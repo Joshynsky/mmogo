@@ -476,6 +476,14 @@ void main() {
       expect(await storedSeen(), isTrue);
     });
 
+    testWidgets('step 1 spotlights the period button: the bubble sits right under it', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await _pumpHome(tester, _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 3));
+      final button = tester.getRect(find.byKey(const Key('homePeriodButton')));
+      final bubble = tester.getRect(find.byKey(coachTourBubbleKey));
+      expect(bubble.top, moreOrLessEquals(button.bottom + 6 + 12, epsilon: 1));
+    });
+
     testWidgets('no transactions yet: a single pointer at +', (tester) async {
       SharedPreferences.setMockInitialValues({});
       await _pumpHome(tester, _FakeHomeDb(now: _morning));

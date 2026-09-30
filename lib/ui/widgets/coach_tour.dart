@@ -113,20 +113,37 @@ class _CoachTourOverlayState extends State<_CoachTourOverlay> {
   CoachStep get _step => widget.steps[_index];
   bool get _isLast => _index == widget.steps.length - 1;
 
+  Timer? _watch;
+  Rect? _measured;
+
   @override
   void initState() {
     super.initState();
     _enterStep();
+    // The page under the tour can still be moving when a step appears (a
+    // route transition, a scroll, data landing): redraw whenever the target
+    // has moved. Only setState on a change, so tests still settle.
+    _watch = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (mounted && _targetRect() != _measured) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _watch?.cancel();
+    super.dispose();
   }
 
   /// Runs the step's [CoachStep.onEnter], then re-measures once the frame it
   /// caused (e.g. a scroll jump) has laid out.
   void _enterStep() {
     final cb = _step.onEnter;
-    if (cb == null) return;
+    // Always re-measure a frame later: on the very first step the overlay has
+    // no render object yet when it first builds, so the target cannot be
+    // measured until then.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      cb();
+      cb?.call();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() {});
       });
@@ -173,6 +190,7 @@ class _CoachTourOverlayState extends State<_CoachTourOverlay> {
     final size = MediaQuery.sizeOf(context);
     final padding = MediaQuery.paddingOf(context);
     final raw = _targetRect();
+    _measured = raw;
     final visible = Offset.zero & size;
     final rect = (raw == null || !raw.overlaps(visible))
         ? null

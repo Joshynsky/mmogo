@@ -87,6 +87,15 @@ void main() {
     expect(find.text('Next'), findsNothing);
   });
 
+  testWidgets('the bubble sits just under the spotlighted target', (tester) async {
+    await tester.pumpWidget(_Host(steps: _steps()));
+    await _launch(tester);
+    final target = tester.getRect(find.byKey(_k1));
+    final bubble = tester.getRect(find.byKey(coachTourBubbleKey));
+    // spotlight inflates the target by 6, the bubble sits 12 below that.
+    expect(bubble.top, moreOrLessEquals(target.bottom + 6 + 12, epsilon: 1));
+  });
+
   testWidgets('onEnter runs when each step becomes current, in order', (tester) async {
     final entered = <String>[];
     await tester.pumpWidget(
