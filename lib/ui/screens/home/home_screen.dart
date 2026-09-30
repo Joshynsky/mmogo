@@ -15,17 +15,13 @@ import '../../shell/primary_scaffold.dart';
 import '../../shell/primary_shell.dart';
 import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/hint_bubble.dart';
+import '../../widgets/coach_tour.dart';
 import 'home_consts.dart';
 import 'recent_list.dart';
 import 'summary_card.dart';
 
-/// T19 — Home's hint id / text (public so the widget tests assert the same
-/// strings the screen actually uses).
-const homeHintId = 'home_hint';
-const homeHintMessage =
-    'This is your Home glance — a read-only snapshot. Tap a recent transaction to open '
-    'Analytics, where you can review or correct your transactions.';
+/// Home's coach-tour page id (the seen flag is `tour_seen_home`).
+const homeTourId = 'home';
 
 /// How many recent rows Home fetches; the screen shows as many of them as
 /// fit whole ([HomeRecentSliver]).
@@ -69,6 +65,13 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
   List<RecentTransaction> _recent = const [];
 
   late final AppLifecycleListener _lifecycle;
+
+  // Coach-tour anchors.
+  final _periodTourKey = GlobalKey();
+  final _cardTourKey = GlobalKey();
+  final _firstRowTourKey = GlobalKey();
+  final _fabTourKey = GlobalKey();
+  bool _tourOffered = false;
 
   DateTime _now() => (widget.clock ?? DateTime.now)();
 
@@ -167,7 +170,49 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
       _recent = results[3] as List<RecentTransaction>;
       _loading = false;
     });
+    // First tour: once, after the first data has painted.
+    if (!_tourOffered) {
+      _tourOffered = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) CoachTour.maybeStart(context, pageId: homeTourId, steps: _tourSteps());
+      });
+    }
   }
+
+  /// The tour: with no transactions yet, just a pointer at + (nothing else
+  /// has anything to show).
+  List<CoachStep> _tourSteps() {
+    final addStep = CoachStep(
+      target: _fabTourKey,
+      text: _recent.isEmpty
+          ? 'Add your first transaction here: paste an M-Pesa message or enter cash.'
+          : 'Add a transaction: paste an M-Pesa message or enter cash.',
+      actionLabel: 'Take me there',
+      onAction: () => Navigator.of(context).pushNamed(Routes.add),
+    );
+    if (_recent.isEmpty) return [addStep];
+    return [
+      CoachStep(target: _periodTourKey, text: 'Switch between Today, This week, This month and more.'),
+      CoachStep(target: _cardTourKey, text: 'Your total, and how it compares with the last period.'),
+      CoachStep(
+        target: _firstRowTourKey,
+        text: 'Tap a transaction to see it in Analytics.',
+        actionLabel: 'Take me there',
+        onAction: () {
+          final shell = primaryShell;
+          if (shell != null) {
+            shell.select(1);
+          } else {
+            Navigator.of(context).pushNamed(Routes.analytics);
+          }
+        },
+      ),
+      addStep,
+    ];
+  }
+
+  /// The header "?" replays the tour.
+  void _replayTour() => CoachTour.start(context, pageId: homeTourId, steps: _tourSteps());
 
   /// T21 pull to refresh: re-query and recompute everything time-derived —
   /// today's period bounds (in [_load]) and the time-of-day greeting (the
@@ -209,14 +254,9 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
       title: homeGreeting(_now(), _name),
       activeIndex: 0,
       followPhoneTheme: true,
-      // T19 — Home's contextual hint, unchanged: a fixed-offset overlay just
-      // below the top bar that occupies no layout space.
-      body: HintOverlayHost(
-        hintId: homeHintId,
-        message: homeHintMessage,
-        gotItKey: const Key('homeHintGotIt'),
-        child: _loading ? Center(child: CircularProgressIndicator(color: palette.primary)) : _buildBody(palette),
-      ),
+      onHelp: _loading ? null : _replayTour,
+      fabTourKey: _fabTourKey,
+      body: _loading ? Center(child: CircularProgressIndicator(color: palette.primary)) : _buildBody(palette),
     );
   }
 
@@ -237,7 +277,10 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
             sliver: SliverToBoxAdapter(
-              child: HomeSummaryCard(
+              child: KeyedSubtree(
+                key: _cardTourKey,
+                child: HomeSummaryCard(
+                periodTourKey: _periodTourKey,
                 palette: palette,
                 period: _period,
                 totalCents: _thisTotalCents,
@@ -245,6 +288,7 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
                 typeTotals: {for (final (code, _) in homeTypeOrder) code: _bySource[code]?.totalCents ?? 0},
                 costCents: totalCost,
                 onPeriodTap: _cyclePeriod,
+                ),
               ),
             ),
           ),
@@ -262,7 +306,12 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
               ),
             ),
           ),
-          HomeRecentSliver(palette: palette, recent: _recent, onTap: _openTransaction),
+          HomeRecentSliver(
+            palette: palette,
+            recent: _recent,
+            onTap: _openTransaction,
+            firstRowTourKey: _firstRowTourKey,
+          ),
         ],
       ),
     );

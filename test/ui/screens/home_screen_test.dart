@@ -14,6 +14,7 @@ import 'package:mpesa_tracker/domain/home/home_period.dart';
 import 'package:mpesa_tracker/ui/screens/home_screen.dart';
 import 'package:mpesa_tracker/ui/shell/routes.dart';
 import 'package:mpesa_tracker/ui/theme/app_colors.dart';
+import 'package:mpesa_tracker/ui/widgets/coach_tour.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -136,8 +137,8 @@ Finder _recentRows({bool skipOffstage = true}) => find.byWidgetPredicate(
 
 void main() {
   setUp(() {
-    // The T19 hint is already dismissed, so the bubble never covers the card.
-    SharedPreferences.setMockInitialValues({'hint_seen_$homeHintId': true});
+    // The tour is already seen, so its scrim never covers the card.
+    SharedPreferences.setMockInitialValues({'tour_seen_$homeTourId': true});
     _pushed.clear();
   });
 
@@ -291,7 +292,7 @@ void main() {
 
   group('greeting', () {
     testWidgets('time of day + name in the top bar', (tester) async {
-      SharedPreferences.setMockInitialValues({'hint_seen_$homeHintId': true, AppPrefs.keyUserDisplayName: 'Shyn'});
+      SharedPreferences.setMockInitialValues({'tour_seen_$homeTourId': true, AppPrefs.keyUserDisplayName: 'Shyn'});
       await _pumpHome(tester, _FakeHomeDb(now: _morning), now: DateTime(2026, 9, 24, 11, 59));
       final title = find.descendant(of: find.byType(AppBar), matching: find.text('Good morning Shyn,'));
       expect(title, findsOneWidget);
@@ -440,6 +441,60 @@ void main() {
       final newStarts = db.sumStarts.skip(before).toList();
       expect(newStarts, contains(HomePeriod.month.bounds(clock).$1), reason: 'October, not September');
       expect(newStarts, isNot(contains(HomePeriod.month.bounds(DateTime(2026, 9, 30)).$1)));
+    });
+  });
+
+  group('coach tour', () {
+    Future<Object?> storedSeen() async => (await SharedPreferences.getInstance()).getBool('tour_seen_$homeTourId');
+
+    testWidgets('first visit with data: 4 steps; Analytics and Add carry "Take me there"', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await _pumpHome(tester, _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 3));
+      expect(find.text('1 of 4'), findsOneWidget);
+      expect(find.byKey(coachTourActionKey), findsNothing);
+
+      await tester.tap(find.byKey(coachTourNextKey));
+      await tester.pumpAndSettle();
+      expect(find.text('2 of 4'), findsOneWidget);
+
+      await tester.tap(find.byKey(coachTourNextKey));
+      await tester.pumpAndSettle();
+      expect(find.text('3 of 4'), findsOneWidget);
+      expect(find.byKey(coachTourActionKey), findsOneWidget);
+
+      await tester.tap(find.byKey(coachTourNextKey));
+      await tester.pumpAndSettle();
+      expect(find.text('4 of 4'), findsOneWidget);
+      expect(find.byKey(coachTourActionKey), findsOneWidget);
+
+      await tester.tap(find.byKey(coachTourNextKey)); // Done
+      await tester.pumpAndSettle();
+      expect(find.byKey(coachTourBubbleKey), findsNothing);
+      expect(await storedSeen(), isTrue);
+    });
+
+    testWidgets('no transactions yet: a single pointer at +', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await _pumpHome(tester, _FakeHomeDb(now: _morning));
+      expect(find.text('1 of 1'), findsOneWidget);
+      expect(find.textContaining('Add your first transaction'), findsOneWidget);
+    });
+
+    testWidgets('the header ? replays a seen tour; Take me there on + opens Add', (tester) async {
+      await _pumpHome(tester, _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 3));
+      expect(find.byKey(coachTourBubbleKey), findsNothing);
+
+      await tester.tap(find.byKey(const Key('pageHelpButton')));
+      await tester.pumpAndSettle();
+      expect(find.text('1 of 4'), findsOneWidget);
+
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.byKey(coachTourNextKey));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.byKey(coachTourActionKey));
+      await tester.pumpAndSettle();
+      expect(_pushed.map((s) => s.name), contains(Routes.add));
     });
   });
 }

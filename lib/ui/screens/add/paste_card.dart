@@ -14,21 +14,13 @@ import '../../theme/app_colors.dart';
 /// state) — this replaces the old dialog-based error
 /// (`mpesa_tab_body.dart`'s `_showParseErrorDialog`, now retired with that
 /// file).
-///
-/// T19 — when [hintAnchor] is non-null it wraps only the unfilled "Paste
-/// M-Pesa SMS" button in a `CompositedTransformTarget`, so Add's contextual
-/// hint floats just below the real control it names. Once [filled] is true
-/// the button is gone (replaced by the strip) — the hint host's own rule
-/// ("anchor not currently built -> bubble simply not shown, seen flag not
-/// touched") takes care of hiding it without this widget doing anything
-/// special.
 class PasteCard extends StatelessWidget {
   const PasteCard({
     super.key,
     required this.filled,
     required this.onParsed,
     required this.onStartOver,
-    this.hintAnchor,
+    this.tourKey,
   });
 
   final bool filled;
@@ -42,7 +34,8 @@ class PasteCard extends StatelessWidget {
   /// selectable again.
   final VoidCallback onStartOver;
 
-  final LayerLink? hintAnchor;
+  /// Lets Add's coach tour spotlight the card.
+  final GlobalKey? tourKey;
 
   Future<void> _openSheet(BuildContext context) async {
     final fields = await showModalBottomSheet<ParsedSmsFields>(
@@ -120,7 +113,7 @@ class PasteCard extends StatelessWidget {
         ),
       ),
     );
-    return hintAnchor == null ? button : CompositedTransformTarget(link: hintAnchor!, child: button);
+    return KeyedSubtree(key: tourKey, child: button);
   }
 }
 

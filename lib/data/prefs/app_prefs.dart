@@ -45,13 +45,6 @@ class AppPrefs {
   static const keyAutoRecognizeClassifications =
       'auto_recognize_classifications';
 
-  /// The per-hint "seen" flag mechanism — a small, fixed,
-  /// non-relational keyed set, one entry per hint id — introduced as a
-  /// real, general reader/writer here (T9's own dismissible Analytics hint
-  /// is the first caller; the key is namespaced per hint id so a later
-  /// screen's own hint doesn't collide with this one).
-  static const _hintSeenPrefix = 'hint_seen_';
-
   /// T16 — the onboarding-complete flag (a single boolean, read once
   /// at launch routing). Set only by an
   /// explicit Skip or Get started on the onboarding flow; nothing clears it
@@ -67,7 +60,7 @@ class AppPrefs {
   /// returning user who wrongly sees it again loses one tap (Skip, which
   /// saves nothing and changes no data), while a new user who wrongly
   /// skips it never gets the name step or the SMS-paste explanation, with
-  /// no way back in. Same fail-toward-showing direction as [readHintSeen].
+  /// no way back in. Same fail-toward-showing direction as [readTourSeen].
   static Future<bool> readOnboardingComplete() async {
     try {
       final prefs = await SharedPreferences.getInstance().timeout(
@@ -160,43 +153,12 @@ class AppPrefs {
     }
   }
 
-  /// Whether the hint identified by [hintId] has already been explicitly
-  /// dismissed ("Got it") —
-  /// only an explicit confirm sets this, never a passive dismissal.
-  /// Defensive: any read failure is treated as "not yet seen" so a broken
-  /// preference store never permanently hides (or permanently shows) a
-  /// hint incorrectly — it fails toward showing it again, the safer
-  /// direction (worst case: an already-acknowledged hint reappears once).
-  static Future<bool> readHintSeen(String hintId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance().timeout(
-        _prefsTimeout,
-      );
-      return prefs.getBool('$_hintSeenPrefix$hintId') ?? false;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  static Future<void> markHintSeen(String hintId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance().timeout(
-        _prefsTimeout,
-      );
-      await prefs.setBool('$_hintSeenPrefix$hintId', true);
-    } catch (_) {
-      // Defensive: a failed/stuck write just means the hint may reappear
-      // next launch — never crash the screen dismissing it.
-    }
-  }
-
-  /// Coach-tour "seen" flag, one per page (`tour_seen_<pageId>`). Replaces
-  /// the per-hint `hint_seen_*` flags once H-b/H-c remove that API.
+  /// Coach-tour "seen" flag, one per page (`tour_seen_<pageId>`).
   static const _tourSeenPrefix = 'tour_seen_';
 
   /// Whether the page's coach tour has been finished or skipped. Defensive:
-  /// any read failure fails toward `false` (show the tour), like
-  /// [readHintSeen].
+  /// any read failure fails toward `false` (show the tour): worst case a
+  /// tour reappears once.
   static Future<bool> readTourSeen(String pageId) async {
     try {
       final prefs = await SharedPreferences.getInstance().timeout(
@@ -241,7 +203,7 @@ class AppPrefs {
   /// read failure (missing plugin channel, stuck platform call, etc.)
   /// fails toward the documented default (ON/true) rather than silently
   /// disabling a feature the user never actually turned off — same
-  /// fail-toward-the-safer-direction discipline [readHintSeen] already
+  /// fail-toward-the-safer-direction discipline [readTourSeen] already
   /// uses, applied to this key's own correct default instead of `false`.
   static Future<bool> readAutoRecognizeClassifications() async {
     try {

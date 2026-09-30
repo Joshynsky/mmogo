@@ -12,10 +12,10 @@ import 'fake_add_db.dart';
 
 /// [captureReceiver] mirrors the remembered "Also record the receiver..." box.
 /// Its real default is ON, so tests that are not about receiver capture start
-/// with it OFF. The first-run hint is marked seen.
+/// with it OFF. The first-run tour is marked seen.
 Future<void> pumpAdd(WidgetTester tester, FakeAddDb db, {bool captureReceiver = false}) async {
   SharedPreferences.setMockInitialValues({
-    'hint_seen_$addHintId': true,
+    'tour_seen_$addTourId': true,
     if (!captureReceiver) AppPrefs.keyCaptureIdentityPreference: false,
   });
   tester.view.physicalSize = const Size(1080, 4800);

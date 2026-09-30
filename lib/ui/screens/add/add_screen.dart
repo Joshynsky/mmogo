@@ -11,8 +11,9 @@ import '../../../domain/parsing/parsed_sms_fields.dart';
 import '../../shell/app_messenger.dart';
 import '../../shell/chrome_widgets.dart';
 import '../../shell/primary_shell.dart';
+import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/hint_bubble.dart';
+import '../../widgets/coach_tour.dart';
 import 'amount_field.dart';
 import 'category_chips.dart';
 import 'details_card.dart';
@@ -28,14 +29,8 @@ import 'type_pills.dart';
 /// suggestion pill), and a "Check before saving" review sheet (replacing
 /// the earlier separate confirmation page).
 ///
-/// T19 — Add's hint id/text, public so the widget tests assert the same
-/// strings the screen actually uses. The hint now names the real "Paste
-/// M-Pesa SMS" card (`paste_card.dart`) instead of the retired "Parse
-/// M-Pesa message" button.
-const addHintId = 'add_hint';
-const addHintMessage =
-    'Tap "Parse M-Pesa message" and paste an M-Pesa confirmation message — it fills the form in for you. '
-    'You can also enter it yourself below. Paid in cash? Switch to Cash.';
+/// Add's coach-tour page id (the seen flag is `tour_seen_add`).
+const addTourId = 'add';
 
 /// Reached from the primary FAB (`Routes.add`) — a pushed page, never a
 /// bottom-nav tab (Add is the FAB, never a
@@ -103,8 +98,59 @@ class _AddScreenState extends State<AddScreen> {
   /// counterparty.
   String? _autoApplyKey;
 
-  /// T19 — anchors the contextual hint to the real "Paste M-Pesa SMS" card.
-  final _pasteHintAnchor = LayerLink();
+  // Coach-tour anchors.
+  final _pasteTourKey = GlobalKey();
+  final _segTourKey = GlobalKey();
+  final _receiverTourKey = GlobalKey();
+  final _categoryTourKey = GlobalKey();
+
+  void _scrollTo(GlobalKey key) {
+    final ctx = key.currentContext;
+    if (ctx == null || !ctx.mounted) return;
+    Scrollable.ensureVisible(ctx, alignment: 0.3, duration: Duration.zero);
+  }
+
+  /// Sends the user to the Paid to tab (Add is pushed over the shell).
+  void _goToPaidTo() {
+    final shell = PrimaryShell.active;
+    if (shell != null) {
+      Navigator.of(context).popUntil((route) => route == shell.route);
+      shell.select(3);
+    } else {
+      Navigator.of(context).pushNamedAndRemoveUntil(Routes.paidTo, (route) => false);
+    }
+  }
+
+  List<CoachStep> _tourSteps() {
+    final categoryStep = CoachStep(
+      target: _categoryTourKey,
+      text: 'Pick a category. Tick Always use to remember it for this receiver.',
+      onEnter: () => _scrollTo(_categoryTourKey),
+    );
+    if (_src == 'CASH') {
+      return [
+        CoachStep(target: _segTourKey, text: 'Switch back to M-Pesa to paste a message.'),
+        categoryStep,
+      ];
+    }
+    return [
+      CoachStep(
+        target: _pasteTourKey,
+        text: 'Paste an M-Pesa message and we fill the form in. You check it before saving.',
+      ),
+      CoachStep(target: _segTourKey, text: 'Paid in cash? Switch to Cash.'),
+      CoachStep(
+        target: _receiverTourKey,
+        text: 'Record the receiver’s name and phone to see this person on Paid to.',
+        actionLabel: 'Take me there',
+        onAction: _goToPaidTo,
+        onEnter: () => _scrollTo(_receiverTourKey),
+      ),
+      categoryStep,
+    ];
+  }
+
+  void _replayTour() => CoachTour.start(context, pageId: addTourId, steps: _tourSteps());
 
   @override
   void initState() {
@@ -130,6 +176,9 @@ class _AddScreenState extends State<AddScreen> {
       _db = db;
       _captureIdentity = capturePreference;
       _loadingDb = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) CoachTour.maybeStart(context, pageId: addTourId, steps: _tourSteps());
     });
   }
 
@@ -466,6 +515,17 @@ class _AddScreenState extends State<AddScreen> {
         title: Text('Add', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: palette.ink)),
         centerTitle: false,
         actions: [
+          if (!_loadingDb) ...[
+            IconCircleButton(
+              key: const Key('pageHelpButton'),
+              icon: Icons.help_outline_rounded,
+              tooltip: 'Show tips for this page',
+              background: palette.card,
+              foreground: palette.ink,
+              onTap: _replayTour,
+            ),
+            const SizedBox(width: 8),
+          ],
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: IconCircleButton(
@@ -501,50 +561,49 @@ class _AddScreenState extends State<AddScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: _SrcSegment(src: _src, onChanged: _onSrcChanged),
+          child: KeyedSubtree(
+            key: _segTourKey,
+            child: _SrcSegment(src: _src, onChanged: _onSrcChanged),
+          ),
         ),
         Expanded(
-          child: HintOverlayHost(
-            hintId: addHintId,
-            message: addHintMessage,
-            anchorLink: _pasteHintAnchor,
-            enabled: _src == 'MPESA',
-            gotItKey: const Key('addHintGotIt'),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_src == 'MPESA') ...[
-                    PasteCard(
-                      filled: _filled,
-                      onParsed: _onParsed,
-                      onStartOver: _startOver,
-                      hintAnchor: _pasteHintAnchor,
-                    ),
-                    if (!_filled) ...[
-                      const SizedBox(height: 14),
-                      TypePills.orDivider(palette),
-                      const SizedBox(height: 10),
-                      TypePills(type: _type, onChanged: _onTypeChanged),
-                    ],
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_src == 'MPESA') ...[
+                  PasteCard(
+                    filled: _filled,
+                    onParsed: _onParsed,
+                    onStartOver: _startOver,
+                    tourKey: _pasteTourKey,
+                  ),
+                  if (!_filled) ...[
+                    const SizedBox(height: 14),
+                    TypePills.orDivider(palette),
+                    const SizedBox(height: 10),
+                    TypePills(type: _type, onChanged: _onTypeChanged),
                   ],
-                  AmountField(controller: _amountController, onChanged: (_) => setState(() {})),
-                  if (_src == 'MPESA')
-                    DetailsCard(
-                      code: _codeController,
-                      fee: _feeController,
-                      codeShapeInvalid: _codeController.text.trim().isNotEmpty && !_codeValidShape,
-                      codeDuplicate: _codeValidShape && _codeDuplicate,
-                      whenText: formatLowKeyDateTime(_occurredAt),
-                      onCodeChanged: _onCodeChanged,
-                      onFeeChanged: (_) => setState(() {}),
-                      onWhenChangeTap: _pickDateTime,
-                    )
-                  else
-                    CashWhenRow(whenText: formatLowKeyDateTime(_occurredAt), onWhenChangeTap: _pickDateTime),
-                  if (_src == 'MPESA')
-                    ReceiverCard(
+                ],
+                AmountField(controller: _amountController, onChanged: (_) => setState(() {})),
+                if (_src == 'MPESA')
+                  DetailsCard(
+                    code: _codeController,
+                    fee: _feeController,
+                    codeShapeInvalid: _codeController.text.trim().isNotEmpty && !_codeValidShape,
+                    codeDuplicate: _codeValidShape && _codeDuplicate,
+                    whenText: formatLowKeyDateTime(_occurredAt),
+                    onCodeChanged: _onCodeChanged,
+                    onFeeChanged: (_) => setState(() {}),
+                    onWhenChangeTap: _pickDateTime,
+                  )
+                else
+                  CashWhenRow(whenText: formatLowKeyDateTime(_occurredAt), onWhenChangeTap: _pickDateTime),
+                if (_src == 'MPESA')
+                  KeyedSubtree(
+                    key: _receiverTourKey,
+                    child: ReceiverCard(
                       type: _type,
                       checked: _captureIdentity,
                       name: _nameController,
@@ -552,13 +611,16 @@ class _AddScreenState extends State<AddScreen> {
                       onCheckedChanged: _setCaptureIdentity,
                       onFieldChanged: () => setState(() {}),
                     ),
-                  const SizedBox(height: 6),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('Category', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: palette.ink)),
                   ),
-                  const SizedBox(height: 8),
-                  CategoryChips(
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Category', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: palette.ink)),
+                ),
+                const SizedBox(height: 8),
+                KeyedSubtree(
+                  key: _categoryTourKey,
+                  child: CategoryChips(
                     db: db,
                     sourceType: _src == 'CASH' ? 'CASH' : _type,
                     counterpartyKey: counterpartyKey,
@@ -572,9 +634,9 @@ class _AddScreenState extends State<AddScreen> {
                     autoApplyChecked: _autoApplyKey != null && _autoApplyKey == counterpartyKey,
                     onAutoApplyChanged: (checked) => setState(() => _autoApplyKey = checked ? counterpartyKey : null),
                   ),
-                  const SizedBox(height: 80),
-                ],
-              ),
+                ),
+                const SizedBox(height: 80),
+              ],
             ),
           ),
         ),

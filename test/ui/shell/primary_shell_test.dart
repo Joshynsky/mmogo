@@ -178,7 +178,7 @@ Future<void> _analyticsPlace(WidgetTester tester) async {
 }
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({'hint_seen_$homeHintId': true}));
+  setUp(() => SharedPreferences.setMockInitialValues({'tour_seen_$homeTourId': true}));
 
   group('F5: the pages stay alive', () {
     testWidgets('switching tabs keeps Analytics\' period and filter', (tester) async {

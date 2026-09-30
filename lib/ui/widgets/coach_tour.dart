@@ -19,10 +19,15 @@ class CoachStep {
     required this.text,
     this.actionLabel,
     this.onAction,
+    this.onEnter,
   });
 
   final GlobalKey? target;
   final String text;
+
+  /// Runs when the step becomes current, before its spotlight is measured
+  /// (e.g. scroll [target] into view). The overlay re-measures next frame.
+  final VoidCallback? onEnter;
   final String? actionLabel;
   final VoidCallback? onAction;
 }
@@ -94,11 +99,32 @@ class _CoachTourOverlayState extends State<_CoachTourOverlay> {
   CoachStep get _step => widget.steps[_index];
   bool get _isLast => _index == widget.steps.length - 1;
 
+  @override
+  void initState() {
+    super.initState();
+    _enterStep();
+  }
+
+  /// Runs the step's [CoachStep.onEnter], then re-measures once the frame it
+  /// caused (e.g. a scroll jump) has laid out.
+  void _enterStep() {
+    final cb = _step.onEnter;
+    if (cb == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      cb();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+    });
+  }
+
   void _next() {
     if (_isLast) {
       widget.onFinish();
     } else {
       setState(() => _index++);
+      _enterStep();
     }
   }
 

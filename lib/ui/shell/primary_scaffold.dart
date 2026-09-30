@@ -35,9 +35,18 @@ class PrimaryScaffold extends StatelessWidget {
     required this.activeIndex,
     required this.body,
     this.followPhoneTheme = false,
+    this.onHelp,
+    this.fabTourKey,
   });
 
   final String title;
+
+  /// The header's "?" replay button: replays this page's coach tour. `null`
+  /// (default) shows no button.
+  final VoidCallback? onHelp;
+
+  /// Lets a page's coach tour spotlight the centre + button.
+  final GlobalKey? fabTourKey;
 
   /// Index into [Routes.primaryOrder] (0=Home,1=Analytics,2=Add,3=Paid to,
   /// 4=Settings; T22 order) — which nav slot is the "you are here" highlight.
@@ -113,6 +122,8 @@ class PrimaryScaffold extends StatelessWidget {
           titleSpacing: 16,
           title: Text(
             title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, letterSpacing: -0.18, color: palette.ink),
           ),
           actions: [
@@ -121,6 +132,18 @@ class PrimaryScaffold extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (onHelp != null) ...[
+                    IconCircleButton(
+                      key: const Key('pageHelpButton'),
+                      icon: Icons.help_outline_rounded,
+                      tooltip: 'Show tips for this page',
+                      size: 36,
+                      background: palette.card,
+                      foreground: palette.ink,
+                      onTap: onHelp!,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   // T25: the notifications bell, immediately left of Profile
                   // (same size/style; no badge logic — a placeholder "Coming
                   // soon" page for now).
@@ -150,6 +173,7 @@ class PrimaryScaffold extends StatelessWidget {
         bottomNavigationBar: _PrimaryBottomNav(
           palette: palette,
           activeIndex: activeIndex,
+          fabTourKey: fabTourKey,
           onTap: (i) => _goToPrimary(context, i),
         ),
       ),
@@ -165,10 +189,11 @@ class PrimaryScaffold extends StatelessWidget {
 }
 
 class _PrimaryBottomNav extends StatelessWidget {
-  const _PrimaryBottomNav({required this.palette, required this.activeIndex, required this.onTap});
+  const _PrimaryBottomNav({required this.palette, required this.activeIndex, required this.onTap, this.fabTourKey});
 
   final AppPalette palette;
   final int activeIndex;
+  final GlobalKey? fabTourKey;
   final ValueChanged<int> onTap;
 
   static const _navHeight = 66.0;
@@ -235,7 +260,10 @@ class _PrimaryBottomNav extends StatelessWidget {
           // the nav's bottom edge (66 - (64 - 29)).
           Positioned(
             bottom: _navHeight - (64 - 29),
-            child: _Fab(palette: palette, active: activeIndex == 2, onTap: () => onTap(2)),
+            child: KeyedSubtree(
+              key: fabTourKey,
+              child: _Fab(palette: palette, active: activeIndex == 2, onTap: () => onTap(2)),
+            ),
           ),
         ],
       ),

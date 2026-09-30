@@ -24,7 +24,7 @@ import '../../../support/fake_add_db.dart';
 /// tests that aren't about receiver capture start with it OFF.
 Future<void> _pumpAdd(WidgetTester tester, FakeAddDb db, {bool captureReceiver = false}) async {
   SharedPreferences.setMockInitialValues({
-    'hint_seen_$addHintId': true, // the first-run hint bubble would cover the Type pills
+    'tour_seen_$addTourId': true, // the first-run tour scrim would cover the Type pills
     if (!captureReceiver) AppPrefs.keyCaptureIdentityPreference: false,
   });
   // Phone width, tall enough that the whole form (down to the category chips)

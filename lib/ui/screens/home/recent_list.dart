@@ -20,7 +20,16 @@ import 'split_line.dart';
 ///  - when not even one row fits (tiny screen / very large text), falls back
 ///    to an ordinary scrolling page with [homeRecentFallbackRows] rows.
 class HomeRecentSliver extends StatelessWidget {
-  const HomeRecentSliver({super.key, required this.palette, required this.recent, required this.onTap});
+  const HomeRecentSliver({
+    super.key,
+    required this.palette,
+    required this.recent,
+    required this.onTap,
+    this.firstRowTourKey,
+  });
+
+  /// Lets Home's coach tour spotlight the first recent row.
+  final GlobalKey? firstRowTourKey;
 
   final AppPalette palette;
   final List<RecentTransaction> recent;
@@ -124,13 +133,16 @@ class HomeRecentSliver extends StatelessWidget {
       children: [
         for (var i = 0; i < rows.length; i++) ...[
           if (i > 0) Container(height: 1, color: palette.line),
-          _RecentRow(
-            palette: palette,
-            tx: rows[i],
-            height: rowH,
-            nameStyle: _nameStyleBase.copyWith(color: palette.ink),
-            subStyle: _subStyleBase.copyWith(color: palette.mutedInk),
-            onTap: () => onTap(rows[i]),
+          KeyedSubtree(
+            key: i == 0 ? firstRowTourKey : null,
+            child: _RecentRow(
+              palette: palette,
+              tx: rows[i],
+              height: rowH,
+              nameStyle: _nameStyleBase.copyWith(color: palette.ink),
+              subStyle: _subStyleBase.copyWith(color: palette.mutedInk),
+              onTap: () => onTap(rows[i]),
+            ),
           ),
         ],
       ],

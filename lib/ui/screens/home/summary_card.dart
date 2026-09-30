@@ -20,7 +20,11 @@ class HomeSummaryCard extends StatelessWidget {
     required this.typeTotals,
     required this.costCents,
     required this.onPeriodTap,
+    this.periodTourKey,
   });
+
+  /// Lets Home's coach tour spotlight the period button.
+  final GlobalKey? periodTourKey;
 
   final AppPalette palette;
   final HomePeriod period;
@@ -53,7 +57,10 @@ class HomeSummaryCard extends StatelessWidget {
             start: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _PeriodButton(palette: palette, label: period.label, onTap: onPeriodTap),
+                KeyedSubtree(
+                  key: periodTourKey,
+                  child: _PeriodButton(palette: palette, label: period.label, onTap: onPeriodTap),
+                ),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
