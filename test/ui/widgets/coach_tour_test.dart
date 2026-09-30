@@ -87,6 +87,33 @@ void main() {
     expect(find.text('Next'), findsNothing);
   });
 
+  testWidgets('onEnter runs when each step becomes current, in order', (tester) async {
+    final entered = <String>[];
+    await tester.pumpWidget(
+      _Host(
+        steps: [
+          CoachStep(target: _k1, text: 'First', onEnter: () => entered.add('one')),
+          CoachStep(target: _k2, text: 'Second', onEnter: () => entered.add('two')),
+        ],
+      ),
+    );
+    await _launch(tester);
+    expect(entered, ['one']);
+    await tester.tap(find.byKey(coachTourNextKey));
+    await tester.pumpAndSettle();
+    expect(entered, ['one', 'two']);
+  });
+
+  testWidgets('autoStartDisabled stops maybeStart but not a replay', (tester) async {
+    CoachTour.autoStartDisabled = true;
+    await tester.pumpWidget(_Host(steps: _steps()));
+    await _launch(tester);
+    expect(find.byKey(coachTourBubbleKey), findsNothing);
+    await tester.pumpWidget(_Host(steps: _steps(), replay: true));
+    await _launch(tester);
+    expect(find.byKey(coachTourBubbleKey), findsOneWidget);
+  });
+
   testWidgets('Done marks seen and closes; second maybeStart does nothing', (
     tester,
   ) async {

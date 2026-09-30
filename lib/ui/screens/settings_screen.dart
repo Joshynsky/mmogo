@@ -15,6 +15,10 @@ import '../shell/primary_shell.dart';
 import '../shell/routes.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_palette_scope.dart';
+import '../widgets/coach_tour.dart';
+
+/// Settings' coach-tour page id (the seen flag is `tour_seen_settings`).
+const settingsTourId = 'settings';
 
 /// Primary destination 5 of 5. T2's original routing scope for this screen:
 /// the two links that hand off to secondary pages (Manage Classifications,
@@ -63,6 +67,12 @@ class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<
   // off->on once the real read resolves in the common case.
   bool _autoRecognize = true;
 
+  // Coach-tour anchors.
+  final _paletteTourKey = GlobalKey();
+  final _dataTourKey = GlobalKey();
+  final _prefsTourKey = GlobalKey();
+  bool _tourOffered = false;
+
   @override
   void initState() {
     super.initState();
@@ -88,6 +98,12 @@ class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<
       _autoRecognize = autoRecognize;
       _loading = false;
     });
+    if (!_tourOffered) {
+      _tourOffered = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) CoachTour.maybeStart(context, pageId: settingsTourId, steps: _tourSteps());
+      });
+    }
   }
 
   /// Flips the switch immediately (never waits on the write) then persists
@@ -142,6 +158,35 @@ class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<
     }
   }
 
+  /// Clears every page's "tour seen" flag. Pages already open in this session
+  /// offer their tour again next launch (Add: next time it is opened); their
+  /// header "?" replays one straight away.
+  Future<void> _showTipsAgain() async {
+    await AppPrefs.resetAllTours();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Tips reset. The guides will show again.')),
+    );
+  }
+
+  List<CoachStep> _tourSteps() => [
+    CoachStep(target: _paletteTourKey, text: 'Pick a colour palette. It follows your phone’s light or dark mode.'),
+    CoachStep(
+      target: _dataTourKey,
+      text: 'Manage your categories, restore deleted transactions, or share everything as a CSV.',
+      onEnter: () => scrollIntoView(_dataTourKey),
+      actionLabel: 'Open Manage classifications',
+      onAction: () => Navigator.of(context).pushNamed(Routes.manageClassifications),
+    ),
+    CoachStep(
+      target: _prefsTourKey,
+      text: 'Suggest categories for repeat receivers. “Show tips again” replays these guides.',
+      onEnter: () => scrollIntoView(_prefsTourKey),
+    ),
+  ];
+
+  void _replayTour() => CoachTour.start(context, pageId: settingsTourId, steps: _tourSteps());
+
   String get _exportSubtitle {
     if (_loading) return 'Loading…';
     if (_activeCount == 0) return 'No transactions to export yet';
@@ -157,6 +202,7 @@ class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<
       title: 'Settings',
       activeIndex: 4,
       followPhoneTheme: true,
+      onHelp: _loading ? null : _replayTour,
       // No pull-to-refresh on Settings (PM direct decision, T23 draft):
       // nothing here changes from elapsed time the way Home/Analytics do.
       body: ListView(
@@ -164,57 +210,77 @@ class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<
         padding: const EdgeInsets.fromLTRB(14, 6, 14, 32),
         children: [
           _SectionLabel('Appearance', palette: palette),
-          _SettingsCard(
-            palette: palette,
-            child: _PaletteGroup(
-              currentPaletteId: AppPaletteScope.of(context).value,
+          KeyedSubtree(
+            key: _paletteTourKey,
+            child: _SettingsCard(
               palette: palette,
-              onSelect: (id) => AppPaletteScope.of(context).select(id),
+              child: _PaletteGroup(
+                currentPaletteId: AppPaletteScope.of(context).value,
+                palette: palette,
+                onSelect: (id) => AppPaletteScope.of(context).select(id),
+              ),
             ),
           ),
           const SizedBox(height: 14),
           _SectionLabel('Your data', palette: palette),
-          _SettingsCard(
-            palette: palette,
-            child: Column(
-              children: [
-                _SettingsLink(
-                  palette: palette,
-                  icon: Icons.category_outlined,
-                  label: 'Manage classifications',
-                  subtitle: 'Create, rename, delete and restore',
-                  first: true,
-                  onTap: () => Navigator.of(context).pushNamed(Routes.manageClassifications),
-                ),
-                _SettingsLink(
-                  palette: palette,
-                  icon: Icons.restore_from_trash_outlined,
-                  label: 'Recently deleted',
-                  subtitle: 'Restore transactions you removed',
-                  onTap: () => Navigator.of(context).pushNamed(Routes.recentlyDeleted),
-                ),
-                _SettingsLink(
-                  palette: palette,
-                  icon: Icons.ios_share,
-                  label: 'Export CSV',
-                  subtitle: _exportSubtitle,
-                  onTap: exportEnabled ? _handleExport : null,
-                ),
-              ],
+          KeyedSubtree(
+            key: _dataTourKey,
+            child: _SettingsCard(
+              palette: palette,
+              child: Column(
+                children: [
+                  _SettingsLink(
+                    palette: palette,
+                    icon: Icons.category_outlined,
+                    label: 'Manage classifications',
+                    subtitle: 'Create, rename, delete and restore',
+                    first: true,
+                    onTap: () => Navigator.of(context).pushNamed(Routes.manageClassifications),
+                  ),
+                  _SettingsLink(
+                    palette: palette,
+                    icon: Icons.restore_from_trash_outlined,
+                    label: 'Recently deleted',
+                    subtitle: 'Restore transactions you removed',
+                    onTap: () => Navigator.of(context).pushNamed(Routes.recentlyDeleted),
+                  ),
+                  _SettingsLink(
+                    palette: palette,
+                    icon: Icons.ios_share,
+                    label: 'Export CSV',
+                    subtitle: _exportSubtitle,
+                    onTap: exportEnabled ? _handleExport : null,
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 14),
           _SectionLabel('Preferences', palette: palette),
-          _SettingsCard(
-            palette: palette,
-            child: _SettingsToggle(
+          KeyedSubtree(
+            key: _prefsTourKey,
+            child: _SettingsCard(
               palette: palette,
-              icon: Icons.auto_awesome_outlined,
-              label: 'Auto-recognize classifications',
-              subtitle: 'Suggest a classification for repeat senders and receivers while you add',
-              first: true,
-              value: _autoRecognize,
-              onChanged: _loading ? null : _handleAutoRecognizeChanged,
+              child: Column(
+                children: [
+                  _SettingsToggle(
+                    palette: palette,
+                    icon: Icons.auto_awesome_outlined,
+                    label: 'Auto-recognize classifications',
+                    subtitle: 'Suggest a classification for repeat senders and receivers while you add',
+                    first: true,
+                    value: _autoRecognize,
+                    onChanged: _loading ? null : _handleAutoRecognizeChanged,
+                  ),
+                  _SettingsLink(
+                    palette: palette,
+                    icon: Icons.lightbulb_outline,
+                    label: 'Show tips again',
+                    subtitle: 'Replay the guide on every page',
+                    onTap: _showTipsAgain,
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 14),
