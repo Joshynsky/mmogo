@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ (API 31) system splash screen, when the OS's dark mode is on.
+         Plain background matching Welcome, no icon (R5, 2026-09-24): the
+         default would show the launcher icon (the Flutter logo). -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/launch_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/launch_icon_transparent</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/launch_background</item>
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@color/launch_background</item>
+    </style>
+</resources>

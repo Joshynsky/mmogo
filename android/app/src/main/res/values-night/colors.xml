@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launch screen background in dark mode: Ocean & Sun Night #0E1A1F,
+         the dark Welcome surface. -->
+    <color name="launch_background">#0E1A1F</color>
+</resources>

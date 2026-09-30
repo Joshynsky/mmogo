@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Plain launch screen, no logo (R5, 2026-09-24): just the Welcome
+     background colour. @color/launch_background is #FFFFFF, or #0E1A1F
+     (values-night) when the phone is in dark mode. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/launch_background" />
+</layer-list>

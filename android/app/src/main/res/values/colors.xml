@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launch screen background (R5, 2026-09-24): matches the Welcome
+         screen's surface so there is no colour jump into Flutter. Light:
+         Ocean & Sun surface #FFFFFF. The dark value is in values-night. -->
+    <color name="launch_background">#FFFFFF</color>
+</resources>
