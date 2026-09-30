@@ -87,6 +87,36 @@ void main() {
       expect(await _seen('paid_to'), isTrue);
     });
 
+    testWidgets('with a type of more than 3 recipients: a third step spotlights "See all"', (tester) async {
+      // analyticsSampleRows() has 3 Send Money recipients; add two more so
+      // one type has 5 and the "See all" link exists.
+      final rows = [
+        ...analyticsSampleRows(),
+        fakeTx(id: 30, at: DateTime(2026, 9, 22, 10), label: 'ALICE WAMBUI', phone: '0711000001', amountCents: 10000),
+        fakeTx(id: 31, at: DateTime(2026, 9, 23, 10), label: 'BOB OMONDI', phone: '0711000002', amountCents: 20000),
+      ];
+      await _pump(tester, screen(rows: rows));
+      expect(find.byKey(const Key('paidToSeeAll-SEND_MONEY')), findsOneWidget);
+      expect(find.text('1 of 3'), findsOneWidget);
+      await _next(tester);
+      expect(find.text('2 of 3'), findsOneWidget);
+      expect(find.byKey(coachTourActionKey), findsOneWidget); // Take me there
+      await _next(tester);
+      expect(find.text('3 of 3'), findsOneWidget);
+      expect(find.textContaining('See all lists everyone'), findsOneWidget);
+      expect(find.byKey(coachTourActionKey), findsNothing);
+      expect(find.text('Done'), findsOneWidget);
+
+      // Back works, and the tour finishes normally from the last step.
+      await tester.tap(find.byKey(coachTourBackKey));
+      await tester.pumpAndSettle();
+      expect(find.text('2 of 3'), findsOneWidget);
+      await _next(tester);
+      await _next(tester); // Done
+      expect(find.byKey(coachTourBubbleKey), findsNothing);
+      expect(await _seen('paid_to'), isTrue);
+    });
+
     testWidgets('no payments: no automatic tour, but the ? still replays the search step', (tester) async {
       await _pump(tester, screen(rows: const []));
       expect(find.byKey(coachTourBubbleKey), findsNothing);
