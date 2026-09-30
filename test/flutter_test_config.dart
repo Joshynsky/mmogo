@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:mpesa_tracker/ui/widgets/coach_tour.dart';
+import 'package:mymog/ui/widgets/coach_tour.dart';
 
 /// Runs for every test file: page tests should not have a first-run coach
 /// tour covering the page. The tour's own tests set `autoStartDisabled` back

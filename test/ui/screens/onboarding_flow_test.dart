@@ -12,12 +12,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/data/prefs/app_prefs.dart';
-import 'package:mpesa_tracker/main.dart';
-import 'package:mpesa_tracker/ui/screens/onboarding_screen.dart';
-import 'package:mpesa_tracker/ui/screens/welcome_screen.dart';
-import 'package:mpesa_tracker/ui/shell/routes.dart';
-import 'package:mpesa_tracker/ui/theme/app_colors.dart';
+import 'package:mymog/data/prefs/app_prefs.dart';
+import 'package:mymog/main.dart';
+import 'package:mymog/ui/screens/onboarding_screen.dart';
+import 'package:mymog/ui/screens/welcome_screen.dart';
+import 'package:mymog/ui/shell/routes.dart';
+import 'package:mymog/ui/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Stands in for "Welcome's first frame is on screen" in widget tests: the

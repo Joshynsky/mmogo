@@ -11,8 +11,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/data/db/local_data_summary_dao.dart';
-import 'package:mpesa_tracker/data/db/schema.dart';
+import 'package:mymog/data/db/local_data_summary_dao.dart';
+import 'package:mymog/data/db/schema.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -142,7 +142,7 @@ void main() {
     test('a real on-disk database yields its actual file size', () async {
       sqfliteFfiInit();
       final dir = await Directory.systemTemp.createTemp('t17_profile_size_');
-      final path = p.join(dir.path, 'mpesa_tracker.db');
+      final path = p.join(dir.path, 'mymog.db');
       final db = await databaseFactoryFfi.openDatabase(path, options: _options());
       try {
         final size = await LocalDataSummaryDao.databaseFileSizeBytes(db);

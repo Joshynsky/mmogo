@@ -1,8 +1,8 @@
 // Tests for lib/ui/widgets/coach_tour.dart and the tour_seen_* prefs.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/data/prefs/app_prefs.dart';
-import 'package:mpesa_tracker/ui/widgets/coach_tour.dart';
+import 'package:mymog/data/prefs/app_prefs.dart';
+import 'package:mymog/ui/widgets/coach_tour.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final _k1 = GlobalKey();

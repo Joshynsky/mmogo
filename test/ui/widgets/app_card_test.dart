@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/ui/theme/app_colors.dart';
-import 'package:mpesa_tracker/ui/widgets/app_card.dart';
+import 'package:mymog/ui/theme/app_colors.dart';
+import 'package:mymog/ui/widgets/app_card.dart';
 
 void main() {
   BoxDecoration deco(WidgetTester t) => t.widget<Container>(find.byType(Container)).decoration! as BoxDecoration;

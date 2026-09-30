@@ -5,8 +5,8 @@
 // for all 3 source types, including the whitespace/case edge cases the
 // rule explicitly claims to handle.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/domain/counterparty/counterparty_key.dart';
-import 'package:mpesa_tracker/domain/parsing/parsed_sms_fields.dart';
+import 'package:mymog/domain/counterparty/counterparty_key.dart';
+import 'package:mymog/domain/parsing/parsed_sms_fields.dart';
 
 void main() {
   group('SEND_MONEY — trimmed phone, no case-folding, no reformatting', () {

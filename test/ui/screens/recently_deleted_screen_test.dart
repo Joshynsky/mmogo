@@ -17,7 +17,7 @@
 // directly and unconditionally.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/ui/screens/recently_deleted_screen.dart';
+import 'package:mymog/ui/screens/recently_deleted_screen.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class _FakeDb implements Database {

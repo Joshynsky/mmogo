@@ -1,4 +1,4 @@
-package com.example.mpesa_tracker
+package app.mymog
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -275,7 +275,7 @@ class AppPalette {
     skipInk: Color(0xFFBFE4EE),
     sun: AppColors.sun,
     card: Color(0xFF1A2C34), // Night card
-    track: Color(0xFF0E1A1F),
+    track: Color(0xFF26404A), // lighter than card AND page, so pills/bars show on both
     diffUp: Color(0xFFFF8A80),
     diffDown: Color(0xFF3FB6D4),
     typeSendMoney: Color(0xFF2AA3C4),
@@ -355,7 +355,7 @@ class AppPalette {
     skipInk: Color(0xFFC3EDD3),
     sun: AppColors.sun,
     card: Color(0xFF1A2C21),
-    track: Color(0xFF0E1A13),
+    track: Color(0xFF26402E),
     diffUp: Color(0xFFFF8A80),
     diffDown: Color(0xFF3DCB7E),
     typeSendMoney: Color(0xFF2FB36A),
@@ -433,7 +433,7 @@ class AppPalette {
     skipInk: Color(0xFFD6D3FF),
     sun: Color(0xFFFF9F7A),
     card: Color(0xFF1F1D33),
-    track: Color(0xFF12111F),
+    track: Color(0xFF2C2A4A),
     diffUp: Color(0xFFFF8A80),
     diffDown: Color(0xFF8F89FF),
     typeSendMoney: Color(0xFF8F89FF),

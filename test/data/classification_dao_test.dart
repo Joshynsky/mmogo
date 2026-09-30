@@ -6,8 +6,8 @@
 // (group_id, name) WHERE active = 1 constraint violation this dispatch's
 // create-flow must surface, not pre-validate away in Dart.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/data/db/classification_dao.dart';
-import 'package:mpesa_tracker/data/db/schema.dart';
+import 'package:mymog/data/db/classification_dao.dart';
+import 'package:mymog/data/db/schema.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<Database> _openFreshDb() async {

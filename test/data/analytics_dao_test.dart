@@ -8,11 +8,11 @@
 // (source_type IN (...)), and that the party filter agrees with Paid to's
 // grouping.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/data/db/analytics_dao.dart';
-import 'package:mpesa_tracker/data/db/schema.dart';
-import 'package:mpesa_tracker/data/db/transaction_dao.dart';
-import 'package:mpesa_tracker/domain/analytics/analytics_period.dart';
-import 'package:mpesa_tracker/domain/paid_to/paid_to.dart';
+import 'package:mymog/data/db/analytics_dao.dart';
+import 'package:mymog/data/db/schema.dart';
+import 'package:mymog/data/db/transaction_dao.dart';
+import 'package:mymog/domain/analytics/analytics_period.dart';
+import 'package:mymog/domain/paid_to/paid_to.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<Database> _openFreshDb() async {

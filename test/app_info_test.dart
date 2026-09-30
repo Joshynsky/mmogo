@@ -7,7 +7,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/app_info.dart';
+import 'package:mymog/app_info.dart';
 
 void main() {
   test('AppInfo.version matches pubspec.yaml\'s version: line exactly', () {

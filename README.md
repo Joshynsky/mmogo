@@ -1,8 +1,6 @@
-# M-Pesa Tracker
+# My Money Goes
 
-An offline Flutter app that turns your M-Pesa messages into a clear picture of where your money goes. Paste a message (or type an entry, or log cash) and the app sorts it, totals it and charts it. Everything stays on your phone.
-
-> Working title. The app name and Android package id are not final yet (see [Status](#status)).
+An offline Flutter app (short name `mymog`, Android id `app.mymog`) that turns your M-Pesa messages into a clear picture of where your money goes. Paste a message (or type an entry, or log cash) and the app sorts it, totals it and charts it. Everything stays on your phone.
 
 ## What it does
 
@@ -54,8 +52,8 @@ Each large screen is a small "shell" that owns the state and data loading, with 
 
 Version `0.1.0`, in development. Still to do before a release:
 
-- choose the final app name and change the Android package id (`com.example.mpesa_tracker`; changing it later creates a different app with no data carry-over);
-- add real screenshots to the onboarding walkthrough;
+- launcher icon (still the default Flutter one);
+- release signing key;
 - choose a licence.
 
 ## Tests

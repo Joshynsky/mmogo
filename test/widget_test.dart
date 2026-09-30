@@ -10,9 +10,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:mpesa_tracker/data/prefs/app_prefs.dart';
-import 'package:mpesa_tracker/main.dart';
-import 'package:mpesa_tracker/ui/screens/welcome_screen.dart';
+import 'package:mymog/data/prefs/app_prefs.dart';
+import 'package:mymog/main.dart';
+import 'package:mymog/ui/screens/welcome_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// T16: the app now launches on the Welcome screen every time, then routes

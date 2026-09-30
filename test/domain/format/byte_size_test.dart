@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/domain/format/byte_size.dart';
+import 'package:mymog/domain/format/byte_size.dart';
 
 void main() {
   group('formatByteSize', () {

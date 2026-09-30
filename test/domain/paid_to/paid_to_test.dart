@@ -3,8 +3,8 @@
 // classification — the T15 rule), counts, categories, sorting and the
 // period hand-off.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/domain/analytics/analytics_period.dart';
-import 'package:mpesa_tracker/domain/paid_to/paid_to.dart';
+import 'package:mymog/domain/analytics/analytics_period.dart';
+import 'package:mymog/domain/paid_to/paid_to.dart';
 
 PaidToPayment _p(
   String type,

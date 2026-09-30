@@ -12,9 +12,9 @@
 // specifically so the parser is proven to ignore it correctly rather
 // than only being tested against a hand-cleaned message.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/domain/parsing/parse_result.dart';
-import 'package:mpesa_tracker/domain/parsing/parsed_sms_fields.dart';
-import 'package:mpesa_tracker/domain/parsing/sms_parser.dart';
+import 'package:mymog/domain/parsing/parse_result.dart';
+import 'package:mymog/domain/parsing/parsed_sms_fields.dart';
+import 'package:mymog/domain/parsing/sms_parser.dart';
 
 void main() {
   group('SmsParser.parse — Send Money (real sample)', () {

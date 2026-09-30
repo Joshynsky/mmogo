@@ -6,12 +6,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/data/prefs/app_prefs.dart';
-import 'package:mpesa_tracker/main.dart';
-import 'package:mpesa_tracker/ui/screens/onboarding_screen.dart';
-import 'package:mpesa_tracker/ui/screens/welcome_screen.dart';
-import 'package:mpesa_tracker/ui/theme/app_colors.dart';
-import 'package:mpesa_tracker/ui/theme/app_palette_scope.dart';
+import 'package:mymog/data/prefs/app_prefs.dart';
+import 'package:mymog/main.dart';
+import 'package:mymog/ui/screens/onboarding_screen.dart';
+import 'package:mymog/ui/screens/welcome_screen.dart';
+import 'package:mymog/ui/theme/app_colors.dart';
+import 'package:mymog/ui/theme/app_palette_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void _setPhone(WidgetTester tester, Brightness brightness) {
@@ -142,7 +142,9 @@ void main() {
       expect(l.card, const Color(0xFFFFFFFF));
       expect(d.card, const Color(0xFF1A2C34));
       expect(l.track, const Color(0xFFE8F0F2));
-      expect(d.track, const Color(0xFF0E1A1F));
+      expect(d.track, const Color(0xFF26404A));
+      expect(d.track, isNot(d.background));
+      expect(d.track, isNot(d.card));
       expect(l.diffUp, const Color(0xFFC62828));
       expect(d.diffUp, const Color(0xFFFF8A80));
       expect(l.diffDown, const Color(0xFF0A6E8A));

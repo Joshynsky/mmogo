@@ -131,13 +131,13 @@ class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<
   /// it to the OS share sheet (the settled mechanism for export).
   static Future<void> _defaultExportCsv(String csvContent, int transactionCount) async {
     final dir = await getTemporaryDirectory();
-    final fileName = 'mpesa-tracker-export-${DateTime.now().millisecondsSinceEpoch}.csv';
+    final fileName = 'mymog-export-${DateTime.now().millisecondsSinceEpoch}.csv';
     final path = p.join(dir.path, fileName);
     await File(path).writeAsString(csvContent);
     await SharePlus.instance.share(
       ShareParams(
         files: [XFile(path, mimeType: 'text/csv', name: fileName)],
-        subject: 'mpesa-tracker CSV export',
+        subject: 'My Money Goes CSV export',
       ),
     );
   }

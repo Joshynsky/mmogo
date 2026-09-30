@@ -4,7 +4,7 @@
 // mirroring the earlier prototype's reference
 // dayBounds/weekBounds/monthBounds/getPriorHomeRange behavior.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/domain/home/home_period.dart';
+import 'package:mymog/domain/home/home_period.dart';
 
 void main() {
   group('HomePeriod.bounds', () {

@@ -9,7 +9,7 @@
 // escalation ladder, the "Month · Custom" link and AnalyticsPeriod.containing
 // (all removed by T21).
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/domain/analytics/analytics_period.dart';
+import 'package:mymog/domain/analytics/analytics_period.dart';
 
 final today = DateTime(2026, 9, 24);
 final now = DateTime(2026, 9, 24, 13, 30);

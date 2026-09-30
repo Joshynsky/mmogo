@@ -8,8 +8,8 @@
 // the schema defines, and that the real group-scope guard triggers
 // (T1) are actually exercised (not bypassed) by a genuine insert.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/data/db/schema.dart';
-import 'package:mpesa_tracker/data/db/transaction_dao.dart';
+import 'package:mymog/data/db/schema.dart';
+import 'package:mymog/data/db/transaction_dao.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<Database> _openFreshDb() async {

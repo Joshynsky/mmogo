@@ -2,7 +2,7 @@
 // and the "unknown/corrupt stored id falls back to ocean" defensive rule
 // the build brief calls out explicitly.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/data/prefs/app_prefs.dart';
+import 'package:mymog/data/prefs/app_prefs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

@@ -10,15 +10,15 @@
 // PaidToScreen's row tap does; Settings is a bare primary page.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/domain/analytics/analytics_period.dart';
-import 'package:mpesa_tracker/domain/counterparty/counterparty_key.dart';
-import 'package:mpesa_tracker/domain/home/home_period.dart';
-import 'package:mpesa_tracker/domain/parsing/parsed_sms_fields.dart';
-import 'package:mpesa_tracker/ui/screens/analytics_screen.dart';
-import 'package:mpesa_tracker/ui/screens/home_screen.dart';
-import 'package:mpesa_tracker/ui/shell/primary_scaffold.dart';
-import 'package:mpesa_tracker/ui/shell/primary_shell.dart';
-import 'package:mpesa_tracker/ui/theme/app_palette_scope.dart';
+import 'package:mymog/domain/analytics/analytics_period.dart';
+import 'package:mymog/domain/counterparty/counterparty_key.dart';
+import 'package:mymog/domain/home/home_period.dart';
+import 'package:mymog/domain/parsing/parsed_sms_fields.dart';
+import 'package:mymog/ui/screens/analytics_screen.dart';
+import 'package:mymog/ui/screens/home_screen.dart';
+import 'package:mymog/ui/shell/primary_scaffold.dart';
+import 'package:mymog/ui/shell/primary_shell.dart';
+import 'package:mymog/ui/theme/app_palette_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_analytics_db.dart';

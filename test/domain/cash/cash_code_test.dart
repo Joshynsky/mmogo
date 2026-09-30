@@ -1,6 +1,6 @@
 // Pure-logic tests for lib/domain/cash/cash_code.dart — no DB, no widget.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/domain/cash/cash_code.dart';
+import 'package:mymog/domain/cash/cash_code.dart';
 
 void main() {
   test('formats a normal date/time with zero-padded month/day/hour/minute', () {

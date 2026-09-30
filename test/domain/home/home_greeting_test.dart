@@ -2,7 +2,7 @@
 // before 12:00 morning, before 17:00 afternoon, otherwise evening; the name
 // follows with a comma, and no name gives just the time of day.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/domain/home/home_greeting.dart';
+import 'package:mymog/domain/home/home_greeting.dart';
 
 DateTime _at(int h, [int m = 0, int s = 0]) => DateTime(2026, 9, 24, h, m, s);
 

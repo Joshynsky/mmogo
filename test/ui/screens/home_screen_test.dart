@@ -9,12 +9,12 @@
 // from "prior period" sums by the start bound it is asked for.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/data/prefs/app_prefs.dart';
-import 'package:mpesa_tracker/domain/home/home_period.dart';
-import 'package:mpesa_tracker/ui/screens/home_screen.dart';
-import 'package:mpesa_tracker/ui/shell/routes.dart';
-import 'package:mpesa_tracker/ui/theme/app_colors.dart';
-import 'package:mpesa_tracker/ui/widgets/coach_tour.dart';
+import 'package:mymog/data/prefs/app_prefs.dart';
+import 'package:mymog/domain/home/home_period.dart';
+import 'package:mymog/ui/screens/home_screen.dart';
+import 'package:mymog/ui/shell/routes.dart';
+import 'package:mymog/ui/theme/app_colors.dart';
+import 'package:mymog/ui/widgets/coach_tour.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 

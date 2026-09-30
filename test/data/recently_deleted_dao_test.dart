@@ -2,9 +2,9 @@
 // real in-memory sqlite3 database — same backend/idiom every other DAO test
 // in this suite uses (schema_test.dart/transaction_dao_test.dart/etc.).
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mpesa_tracker/data/db/recently_deleted_dao.dart';
-import 'package:mpesa_tracker/data/db/schema.dart';
-import 'package:mpesa_tracker/data/db/transaction_dao.dart';
+import 'package:mymog/data/db/recently_deleted_dao.dart';
+import 'package:mymog/data/db/schema.dart';
+import 'package:mymog/data/db/transaction_dao.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<Database> _openFreshDb() async {
