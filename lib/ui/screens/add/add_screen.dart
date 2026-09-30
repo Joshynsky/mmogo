@@ -104,12 +104,6 @@ class _AddScreenState extends State<AddScreen> {
   final _receiverTourKey = GlobalKey();
   final _categoryTourKey = GlobalKey();
 
-  void _scrollTo(GlobalKey key) {
-    final ctx = key.currentContext;
-    if (ctx == null || !ctx.mounted) return;
-    Scrollable.ensureVisible(ctx, alignment: 0.3, duration: Duration.zero);
-  }
-
   /// Sends the user to the Paid to tab (Add is pushed over the shell).
   void _goToPaidTo() {
     final shell = PrimaryShell.active;
@@ -125,7 +119,7 @@ class _AddScreenState extends State<AddScreen> {
     final categoryStep = CoachStep(
       target: _categoryTourKey,
       text: 'Pick a category. Tick Always use to remember it for this receiver.',
-      onEnter: () => _scrollTo(_categoryTourKey),
+      onEnter: () => scrollIntoView(_categoryTourKey),
     );
     if (_src == 'CASH') {
       return [
@@ -144,7 +138,7 @@ class _AddScreenState extends State<AddScreen> {
         text: 'Record the receiver’s name and phone to see this person on Paid to.',
         actionLabel: 'Take me there',
         onAction: _goToPaidTo,
-        onEnter: () => _scrollTo(_receiverTourKey),
+        onEnter: () => scrollIntoView(_receiverTourKey),
       ),
       categoryStep,
     ];

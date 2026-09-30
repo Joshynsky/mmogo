@@ -174,15 +174,5 @@ List<Widget> analyticsTransactionSections({
     }
     out.add(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: txs));
   }
-  out.add(
-    Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: Text(
-        'Swipe a row right to edit, left to delete',
-        textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 11, color: palette.mutedInk),
-      ),
-    ),
-  );
   return out;
 }

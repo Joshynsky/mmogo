@@ -32,6 +32,14 @@ class CoachStep {
   final VoidCallback? onAction;
 }
 
+/// A [CoachStep.onEnter] helper: jumps the scrollable holding [key]'s widget
+/// so it shows, a little above the middle. No-op if it is not built.
+void scrollIntoView(GlobalKey key) {
+  final ctx = key.currentContext;
+  if (ctx == null || !ctx.mounted) return;
+  Scrollable.ensureVisible(ctx, alignment: 0.3, duration: Duration.zero);
+}
+
 const coachTourBubbleKey = Key('coachTourBubble');
 const coachTourNextKey = Key('coachTourNext');
 const coachTourSkipKey = Key('coachTourSkip');
@@ -43,6 +51,12 @@ const coachTourActionKey = Key('coachTourAction');
 class CoachTour {
   CoachTour._();
 
+  /// Test switch: while true, [maybeStart] never shows a tour, so page tests
+  /// need not seed the seen flags (`test/flutter_test_config.dart` sets it;
+  /// the tour's own tests clear it). Replay via [start] is unaffected.
+  @visibleForTesting
+  static bool autoStartDisabled = false;
+
   /// Shows the tour only if [pageId]'s tour has not been seen. Marks it seen
   /// on Done or Skip. Completes when the tour closes (immediately if it was
   /// already seen, or [steps] is empty, or [context] is gone).
@@ -51,7 +65,7 @@ class CoachTour {
     required String pageId,
     required List<CoachStep> steps,
   }) async {
-    if (steps.isEmpty) return;
+    if (steps.isEmpty || autoStartDisabled) return;
     if (await AppPrefs.readTourSeen(pageId)) return;
     if (!context.mounted) return;
     await start(context, pageId: pageId, steps: steps);

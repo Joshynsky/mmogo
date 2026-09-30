@@ -445,6 +445,9 @@ void main() {
   });
 
   group('coach tour', () {
+    setUp(() => CoachTour.autoStartDisabled = false);
+    tearDown(() => CoachTour.autoStartDisabled = true);
+
     Future<Object?> storedSeen() async => (await SharedPreferences.getInstance()).getBool('tour_seen_$homeTourId');
 
     testWidgets('first visit with data: 4 steps; Analytics and Add carry "Take me there"', (tester) async {

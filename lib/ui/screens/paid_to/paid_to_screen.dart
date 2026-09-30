@@ -10,6 +10,7 @@ import '../../shell/primary_shell.dart';
 import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/coach_tour.dart';
 import '../../widgets/period_pill.dart';
 import '../analytics_screen.dart' show AnalyticsRouteArgs;
 import 'filter_sheet.dart';
@@ -17,6 +18,9 @@ import 'hero_card.dart';
 import 'recipient_section.dart';
 import 'search_row.dart';
 import 'type_pills.dart';
+
+/// Paid to's coach-tour page id (the seen flag is `tour_seen_paid_to`).
+const paidToTourId = 'paid_to';
 
 /// Primary destination 4 of 5 (nav slot 3) — T22's "Paid to" (formerly
 /// Parties, T15), built to the PM-locked prototype v12
@@ -74,6 +78,13 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
   final _granKey = GlobalKey();
   final _valueKey = GlobalKey();
 
+  // Coach-tour anchors (see §PAIDTO.SHELL.TOUR).
+  final _searchTourKey = GlobalKey();
+  final _firstRowTourKey = GlobalKey();
+  final _seeAllTourKey = GlobalKey();
+  PaidToRecipient? _tourRecipient;
+  bool _tourOffered = false;
+
   DateTime _now() => (widget.clock ?? DateTime.now)();
 
   @override
@@ -130,6 +141,13 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
           ),
       ];
     });
+    // First tour: once, when there is a list to point at.
+    if (!_tourOffered && _payments!.isNotEmpty) {
+      _tourOffered = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) CoachTour.maybeStart(context, pageId: paidToTourId, steps: _tourSteps());
+      });
+    }
   }
 
   void _setPeriod(AnalyticsPeriod p) {
@@ -229,6 +247,36 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
     Navigator.of(context).pushNamed(Routes.analytics, arguments: args);
   }
 
+  // §PAIDTO.SHELL.TOUR ---- coach tour --------------------------------------------
+
+  /// Search + Filter, then (when the list has them) a recipient row and the
+  /// first "See all". Looks at what is built right now.
+  List<CoachStep> _tourSteps() {
+    final recipient = _tourRecipient;
+    return [
+      CoachStep(
+        target: _searchTourKey,
+        text: 'Find someone, or use Filter & sort: amount, times paid or most recent.',
+      ),
+      if (recipient != null && _firstRowTourKey.currentContext != null)
+        CoachStep(
+          target: _firstRowTourKey,
+          text: 'Tap a name to see every payment to them in Analytics.',
+          onEnter: () => scrollIntoView(_firstRowTourKey),
+          actionLabel: 'Take me there',
+          onAction: () => _openRecipient(recipient),
+        ),
+      if (_seeAllTourKey.currentContext != null)
+        CoachStep(
+          target: _seeAllTourKey,
+          text: 'Top 3 per type are shown. See all lists everyone.',
+          onEnter: () => scrollIntoView(_seeAllTourKey),
+        ),
+    ];
+  }
+
+  void _replayTour() => CoachTour.start(context, pageId: paidToTourId, steps: _tourSteps());
+
   // §PAIDTO.SHELL.BUILD ---- build ------------------------------------------------
 
   @override
@@ -239,6 +287,7 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
       title: 'Paid to',
       activeIndex: PrimaryShellController.paidToIndex,
       followPhoneTheme: true,
+      onHelp: payments == null ? null : _replayTour,
       body: payments == null
           ? Center(child: CircularProgressIndicator(color: palette.primary))
           : RefreshIndicator(
@@ -275,12 +324,15 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
         ),
       ),
       pad(
-        PaidToSearchRow(
-          palette: palette,
-          controller: _search,
-          activeFilters: _activeFilters,
-          onChanged: () => setState(() {}),
-          onFilter: _openFilterSheet,
+        KeyedSubtree(
+          key: _searchTourKey,
+          child: PaidToSearchRow(
+            palette: palette,
+            controller: _search,
+            activeFilters: _activeFilters,
+            onChanged: () => setState(() {}),
+            onFilter: _openFilterSheet,
+          ),
         ),
       ),
       PaidToTypePills(palette: palette, payments: payments, selected: _tab, onSelect: _selectTab),
@@ -295,13 +347,6 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
           ),
         ),
       ..._list(payments, palette).map(pad),
-      pad(
-        Text(
-          'Tap a name to see every payment to them',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 11, color: palette.mutedInk),
-        ),
-      ),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -341,19 +386,25 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
     final overview = _tab == null;
     final ranked = _sort != PaidToSort.recent;
     final out = <Widget>[];
+    var seeAllTagged = false; // only the first "See all" carries the tour key
     for (final type in paidToTypes) {
       final part = list.where((g) => g.sourceType == type).toList();
       if (part.isEmpty) continue;
       final section = PaidToSection(type, part);
       final shown = overview ? part.take(3).toList() : part;
+      final first = out.isEmpty;
+      final hasSeeAll = overview && part.length > 3;
+      if (first) _tourRecipient = shown.first;
       out.add(
         PaidToSectionHeader(
           palette: palette,
           section: section,
-          seeAll: overview && part.length > 3,
+          seeAll: hasSeeAll,
           onSeeAll: () => _seeAll(type),
+          seeAllTourKey: hasSeeAll && !seeAllTagged ? _seeAllTourKey : null,
         ),
       );
+      if (hasSeeAll) seeAllTagged = true;
       out.add(
         PaidToListCard(
           palette: palette,
@@ -362,6 +413,7 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
           sort: _sort,
           today: dateOnly(_now()),
           onOpen: _openRecipient,
+          firstRowTourKey: first ? _firstRowTourKey : null,
         ),
       );
     }

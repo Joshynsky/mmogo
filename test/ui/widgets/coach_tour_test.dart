@@ -62,7 +62,11 @@ Future<void> _launch(WidgetTester tester) async {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    CoachTour.autoStartDisabled = false;
+  });
+  tearDown(() => CoachTour.autoStartDisabled = true);
 
   testWidgets('Next advances and updates the counter; last step shows Done', (
     tester,

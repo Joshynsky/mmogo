@@ -97,7 +97,7 @@ void main() {
       expect(find.text('Groceries · 17:00'), findsOneWidget);
       // Out of the period.
       expect(find.text('MARY WANJIKU'), findsNothing);
-      expect(find.text('Swipe a row right to edit, left to delete'), findsOneWidget);
+      expect(find.text('Swipe a row right to edit, left to delete'), findsNothing, reason: 'the tour says it now');
     });
 
     testWidgets('the whole data window (period, prior, chart bars) comes from one real-DAO query', (tester) async {

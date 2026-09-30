@@ -18,7 +18,11 @@ class PaidToSectionHeader extends StatelessWidget {
     required this.section,
     required this.seeAll,
     required this.onSeeAll,
+    this.seeAllTourKey,
   });
+
+  /// Lets Paid to's coach tour spotlight the "See all N ›" link.
+  final GlobalKey? seeAllTourKey;
 
   final AppPalette palette;
   final PaidToSection section;
@@ -76,17 +80,20 @@ class PaidToSectionHeader extends StatelessWidget {
               ),
               if (seeAll) ...[
                 Text(' · ', style: subStyle),
-                Semantics(
-                  button: true,
-                  child: GestureDetector(
-                    key: Key('paidToSeeAll-${s.type}'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: onSeeAll,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Text(
-                        'See all $n ›',
-                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: palette.primary),
+                KeyedSubtree(
+                  key: seeAllTourKey,
+                  child: Semantics(
+                    button: true,
+                    child: GestureDetector(
+                      key: Key('paidToSeeAll-${s.type}'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onSeeAll,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          'See all $n ›',
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: palette.primary),
+                        ),
                       ),
                     ),
                   ),
@@ -110,7 +117,11 @@ class PaidToListCard extends StatelessWidget {
     required this.sort,
     required this.today,
     required this.onOpen,
+    this.firstRowTourKey,
   });
+
+  /// Lets Paid to's coach tour spotlight the first recipient row.
+  final GlobalKey? firstRowTourKey;
 
   final AppPalette palette;
   final List<PaidToRecipient> shown;
@@ -134,15 +145,18 @@ class PaidToListCard extends StatelessWidget {
         children: [
           for (final (i, g) in shown.indexed) ...[
             if (i > 0) Divider(height: 1, thickness: 1, color: palette.line),
-            PaidToRecipientRow(
-              key: ValueKey('paidToRow-${g.key}'),
-              palette: palette,
-              recipient: g,
-              rank: ranked ? i + 1 : null,
-              share: metric == null ? null : metric(g) / max,
-              sort: sort,
-              today: today,
-              onTap: () => onOpen(g),
+            KeyedSubtree(
+              key: i == 0 ? firstRowTourKey : null,
+              child: PaidToRecipientRow(
+                key: ValueKey('paidToRow-${g.key}'),
+                palette: palette,
+                recipient: g,
+                rank: ranked ? i + 1 : null,
+                share: metric == null ? null : metric(g) / max,
+                sort: sort,
+                today: today,
+                onTap: () => onOpen(g),
+              ),
             ),
           ],
         ],

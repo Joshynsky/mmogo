@@ -11,6 +11,7 @@ import '../../../domain/analytics/analytics_period.dart';
 import '../../shell/primary_scaffold.dart';
 import '../../shell/primary_shell.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/coach_tour.dart';
 import '../../widgets/period_pill.dart';
 import 'analytics_view.dart';
 import 'chart_card.dart';
@@ -22,6 +23,7 @@ import 'party_card.dart';
 import 'route_args.dart';
 import 'sheet_parts.dart';
 import 'toast.dart';
+import 'tour.dart';
 import 'transaction_list.dart';
 import 'type_breakdown.dart';
 import 'where_breakdown.dart';
@@ -89,6 +91,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
   final _scroll = ScrollController();
   final _granKey = GlobalKey();
   final _valueKey = GlobalKey();
+  final _chartTourKey = GlobalKey();
+  final _breakdownTourKey = GlobalKey();
+  bool _tourOffered = false;
 
   final Map<int, GlobalKey> _rowKeys = {};
   int? _pendingHighlightId;
@@ -374,7 +379,26 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
       });
     }
     _maybeHighlight();
+    if (!_tourOffered) {
+      _tourOffered = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) CoachTour.maybeStart(context, pageId: analyticsTourId, steps: _tourSteps());
+      });
+    }
   }
+
+  List<CoachStep> _tourSteps() {
+    final rows = _view?.inc ?? const [];
+    return analyticsTourSteps(
+      granKey: _granKey,
+      chartKey: _chartTourKey,
+      breakdownKey: _breakdownTourKey,
+      firstRowKey: rows.isEmpty ? null : _rowKeys.putIfAbsent(rows.first.id, GlobalKey.new),
+    );
+  }
+
+  /// The header "?" replays the tour.
+  void _replayTour() => CoachTour.start(context, pageId: analyticsTourId, steps: _tourSteps());
 
   void _maybeHighlight() {
     final id = _pendingHighlightId;
@@ -599,8 +623,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
           title: 'Analytics',
           activeIndex: PrimaryShellController.analyticsIndex,
           followPhoneTheme: true,
-          // No hint bubble on Analytics (PM direct decision, 2026-09-24:
-          // hints stay on Home and Add only).
+          onHelp: v == null ? null : _replayTour,
           body: v == null
               ? Center(child: CircularProgressIndicator(color: palette.primary))
               : Column(
@@ -663,39 +686,45 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
         onValue: _openValueMenu,
         onCustom: _openCustomSheet,
       ),
-      AnalyticsChartCard(
-        palette: palette,
-        view: v,
-        typeFilterIndex: _typeFilter == null ? null : analyticsTypeOrder.indexWhere((t) => t.$1 == _typeFilter),
-        canBack: _period.canStepBack(today: v.today, first: v.first),
-        canForward: _period.canStepForward(today: v.today),
-        onStep: _step,
-        onBucket: (b) => _setPeriod(b.target!),
+      KeyedSubtree(
+        key: _chartTourKey,
+        child: AnalyticsChartCard(
+          palette: palette,
+          view: v,
+          typeFilterIndex: _typeFilter == null ? null : analyticsTypeOrder.indexWhere((t) => t.$1 == _typeFilter),
+          canBack: _period.canStepBack(today: v.today, first: v.first),
+          canForward: _period.canStepForward(today: v.today),
+          onStep: _step,
+          onBucket: (b) => _setPeriod(b.target!),
+        ),
       ),
       AnalyticsBreakdownSwitch(
         palette: palette,
         whereTab: _whereTab,
         onChanged: (where) => setState(() => _whereTab = where),
       ),
-      ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 132),
-        child: _whereTab
-            ? AnalyticsWherePanel(
-                palette: palette,
-                view: v,
-                typeFilter: _typeFilter,
-                classFilter: _classFilter,
-                showAll: _showAllClasses,
-                onToggleClass: _toggleClass,
-                onToggleShowAll: () => setState(() => _showAllClasses = !_showAllClasses),
-              )
-            : AnalyticsTypePanel(
-                palette: palette,
-                view: v,
-                typeFilter: _typeFilter,
-                classFilter: _classFilter,
-                onToggleType: _toggleType,
-              ),
+      KeyedSubtree(
+        key: _breakdownTourKey,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 132),
+          child: _whereTab
+              ? AnalyticsWherePanel(
+                  palette: palette,
+                  view: v,
+                  typeFilter: _typeFilter,
+                  classFilter: _classFilter,
+                  showAll: _showAllClasses,
+                  onToggleClass: _toggleClass,
+                  onToggleShowAll: () => setState(() => _showAllClasses = !_showAllClasses),
+                )
+              : AnalyticsTypePanel(
+                  palette: palette,
+                  view: v,
+                  typeFilter: _typeFilter,
+                  classFilter: _classFilter,
+                  onToggleType: _toggleType,
+                ),
+        ),
       ),
       ...analyticsTransactionSections(
         palette: palette,

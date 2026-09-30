@@ -61,7 +61,11 @@ Future<void> _next(WidgetTester tester) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    CoachTour.autoStartDisabled = false;
+  });
+  tearDown(() => CoachTour.autoStartDisabled = true);
 
   testWidgets('first visit: a 4-step tour, marked seen only when finished', (tester) async {
     await _pumpAdd(tester);
