@@ -1,6 +1,8 @@
 // QA fix F6: the Analytics edit sheet rejects a bad cost, saves blank
 // identity fields as NULL (not ''), and shows a plain message if the update
-// fails instead of throwing unhandled.
+// fails instead of throwing unhandled. QA fix F4 (Undo hitting the unique
+// code index) is covered here too; Recently Deleted's own test is in
+// recently_deleted_screen_test.dart.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mymog/ui/screens/analytics_screen.dart';
@@ -71,6 +73,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(db.byId(3)['counterparty_label'], isNull);
     expect(db.byId(3)['paybill_account_number'], isNull);
+    await _drain(tester);
+  });
+
+  // F4: Undo of a delete whose code was re-recorded meanwhile.
+  testWidgets('Undo that hits the unique code index shows a plain message and leaves the row deleted', (tester) async {
+    final db = await _pumpEdit(tester, 'DSTV KENYA');
+    await tester.tap(find.byKey(const Key('editDeleteButton')));
+    await tester.pumpAndSettle();
+    expect(db.byId(3)['deleted_at'], isNotNull);
+
+    db.restoreError = FakeDatabaseException();
+    await tester.tap(find.byKey(const Key('analyticsUndo')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('That code is already recorded'), findsOneWidget);
+    expect(db.byId(3)['deleted_at'], isNotNull);
+    expect(find.text('DSTV KENYA'), findsNothing);
     await _drain(tester);
   });
 

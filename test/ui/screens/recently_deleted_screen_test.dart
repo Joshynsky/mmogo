@@ -18,6 +18,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mymog/ui/screens/recently_deleted_screen.dart';
+
+import '../../support/fake_analytics_db.dart' show FakeDatabaseException;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class _FakeDb implements Database {
@@ -34,6 +36,9 @@ class _FakeDb implements Database {
       classifications.firstWhere((c) => c['id'] == id)['name'] as String;
 
   int purgeCallCount = 0;
+
+  /// When set, a restore (`SET deleted_at = NULL`) throws this.
+  Object? restoreError;
 
   @override
   Future<List<Map<String, Object?>>> rawQuery(String sql, [List<Object?>? arguments]) async {
@@ -67,6 +72,7 @@ class _FakeDb implements Database {
     ConflictAlgorithm? conflictAlgorithm,
   }) async {
     if (table == 'transactions') {
+      if (restoreError != null && values['deleted_at'] == null) throw restoreError!;
       final id = whereArgs![0] as int;
       final tx = transactions.firstWhere((t) => t['id'] == id);
       tx.addAll(values);
@@ -174,6 +180,22 @@ void main() {
     expect(find.text('Nothing here right now.'), findsOneWidget);
     final row = db.transactions.firstWhere((t) => t['id'] == 1);
     expect(row['deleted_at'], isNull);
+  });
+
+  testWidgets('Restore of a row whose code was re-recorded shows a plain message and leaves the row deleted', (tester) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final db = _FakeDb(transactions: [_deletedTx(id: 1, deletedAt: now - 60000)])..restoreError = FakeDatabaseException();
+    await tester.pumpWidget(_harness(db));
+    await _settle(tester);
+
+    await tester.tap(find.byKey(const Key('deletedRowRestoreButton_1')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('That code is already recorded'), findsOneWidget);
+    expect(find.text('Transaction restored'), findsNothing);
+    expect(find.text('JOHN KAMAU'), findsOneWidget);
+    expect(db.transactions.firstWhere((t) => t['id'] == 1)['deleted_at'], isNotNull);
   });
 
   testWidgets(

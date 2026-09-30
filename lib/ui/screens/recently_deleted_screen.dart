@@ -126,7 +126,15 @@ class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
   Future<void> _restore(DeletedTransactionRow row) async {
     final db = _db;
     if (db == null) return;
-    await TransactionDao.restore(db, id: row.id);
+    try {
+      await TransactionDao.restore(db, id: row.id);
+    } on DatabaseException {
+      // Its M-Pesa code was recorded again while it was deleted (the unique
+      // index); the row stays here.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('That code is already recorded')));
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Transaction restored')),

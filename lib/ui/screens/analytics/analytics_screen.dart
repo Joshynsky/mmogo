@@ -621,7 +621,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     final id = _undoId;
     _hideToast();
     if (id == null) return;
-    await TransactionDao.restore(await _db(), id: id);
+    try {
+      await TransactionDao.restore(await _db(), id: id);
+    } on DatabaseException {
+      // Its M-Pesa code was recorded again while it was deleted (the unique
+      // index); the row stays in Recently Deleted.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('That code is already recorded')));
+      return;
+    }
     if (!mounted) return;
     _pendingHighlightId = id;
     await _load();
