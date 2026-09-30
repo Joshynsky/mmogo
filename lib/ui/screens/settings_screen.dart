@@ -176,7 +176,14 @@ class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<
       text: 'Manage your categories, restore deleted transactions, or share everything as a CSV.',
       onEnter: () => scrollIntoView(_dataTourKey),
       actionLabel: 'Open Manage classifications',
-      onAction: () => Navigator.of(context).pushNamed(Routes.manageClassifications),
+      onAction: () async {
+        // The tour pauses here; when Manage classifications is closed, pick
+        // it up at the next step.
+        await Navigator.of(context).pushNamed(Routes.manageClassifications);
+        if (mounted) {
+          CoachTour.maybeStart(context, pageId: settingsTourId, steps: _tourSteps());
+        }
+      },
     ),
     CoachStep(
       target: _prefsTourKey,

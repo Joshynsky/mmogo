@@ -181,7 +181,40 @@ class AppPrefs {
     }
   }
 
-  /// Settings' "Show tips again": clears every `tour_seen_*` flag.
+  /// Where an unfinished tour left off (`tour_step_<pageId>`): set when the
+  /// user follows a step's "Take me there", so the tour continues from the
+  /// next step when they are back on the page.
+  static const _tourStepPrefix = 'tour_step_';
+
+  static Future<int> readTourStep(String pageId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
+      return prefs.getInt('$_tourStepPrefix$pageId') ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Saves progress; a step of 0 (or less) clears it.
+  static Future<void> writeTourStep(String pageId, int step) async {
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
+      if (step <= 0) {
+        await prefs.remove('$_tourStepPrefix$pageId');
+      } else {
+        await prefs.setInt('$_tourStepPrefix$pageId', step);
+      }
+    } catch (_) {
+      // Defensive: worst case the tour restarts from its first step.
+    }
+  }
+
+  /// Settings' "Show tips again": clears every `tour_seen_*` flag and every
+  /// saved `tour_step_*` position.
   static Future<void> resetAllTours() async {
     try {
       final prefs = await SharedPreferences.getInstance().timeout(
@@ -189,7 +222,7 @@ class AppPrefs {
       );
       final keys = prefs
           .getKeys()
-          .where((k) => k.startsWith(_tourSeenPrefix))
+          .where((k) => k.startsWith(_tourSeenPrefix) || k.startsWith(_tourStepPrefix))
           .toList();
       for (final k in keys) {
         await prefs.remove(k);

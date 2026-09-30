@@ -11,8 +11,9 @@ import '../theme/app_colors.dart';
 /// spotlight and the bubble is centred.
 ///
 /// [actionLabel]/[onAction] make the cross-page "Take me there" button, shown
-/// on that step only. Tapping it runs [onAction] and ends the tour (marked
-/// seen), so the destination page can start its own tour.
+/// on that step only. Tapping it runs [onAction] and pauses the tour: it is
+/// not marked seen, and resumes from the next step when the page is shown
+/// again (on the last step it finishes instead).
 class CoachStep {
   const CoachStep({
     required this.target,
@@ -43,6 +44,7 @@ void scrollIntoView(GlobalKey key) {
 const coachTourBubbleKey = Key('coachTourBubble');
 const coachTourNextKey = Key('coachTourNext');
 const coachTourSkipKey = Key('coachTourSkip');
+const coachTourBackKey = Key('coachTourBack');
 const coachTourStepCounterKey = Key('coachTourStepCounter');
 const coachTourActionKey = Key('coachTourAction');
 
@@ -57,40 +59,79 @@ class CoachTour {
   @visibleForTesting
   static bool autoStartDisabled = false;
 
-  /// Shows the tour only if [pageId]'s tour has not been seen. Marks it seen
-  /// on Done or Skip. Completes when the tour closes (immediately if it was
-  /// already seen, or [steps] is empty, or [context] is gone).
+  /// Pages whose tour is showing right now: a page never gets two overlays.
+  static final Set<String> _active = {};
+
+  /// Shows the tour only if [pageId]'s tour is not finished. Done and Skip
+  /// finish it; "Take me there" only pauses it, so this resumes from the step
+  /// after the one the user left on. Safe to call every time the page is
+  /// shown. Completes when the tour closes (immediately if it was finished,
+  /// is already showing, or [steps] is empty or [context] is gone).
   static Future<void> maybeStart(
     BuildContext context, {
     required String pageId,
     required List<CoachStep> steps,
   }) async {
-    if (steps.isEmpty || autoStartDisabled) return;
+    if (steps.isEmpty || autoStartDisabled || _active.contains(pageId)) return;
     if (await AppPrefs.readTourSeen(pageId)) return;
+    final at = await AppPrefs.readTourStep(pageId);
+    if (at >= steps.length) {
+      // Paused on what is now the last step: nothing left to show.
+      await AppPrefs.markTourSeen(pageId);
+      await AppPrefs.writeTourStep(pageId, 0);
+      return;
+    }
     if (!context.mounted) return;
-    await start(context, pageId: pageId, steps: steps);
+    await start(context, pageId: pageId, steps: steps, startIndex: at);
   }
 
-  /// Replay: shows the tour regardless of the seen flag (still marks seen).
+  /// Replay: shows the tour from [startIndex] regardless of the seen flag
+  /// (Done and Skip still mark it seen).
   static Future<void> start(
     BuildContext context, {
     required String pageId,
     required List<CoachStep> steps,
+    int startIndex = 0,
   }) {
-    if (steps.isEmpty) return Future.value();
+    if (steps.isEmpty || !_active.add(pageId)) return Future.value();
     final overlay = Overlay.maybeOf(context, rootOverlay: true);
-    if (overlay == null) return Future.value();
+    if (overlay == null) {
+      _active.remove(pageId);
+      return Future.value();
+    }
     final done = Completer<void>();
     late OverlayEntry entry;
-    void finish() {
-      if (done.isCompleted) return;
+    void close() {
       done.complete();
       entry.remove();
+      _active.remove(pageId);
+    }
+
+    // Done / Skip: finished for good.
+    void finish() {
+      if (done.isCompleted) return;
+      close();
       AppPrefs.markTourSeen(pageId);
+      AppPrefs.writeTourStep(pageId, 0);
+    }
+
+    // "Take me there": paused; picks up at [next] when the page is shown again.
+    void pause(int next) {
+      if (done.isCompleted) return;
+      close();
+      AppPrefs.writeTourStep(pageId, next);
     }
 
     entry = OverlayEntry(
-      builder: (_) => _CoachTourOverlay(steps: steps, onFinish: finish),
+      builder: (_) => _CoachTourOverlay(
+        steps: steps,
+        startIndex: startIndex.clamp(0, steps.length - 1),
+        onFinish: finish,
+        onPause: pause,
+        // The overlay can also be torn down without Done / Skip (the whole
+        // tree going away): the page must not stay marked as showing.
+        onDisposed: () => _active.remove(pageId),
+      ),
     );
     overlay.insert(entry);
     return done.future;
@@ -98,17 +139,26 @@ class CoachTour {
 }
 
 class _CoachTourOverlay extends StatefulWidget {
-  const _CoachTourOverlay({required this.steps, required this.onFinish});
+  const _CoachTourOverlay({
+    required this.steps,
+    required this.startIndex,
+    required this.onFinish,
+    required this.onPause,
+    required this.onDisposed,
+  });
 
   final List<CoachStep> steps;
+  final int startIndex;
   final VoidCallback onFinish;
+  final ValueChanged<int> onPause;
+  final VoidCallback onDisposed;
 
   @override
   State<_CoachTourOverlay> createState() => _CoachTourOverlayState();
 }
 
 class _CoachTourOverlayState extends State<_CoachTourOverlay> {
-  int _index = 0;
+  late int _index = widget.startIndex;
 
   CoachStep get _step => widget.steps[_index];
   bool get _isLast => _index == widget.steps.length - 1;
@@ -131,6 +181,7 @@ class _CoachTourOverlayState extends State<_CoachTourOverlay> {
   @override
   void dispose() {
     _watch?.cancel();
+    widget.onDisposed();
     super.dispose();
   }
 
@@ -159,9 +210,21 @@ class _CoachTourOverlayState extends State<_CoachTourOverlay> {
     }
   }
 
+  void _back() {
+    if (_index == 0) return;
+    setState(() => _index--);
+    _enterStep();
+  }
+
+  /// "Take me there": leaves for the other page. On the last step there is
+  /// nothing left to resume, so that finishes the tour.
   void _action() {
     final cb = _step.onAction;
-    widget.onFinish();
+    if (_isLast) {
+      widget.onFinish();
+    } else {
+      widget.onPause(_index + 1);
+    }
     cb?.call();
   }
 
@@ -209,6 +272,7 @@ class _CoachTourOverlayState extends State<_CoachTourOverlay> {
       isLast: _isLast,
       maxHeight: maxHeight,
       onNext: _next,
+      onBack: _index == 0 ? null : _back,
       onSkip: widget.onFinish,
       onAction: _step.actionLabel != null ? _action : null,
     );
@@ -300,6 +364,7 @@ class _Bubble extends StatelessWidget {
     required this.isLast,
     required this.maxHeight,
     required this.onNext,
+    required this.onBack,
     required this.onSkip,
     required this.onAction,
   });
@@ -311,6 +376,7 @@ class _Bubble extends StatelessWidget {
   final bool isLast;
   final double maxHeight;
   final VoidCallback onNext;
+  final VoidCallback? onBack;
   final VoidCallback onSkip;
   final VoidCallback? onAction;
 
@@ -370,8 +436,8 @@ class _Bubble extends StatelessWidget {
                     key: coachTourStepCounterKey,
                     style: TextStyle(fontSize: 12.5, color: p.mutedInk),
                   ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       TextButton(
                         key: coachTourSkipKey,
@@ -382,6 +448,16 @@ class _Bubble extends StatelessWidget {
                         ),
                         child: const Text('Skip'),
                       ),
+                      if (onBack != null)
+                        TextButton(
+                          key: coachTourBackKey,
+                          onPressed: onBack,
+                          style: TextButton.styleFrom(
+                            foregroundColor: p.mutedInk,
+                            minimumSize: const Size(0, 36),
+                          ),
+                          child: const Text('Back'),
+                        ),
                       const SizedBox(width: 4),
                       FilledButton(
                         key: coachTourNextKey,

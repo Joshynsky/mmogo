@@ -87,6 +87,89 @@ void main() {
     expect(find.text('Next'), findsNothing);
   });
 
+  testWidgets('Back returns to the previous step; not shown on step 1', (tester) async {
+    await tester.pumpWidget(_Host(steps: _steps()));
+    await _launch(tester);
+    expect(find.byKey(coachTourBackKey), findsNothing);
+    await tester.tap(find.byKey(coachTourNextKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(coachTourNextKey));
+    await tester.pumpAndSettle();
+    expect(find.text('3 of 3'), findsOneWidget);
+    await tester.tap(find.byKey(coachTourBackKey));
+    await tester.pumpAndSettle();
+    expect(find.text('2 of 3'), findsOneWidget);
+    expect(find.text('Second'), findsOneWidget);
+    await tester.tap(find.byKey(coachTourBackKey));
+    await tester.pumpAndSettle();
+    expect(find.text('1 of 3'), findsOneWidget);
+    expect(find.byKey(coachTourBackKey), findsNothing);
+  });
+
+  group('Take me there pauses instead of ending', () {
+    List<CoachStep> stepsWithMiddleAction(VoidCallback onAction) => [
+      CoachStep(target: _k1, text: 'First'),
+      CoachStep(target: _k2, text: 'Second', actionLabel: 'Take me there', onAction: onAction),
+      CoachStep(target: _k3, text: 'Third'),
+    ];
+
+    testWidgets('on a middle step: fires, closes, is NOT seen, and resumes at the next step', (tester) async {
+      var fired = 0;
+      await tester.pumpWidget(_Host(steps: stepsWithMiddleAction(() => fired++)));
+      await _launch(tester);
+      await tester.tap(find.byKey(coachTourNextKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(coachTourActionKey));
+      await tester.pumpAndSettle();
+      expect(fired, 1);
+      expect(find.byKey(coachTourBubbleKey), findsNothing);
+      expect(await AppPrefs.readTourSeen('p'), isFalse);
+      expect(await AppPrefs.readTourStep('p'), 2);
+
+      // Back on the page: the tour carries on at step 3 and can still go Back.
+      await _launch(tester);
+      expect(find.text('3 of 3'), findsOneWidget);
+      expect(find.text('Third'), findsOneWidget);
+      await tester.tap(find.byKey(coachTourBackKey));
+      await tester.pumpAndSettle();
+      expect(find.text('2 of 3'), findsOneWidget);
+      await tester.tap(find.byKey(coachTourNextKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(coachTourNextKey)); // Done
+      await tester.pumpAndSettle();
+      expect(await AppPrefs.readTourSeen('p'), isTrue);
+      expect(await AppPrefs.readTourStep('p'), 0);
+    });
+
+    testWidgets('on the last step: it finishes the tour', (tester) async {
+      await tester.pumpWidget(_Host(steps: _steps(onAction: () {})));
+      await _launch(tester);
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.byKey(coachTourNextKey));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.byKey(coachTourActionKey));
+      await tester.pumpAndSettle();
+      expect(await AppPrefs.readTourSeen('p'), isTrue);
+    });
+
+    testWidgets('a saved step past the end (steps shrank) counts as finished', (tester) async {
+      await AppPrefs.writeTourStep('p', 3);
+      await tester.pumpWidget(_Host(steps: _steps()));
+      await _launch(tester);
+      expect(find.byKey(coachTourBubbleKey), findsNothing);
+      expect(await AppPrefs.readTourSeen('p'), isTrue);
+    });
+
+    testWidgets('never two overlays for one page', (tester) async {
+      await tester.pumpWidget(_Host(steps: _steps()));
+      await _launch(tester);
+      await tester.tap(find.byKey(const Key('launch')), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(find.byKey(coachTourBubbleKey), findsOneWidget);
+    });
+  });
+
   testWidgets('the bubble sits just under the spotlighted target', (tester) async {
     await tester.pumpWidget(_Host(steps: _steps()));
     await _launch(tester);

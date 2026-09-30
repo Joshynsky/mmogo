@@ -116,7 +116,12 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
   int get primaryTabIndex => 0;
 
   @override
-  void onPrimaryTabShown() => _load();
+  void onPrimaryTabShown() {
+    _load();
+    // Back from a tour's "Take me there": pick the tour up where it paused.
+    // (This also fires for data changes while another tab is showing.)
+    if (_tourOffered && primaryShell?.index.value == primaryTabIndex) _offerTour();
+  }
 
   /// F6: Analytics changed its length to Day / Week / Month.
   void _onSharedLength() {
@@ -173,10 +178,15 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
     // First tour: once, after the first data has painted.
     if (!_tourOffered) {
       _tourOffered = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) CoachTour.maybeStart(context, pageId: homeTourId, steps: _tourSteps());
-      });
+      _offerTour();
     }
+  }
+
+  /// Shows the tour (or its unfinished rest) once the frame has painted.
+  void _offerTour() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) CoachTour.maybeStart(context, pageId: homeTourId, steps: _tourSteps());
+    });
   }
 
   /// The tour: with no transactions yet, just a pointer at + (nothing else
