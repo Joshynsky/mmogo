@@ -72,7 +72,7 @@ int get onboardingStepCount => _steps.length;
 /// (image-led, per the PM's design): a large rounded image area on top (56% of the screen), a
 /// pill+dots progress indicator, a short text card, a wide "Next ›" pill
 /// with a round deep-ocean Back "‹" from step 2 (chevron icons, mock v5),
-/// and Skip top-right over the image. Reached only from the Welcome screen while the onboarding-complete
+/// and Skip top-right on its own row above the image. Reached only from the Welcome screen while the onboarding-complete
 /// flag is unset. Skip and Get started both set the flag and reset the stack
 /// to Home; Get started also saves a non-empty trimmed name through
 /// [AppPrefs.writeUserDisplayName] (T17 BINDING — bumps Home's greeting
@@ -191,7 +191,11 @@ class _StepPage extends StatelessWidget {
     // the screen size rather than the body constraints so the image does
     // not shrink when the keyboard opens on the name step — the page
     // scrolls instead.
-    final imageHeight = media.size.height * 0.56;
+    // Skip sits on its own row above the image (on the page background), so no
+    // image ever runs underneath it. The row plus the image together still
+    // take 56% of the screen.
+    final skipRowHeight = media.padding.top + 5 + 48 + 5;
+    final imageHeight = media.size.height * 0.56 - skipRowHeight;
     return ColoredBox(
       color: AppPalette.of(context).background,
       child: LayoutBuilder(
@@ -202,15 +206,13 @@ class _StepPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(
-                    height: imageHeight,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        _ImageArea(step: step, topInset: media.padding.top),
-                        Positioned(top: media.padding.top + 5, right: 14, child: _SkipButton(onPressed: onSkip)),
-                      ],
-                    ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(20, media.padding.top + 5, 14, 5),
+                    child: Align(alignment: Alignment.centerRight, child: _SkipButton(onPressed: onSkip)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: SizedBox(height: imageHeight, child: _ImageArea(step: step)),
                   ),
                   Expanded(
                     child: SafeArea(
@@ -250,25 +252,23 @@ class _StepPage extends StatelessWidget {
 }
 
 class _ImageArea extends StatelessWidget {
-  const _ImageArea({required this.step, required this.topInset});
+  const _ImageArea({required this.step});
 
   final _Step step;
-  final double topInset;
 
   @override
   Widget build(BuildContext context) {
     final frames = step.frames;
     final palette = AppPalette.of(context);
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+      borderRadius: BorderRadius.circular(28),
       child: ColoredBox(
         key: const Key('onboarding-image-area'),
         color: palette.tint,
         child: frames == null
             ? _SlotImage(asset: step.image!)
-            // Mock `.img{padding:48px 22px 18px}` — the 48px top clears Skip.
             : Padding(
-                padding: EdgeInsets.fromLTRB(22, topInset + 48, 22, 18),
+                padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
                 child: _ParseStrip(frames: frames),
               ),
       ),
@@ -276,7 +276,7 @@ class _ImageArea extends StatelessWidget {
   }
 }
 
-/// One bundled image, `BoxFit.cover`. If the asset is missing or fails to
+/// One bundled image, `BoxFit.cover`, top-aligned. If the asset is missing or fails to
 /// decode, [Image.errorBuilder] leaves an empty box, so the tint
 /// background behind it shows through — never a crash or a broken-image
 /// glyph. Decorative: the text card carries the meaning.
@@ -291,6 +291,9 @@ class _SlotImage extends StatelessWidget {
       asset,
       key: ValueKey('onboarding-img:$asset'),
       fit: BoxFit.cover,
+      // Anchored to the top: if the slot is shorter than the image, only the
+      // bottom is trimmed, so the header of each screenshot stays visible.
+      alignment: Alignment.topCenter,
       width: double.infinity,
       height: double.infinity,
       excludeFromSemantics: true,
