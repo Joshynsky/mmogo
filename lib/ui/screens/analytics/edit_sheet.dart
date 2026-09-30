@@ -95,6 +95,21 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
 
   int? _parsedAmountCents() => parseKshCents(_amountController.text);
 
+  /// An empty cost means 0 (T6's cost-optional precedent); a typed one must
+  /// be a valid non-negative amount, else `null` (the form will not save).
+  int? _parsedCostCents() {
+    final text = _costController.text.trim();
+    return text.isEmpty ? 0 : parseKshCents(text, allowZero: true);
+  }
+
+  bool get _canSave => _parsedAmountCents() != null && (_isCash || _parsedCostCents() != null);
+
+  /// Blank identity fields are stored as NULL, never `''`.
+  String? _orNull(TextEditingController c) {
+    final t = c.text.trim();
+    return t.isEmpty ? null : t;
+  }
+
   Future<void> _pickDateTime() async {
     final date = await showDatePicker(
       context: context,
@@ -135,17 +150,16 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
 
   void _save() {
     final amountCents = _parsedAmountCents();
-    if (amountCents == null) return;
+    if (amountCents == null || !_canSave) return;
     Navigator.of(context).pop(
       AnalyticsEditResult(
         amountCents: amountCents,
         transactionOccurredAt: _occurredAt.millisecondsSinceEpoch,
         classificationId: _classificationId,
-        counterpartyLabel: _isCash ? null : _labelController.text.trim(),
-        counterpartyPhone: (!_isCash && widget.tx.sourceType == 'SEND_MONEY') ? _phoneController.text.trim() : null,
-        paybillAccountNumber: (!_isCash && widget.tx.sourceType == 'PAYBILL') ? _accountController.text.trim() : null,
-        // An empty cost means 0 (T6's cost-optional precedent).
-        transactionCostCents: _isCash ? null : (parseKshCents(_costController.text, allowZero: true) ?? 0),
+        counterpartyLabel: _isCash ? null : _orNull(_labelController),
+        counterpartyPhone: (!_isCash && widget.tx.sourceType == 'SEND_MONEY') ? _orNull(_phoneController) : null,
+        paybillAccountNumber: (!_isCash && widget.tx.sourceType == 'PAYBILL') ? _orNull(_accountController) : null,
+        transactionCostCents: _isCash ? null : _parsedCostCents(),
       ),
     );
   }
@@ -282,7 +296,9 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
                 const Key('editCostField'),
                 _costController,
                 keyboard: const TextInputType.numberWithOptions(decimal: true),
+                onChange: true,
                 money: true,
+                errorText: _parsedCostCents() == null ? 'Enter a cost from 0 to 10,000,000.00' : null,
               ),
             ),
           ),
@@ -324,7 +340,7 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
           cancelKey: const Key('editCancelButton'),
           primaryKey: const Key('editSaveButton'),
           primaryLabel: 'Save',
-          onPrimary: _parsedAmountCents() != null ? _save : null,
+          onPrimary: _canSave ? _save : null,
         ),
       ],
     );

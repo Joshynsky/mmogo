@@ -567,17 +567,26 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
       return;
     }
     if (result is! AnalyticsEditResult) return;
-    await TransactionDao.update(
-      db,
-      id: tx.id,
-      amountCents: result.amountCents,
-      transactionOccurredAt: result.transactionOccurredAt,
-      classificationId: result.classificationId,
-      counterpartyLabel: result.counterpartyLabel,
-      counterpartyPhone: result.counterpartyPhone,
-      paybillAccountNumber: result.paybillAccountNumber,
-      transactionCostCents: result.transactionCostCents,
-    );
+    try {
+      await TransactionDao.update(
+        db,
+        id: tx.id,
+        amountCents: result.amountCents,
+        transactionOccurredAt: result.transactionOccurredAt,
+        classificationId: result.classificationId,
+        counterpartyLabel: result.counterpartyLabel,
+        counterpartyPhone: result.counterpartyPhone,
+        paybillAccountNumber: result.paybillAccountNumber,
+        transactionCostCents: result.transactionCostCents,
+      );
+    } on DatabaseException {
+      // Plain wording only; the raw database text means nothing to the user.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save the changes. If you fill in a name, fill in its phone or account number too.')),
+      );
+      return;
+    }
     if (!mounted) return;
     _pendingHighlightId = tx.id;
     await _load();

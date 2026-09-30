@@ -25,6 +25,11 @@ class FakeAnalyticsDb implements Database {
 
   final List<int> lookedUpIds = [];
 
+  /// When set, `TransactionDao.update` / `restore` throw this (a
+  /// DatabaseException in the tests that use it).
+  Object? updateError;
+  Object? restoreError;
+
   /// Every `(startMs, endMs)` window itemizedTransactions was asked for.
   final List<(int?, int?)> windows = [];
 
@@ -156,6 +161,9 @@ class FakeAnalyticsDb implements Database {
     ConflictAlgorithm? conflictAlgorithm,
   }) async {
     if (table != 'transactions') throw UnsupportedError('FakeAnalyticsDb.update: unexpected table "$table"');
+    final isRestore = values.length == 1 && values.containsKey('deleted_at') && values['deleted_at'] == null;
+    if (isRestore && restoreError != null) throw restoreError!;
+    if (!isRestore && !values.containsKey('deleted_at') && updateError != null) throw updateError!;
     final t = byId(whereArgs![0] as int);
     if (values.containsKey('classification_id') && values['classification_id'] != t['classification_id']) {
       t['_renamed'] = true;
@@ -259,3 +267,17 @@ List<Map<String, Object?>> analyticsSampleRows() => [
     classificationId: 102,
   ),
 ];
+
+/// A stand-in for a failed write (e.g. a CHECK or UNIQUE violation), for
+/// tests of the friendly-message paths.
+class FakeDatabaseException implements DatabaseException {
+  FakeDatabaseException([this.message = 'UNIQUE constraint failed: transactions.display_code (2067)']);
+
+  final String message;
+
+  @override
+  String toString() => 'SqfliteFfiException($message)';
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
