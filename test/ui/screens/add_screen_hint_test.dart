@@ -76,9 +76,9 @@ void main() {
     await _pumpAdd(tester);
     expect(find.text(addHintMessage), findsOneWidget);
     expect(_visible(_bubble), isTrue);
-    expect(find.descendant(of: find.byKey(_pasteBtn), matching: find.text('Paste M-Pesa SMS')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(_pasteBtn), matching: find.text('Parse M-Pesa message')), findsOneWidget);
     expect(find.descendant(of: find.byKey(_cashToggle), matching: find.text('Cash')), findsOneWidget);
-    expect(addHintMessage, contains('"Paste M-Pesa SMS"'));
+    expect(addHintMessage, contains('"Parse M-Pesa message"'));
     expect(addHintMessage, contains('Cash'));
   });
 

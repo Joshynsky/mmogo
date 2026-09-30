@@ -34,7 +34,7 @@ import 'type_pills.dart';
 /// M-Pesa message" button.
 const addHintId = 'add_hint';
 const addHintMessage =
-    'Tap "Paste M-Pesa SMS" and paste an M-Pesa confirmation message — it fills the form in for you. '
+    'Tap "Parse M-Pesa message" and paste an M-Pesa confirmation message — it fills the form in for you. '
     'You can also enter it yourself below. Paid in cash? Switch to Cash.';
 
 /// Reached from the primary FAB (`Routes.add`) — a pushed page, never a

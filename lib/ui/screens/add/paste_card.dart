@@ -104,7 +104,7 @@ class PasteCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Paste M-Pesa SMS',
+                      'Parse M-Pesa message',
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: palette.tintInk),
                     ),
                     const SizedBox(height: 2),
@@ -171,7 +171,7 @@ class _PasteSheetState extends State<_PasteSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Paste the M-Pesa SMS',
+                'Parse the M-Pesa message',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: palette.ink),
               ),
               const SizedBox(height: 10),
@@ -227,7 +227,7 @@ class _PasteSheetState extends State<_PasteSheet> {
                         backgroundColor: palette.primary,
                         foregroundColor: palette.onPrimary,
                       ),
-                      child: const Text('Fill it in'),
+                      child: const Text('Parse'),
                     ),
                   ),
                 ],
