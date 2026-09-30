@@ -440,7 +440,10 @@ void main() {
       expect(find.text('Good morning'), findsNothing);
       final newStarts = db.sumStarts.skip(before).toList();
       expect(newStarts, contains(HomePeriod.month.bounds(clock).$1), reason: 'October, not September');
-      expect(newStarts, isNot(contains(HomePeriod.month.bounds(DateTime(2026, 9, 30)).$1)));
+      // September is now only the PRIOR month (QA fix F2: previous calendar
+      // month); a stale September-as-current would have queried August.
+      expect(newStarts, contains(HomePeriod.month.priorBounds(clock).$1), reason: 'prior = September');
+      expect(newStarts, isNot(contains(HomePeriod.month.priorBounds(DateTime(2026, 9, 30)).$1)), reason: 'not August');
     });
   });
 

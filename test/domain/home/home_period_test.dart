@@ -52,21 +52,31 @@ void main() {
       expect(DateTime.fromMillisecondsSinceEpoch(end), DateTime(2026, 9, 11, 23, 59, 59, 999));
     });
 
-    test(
-      'month\'s prior period is a same-length window immediately preceding '
-      '(not necessarily the literal prior calendar month when lengths differ)',
-      () {
-        // September has 30 days, so its prior-period window is exactly 30
-        // days immediately before Sep 1 -- which lands on Aug 2, not Aug 1,
-        // since August has 31 days. This is the intended "vs the prior
-        // period of the same length" generalization, not a
-        // literal calendar-month lookup -- matches the prototype exactly.
-        final now = DateTime(2026, 9, 18, 14, 30);
-        final (start, end) = HomePeriod.month.priorBounds(now);
-        expect(DateTime.fromMillisecondsSinceEpoch(start), DateTime(2026, 8, 2, 0, 0, 0, 0));
-        expect(DateTime.fromMillisecondsSinceEpoch(end), DateTime(2026, 8, 31, 23, 59, 59, 999));
-      },
-    );
+    test('month\'s prior period is the previous calendar month', () {
+      // QA fix F2: was a same-length window (Aug 2-31 for September).
+      final now = DateTime(2026, 9, 18, 14, 30);
+      final (start, end) = HomePeriod.month.priorBounds(now);
+      expect(DateTime.fromMillisecondsSinceEpoch(start), DateTime(2026, 8, 1, 0, 0, 0, 0));
+      expect(DateTime.fromMillisecondsSinceEpoch(end), DateTime(2026, 8, 31, 23, 59, 59, 999));
+    });
+
+    test('March compares to February 1-28 (not a same-length window)', () {
+      final (start, end) = HomePeriod.month.priorBounds(DateTime(2027, 3, 15));
+      expect(DateTime.fromMillisecondsSinceEpoch(start), DateTime(2027, 2, 1, 0, 0, 0, 0));
+      expect(DateTime.fromMillisecondsSinceEpoch(end), DateTime(2027, 2, 28, 23, 59, 59, 999));
+    });
+
+    test('March in a leap year compares to February 1-29', () {
+      final (start, end) = HomePeriod.month.priorBounds(DateTime(2028, 3, 15));
+      expect(DateTime.fromMillisecondsSinceEpoch(start), DateTime(2028, 2, 1, 0, 0, 0, 0));
+      expect(DateTime.fromMillisecondsSinceEpoch(end), DateTime(2028, 2, 29, 23, 59, 59, 999));
+    });
+
+    test('January compares to the previous December (year rolls back)', () {
+      final (start, end) = HomePeriod.month.priorBounds(DateTime(2027, 1, 10));
+      expect(DateTime.fromMillisecondsSinceEpoch(start), DateTime(2026, 12, 1, 0, 0, 0, 0));
+      expect(DateTime.fromMillisecondsSinceEpoch(end), DateTime(2026, 12, 31, 23, 59, 59, 999));
+    });
   });
 
   group('HomePeriod.next / label / priorSuffix', () {

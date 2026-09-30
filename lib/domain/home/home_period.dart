@@ -54,11 +54,17 @@ enum HomePeriod {
         HomePeriod.month => period_math.monthBounds(now),
       };
 
-  /// The immediately preceding period of the same length — e.g. for
-  /// `week`, the 7 days immediately before the current week's start.
+  /// The immediately preceding period — e.g. for `week`, the 7 days
+  /// immediately before the current week's start; for `month`, the previous
+  /// calendar month.
   /// Generalizes "vs last month" the same way Analytics'
   /// period diff line does.
   (int, int) priorBounds(DateTime now) {
+    // Month compares to the previous CALENDAR month (March vs February 1-28),
+    // not a same-length window. Today and week use same-length windows.
+    if (this == HomePeriod.month) {
+      return period_math.monthBounds(DateTime(now.year, now.month - 1, 1));
+    }
     final (start, end) = bounds(now);
     return period_math.priorBoundsOf(start, end);
   }
