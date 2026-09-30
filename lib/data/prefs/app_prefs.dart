@@ -42,7 +42,8 @@ class AppPrefs {
   /// `counterparty_classification_map` are NEVER gated by this flag — see
   /// `CounterpartyDao.upsertOnConfirm`'s own doc comment — so suggestions
   /// resume correctly the moment the toggle is turned back on.
-  static const keyAutoRecognizeClassifications = 'auto_recognize_classifications';
+  static const keyAutoRecognizeClassifications =
+      'auto_recognize_classifications';
 
   /// The per-hint "seen" flag mechanism — a small, fixed,
   /// non-relational keyed set, one entry per hint id — introduced as a
@@ -69,7 +70,9 @@ class AppPrefs {
   /// no way back in. Same fail-toward-showing direction as [readHintSeen].
   static Future<bool> readOnboardingComplete() async {
     try {
-      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       return prefs.getBool(keyOnboardingComplete) ?? false;
     } catch (_) {
       return false;
@@ -82,8 +85,12 @@ class AppPrefs {
   /// that onboarding shows again next launch, per [readOnboardingComplete].
   static Future<bool> writeOnboardingComplete() async {
     try {
-      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
-      return await prefs.setBool(keyOnboardingComplete, true).timeout(_prefsTimeout);
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
+      return await prefs
+          .setBool(keyOnboardingComplete, true)
+          .timeout(_prefsTimeout);
     } catch (_) {
       return false;
     }
@@ -91,7 +98,9 @@ class AppPrefs {
 
   static Future<String?> readUserDisplayName() async {
     try {
-      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       final value = prefs.getString(keyUserDisplayName);
       if (value == null || value.trim().isEmpty) return null;
       return value;
@@ -117,7 +126,9 @@ class AppPrefs {
   /// value of its own). Any later writer (T16's optional onboarding name
   /// step) gets Home-refresh for free by going through
   /// [writeUserDisplayName] too.
-  static final ValueNotifier<int> userDisplayNameRevision = ValueNotifier<int>(0);
+  static final ValueNotifier<int> userDisplayNameRevision = ValueNotifier<int>(
+    0,
+  );
 
   /// T17 — persists Profile's "How Home greets you" field. [name] is
   /// trimmed; `null`, empty or whitespace-only REMOVES the key entirely
@@ -133,10 +144,14 @@ class AppPrefs {
   static Future<bool> writeUserDisplayName(String? name) async {
     final trimmed = name?.trim() ?? '';
     try {
-      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       final ok = trimmed.isEmpty
           ? await prefs.remove(keyUserDisplayName).timeout(_prefsTimeout)
-          : await prefs.setString(keyUserDisplayName, trimmed).timeout(_prefsTimeout);
+          : await prefs
+                .setString(keyUserDisplayName, trimmed)
+                .timeout(_prefsTimeout);
       if (ok) userDisplayNameRevision.value++;
       return ok;
     } catch (_) {
@@ -154,7 +169,9 @@ class AppPrefs {
   /// direction (worst case: an already-acknowledged hint reappears once).
   static Future<bool> readHintSeen(String hintId) async {
     try {
-      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       return prefs.getBool('$_hintSeenPrefix$hintId') ?? false;
     } catch (_) {
       return false;
@@ -163,11 +180,60 @@ class AppPrefs {
 
   static Future<void> markHintSeen(String hintId) async {
     try {
-      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       await prefs.setBool('$_hintSeenPrefix$hintId', true);
     } catch (_) {
       // Defensive: a failed/stuck write just means the hint may reappear
       // next launch — never crash the screen dismissing it.
+    }
+  }
+
+  /// Coach-tour "seen" flag, one per page (`tour_seen_<pageId>`). Replaces
+  /// the per-hint `hint_seen_*` flags once H-b/H-c remove that API.
+  static const _tourSeenPrefix = 'tour_seen_';
+
+  /// Whether the page's coach tour has been finished or skipped. Defensive:
+  /// any read failure fails toward `false` (show the tour), like
+  /// [readHintSeen].
+  static Future<bool> readTourSeen(String pageId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
+      return prefs.getBool('$_tourSeenPrefix$pageId') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> markTourSeen(String pageId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
+      await prefs.setBool('$_tourSeenPrefix$pageId', true);
+    } catch (_) {
+      // Defensive: worst case the tour shows once more.
+    }
+  }
+
+  /// Settings' "Show tips again": clears every `tour_seen_*` flag.
+  static Future<void> resetAllTours() async {
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
+      final keys = prefs
+          .getKeys()
+          .where((k) => k.startsWith(_tourSeenPrefix))
+          .toList();
+      for (final k in keys) {
+        await prefs.remove(k);
+      }
+    } catch (_) {
+      // Defensive: see [markTourSeen].
     }
   }
 
@@ -179,7 +245,9 @@ class AppPrefs {
   /// uses, applied to this key's own correct default instead of `false`.
   static Future<bool> readAutoRecognizeClassifications() async {
     try {
-      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       return prefs.getBool(keyAutoRecognizeClassifications) ?? true;
     } catch (_) {
       return true;
@@ -193,7 +261,9 @@ class AppPrefs {
   /// user can retry the switch) — never crash the Settings screen over it.
   static Future<void> writeAutoRecognizeClassifications(bool value) async {
     try {
-      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       await prefs.setBool(keyAutoRecognizeClassifications, value);
     } catch (_) {
       // Defensive: see doc comment above.
@@ -215,7 +285,9 @@ class AppPrefs {
 
   static Future<bool> readCaptureIdentityPreference() async {
     try {
-      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       return prefs.getBool(keyCaptureIdentityPreference) ?? true;
     } catch (_) {
       return true;
@@ -224,7 +296,9 @@ class AppPrefs {
 
   static Future<void> writeCaptureIdentityPreference(bool value) async {
     try {
-      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       await prefs.setBool(keyCaptureIdentityPreference, value);
     } catch (_) {
       // Defensive: a failed/stuck write just means the preference may not
@@ -246,7 +320,9 @@ class AppPrefs {
   /// to `ocean` — the documented default (T23 scope rule).
   static Future<String> readPaletteId() async {
     try {
-      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       final id = prefs.getString(keyPaletteId);
       return _validPaletteIds.contains(id) ? id! : 'ocean';
     } catch (_) {
@@ -256,7 +332,9 @@ class AppPrefs {
 
   static Future<void> writePaletteId(String id) async {
     try {
-      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       await prefs.setString(keyPaletteId, id);
     } catch (_) {
       // Defensive: a failed/stuck write just means the choice may not
