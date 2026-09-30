@@ -341,7 +341,11 @@ class _CoachTourOverlayState extends State<_CoachTourOverlay> {
             child: CustomPaint(
               painter: _ScrimPainter(
                 rect: rect,
-                color: p.ink.withValues(alpha: 0.72),
+                // Always a dark dim: in the dark palettes `ink` is near-white,
+                // which would fog the page instead of dimming it.
+                color: p.brightness == Brightness.dark
+                    ? Colors.black.withValues(alpha: 0.68)
+                    : p.ink.withValues(alpha: 0.72),
               ),
             ),
           ),
