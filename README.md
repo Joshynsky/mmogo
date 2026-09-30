@@ -1,6 +1,6 @@
 # My Money Go
 
-An offline Flutter app (short name `mymog`, Android id `app.mymog`) that turns your M-Pesa messages into a clear picture of where your money goes. Paste a message (or type an entry, or log cash) and the app sorts it, totals it and charts it. Everything stays on your phone.
+An offline Flutter app (short name `mymog`, Android id `io.github.joshynsky.mymog`) that turns your M-Pesa messages into a clear picture of where your money goes. Paste a message (or type an entry, or log cash) and the app sorts it, totals it and charts it. Everything stays on your phone.
 
 ## What it does
 

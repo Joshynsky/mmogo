@@ -43,3 +43,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local secrets and settings. NEVER commit these (the repo is public).
+# `.env.example` (no values) is the committed template.
+.env
+.env.*
+!.env.example
+android/key.properties
+*.jks
+*.keystore
