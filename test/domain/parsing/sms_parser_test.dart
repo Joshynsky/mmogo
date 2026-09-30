@@ -167,4 +167,57 @@ void main() {
       expect(result, isA<ParseError>());
     });
   });
+
+  // QA fix F8(d)/(e): a matched shape with an impossible value is "not
+  // recognised", never a success.
+  group('SmsParser.parse — impossible values', () {
+    String send({String amount = '200.00', String date = '22/8/26', String time = '10:52 AM', String cost = '7.00'}) =>
+        'UHM8E3SB8M Confirmed. Ksh$amount sent to LETRICIA OTIENO 0798630424 '
+        'on $date at $time. New M-PESA balance is Ksh0.00. Transaction '
+        'cost, Ksh$cost. Amount you can transact within the day is 499,629.00.';
+
+    test('the control message still parses', () {
+      expect(SmsParser.parse(send()), isA<ParseSuccess>());
+    });
+
+    test('a 0.00 amount is not recognised (was: success with 0 cents)', () {
+      expect(SmsParser.parse(send(amount: '0.00')), isA<ParseError>());
+    });
+
+    test('a 0.00 fee is still fine', () {
+      final r = SmsParser.parse(send(cost: '0.00'));
+      expect((r as ParseSuccess).fields.transactionCostCents, 0);
+    });
+
+    test('31/2/26 is not recognised (was: rolled to 3 March)', () {
+      expect(SmsParser.parse(send(date: '31/2/26')), isA<ParseError>());
+    });
+
+    test('other dates and times that do not exist are not recognised', () {
+      for (final date in ['0/5/26', '15/13/26', '31/4/26', '29/2/27']) {
+        expect(SmsParser.parse(send(date: date)), isA<ParseError>(), reason: date);
+      }
+      for (final time in ['13:00 PM', '10:75 AM']) {
+        expect(SmsParser.parse(send(time: time)), isA<ParseError>(), reason: time);
+      }
+    });
+
+    test('a real leap day and 12-hour edge times still parse', () {
+      final leap = SmsParser.parse(send(date: '29/2/28')) as ParseSuccess;
+      expect(leap.fields.transactionOccurredAt, DateTime(2028, 2, 29, 10, 52).millisecondsSinceEpoch);
+      final noon = SmsParser.parse(send(time: '12:05 PM')) as ParseSuccess;
+      expect(noon.fields.transactionOccurredAt, DateTime(2026, 8, 22, 12, 5).millisecondsSinceEpoch);
+      final midnight = SmsParser.parse(send(time: '12:05 AM')) as ParseSuccess;
+      expect(midnight.fields.transactionOccurredAt, DateTime(2026, 8, 22, 0, 5).millisecondsSinceEpoch);
+    });
+
+    test('the same checks cover Paybill and Buy Goods', () {
+      const paybill = 'UHL8E3PJ8Y Confirmed. Ksh0.00 sent to LOOP BIZ for account 464332 '
+          'on 22/8/26 at 10:52 AM. New M-PESA balance is Ksh0.00. Transaction cost, Ksh7.00.';
+      const buyGoods = 'UHL8E3PJ8Y Confirmed. Ksh50.00 paid to JAVA HOUSE. on 31/2/26 at 10:52 AM. '
+          'New M-PESA balance is Ksh0.00. Transaction cost, Ksh0.00.';
+      expect(SmsParser.parse(paybill), isA<ParseError>());
+      expect(SmsParser.parse(buyGoods), isA<ParseError>());
+    });
+  });
 }

@@ -61,6 +61,16 @@ class SmsParser {
   /// malformed/unmatched message; an unmatched paste is a first-class,
   /// explicit, transient result (an explicit error, not a silent fallback).
   static ParseResult parse(String rawMessage) {
+    try {
+      return _parse(rawMessage);
+    } on FormatException {
+      // A matched shape with an impossible value (a zero amount, a date or
+      // time that does not exist) is "not recognised", never a success.
+      return const ParseResult.error(_noMatchReason);
+    }
+  }
+
+  static ParseResult _parse(String rawMessage) {
     final text = rawMessage.trim();
     if (text.isEmpty) {
       return const ParseResult.error(_noMatchReason);
@@ -71,7 +81,7 @@ class SmsParser {
       return ParseResult.success(ParsedSmsFields(
         code: buyGoods.group(1)!,
         sourceType: SmsSourceType.buyGoods,
-        amountCents: _parseMoneyCents(buyGoods.group(2)!),
+        amountCents: _parseAmountCents(buyGoods.group(2)!),
         counterpartyLabel: _normalizeLabel(buyGoods.group(3)!),
         counterpartyPhone: null,
         paybillAccountNumber: null,
@@ -86,7 +96,7 @@ class SmsParser {
       return ParseResult.success(ParsedSmsFields(
         code: paybill.group(1)!,
         sourceType: SmsSourceType.payBill,
-        amountCents: _parseMoneyCents(paybill.group(2)!),
+        amountCents: _parseAmountCents(paybill.group(2)!),
         counterpartyLabel: _normalizeLabel(paybill.group(3)!),
         counterpartyPhone: null,
         paybillAccountNumber: paybill.group(4)!.trim(),
@@ -101,7 +111,7 @@ class SmsParser {
       return ParseResult.success(ParsedSmsFields(
         code: sendMoney.group(1)!,
         sourceType: SmsSourceType.sendMoney,
-        amountCents: _parseMoneyCents(sendMoney.group(2)!),
+        amountCents: _parseAmountCents(sendMoney.group(2)!),
         counterpartyLabel: _normalizeLabel(sendMoney.group(3)!),
         counterpartyPhone: sendMoney.group(4)!.trim(),
         paybillAccountNumber: null,
@@ -123,6 +133,13 @@ class SmsParser {
     final cleaned = amount.replaceAll(',', '');
     final value = double.parse(cleaned);
     return (value * 100).round();
+  }
+
+  /// The transaction amount: must be above zero (the fee may be 0.00).
+  static int _parseAmountCents(String amount) {
+    final cents = _parseMoneyCents(amount);
+    if (cents <= 0) throw FormatException('Amount must be above zero: $amount');
+    return cents;
   }
 
   static String _normalizeLabel(String raw) =>
@@ -152,6 +169,12 @@ class SmsParser {
     } else {
       if (hour != 12) hour += 12;
     }
-    return DateTime(year, month, day, hour, minute).millisecondsSinceEpoch;
+    final at = DateTime(year, month, day, hour, minute);
+    // DateTime rolls impossible values over (31/2/26 -> 3 March); a date or
+    // time that does not round-trip is not a real one.
+    if (at.year != year || at.month != month || at.day != day || at.hour != hour || at.minute != minute) {
+      throw FormatException('Not a real date/time: $dateStr $timeStr');
+    }
+    return at.millisecondsSinceEpoch;
   }
 }
