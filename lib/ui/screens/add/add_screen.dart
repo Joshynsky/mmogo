@@ -378,12 +378,30 @@ class _AddScreenState extends State<AddScreen> {
   bool get _canReview =>
       _missing.isEmpty && !(_src == 'MPESA' && _codeDuplicate) && _identityPairComplete && _parsedFeeCents() != null;
 
+  /// What "Also record the receiver's name & phone" still needs (Send Money:
+  /// name + phone; Paybill: business + account). Empty when the box is off,
+  /// for Buy Goods and for Cash, or when both are filled.
+  List<String> get _missingIdentity {
+    if (_identityPairComplete) return const [];
+    final (first, second) = _type == 'PAYBILL'
+        ? ('the business name', 'the account number')
+        : ('the receiver’s name', 'the receiver’s phone');
+    final noName = _nameController.text.trim().isEmpty;
+    final noSub = _subController.text.trim().isEmpty;
+    if (noName && noSub) {
+      return [_type == 'PAYBILL' ? 'the business name and account number' : 'the receiver’s name and phone'];
+    }
+    return [if (noName) first, if (noSub) second];
+  }
+
   String get _reviewHint {
     if (_src == 'MPESA' && _codeDuplicate) return 'That code is already recorded.';
-    final miss = _missing;
+    final identity = _missingIdentity;
+    final miss = [..._missing, ...identity, if (_parsedFeeCents() == null) 'a valid fee'];
     if (miss.isEmpty) return '';
-    if (miss.length == 1) return 'Add ${miss.first}.';
-    return 'Add ${miss.sublist(0, miss.length - 1).join(', ')} and ${miss.last}.';
+    final list = miss.length == 1 ? miss.first : '${miss.sublist(0, miss.length - 1).join(', ')} and ${miss.last}';
+    // The box is what asks for them, so say how to skip it too.
+    return identity.isEmpty ? 'Add $list.' : 'Add $list, or untick “Also record the receiver’s name & phone”.';
   }
 
   // §ADD.SHELL.SAVE — the sticky "Review & save" bar + "Check before

@@ -78,6 +78,85 @@ void main() {
       expect(tester.widget<FilledButton>(find.byKey(const Key('addReviewButton'))).onPressed, isNotNull);
     });
 
+    group('the hint names what "Also record the receiver…" still needs', () {
+      const untick = 'or untick “Also record the receiver’s name & phone”';
+
+      Future<void> fillBasics(WidgetTester tester) async {
+        await tester.enterText(find.byKey(const Key('addAmountField')), '500');
+        await tester.enterText(find.byKey(const Key('addCodeField')), 'abcd123456');
+        await tester.tap(find.byKey(const Key('addCategoryChip_101')));
+        await _settle(tester);
+      }
+
+      bool reviewEnabled(WidgetTester tester) =>
+          tester.widget<FilledButton>(find.byKey(const Key('addReviewButton'))).onPressed != null;
+
+      String hint(WidgetTester tester) => tester.widget<Text>(find.byKey(const Key('addReviewHint'))).data!;
+
+      testWidgets('Send Money, nothing entered: name and phone', (tester) async {
+        await _pumpAdd(tester, FakeAddDb(), captureReceiver: true);
+        await fillBasics(tester);
+        expect(reviewEnabled(tester), isFalse);
+        expect(hint(tester), 'Add the receiver’s name and phone, $untick.');
+      });
+
+      testWidgets('Send Money, name but no phone: just the phone (the case that used to be blank)', (tester) async {
+        await _pumpAdd(tester, FakeAddDb(), captureReceiver: true);
+        await fillBasics(tester);
+        await tester.enterText(find.byKey(const Key('addReceiverNameField')), 'alice wambui');
+        await _settle(tester);
+        expect(reviewEnabled(tester), isFalse);
+        expect(hint(tester), 'Add the receiver’s phone, $untick.');
+      });
+
+      testWidgets('Send Money, phone but no name: just the name', (tester) async {
+        await _pumpAdd(tester, FakeAddDb(), captureReceiver: true);
+        await fillBasics(tester);
+        await tester.enterText(find.byKey(const Key('addReceiverSubField')), '0711000001');
+        await _settle(tester);
+        expect(hint(tester), 'Add the receiver’s name, $untick.');
+      });
+
+      testWidgets('both filled: enabled, no hint', (tester) async {
+        await _pumpAdd(tester, FakeAddDb(), captureReceiver: true);
+        await fillBasics(tester);
+        await tester.enterText(find.byKey(const Key('addReceiverNameField')), 'alice wambui');
+        await tester.enterText(find.byKey(const Key('addReceiverSubField')), '0711000001');
+        await _settle(tester);
+        expect(reviewEnabled(tester), isTrue);
+        expect(find.byKey(const Key('addReviewHint')), findsNothing);
+      });
+
+      testWidgets('joins with the other missing items', (tester) async {
+        await _pumpAdd(tester, FakeAddDb(), captureReceiver: true);
+        await tester.enterText(find.byKey(const Key('addAmountField')), '500');
+        await tester.enterText(find.byKey(const Key('addReceiverNameField')), 'alice wambui');
+        await _settle(tester);
+        expect(
+          hint(tester),
+          'Add the 10-character code, a category and the receiver’s phone, $untick.',
+        );
+      });
+
+      testWidgets('Paybill asks for the business and account instead', (tester) async {
+        await _pumpAdd(tester, FakeAddDb(), captureReceiver: true);
+        await tester.tap(find.byKey(const Key('addTypePill_PAYBILL')));
+        await _settle(tester);
+        await tester.enterText(find.byKey(const Key('addAmountField')), '500');
+        await tester.enterText(find.byKey(const Key('addCodeField')), 'abcd123456');
+        await tester.tap(find.byKey(const Key('addCategoryChip_105'))); // Paybill's own category
+        await _settle(tester);
+        expect(hint(tester), 'Add the business name and account number, $untick.');
+      });
+
+      testWidgets('box unticked: no receiver words in the hint', (tester) async {
+        await _pumpAdd(tester, FakeAddDb());
+        await tester.enterText(find.byKey(const Key('addAmountField')), '500');
+        await _settle(tester);
+        expect(hint(tester), 'Add the 10-character code and a category.');
+      });
+    });
+
     testWidgets('a duplicate M-Pesa code shows inline and blocks Review & save', (tester) async {
       final db = FakeAddDb()
         ..transactions.add({'id': 1, 'display_code': 'ABCD123456', 'source_type': 'SEND_MONEY', 'deleted_at': null});
