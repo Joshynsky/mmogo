@@ -137,7 +137,7 @@ class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<
     await SharePlus.instance.share(
       ShareParams(
         files: [XFile(path, mimeType: 'text/csv', name: fileName)],
-        subject: 'My Money Goes CSV export',
+        subject: 'My Money Go CSV export',
       ),
     );
   }

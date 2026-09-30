@@ -8,7 +8,7 @@
 class AppInfo {
   AppInfo._();
 
-  static const name = 'My Money Goes';
+  static const name = 'My Money Go';
 
   /// Must equal `pubspec.yaml`'s `version:` value exactly (build-name +
   /// `+`build-number).

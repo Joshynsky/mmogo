@@ -57,7 +57,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
     return AppPaletteScope(
       controller: _paletteController,
       child: MaterialApp(
-        title: 'My Money Goes',
+        title: 'My Money Go',
         theme: AppTheme.theme,
         // Pinned to light: a dark phone must not half-darken screens that
         // haven't been reworked yet. The chosen palette now applies
