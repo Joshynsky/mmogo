@@ -84,7 +84,18 @@ class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<
   int get primaryTabIndex => 4;
 
   @override
-  void onPrimaryTabShown() => _bootstrap();
+  void onPrimaryTabShown() {
+    _bootstrap();
+    // Back after the tour paused (system Back, another tab): pick it up.
+    if (_tourOffered && primaryShell?.index.value == primaryTabIndex) _offerTour();
+  }
+
+  /// Shows the tour (or its unfinished rest) once the frame has painted.
+  void _offerTour() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) CoachTour.maybeStart(context, pageId: settingsTourId, steps: _tourSteps());
+    });
+  }
 
   Future<void> _bootstrap() async {
     final db = widget.db ?? await AppDatabase.instance.database;
@@ -100,9 +111,7 @@ class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<
     });
     if (!_tourOffered) {
       _tourOffered = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) CoachTour.maybeStart(context, pageId: settingsTourId, steps: _tourSteps());
-      });
+      _offerTour();
     }
   }
 

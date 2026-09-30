@@ -160,6 +160,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
   @override
   void onPrimaryTabShown() {
     if (!_handoffBusy) _load();
+    // Back after the tour paused (system Back, another tab): pick it up.
+    if (_tourOffered && primaryShell?.index.value == primaryTabIndex) _offerTour();
   }
 
   /// A hand-off from Home or Paid to into this live Analytics.
@@ -381,10 +383,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     _maybeHighlight();
     if (!_tourOffered) {
       _tourOffered = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) CoachTour.maybeStart(context, pageId: analyticsTourId, steps: _tourSteps());
-      });
+      _offerTour();
     }
+  }
+
+  /// Shows the tour (or its unfinished rest) once the frame has painted.
+  void _offerTour() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) CoachTour.maybeStart(context, pageId: analyticsTourId, steps: _tourSteps());
+    });
   }
 
   List<CoachStep> _tourSteps() {
