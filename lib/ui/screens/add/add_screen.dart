@@ -7,6 +7,7 @@ import '../../../data/db/transaction_dao.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../../domain/cash/cash_code.dart';
 import '../../../domain/counterparty/counterparty_key.dart';
+import '../../../domain/format/ksh_amount.dart';
 import '../../../domain/parsing/parsed_sms_fields.dart';
 import '../../shell/app_messenger.dart';
 import '../../shell/chrome_widgets.dart';
@@ -288,22 +289,14 @@ class _AddScreenState extends State<AddScreen> {
 
   // §ADD.SHELL.DERIVED — amounts, the counterparty key, gating.
 
-  int? _parsedAmountCents() {
-    final text = _amountController.text.trim();
-    if (text.isEmpty) return null;
-    final value = double.tryParse(text);
-    if (value == null || value <= 0) return null;
-    return (value * 100).round();
-  }
+  int? _parsedAmountCents() => parseKshCents(_amountController.text);
 
   /// An empty Fee is `0`, not invalid (2026-09-19 PM decision, carried
   /// forward from `mpesa_tab_body.dart`'s identical rule).
   int? _parsedFeeCents() {
     final text = _feeController.text.trim();
     if (text.isEmpty) return 0;
-    final value = double.tryParse(text);
-    if (value == null || value < 0) return null;
-    return (value * 100).round();
+    return parseKshCents(text, allowZero: true);
   }
 
   String? get _effectiveLabel {
@@ -488,8 +481,9 @@ class _AddScreenState extends State<AddScreen> {
     );
     try {
       await TransactionDao.insert(db, input);
-    } on DatabaseException catch (e) {
-      return 'Could not save this transaction: $e';
+    } on DatabaseException {
+      // Plain wording only; the raw database text means nothing to the user.
+      return 'Could not save this transaction. Check the amount and code, then try again.';
     }
     if (!cash) {
       final key = _currentCounterpartyKey();
@@ -598,7 +592,11 @@ class _AddScreenState extends State<AddScreen> {
                     TypePills(type: _type, onChanged: _onTypeChanged),
                   ],
                 ],
-                AmountField(controller: _amountController, onChanged: (_) => setState(() {})),
+                AmountField(
+                  controller: _amountController,
+                  onChanged: (_) => setState(() {}),
+                  errorText: _amountController.text.trim().isNotEmpty && _parsedAmountCents() == null ? kshAmountHelp : null,
+                ),
                 if (_src == 'MPESA')
                   DetailsCard(
                     code: _codeController,

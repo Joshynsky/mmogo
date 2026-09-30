@@ -6,9 +6,11 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../../../data/db/analytics_dao.dart';
 import '../../../data/db/classification_dao.dart';
 import '../../../domain/analytics/analytics_period.dart';
+import '../../../domain/format/ksh_amount.dart';
 import '../../../domain/format/source_types.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/bottom_sheet_shell.dart';
+import '../../widgets/ksh_input_formatter.dart';
 import '../../widgets/flat_classification_picker.dart';
 import '../../widgets/mpesa_classification_picker.dart';
 import 'format.dart';
@@ -91,11 +93,7 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
     super.dispose();
   }
 
-  int? _parsedAmountCents() {
-    final value = double.tryParse(_amountController.text.trim());
-    if (value == null || value <= 0) return null;
-    return (value * 100).round();
-  }
+  int? _parsedAmountCents() => parseKshCents(_amountController.text);
 
   Future<void> _pickDateTime() async {
     final date = await showDatePicker(
@@ -147,7 +145,7 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
         counterpartyPhone: (!_isCash && widget.tx.sourceType == 'SEND_MONEY') ? _phoneController.text.trim() : null,
         paybillAccountNumber: (!_isCash && widget.tx.sourceType == 'PAYBILL') ? _accountController.text.trim() : null,
         // An empty cost means 0 (T6's cost-optional precedent).
-        transactionCostCents: _isCash ? null : ((double.tryParse(_costController.text.trim()) ?? 0) * 100).round(),
+        transactionCostCents: _isCash ? null : (parseKshCents(_costController.text, allowZero: true) ?? 0),
       ),
     );
   }
@@ -158,7 +156,14 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
     _ => 'Receiver name',
   };
 
-  Widget _input(Key key, TextEditingController controller, {TextInputType? keyboard, bool onChange = false}) {
+  Widget _input(
+    Key key,
+    TextEditingController controller, {
+    TextInputType? keyboard,
+    bool onChange = false,
+    bool money = false,
+    String? errorText,
+  }) {
     final p = widget.palette;
     OutlineInputBorder border(Color c) => OutlineInputBorder(
       borderRadius: const BorderRadius.all(Radius.circular(10)),
@@ -168,9 +173,14 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
       key: key,
       controller: controller,
       keyboardType: keyboard,
+      inputFormatters: money ? const [KshInputFormatter()] : null,
       cursorColor: p.primary,
       style: TextStyle(fontSize: 13, color: p.ink),
       decoration: InputDecoration(
+        errorText: errorText,
+        errorStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.diffUp),
+        errorBorder: border(p.diffUp),
+        focusedErrorBorder: border(p.diffUp),
         isDense: true,
         filled: true,
         fillColor: p.background,
@@ -230,6 +240,8 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
               _amountController,
               keyboard: const TextInputType.numberWithOptions(decimal: true),
               onChange: true,
+              money: true,
+              errorText: _amountController.text.trim().isNotEmpty && _parsedAmountCents() == null ? kshAmountHelp : null,
             ),
           ),
         ),
@@ -270,6 +282,7 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
                 const Key('editCostField'),
                 _costController,
                 keyboard: const TextInputType.numberWithOptions(decimal: true),
+                money: true,
               ),
             ),
           ),

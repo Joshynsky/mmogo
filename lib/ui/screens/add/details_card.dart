@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../theme/app_colors.dart';
+import '../../widgets/ksh_input_formatter.dart';
 import 'form_row.dart';
 
 /// §ADD.DETAILS — Code (D1: 10 characters, uppercase, D5's "already
@@ -90,6 +91,7 @@ class DetailsCard extends StatelessWidget {
               key: const Key('addFeeField'),
               controller: fee,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: const [KshInputFormatter()],
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: palette.ink),
               cursorColor: palette.primary,
               decoration: InputDecoration(
