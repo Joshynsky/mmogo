@@ -174,8 +174,26 @@ class _CoachTourOverlayState extends State<_CoachTourOverlay> {
     // route transition, a scroll, data landing): redraw whenever the target
     // has moved. Only setState on a change, so tests still settle.
     _watch = Timer.periodic(const Duration(milliseconds: 100), (_) {
-      if (mounted && _targetRect() != _measured) setState(() {});
+      if (!mounted) return;
+      if (_pageLeft()) {
+        widget.onPause(_index);
+        return;
+      }
+      if (_targetRect() != _measured) setState(() {});
     });
+  }
+
+  bool _hadTarget = false;
+
+  /// True once the step's target has been on screen and then its page went
+  /// away (route popped, tab switched): the tour sits above the whole app, so
+  /// it must step aside and pick this step up when the page is back.
+  bool _pageLeft() {
+    final ctx = _step.target?.currentContext;
+    if (_step.target == null) return false;
+    if (ctx == null || !ctx.mounted) return _hadTarget;
+    _hadTarget = true;
+    return !TickerMode.getNotifier(ctx).value;
   }
 
   @override
@@ -188,6 +206,7 @@ class _CoachTourOverlayState extends State<_CoachTourOverlay> {
   /// Runs the step's [CoachStep.onEnter], then re-measures once the frame it
   /// caused (e.g. a scroll jump) has laid out.
   void _enterStep() {
+    _hadTarget = false;
     final cb = _step.onEnter;
     // Always re-measure a frame later: on the very first step the overlay has
     // no render object yet when it first builds, so the target cannot be

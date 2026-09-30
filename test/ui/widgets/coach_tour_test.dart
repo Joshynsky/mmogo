@@ -170,6 +170,86 @@ void main() {
     });
   });
 
+  group('the tour steps aside when its page goes away', () {
+    // A page whose visibility / presence the test controls.
+    Widget pageHost(ValueNotifier<bool> shown, ValueNotifier<bool> tickers) => MaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => Column(
+            children: [
+              ValueListenableBuilder<bool>(
+                valueListenable: shown,
+                builder: (_, on, _) => on
+                    ? ValueListenableBuilder<bool>(
+                        valueListenable: tickers,
+                        builder: (_, t, _) => TickerMode(
+                          enabled: t,
+                          child: SizedBox(key: _k1, height: 40, child: const Text('page')),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              TextButton(
+                key: const Key('launch'),
+                onPressed: () => CoachTour.maybeStart(
+                  context,
+                  pageId: 'p',
+                  steps: [
+                    CoachStep(target: _k1, text: 'One'),
+                    CoachStep(target: _k1, text: 'Two'),
+                  ],
+                ),
+                child: const Text('launch'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    testWidgets('page hidden (another tab shown): pauses, not seen, resumes at the same step', (tester) async {
+      final shown = ValueNotifier(true);
+      final tickers = ValueNotifier(true);
+      await tester.pumpWidget(pageHost(shown, tickers));
+      await _launch(tester);
+      await tester.tap(find.byKey(coachTourNextKey));
+      await tester.pumpAndSettle();
+      expect(find.text('2 of 2'), findsOneWidget);
+
+      tickers.value = false; // the shell switched to another tab
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pumpAndSettle();
+      expect(find.byKey(coachTourBubbleKey), findsNothing);
+      expect(await AppPrefs.readTourSeen('p'), isFalse);
+      expect(await AppPrefs.readTourStep('p'), 1);
+
+      tickers.value = true; // back on the tab
+      await _launch(tester);
+      expect(find.text('2 of 2'), findsOneWidget);
+    });
+
+    testWidgets('page removed (route popped): pauses too', (tester) async {
+      final shown = ValueNotifier(true);
+      final tickers = ValueNotifier(true);
+      await tester.pumpWidget(pageHost(shown, tickers));
+      await _launch(tester);
+      expect(find.byKey(coachTourBubbleKey), findsOneWidget);
+
+      shown.value = false;
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pumpAndSettle();
+      expect(find.byKey(coachTourBubbleKey), findsNothing);
+      expect(await AppPrefs.readTourSeen('p'), isFalse);
+    });
+
+    testWidgets('a target that was never built does not pause the tour', (tester) async {
+      await tester.pumpWidget(_Host(steps: [CoachStep(target: _unlaid, text: 'Lost')]));
+      await _launch(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byKey(coachTourBubbleKey), findsOneWidget);
+    });
+  });
+
   testWidgets('the bubble sits just under the spotlighted target', (tester) async {
     await tester.pumpWidget(_Host(steps: _steps()));
     await _launch(tester);
