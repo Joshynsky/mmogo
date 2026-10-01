@@ -467,22 +467,25 @@ class _AddScreenState extends State<AddScreen> {
     final db = _db;
     if (db == null) return 'Not ready yet — try again.';
     final cash = _src == 'CASH';
-    final input = NewTransactionInput(
-      displayCode: cash ? generateCashDisplayCode(_occurredAt.millisecondsSinceEpoch) : _codeController.text.trim(),
-      sourceType: cash ? 'CASH' : _type,
-      amountCents: _parsedAmountCents()!,
-      transactionCostCents: cash ? null : _parsedFeeCents(),
-      counterpartyLabel: cash ? null : _effectiveLabel,
-      counterpartyPhone: cash ? null : _effectivePhone,
-      paybillAccountNumber: cash ? null : _effectiveAccount,
-      classificationId: _classificationId!,
-      rawParseSource: cash ? 'MANUAL' : _rawParseSource,
-      transactionOccurredAt: _occurredAt.millisecondsSinceEpoch,
-    );
     try {
+      final input = NewTransactionInput(
+        displayCode: cash ? generateCashDisplayCode(_occurredAt.millisecondsSinceEpoch) : _codeController.text.trim(),
+        sourceType: cash ? 'CASH' : _type,
+        amountCents: _parsedAmountCents()!,
+        transactionCostCents: cash ? null : _parsedFeeCents(),
+        counterpartyLabel: cash ? null : _effectiveLabel,
+        counterpartyPhone: cash ? null : _effectivePhone,
+        paybillAccountNumber: cash ? null : _effectiveAccount,
+        classificationId: _classificationId!,
+        rawParseSource: cash ? 'MANUAL' : _rawParseSource,
+        transactionOccurredAt: _occurredAt.millisecondsSinceEpoch,
+      );
       await TransactionDao.insert(db, input);
-    } on DatabaseException {
-      // Plain wording only; the raw database text means nothing to the user.
+    } catch (_) {
+      // B4: any failure (a DatabaseException, or anything else thrown while
+      // building or writing the row) comes back as this plain message, which
+      // the review sheet shows inline; the screen never crashes or sticks on
+      // "saving". The raw error text means nothing to the user.
       return 'Could not save this transaction. Check the amount and code, then try again.';
     }
     if (!cash) {

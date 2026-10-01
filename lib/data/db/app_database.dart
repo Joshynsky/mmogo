@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'migrations.dart';
 import 'schema.dart';
 
 /// Owns the single sqflite [Database] instance for the whole app.
@@ -57,7 +58,7 @@ class AppDatabase {
 
     return openDatabase(
       dbPath,
-      version: 1,
+      version: kDbVersion,
       onConfigure: (db) async {
         // Triggers + FK enforcement both require this ON per-connection.
         await db.execute('PRAGMA foreign_keys = ON');
@@ -66,6 +67,7 @@ class AppDatabase {
         await AppSchema.createSchema(db);
         await AppSchema.seed(db);
       },
+      onUpgrade: AppMigrations.migrate,
     );
   }
 

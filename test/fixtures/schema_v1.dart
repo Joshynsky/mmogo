@@ -1,3 +1,6 @@
+// FROZEN copy of the 0.1.0 schema + seed (lib/data/db/schema.dart at tag v0.1.0).
+// NEVER edit: it is the only way to build a real 0.1.0 (version 1) database in a test.
+// Class renamed AppSchema -> AppSchemaV1; body is verbatim.
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// Pure schema/seed logic, factored out of [AppDatabase] so it can be
@@ -6,27 +9,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 /// app run). This is the single source of truth for the DDL described in
 /// the app's data model (current schema only) — `AppDatabase` and the test suite both call into this file
 /// rather than each keeping their own copy of the schema.
-class AppSchema {
-  AppSchema._();
-
-  /// The 12 built-in classifications, in insertion order (so ids 1..12 on a
-  /// fresh install; `AppMigrations` relies on that order to backfill
-  /// `seed_key` for 0.1.0 databases). Never reorder or insert in the middle.
-  static const List<({String group, String name, String seedKey})>
-      seedClassifications = [
-    (group: 'SEND_MONEY', name: 'Family/Friends', seedKey: 'SEND_MONEY:family_friends'),
-    (group: 'SEND_MONEY', name: 'Rent', seedKey: 'SEND_MONEY:rent'),
-    (group: 'SEND_MONEY', name: 'Transport', seedKey: 'SEND_MONEY:transport'),
-    (group: 'SEND_MONEY', name: 'Groceries', seedKey: 'SEND_MONEY:groceries'),
-    (group: 'PAYBILL', name: 'Rent Payment', seedKey: 'PAYBILL:rent_payment'),
-    (group: 'PAYBILL', name: 'Shopping', seedKey: 'PAYBILL:shopping'),
-    (group: 'PAYBILL', name: 'Transport', seedKey: 'PAYBILL:transport'),
-    (group: 'PAYBILL', name: 'Groceries', seedKey: 'PAYBILL:groceries'),
-    (group: 'BUY_GOODS', name: 'Rent Payment', seedKey: 'BUY_GOODS:rent_payment'),
-    (group: 'BUY_GOODS', name: 'Shopping', seedKey: 'BUY_GOODS:shopping'),
-    (group: 'BUY_GOODS', name: 'Transport', seedKey: 'BUY_GOODS:transport'),
-    (group: 'BUY_GOODS', name: 'Groceries', seedKey: 'BUY_GOODS:groceries'),
-  ];
+class AppSchemaV1 {
+  AppSchemaV1._();
 
   static Future<void> createSchema(Database db) async {
     // --- classification_groups ---------------------------------------
@@ -48,8 +32,7 @@ class AppSchema {
         group_id      INTEGER NOT NULL REFERENCES classification_groups(id) ON DELETE RESTRICT,
         name          TEXT NOT NULL,
         active        INTEGER NOT NULL DEFAULT 1,
-        created_at    INTEGER NOT NULL,
-        seed_key      TEXT NULL
+        created_at    INTEGER NOT NULL
       )
     ''');
     await db.execute('''
@@ -58,11 +41,6 @@ class AppSchema {
     ''');
     await db.execute('''
       CREATE INDEX idx_classifications_group ON classifications(group_id)
-    ''');
-    // v2 (0.1.1): stable key of the 12 built-ins; NULL for user-created rows.
-    await db.execute('''
-      CREATE UNIQUE INDEX idx_classifications_seed_key
-        ON classifications(seed_key) WHERE seed_key IS NOT NULL
     ''');
 
     // --- transactions (revised DDL — current authoritative) -------------
@@ -233,14 +211,27 @@ class AppSchema {
       groupIds[row.$1] = id;
     }
 
-    // classifications — 12 seed rows, group-scoped, each with its seed_key.
+    // classifications — 12 seed rows, group-scoped.
+    const seedClassifications = [
+      ('SEND_MONEY', 'Family/Friends'),
+      ('SEND_MONEY', 'Rent'),
+      ('SEND_MONEY', 'Transport'),
+      ('SEND_MONEY', 'Groceries'),
+      ('PAYBILL', 'Rent Payment'),
+      ('PAYBILL', 'Shopping'),
+      ('PAYBILL', 'Transport'),
+      ('PAYBILL', 'Groceries'),
+      ('BUY_GOODS', 'Rent Payment'),
+      ('BUY_GOODS', 'Shopping'),
+      ('BUY_GOODS', 'Transport'),
+      ('BUY_GOODS', 'Groceries'),
+    ];
     for (final row in seedClassifications) {
       await db.insert('classifications', {
-        'group_id': groupIds[row.group],
-        'name': row.name,
+        'group_id': groupIds[row.$1],
+        'name': row.$2,
         'active': 1,
         'created_at': now,
-        'seed_key': row.seedKey,
       });
     }
 

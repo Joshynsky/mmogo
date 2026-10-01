@@ -200,6 +200,58 @@ void main() {
     });
   });
 
+  group('fab_hit_area_test (B5)', () {
+    Future<List<String>> pump(WidgetTester tester) async {
+      final log = <String>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PrimaryScaffold(
+            title: 'Home',
+            activeIndex: 0,
+            body: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => log.add('body'),
+              child: const SizedBox.expand(),
+            ),
+          ),
+          onGenerateRoute: (settings) {
+            log.add('route ${settings.name}');
+            return MaterialPageRoute(settings: settings, builder: (_) => const Scaffold(body: Text('NEXT')));
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      return log;
+    }
+
+    testWidgets('taps at the top, bottom, left and right edges of the visible circle each open Add', (tester) async {
+      for (final edge in ['top', 'bottom', 'left', 'right']) {
+        final log = await pump(tester); // a fresh page for each point (Add replaces it)
+        final ring = tester.getRect(find.byKey(const Key('primaryFabRing')));
+        final c = ring.center;
+        final r = ring.width / 2;
+        const inset = 2.0; // just inside the visible edge
+        final point = switch (edge) {
+          'top' => Offset(c.dx, c.dy - r + inset),
+          'bottom' => Offset(c.dx, c.dy + r - inset),
+          'left' => Offset(c.dx - r + inset, c.dy),
+          _ => Offset(c.dx + r - inset, c.dy),
+        };
+        await tester.tapAt(point);
+        await tester.pumpAndSettle();
+        expect(log, ['route ${Routes.add}'], reason: 'the $edge edge of the FAB circle must open Add');
+        await tester.pumpWidget(const SizedBox());
+      }
+    });
+
+    testWidgets('a tap in the neighbouring nav item goes to that item, not Add', (tester) async {
+      final log = await pump(tester);
+      await tester.tap(find.descendant(of: find.byKey(const Key('primaryBottomNav')), matching: find.text('Paid to')));
+      await tester.pumpAndSettle();
+      expect(log, ['route ${Routes.primaryOrder[3]}']);
+    });
+  });
+
   group('T25 — notifications bell', () {
     testWidgets('sits 8px left of Profile, same size/style; tapping it opens Notifications', (tester) async {
       await tester.pumpWidget(

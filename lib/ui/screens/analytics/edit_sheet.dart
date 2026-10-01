@@ -10,6 +10,7 @@ import '../../../domain/format/ksh_amount.dart';
 import '../../../domain/format/source_types.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/bottom_sheet_shell.dart';
+import '../add/receiver_card.dart' show receiverFieldMaxLength;
 import '../../widgets/ksh_input_formatter.dart';
 import '../../widgets/flat_classification_picker.dart';
 import '../../widgets/mpesa_classification_picker.dart';
@@ -176,6 +177,7 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
     TextInputType? keyboard,
     bool onChange = false,
     bool money = false,
+    int? maxLength,
     String? errorText,
   }) {
     final p = widget.palette;
@@ -187,6 +189,10 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
       key: key,
       controller: controller,
       keyboardType: keyboard,
+      maxLength: maxLength,
+      buildCounter: maxLength == null
+          ? null
+          : (_, {required currentLength, required isFocused, maxLength}) => null,
       inputFormatters: money ? const [KshInputFormatter()] : null,
       cursorColor: p.primary,
       style: TextStyle(fontSize: 13, color: p.ink),
@@ -282,13 +288,18 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
           ),
         ]),
         if (!_isCash) ...[
-          group(_field(_labelFieldLabel, _input(const Key('editLabelField'), _labelController))),
+          group(_field(_labelFieldLabel, _input(const Key('editLabelField'), _labelController, maxLength: receiverFieldMaxLength))),
           if (tx.sourceType == 'SEND_MONEY')
             group(
-              _field('Phone', _input(const Key('editPhoneField'), _phoneController, keyboard: TextInputType.phone)),
+              _field('Phone', _input(
+                const Key('editPhoneField'),
+                _phoneController,
+                keyboard: TextInputType.phone,
+                maxLength: receiverFieldMaxLength,
+              )),
             ),
           if (tx.sourceType == 'PAYBILL')
-            group(_field('Account number', _input(const Key('editAccountField'), _accountController))),
+            group(_field('Account number', _input(const Key('editAccountField'), _accountController, maxLength: receiverFieldMaxLength))),
           group(
             _field(
               'Transaction cost (Ksh)',
