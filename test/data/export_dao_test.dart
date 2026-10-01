@@ -11,8 +11,8 @@
 //     counterparty_label/paybill_account_number;
 //   - the CSV content/row-count itself, against seeded data.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/data/db/export_dao.dart';
-import 'package:mymog/data/db/schema.dart';
+import 'package:mmogo/data/db/export_dao.dart';
+import 'package:mmogo/data/db/schema.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<Database> _openFreshDb() async {

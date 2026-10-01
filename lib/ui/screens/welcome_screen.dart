@@ -56,8 +56,7 @@ Future<void> Function() welcomeFirstFramePresented = waitForFirstFramePresented;
 /// T16 — the Welcome screen, shown on EVERY launch, even after onboarding is
 /// done (PM direct decision, 2026-09-24; onboarding
 /// mock, screen 0): the surface
-/// colour, a centred tint circle reading "Welcome" (the logo placeholder until a logo
-/// exists) and "Tap to continue". Continues [welcomeDuration] after it is
+/// colour, the centred app icon, "Welcome" and "Tap to continue". Continues [welcomeDuration] after it is
 /// first on screen, or on tap, whichever comes first (a tap works even
 /// before the timer has started).
 ///
@@ -135,30 +134,30 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
+                  // The app icon (PM logo decision, 2026-10-01) sits where
+                  // the tint-circle placeholder was. A later pass can
+                  // animate it.
+                  Image.asset(
+                    'assets/brand/mmogo_icon.png',
+                    key: const Key('welcome-logo'),
                     width: 150,
                     height: 150,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(color: palette.tint, shape: BoxShape.circle),
-                    // FittedBox: at large text scales the word shrinks to
-                    // stay inside the circle instead of overflowing it.
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          'Welcome',
-                          style: TextStyle(
-                            color: palette.tintInk,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.26,
-                          ),
-                        ),
+                    excludeFromSemantics: true,
+                  ),
+                  const SizedBox(height: 18),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Welcome',
+                      style: TextStyle(
+                        color: palette.tintInk,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.26,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 8),
                   Text(
                     'Tap to continue',
                     style: TextStyle(fontSize: 12, color: palette.mutedInk),

@@ -7,7 +7,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/ui/theme/app_colors.dart';
+import 'package:mmogo/ui/theme/app_colors.dart';
 
 /// WCAG 2.x relative luminance (sRGB), per the spec's own formula.
 double _relativeLuminance(Color c) {

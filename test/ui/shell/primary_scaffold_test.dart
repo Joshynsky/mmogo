@@ -6,11 +6,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/ui/screens/notifications_screen.dart';
-import 'package:mymog/ui/shell/chrome_widgets.dart';
-import 'package:mymog/ui/shell/primary_scaffold.dart';
-import 'package:mymog/ui/shell/routes.dart';
-import 'package:mymog/ui/theme/app_colors.dart';
+import 'package:mmogo/ui/screens/notifications_screen.dart';
+import 'package:mmogo/ui/shell/chrome_widgets.dart';
+import 'package:mmogo/ui/shell/primary_scaffold.dart';
+import 'package:mmogo/ui/shell/routes.dart';
+import 'package:mmogo/ui/theme/app_colors.dart';
 
 /// Finds the [IconCircleButton] with a given tooltip — since T25 there are
 /// two on the primary top bar (Notifications, Profile), so a bare

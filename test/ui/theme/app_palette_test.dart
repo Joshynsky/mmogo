@@ -6,22 +6,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/data/prefs/app_prefs.dart';
-import 'package:mymog/main.dart';
-import 'package:mymog/ui/screens/onboarding_screen.dart';
-import 'package:mymog/ui/screens/welcome_screen.dart';
-import 'package:mymog/ui/theme/app_colors.dart';
-import 'package:mymog/ui/theme/app_palette_scope.dart';
+import 'package:mmogo/data/prefs/app_prefs.dart';
+import 'package:mmogo/main.dart';
+import 'package:mmogo/ui/screens/onboarding_screen.dart';
+import 'package:mmogo/ui/screens/welcome_screen.dart';
+import 'package:mmogo/ui/theme/app_colors.dart';
+import 'package:mmogo/ui/theme/app_palette_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void _setPhone(WidgetTester tester, Brightness brightness) {
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-}
-
-Color? _circleColor(WidgetTester tester) {
-  final box = tester.widget<Container>(find.ancestor(of: find.text('Welcome'), matching: find.byType(Container)).first);
-  return (box.decoration! as BoxDecoration).color;
 }
 
 SystemUiOverlayStyle _overlay(WidgetTester tester) => tester
@@ -164,7 +159,7 @@ void main() {
         await tester.pumpWidget(const MaterialApp(home: WelcomeScreen()));
         await tester.pump();
         expect(tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor, palette.surface);
-        expect(_circleColor(tester), palette.tint);
+        expect(find.byKey(const Key('welcome-logo')), findsOneWidget);
         expect(_textColor(tester, 'Welcome'), palette.tintInk);
         expect(_textColor(tester, 'Tap to continue'), palette.mutedInk);
         expect(_overlay(tester), palette.overlayStyleWithNavBar(palette.surface));
@@ -223,7 +218,7 @@ void main() {
       );
       await tester.pump();
       expect(tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor, AppPalette.leafLight.surface);
-      expect(_circleColor(tester), AppPalette.leafLight.tint);
+      expect(find.byKey(const Key('welcome-logo')), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     });
 

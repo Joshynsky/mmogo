@@ -17,7 +17,7 @@
 // directly and unconditionally.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/ui/screens/recently_deleted_screen.dart';
+import 'package:mmogo/ui/screens/recently_deleted_screen.dart';
 
 import '../../support/fake_analytics_db.dart' show FakeDatabaseException;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';

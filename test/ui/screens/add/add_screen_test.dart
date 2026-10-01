@@ -11,9 +11,9 @@
 // pushes it over a root page instead of using it as MaterialApp's `home`.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/data/prefs/app_prefs.dart';
-import 'package:mymog/ui/screens/add/add_screen.dart';
-import 'package:mymog/ui/shell/app_messenger.dart';
+import 'package:mmogo/data/prefs/app_prefs.dart';
+import 'package:mmogo/ui/screens/add/add_screen.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../support/fake_add_db.dart';

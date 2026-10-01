@@ -52,7 +52,7 @@ class AppDatabase {
     } else {
       dbDirPath = await getDatabasesPath();
     }
-    final dbPath = p.join(dbDirPath, 'mymog.db');
+    final dbPath = p.join(dbDirPath, 'mmogo.db');
     debugPrint('AppDatabase: opening $dbPath');
 
     return openDatabase(

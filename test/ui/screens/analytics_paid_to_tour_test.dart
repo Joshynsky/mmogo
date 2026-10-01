@@ -3,9 +3,9 @@
 // and FakeAnalyticsDb the other screen tests use. "Now" is Thu 24 Sep 2026.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/ui/screens/analytics_screen.dart';
-import 'package:mymog/ui/screens/paid_to_screen.dart';
-import 'package:mymog/ui/widgets/coach_tour.dart';
+import 'package:mmogo/ui/screens/analytics_screen.dart';
+import 'package:mmogo/ui/screens/paid_to_screen.dart';
+import 'package:mmogo/ui/widgets/coach_tour.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_analytics_db.dart';

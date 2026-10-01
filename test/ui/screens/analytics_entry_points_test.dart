@@ -13,11 +13,11 @@
 //    classification filter too when one is given (T26: both together).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/domain/analytics/analytics_period.dart';
-import 'package:mymog/domain/counterparty/counterparty_key.dart';
-import 'package:mymog/domain/parsing/parsed_sms_fields.dart';
-import 'package:mymog/ui/screens/analytics_screen.dart';
-import 'package:mymog/ui/theme/app_colors.dart';
+import 'package:mmogo/domain/analytics/analytics_period.dart';
+import 'package:mmogo/domain/counterparty/counterparty_key.dart';
+import 'package:mmogo/domain/parsing/parsed_sms_fields.dart';
+import 'package:mmogo/ui/screens/analytics_screen.dart';
+import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_analytics_db.dart';

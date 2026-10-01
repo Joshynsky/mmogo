@@ -1,4 +1,4 @@
-name: mymog
+name: mmogo
 description: "Offline M-Pesa spending tracker: paste your M-Pesa messages, see where your money goes."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -75,6 +75,7 @@ flutter:
   # Onboarding image slots (step1.png, step2_1..3.png, step3.png, step4.png). Replace a file with a real screenshot of the same name; no code change needed.
   assets:
     - assets/onboarding/
+    - assets/brand/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

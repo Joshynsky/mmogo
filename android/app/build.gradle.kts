@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "app.mymog"
+    namespace = "app.mmogo"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -22,8 +22,8 @@ android {
     defaultConfig {
         // Permanent once anyone installs the app. io.github.<user>.<repo> is the
         // convention for projects without their own domain. `namespace` above is
-        // only the Kotlin package and deliberately stays `app.mymog`.
-        applicationId = "io.github.joshynsky.mymog"
+        // only the Kotlin package and deliberately stays `app.mmogo`.
+        applicationId = "io.github.joshynsky.mmogo"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

@@ -13,7 +13,7 @@
 //     accept a valid one, for both the CASH-cross-group branch and the
 //     non-CASH same-group branch, on both INSERT and UPDATE
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/data/db/schema.dart';
+import 'package:mmogo/data/db/schema.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<Database> _openFreshDb() async {

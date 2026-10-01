@@ -10,9 +10,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:mymog/data/prefs/app_prefs.dart';
-import 'package:mymog/main.dart';
-import 'package:mymog/ui/screens/welcome_screen.dart';
+import 'package:mmogo/data/prefs/app_prefs.dart';
+import 'package:mmogo/main.dart';
+import 'package:mmogo/ui/screens/welcome_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// T16: the app now launches on the Welcome screen every time, then routes

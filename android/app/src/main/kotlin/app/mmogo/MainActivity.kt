@@ -1,4 +1,4 @@
-package app.mymog
+package app.mmogo
 
 import io.flutter.embedding.android.FlutterActivity
 

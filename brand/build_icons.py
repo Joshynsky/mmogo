@@ -1,4 +1,4 @@
-"""Rebuild the My Money Go launcher icons from the SVG sources in this folder.
+"""Rebuild the mmogo launcher icons from the SVG sources in this folder.
 
 Needs Python with Pillow and Google Chrome (headless) on Windows.
 Run from the app root:  python brand/build_icons.py
@@ -59,6 +59,6 @@ for d, px in {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192
 (BRAND / "export").mkdir(exist_ok=True)
 for nm, fg in (("with-m", fg_m), ("no-m", fg_ring)):
     for shape in ("squircle", "circle"):
-        composite(fg, 512, shape).save(BRAND / f"export/mymog-icon-{nm}-{shape}-512.png")
-    composite(fg, 512, "rounded", crop=False).save(BRAND / f"export/mymog-icon-{nm}-full-512.png")
+        composite(fg, 512, shape).save(BRAND / f"export/mmogo-icon-{nm}-{shape}-512.png")
+    composite(fg, 512, "rounded", crop=False).save(BRAND / f"export/mmogo-icon-{nm}-full-512.png")
 print("icons rebuilt")

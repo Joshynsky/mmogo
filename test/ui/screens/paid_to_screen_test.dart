@@ -7,9 +7,9 @@
 // unnamed rows (T15), no Cash, and the Analytics hand-off arguments.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/domain/analytics/analytics_period.dart';
-import 'package:mymog/ui/screens/analytics_screen.dart';
-import 'package:mymog/ui/screens/paid_to_screen.dart';
+import 'package:mmogo/domain/analytics/analytics_period.dart';
+import 'package:mmogo/ui/screens/analytics_screen.dart';
+import 'package:mmogo/ui/screens/paid_to_screen.dart';
 
 import '../../support/fake_analytics_db.dart';
 

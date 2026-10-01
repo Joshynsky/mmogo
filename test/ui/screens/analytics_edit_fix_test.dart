@@ -5,7 +5,7 @@
 // recently_deleted_screen_test.dart.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/ui/screens/analytics_screen.dart';
+import 'package:mmogo/ui/screens/analytics_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_analytics_db.dart';

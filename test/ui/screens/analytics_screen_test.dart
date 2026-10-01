@@ -8,8 +8,8 @@
 // sample data.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/ui/screens/analytics_screen.dart';
-import 'package:mymog/ui/theme/app_colors.dart';
+import 'package:mmogo/ui/screens/analytics_screen.dart';
+import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_analytics_db.dart';

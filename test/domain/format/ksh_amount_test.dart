@@ -1,7 +1,7 @@
 // QA fix F5: the integer-cents amount parser shared by the Add screen and the
 // Analytics edit sheet.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/domain/format/ksh_amount.dart';
+import 'package:mmogo/domain/format/ksh_amount.dart';
 
 void main() {
   group('parseKshCents', () {

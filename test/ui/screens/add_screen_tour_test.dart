@@ -5,8 +5,8 @@
 // inside testWidgets).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/ui/screens/add/add_screen.dart';
-import 'package:mymog/ui/widgets/coach_tour.dart';
+import 'package:mmogo/ui/screens/add/add_screen.dart';
+import 'package:mmogo/ui/widgets/coach_tour.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 

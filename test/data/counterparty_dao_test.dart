@@ -6,10 +6,10 @@
 // correctness for T12 is proven here as plain test()s instead, matching
 // the pattern classification_dao_test.dart already established).
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/data/db/counterparty_dao.dart';
-import 'package:mymog/data/db/schema.dart';
-import 'package:mymog/domain/counterparty/counterparty_key.dart';
-import 'package:mymog/domain/parsing/parsed_sms_fields.dart';
+import 'package:mmogo/data/db/counterparty_dao.dart';
+import 'package:mmogo/data/db/schema.dart';
+import 'package:mmogo/domain/counterparty/counterparty_key.dart';
+import 'package:mmogo/domain/parsing/parsed_sms_fields.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<Database> _openFreshDb() async {

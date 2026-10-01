@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/domain/format/money.dart';
+import 'package:mmogo/domain/format/money.dart';
 
 void main() {
   group('formatKsh', () {

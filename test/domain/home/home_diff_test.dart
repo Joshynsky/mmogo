@@ -1,6 +1,6 @@
 // Unit tests for lib/domain/home/home_diff.dart — pure Dart, no database.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mymog/domain/home/home_diff.dart';
+import 'package:mmogo/domain/home/home_diff.dart';
 
 void main() {
   test('both totals zero -> noPriorNoSpend', () {
