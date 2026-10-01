@@ -221,9 +221,6 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
     ];
   }
 
-  /// The header "?" replays the tour.
-  void _replayTour() => CoachTour.start(context, pageId: homeTourId, steps: _tourSteps());
-
   /// T21 pull to refresh: re-query and recompute everything time-derived —
   /// today's period bounds (in [_load]) and the time-of-day greeting (the
   /// rebuild), so a Home left open across 12:00 / 17:00 catches up.
@@ -264,7 +261,6 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
       title: homeGreeting(_now(), _name),
       activeIndex: 0,
       followPhoneTheme: true,
-      onHelp: _loading ? null : _replayTour,
       fabTourKey: _fabTourKey,
       body: _loading ? Center(child: CircularProgressIndicator(color: palette.primary)) : _buildBody(palette),
     );

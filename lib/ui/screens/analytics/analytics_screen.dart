@@ -404,9 +404,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     );
   }
 
-  /// The header "?" replays the tour.
-  void _replayTour() => CoachTour.start(context, pageId: analyticsTourId, steps: _tourSteps());
-
   void _maybeHighlight() {
     final id = _pendingHighlightId;
     if (id == null) return;
@@ -647,7 +644,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
           title: 'Analytics',
           activeIndex: PrimaryShellController.analyticsIndex,
           followPhoneTheme: true,
-          onHelp: v == null ? null : _replayTour,
           body: v == null
               ? Center(child: CircularProgressIndicator(color: palette.primary))
               : Column(

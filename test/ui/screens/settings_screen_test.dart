@@ -24,7 +24,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/prefs/app_prefs.dart';
+import 'package:mmogo/ui/screens/notifications_screen.dart';
 import 'package:mmogo/ui/screens/settings_screen.dart';
+import 'package:mmogo/ui/shell/routes.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -327,6 +329,54 @@ void main() {
       expect(AppPalette.of(context).primary, AppPalettes.leaf.light.primary);
       expect(controller.value, 'leaf');
       expect(await AppPrefs.readPaletteId(), 'leaf');
+    });
+  });
+
+  group('B48: Settings is a secondary page with regrouped sections', () {
+    Future<void> pumpWithRoutes(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(400, 2600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          routes: {Routes.notifications: (_) => const NotificationsComingSoonScreen()},
+          home: AppPaletteScope(
+            controller: AppPaletteController(),
+            child: SettingsScreen(db: _FakeDb(transactions: []), exportCsv: (_, _) async {}),
+          ),
+        ),
+      );
+      await _settle(tester);
+    }
+
+    testWidgets('back button, no bottom bar, no header ? or Profile button', (tester) async {
+      await pumpWithRoutes(tester);
+      expect(find.byTooltip('Back'), findsOneWidget);
+      expect(find.byKey(const Key('primaryBottomNav')), findsNothing);
+      expect(find.byKey(const Key('pageHelpButton')), findsNothing);
+      expect(find.byTooltip('Profile'), findsNothing);
+    });
+
+    testWidgets('groups: Appearance, Your data, Preferences, Updates and feedback (in that order)', (tester) async {
+      await pumpWithRoutes(tester);
+      final ys = [
+        for (final g in ['APPEARANCE', 'YOUR DATA', 'PREFERENCES', 'UPDATES AND FEEDBACK'])
+          tester.getTopLeft(find.text(g)).dy,
+      ];
+      expect([...ys]..sort(), ys);
+      expect(find.text('Show tips again'), findsOneWidget);
+      // Rows whose destinations arrive later are not added yet.
+      expect(find.text('Privacy and security'.toUpperCase()), findsNothing);
+      expect(find.text('Backup and restore'), findsNothing);
+      expect(find.text('Send feedback'), findsNothing);
+      expect(find.text('Check now'), findsNothing);
+    });
+
+    testWidgets('the Updates row opens the notifications/updates page', (tester) async {
+      await pumpWithRoutes(tester);
+      await tester.tap(find.text('Updates'));
+      await tester.pumpAndSettle();
+      expect(find.text('Coming soon'), findsOneWidget);
     });
   });
 }

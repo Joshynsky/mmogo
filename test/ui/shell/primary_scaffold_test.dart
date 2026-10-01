@@ -12,9 +12,7 @@ import 'package:mmogo/ui/shell/primary_scaffold.dart';
 import 'package:mmogo/ui/shell/routes.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
 
-/// Finds the [IconCircleButton] with a given tooltip — since T25 there are
-/// two on the primary top bar (Notifications, Profile), so a bare
-/// `find.byType` no longer resolves to a single widget.
+/// Finds the [IconCircleButton] with a given tooltip.
 Finder _iconCircleButton(String tooltip) =>
     find.byWidgetPredicate((w) => w is IconCircleButton && w.tooltip == tooltip);
 
@@ -23,10 +21,10 @@ void _setPhone(WidgetTester tester, Brightness brightness) {
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
 }
 
-/// A non-Home primary page (Settings' slot) with a long scrolling body.
+/// A non-Home primary page (Profile's slot) with a long scrolling body.
 Widget _settingsLike({bool followPhoneTheme = false}) => MaterialApp(
   home: PrimaryScaffold(
-    title: 'Settings',
+    title: 'Profile',
     activeIndex: 4,
     followPhoneTheme: followPhoneTheme,
     body: ListView(
@@ -87,23 +85,36 @@ void main() {
       expect(_barMaterial(tester).elevation, 0);
     });
 
-    testWidgets('Ocean & Sun chrome: title ink, round Profile button in the card colour, Ocean nav + FAB', (
+    testWidgets('B48: the bottom bar reads Home, Analytics, + (FAB), Paid to, Profile with the person icon', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_settingsLike());
+      await tester.pumpAndSettle();
+      final nav = find.byKey(const Key('primaryBottomNav'));
+      final labels = ['Home', 'Analytics', 'Paid to', 'Profile'];
+      final lefts = [for (final l in labels) tester.getTopLeft(find.descendant(of: nav, matching: find.text(l))).dx];
+      expect(lefts, [...lefts]..sort(), reason: 'left to right order');
+      final fabX = tester.getCenter(find.byKey(const Key('primaryFab'))).dx;
+      expect(lefts[1], lessThan(fabX));
+      expect(lefts[2], greaterThan(fabX));
+      expect(find.descendant(of: nav, matching: find.text('Settings')), findsNothing);
+      expect(find.descendant(of: nav, matching: find.byIcon(Icons.person_rounded)), findsOneWidget);
+      expect(find.descendant(of: nav, matching: find.byIcon(Icons.settings_rounded)), findsNothing);
+    });
+
+    testWidgets('Ocean & Sun chrome: title ink, Ocean nav + FAB', (
       tester,
     ) async {
       await tester.pumpWidget(_settingsLike());
       await tester.pumpAndSettle();
       const p = AppPalette.light;
-      final title = tester.widget<Text>(find.descendant(of: find.byType(AppBar), matching: find.text('Settings')));
+      final title = tester.widget<Text>(find.descendant(of: find.byType(AppBar), matching: find.text('Profile')));
       expect(title.style!.color, p.ink);
       expect(title.style!.fontSize, 18);
       expect(title.style!.fontWeight, FontWeight.w800);
 
-      final profile = tester.widget<IconCircleButton>(_iconCircleButton('Profile'));
-      expect(profile.background, p.card);
-      expect(profile.size, 36);
-
       expect(_navColor(tester), p.card);
-      expect(_navLabelColor(tester, 'Settings'), p.primary, reason: 'active item is Ocean');
+      expect(_navLabelColor(tester, 'Profile'), p.primary, reason: 'active item is Ocean');
       expect(_navLabelColor(tester, 'Home'), p.mutedInk);
       final fab = tester.widget<Material>(find.byKey(const Key('primaryFab')));
       expect(fab.color, p.primary);
@@ -253,10 +264,11 @@ void main() {
   });
 
   group('T25 — notifications bell', () {
-    testWidgets('sits 8px left of Profile, same size/style; tapping it opens Notifications', (tester) async {
+    testWidgets('B48: the bell is the only top-right button (no Help ?, no Profile); same size/style; '
+        'tapping it opens Notifications', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: PrimaryScaffold(title: 'Settings', activeIndex: 4, body: const SizedBox.shrink()),
+          home: PrimaryScaffold(title: 'Profile', activeIndex: 4, body: const SizedBox.shrink()),
           routes: {Routes.notifications: (_) => const NotificationsComingSoonScreen()},
         ),
       );
@@ -269,9 +281,14 @@ void main() {
       expect(bell.background, p.card);
       expect(bell.foreground, p.ink);
 
-      final bellRect = tester.getRect(_iconCircleButton('Notifications'));
-      final profileRect = tester.getRect(_iconCircleButton('Profile'));
-      expect(bellRect.right, moreOrLessEquals(profileRect.left - 8, epsilon: 0.1));
+      expect(
+        find.descendant(of: find.byType(AppBar), matching: find.byType(IconCircleButton)),
+        findsOneWidget,
+        reason: 'bell only in the top bar',
+      );
+      expect(_iconCircleButton('Profile'), findsNothing);
+      expect(find.byKey(const Key('pageHelpButton')), findsNothing);
+      expect(find.byTooltip('Show tips for this page'), findsNothing);
 
       await tester.tap(_iconCircleButton('Notifications'));
       await tester.pumpAndSettle();

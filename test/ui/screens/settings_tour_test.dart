@@ -65,13 +65,11 @@ void main() {
     expect(await _seen(settingsTourId), isTrue);
   });
 
-  testWidgets('already seen: no tour; the header ? replays it', (tester) async {
+  testWidgets('already seen: no tour, and no header ? button (B48: Help and tips is in Profile)', (tester) async {
     SharedPreferences.setMockInitialValues({'tour_seen_$settingsTourId': true});
     await _pump(tester);
     expect(find.byKey(coachTourBubbleKey), findsNothing);
-    await tester.tap(find.byKey(const Key('pageHelpButton')));
-    await tester.pumpAndSettle();
-    expect(find.text('1 of 3'), findsOneWidget);
+    expect(find.byKey(const Key('pageHelpButton')), findsNothing);
   });
 
   testWidgets('Show tips again clears every page\'s seen flag (and only those)', (tester) async {

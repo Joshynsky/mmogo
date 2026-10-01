@@ -58,13 +58,11 @@ void main() {
       expect(find.text('1 of 3'), findsOneWidget);
     });
 
-    testWidgets('already seen: no tour; the header ? replays it', (tester) async {
+    testWidgets('already seen: no tour, and no header ? button (B48: Help and tips is in Profile)', (tester) async {
       SharedPreferences.setMockInitialValues({'tour_seen_analytics': true});
       await _pump(tester, screen());
       expect(find.byKey(coachTourBubbleKey), findsNothing);
-      await tester.tap(find.byKey(const Key('pageHelpButton')));
-      await tester.pumpAndSettle();
-      expect(find.text('1 of 4'), findsOneWidget);
+      expect(find.byKey(const Key('pageHelpButton')), findsNothing);
     });
   });
 
@@ -117,12 +115,10 @@ void main() {
       expect(await _seen('paid_to'), isTrue);
     });
 
-    testWidgets('no payments: no automatic tour, but the ? still replays the search step', (tester) async {
+    testWidgets('no payments: no automatic tour and no header ? button', (tester) async {
       await _pump(tester, screen(rows: const []));
       expect(find.byKey(coachTourBubbleKey), findsNothing);
-      await tester.tap(find.byKey(const Key('pageHelpButton')));
-      await tester.pumpAndSettle();
-      expect(find.text('1 of 1'), findsOneWidget);
+      expect(find.byKey(const Key('pageHelpButton')), findsNothing);
     });
 
     testWidgets('the static caption is gone (the tour says it)', (tester) async {

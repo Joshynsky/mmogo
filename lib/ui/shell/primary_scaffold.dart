@@ -8,8 +8,8 @@ import 'primary_shell.dart';
 import 'routes.dart';
 
 /// Chrome shared by all 5 primary destinations (Home, Analytics, Add,
-/// Paid to, Settings) — the primary tier of the two-tier chrome pattern:
-/// a top bar (title + top-right Profile button) plus the fixed 5-item
+/// Paid to, Profile) — the primary tier of the two-tier chrome pattern:
+/// a top bar (title + top-right bell only, B48) plus the fixed 5-item
 /// bottom nav with a centered, permanently-raised FAB (the Add slot).
 ///
 /// **Seamless top bar on every primary page (T20; PM direct decision,
@@ -35,21 +35,16 @@ class PrimaryScaffold extends StatelessWidget {
     required this.activeIndex,
     required this.body,
     this.followPhoneTheme = false,
-    this.onHelp,
     this.fabTourKey,
   });
 
   final String title;
 
-  /// The header's "?" replay button: replays this page's coach tour. `null`
-  /// (default) shows no button.
-  final VoidCallback? onHelp;
-
   /// Lets a page's coach tour spotlight the centre + button.
   final GlobalKey? fabTourKey;
 
   /// Index into [Routes.primaryOrder] (0=Home,1=Analytics,2=Add,3=Paid to,
-  /// 4=Settings; T22 order) — which nav slot is the "you are here" highlight.
+  /// 4=Profile; T22 order, B48 Profile) — which nav slot is the "you are here" highlight.
   final int activeIndex;
 
   final Widget body;
@@ -132,21 +127,8 @@ class PrimaryScaffold extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (onHelp != null) ...[
-                    IconCircleButton(
-                      key: const Key('pageHelpButton'),
-                      icon: Icons.help_outline_rounded,
-                      tooltip: 'Show tips for this page',
-                      size: 36,
-                      background: palette.card,
-                      foreground: palette.ink,
-                      onTap: onHelp!,
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  // T25: the notifications bell, immediately left of Profile
-                  // (same size/style; no badge logic — a placeholder "Coming
-                  // soon" page for now).
+                  // B48: the bell is the only top-right button (the Help "?"
+                  // moved into Profile; Profile is a bottom-nav tab).
                   IconCircleButton(
                     icon: Icons.notifications_none_rounded,
                     tooltip: 'Notifications',
@@ -154,15 +136,6 @@ class PrimaryScaffold extends StatelessWidget {
                     background: palette.card,
                     foreground: palette.ink,
                     onTap: () => Navigator.of(context).pushNamed(Routes.notifications),
-                  ),
-                  const SizedBox(width: 8),
-                  IconCircleButton(
-                    icon: Icons.person_outline,
-                    tooltip: 'Profile',
-                    size: 36,
-                    background: palette.card,
-                    foreground: palette.ink,
-                    onTap: () => Navigator.of(context).pushNamed(Routes.profile),
                   ),
                 ],
               ),
@@ -211,11 +184,11 @@ class _PrimaryBottomNav extends StatelessWidget {
     Icons.bar_chart_rounded,
     null, // FAB slot, rendered separately
     Icons.groups_rounded,
-    Icons.settings_rounded,
+    Icons.person_rounded,
   ];
-  // T22: Home · Analytics · + · Paid to · Settings (PM direct decision,
-  // 2026-09-25); "Paid to" was "Parties".
-  static const _labels = ['Home', 'Analytics', 'Add', 'Paid to', 'Settings'];
+  // T22: Home · Analytics · + · Paid to · Settings; B48 (PM 2026-10-01):
+  // the last tab is Profile (Settings opens from inside it).
+  static const _labels = ['Home', 'Analytics', 'Add', 'Paid to', 'Profile'];
 
   @override
   Widget build(BuildContext context) {

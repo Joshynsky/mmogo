@@ -72,6 +72,10 @@ Widget _appWithPalette(Database db, {required String paletteId, required Brightn
   );
 }
 
+/// A label in the primary bottom bar.
+Finder _navTab(String label) =>
+    find.descendant(of: find.byKey(const Key('primaryBottomNav')), matching: find.text(label));
+
 /// T20: with no display name, Home's greeting is just the time of day
 /// ("Good morning" / "Good afternoon" / "Good evening"; no "Welcome back").
 final _noNameGreeting = find.textContaining(RegExp(r'^Good (morning|afternoon|evening)$'));
@@ -95,9 +99,10 @@ void main() {
     expect(find.text(AppInfo.name), findsOneWidget);
     expect(find.text(AppInfo.displayVersion), findsOneWidget);
     expect(find.textContaining('T17'), findsNothing);
-    // Secondary chrome: back arrow, no bottom nav.
-    expect(find.byTooltip('Back'), findsOneWidget);
-    expect(find.text('Paid to'), findsNothing);
+    // B48: a primary tab: bell + bottom bar, no back arrow.
+    expect(find.byTooltip('Notifications'), findsOneWidget);
+    expect(find.byTooltip('Back'), findsNothing);
+    expect(find.byKey(const Key('primaryBottomNav')), findsOneWidget);
   });
 
   testWidgets('empty database: 0 transactions, "No data yet", storage "—"', (tester) async {
@@ -187,8 +192,8 @@ void main() {
 
   testWidgets('Home greeting refreshes on return from Profile after editing the name '
       '(no relaunch)', (tester) async {
-    // Real app + real routes: Profile is pushed via PrimaryScaffold's
-    // top-right icon on top of a still-mounted Home, exactly as on device.
+    // Real app + real routes: Profile is the bottom bar's last tab beside a
+    // still-mounted Home (B48), exactly as on device.
     // (Home's own DB load hangs in testWidgets here, which is irrelevant:
     // the greeting is the AppBar title and is loaded independently.)
     // T16: the app now launches on Welcome and routes to Home only once
@@ -202,7 +207,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(_noNameGreeting, findsOneWidget);
 
-    await tester.tap(find.byTooltip('Profile'));
+    await tester.tap(_navTab('Profile'));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byKey(const Key('profile-name-field')), 'Joshua');
@@ -210,7 +215,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    await tester.tap(find.byTooltip('Back'));
+    await tester.tap(_navTab('Home'));
     // pump with durations, not pumpAndSettle: Home's body spinner never
     // settles while its (hung-in-test) DB load is pending.
     await tester.pump();
@@ -220,15 +225,53 @@ void main() {
     expect(_noNameGreeting, findsNothing);
 
     // And clearing it goes back to the fallback.
-    await tester.tap(find.byTooltip('Profile'));
+    await tester.tap(_navTab('Profile'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('profile-name-field')), '');
     await tester.tap(find.text('Save'));
     await tester.pump();
     await tester.pump();
-    await tester.tap(find.byTooltip('Back'));
+    await tester.tap(_navTab('Home'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(_noNameGreeting, findsOneWidget);
+  });
+
+  group('B48: Settings and Help and tips rows', () {
+    testWidgets('rows sit between the greeting card and the local data summary', (tester) async {
+      await tester.pumpWidget(_app(_FakeDb(occurredAt: [])));
+      await _settle(tester);
+
+      expect(find.text('Settings'), findsOneWidget);
+      expect(find.text('Colours, classifications, backup, updates, privacy'), findsOneWidget);
+      expect(find.text('Help and tips'), findsOneWidget);
+      expect(find.text('Replay the guide on every page'), findsOneWidget);
+
+      final greeting = tester.getTopLeft(find.text('HOW HOME GREETS YOU')).dy;
+      final settings = tester.getTopLeft(find.text('Settings')).dy;
+      final help = tester.getTopLeft(find.text('Help and tips')).dy;
+      final summary = tester.getTopLeft(find.text('LOCAL DATA SUMMARY')).dy;
+      expect(greeting, lessThan(settings));
+      expect(settings, lessThan(help));
+      expect(help, lessThan(summary));
+    });
+
+    testWidgets('Help and tips clears every seen flag and says so', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'tour_seen_home': true,
+        'tour_seen_add': true,
+        AppPrefs.keyUserDisplayName: 'Amina',
+      });
+      await tester.pumpWidget(_app(_FakeDb(occurredAt: [])));
+      await _settle(tester);
+
+      await tester.tap(find.text('Help and tips'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tips reset. The guides will show again on every page.'), findsOneWidget);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getKeys().where((k) => k.startsWith('tour_seen_')), isEmpty);
+      expect(prefs.getString(AppPrefs.keyUserDisplayName), 'Amina');
+    });
   });
 }

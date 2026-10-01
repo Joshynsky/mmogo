@@ -4,7 +4,7 @@ import '../../domain/home/home_period.dart';
 import '../screens/analytics_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/paid_to_screen.dart';
-import '../screens/settings_screen.dart';
+import '../screens/profile_screen.dart';
 
 /// F6 (T21 fix round): one change of the period LENGTH shared by Home and
 /// Analytics. Home posts its own choice ([fromAnalytics] `false`); Analytics
@@ -32,9 +32,10 @@ class PrimaryShellController {
   PrimaryShellController(int initialIndex) : index = ValueNotifier(initialIndex);
 
   /// T22 nav order (PM direct decision, 2026-09-25): 0 Home, 1 Analytics,
-  /// 2 Add (the FAB, never a tab), 3 Paid to, 4 Settings.
+  /// 2 Add (the FAB, never a tab), 3 Paid to, 4 Profile (B48).
   static const analyticsIndex = 1;
   static const paidToIndex = 3;
+  static const profileIndex = 4;
 
   /// The visible nav slot (see [analyticsIndex] / [paidToIndex]).
   final ValueNotifier<int> index;
@@ -75,7 +76,7 @@ class PrimaryShellController {
   }
 }
 
-/// F5 (T21 fix round, replaces F1): Home, Analytics, Paid to and Settings
+/// F5 (T21 fix round, replaces F1): Home, Analytics, Paid to and Profile
 /// live side by side in one route and stay alive. A tab switch is instant
 /// (no route transition) and each page keeps its own state — period,
 /// filters, tab, scroll. Each page is built on its first visit. Add (the
@@ -90,7 +91,7 @@ class PrimaryShell extends StatefulWidget {
   final int initialIndex;
 
   /// Test seam: the pages by nav index (0 Home, 1 Analytics, 3 Paid to,
-  /// 4 Settings). `null` = the real ones.
+  /// 4 Profile). `null` = the real ones.
   final Map<int, Widget>? pages;
 
   static PrimaryShellController? _active;
@@ -144,7 +145,7 @@ class _PrimaryShellState extends State<PrimaryShell> {
       0 => const HomeScreen(),
       PrimaryShellController.analyticsIndex => const AnalyticsScreen(),
       PrimaryShellController.paidToIndex => const PaidToScreen(),
-      _ => const SettingsScreen(),
+      _ => const ProfileScreen(),
     };
   }
 

@@ -285,8 +285,6 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
     ];
   }
 
-  void _replayTour() => CoachTour.start(context, pageId: paidToTourId, steps: _tourSteps());
-
   // §PAIDTO.SHELL.BUILD ---- build ------------------------------------------------
 
   @override
@@ -297,7 +295,6 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
       title: 'Paid to',
       activeIndex: PrimaryShellController.paidToIndex,
       followPhoneTheme: true,
-      onHelp: payments == null ? null : _replayTour,
       body: payments == null
           ? Center(child: CircularProgressIndicator(color: palette.primary))
           : RefreshIndicator(

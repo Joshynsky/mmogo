@@ -494,12 +494,17 @@ void main() {
       expect(find.textContaining('Add your first transaction'), findsOneWidget);
     });
 
-    testWidgets('the header ? replays a seen tour; Take me there on + opens Add', (tester) async {
+    testWidgets('B48: a seen tour stays quiet and the header has no ? button', (tester) async {
       await _pumpHome(tester, _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 3));
       expect(find.byKey(coachTourBubbleKey), findsNothing);
+      expect(find.byKey(const Key('pageHelpButton')), findsNothing);
+      expect(find.byTooltip('Notifications'), findsOneWidget);
+      expect(find.byTooltip('Profile'), findsNothing);
+    });
 
-      await tester.tap(find.byKey(const Key('pageHelpButton')));
-      await tester.pumpAndSettle();
+    testWidgets('Take me there on + opens Add', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await _pumpHome(tester, _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 3));
       expect(find.text('1 of 4'), findsOneWidget);
 
       for (var i = 0; i < 3; i++) {

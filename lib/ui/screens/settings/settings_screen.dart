@@ -10,19 +10,20 @@ import '../../../app_info.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/db/export_dao.dart';
 import '../../../data/prefs/app_prefs.dart';
-import '../../shell/primary_scaffold.dart';
-import '../../shell/primary_shell.dart';
 import '../../shell/routes.dart';
+import '../../shell/secondary_scaffold.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/coach_tour.dart';
 import 'appearance_section.dart';
 import 'data_section.dart';
 import 'preferences_section.dart';
+import 'updates_section.dart';
 
 /// Settings' coach-tour page id (the seen flag is `tour_seen_settings`).
 const settingsTourId = 'settings';
 
-/// Primary destination 5 of 5. T2's original routing scope for this screen:
+/// B48: a secondary page opened from Profile's "Settings" row (it was the
+/// fifth bottom-nav tab until then). T2's original routing scope for this screen:
 /// the two links that hand off to secondary pages (Manage Classifications,
 /// Recently Deleted) and back. T8 wired the "Manage Classifications" link to
 /// its real page. T10 wired "Export CSV" to the real `ExportDao` query +
@@ -59,7 +60,7 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen> {
   Database? _db;
   bool _loading = true;
   int _activeCount = 0;
@@ -79,17 +80,6 @@ class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<
   void initState() {
     super.initState();
     _bootstrap();
-  }
-
-  // F5: back on the Settings tab, re-read the count and the switch.
-  @override
-  int get primaryTabIndex => 4;
-
-  @override
-  void onPrimaryTabShown() {
-    _bootstrap();
-    // Back after the tour paused (system Back, another tab): pick it up.
-    if (_tourOffered && primaryShell?.index.value == primaryTabIndex) _offerTour();
   }
 
   /// Shows the tour (or its unfinished rest) once the frame has painted.
@@ -203,8 +193,6 @@ class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<
     ),
   ];
 
-  void _replayTour() => CoachTour.start(context, pageId: settingsTourId, steps: _tourSteps());
-
   String get _exportSubtitle {
     if (_loading) return 'Loading…';
     if (_activeCount == 0) return 'No transactions to export yet';
@@ -216,11 +204,10 @@ class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final exportEnabled = !_loading && _activeCount > 0 && !_exporting;
-    return PrimaryScaffold(
+    // B48: a secondary page opened from Profile (back button, no bottom bar).
+    return SecondaryScaffold(
       title: 'Settings',
-      activeIndex: 4,
-      followPhoneTheme: true,
-      onHelp: _loading ? null : _replayTour,
+      followPalette: true,
       // No pull-to-refresh on Settings (PM direct decision, T23 draft):
       // nothing here changes from elapsed time the way Home/Analytics do.
       body: ListView(
@@ -244,6 +231,8 @@ class _SettingsScreenState extends State<SettingsScreen> with PrimaryTabRefresh<
             onAutoRecognizeChanged: _loading ? null : _handleAutoRecognizeChanged,
             onShowTipsAgain: _showTipsAgain,
           ),
+          const SizedBox(height: 14),
+          UpdatesSection(palette: palette),
           const SizedBox(height: 14),
           Text(
             '${AppInfo.name} ${AppInfo.versionName} · your data stays on this phone',

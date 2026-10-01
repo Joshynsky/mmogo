@@ -4,8 +4,8 @@ import 'ui/screens/add/add_screen.dart';
 import 'ui/screens/manage_classifications_screen.dart';
 import 'ui/screens/notifications_screen.dart';
 import 'ui/screens/onboarding_screen.dart';
-import 'ui/screens/profile_screen.dart';
 import 'ui/screens/recently_deleted_screen.dart';
+import 'ui/screens/settings_screen.dart';
 import 'ui/screens/welcome_screen.dart';
 import 'ui/shell/app_messenger.dart';
 import 'ui/shell/primary_shell.dart';
@@ -82,8 +82,8 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
           Routes.analytics: (_) => const PrimaryShell(initialIndex: 1),
           Routes.add: (_) => const AddScreen(),
           Routes.paidTo: (_) => const PrimaryShell(initialIndex: 3),
-          Routes.settings: (_) => const PrimaryShell(initialIndex: 4),
-          Routes.profile: (_) => const ProfileScreen(),
+          Routes.profile: (_) => const PrimaryShell(initialIndex: 4),
+          Routes.settings: (_) => const SettingsScreen(),
           Routes.manageClassifications: (_) => const ManageClassificationsScreen(),
           Routes.recentlyDeleted: (_) => const RecentlyDeletedScreen(),
           Routes.notifications: (_) => const NotificationsComingSoonScreen(),

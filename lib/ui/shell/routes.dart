@@ -24,15 +24,19 @@ class Routes {
 
   /// "Paid to" (formerly Parties, T15; renamed in T22).
   static const paidTo = '/paid-to';
-  static const settings = '/settings';
+
+  /// B48 (PM 2026-10-01): Profile is the fifth bottom-nav tab (was Settings).
+  static const profile = '/profile';
 
   /// Order matches the bottom nav's visual left-to-right layout, index 2
   /// being the centered FAB slot.
-  static const primaryOrder = [home, analytics, add, paidTo, settings];
+  static const primaryOrder = [home, analytics, add, paidTo, profile];
 
   // Secondary pages — two-tier chrome pattern (back-arrow + mini-FAB, not
   // the full 5-item bar).
-  static const profile = '/profile';
+
+  /// B48: no longer a tab; opened from the Profile page's Settings row.
+  static const settings = '/settings';
   static const manageClassifications = '/manage-classifications';
   static const recentlyDeleted = '/recently-deleted';
 

@@ -7,18 +7,23 @@ import '../../data/db/local_data_summary_dao.dart';
 import '../../data/prefs/app_prefs.dart';
 import '../../domain/format/byte_size.dart';
 import '../../domain/format/money.dart';
-import '../shell/secondary_scaffold.dart';
+import '../shell/primary_scaffold.dart';
+import '../shell/primary_shell.dart';
+import '../shell/routes.dart';
 import '../theme/app_colors.dart';
+import 'settings/settings_widgets.dart';
 
-/// Secondary page 1 of 3 (two-tier chrome: back-arrow + mini-FAB via
-/// [SecondaryScaffold], not the full bottom nav) — T17, following the validated earlier prototype (used as a
-/// behavior/layout reference only). Three cards:
+/// Primary destination 5 of 5 since B48 (PM 2026-10-01; it was a secondary
+/// page from T17): the bottom-nav "Profile" tab with the bell and the bar.
+/// Cards:
 ///   1. App info — name + version from [AppInfo] (a Dart constant kept in
 ///      sync with `pubspec.yaml` by a test; no new plugin).
 ///   2. "How Home greets you" — editable display name (max 30 chars,
 ///      trimmed, empty clears the key) written via
 ///      [AppPrefs.writeUserDisplayName], which also notifies a live Home.
-///   3. Local data summary — aggregates only ([LocalDataSummaryDao]):
+///   3. Two rows: Settings (opens the secondary Settings page) and Help and
+///      tips (resets every page's tour).
+///   4. Local data summary — aggregates only ([LocalDataSummaryDao]):
 ///      transactions stored, date range covered, storage used (est.).
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, this.db});
@@ -34,7 +39,7 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen> with PrimaryTabRefresh<ProfileScreen> {
   final _nameController = TextEditingController();
   bool _nameEdited = false;
   bool _saving = false;
@@ -53,6 +58,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadName();
     _loadSummary();
   }
+
+  // Back on the Profile tab (or a transaction was added): re-read the summary.
+  @override
+  int get primaryTabIndex => PrimaryShellController.profileIndex;
+
+  @override
+  void onPrimaryTabShown() => _loadSummary();
 
   @override
   void dispose() {
@@ -104,6 +116,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// "Help and tips": clears every page's "tour seen" flag (what the old
+  /// header "?" and Settings' "Show tips again" lead to). Pages already open
+  /// in this session offer their tour again next launch.
+  Future<void> _showTipsAgain() async {
+    await AppPrefs.resetAllTours();
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Tips reset. The guides will show again on every page.')),
+    );
+  }
+
   String get _countText {
     final s = _summary;
     if (s == null) return '—';
@@ -122,12 +147,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    return SecondaryScaffold(
+    return PrimaryScaffold(
       title: 'Profile',
-      followPalette: true,
+      activeIndex: PrimaryShellController.profileIndex,
+      followPhoneTheme: true,
       body: ListView(
-        // Extra bottom padding keeps the last card clear of the mini-FAB.
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+        key: const Key('profileScroll'),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
           _Card(
             palette: palette,
@@ -207,6 +233,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ],
+            ),
+          ),
+          // B48: Settings and Help and tips (prototype v16 `aria-label="App"`).
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: SettingsCard(
+              palette: palette,
+              child: Column(
+                children: [
+                  SettingsLink(
+                    palette: palette,
+                    icon: Icons.settings_outlined,
+                    label: 'Settings',
+                    subtitle: 'Colours, classifications, backup, updates, privacy',
+                    first: true,
+                    onTap: () => Navigator.of(context).pushNamed(Routes.settings),
+                  ),
+                  SettingsLink(
+                    palette: palette,
+                    icon: Icons.lightbulb_outline,
+                    label: 'Help and tips',
+                    subtitle: 'Replay the guide on every page',
+                    onTap: _showTipsAgain,
+                  ),
+                ],
+              ),
             ),
           ),
           _Card(

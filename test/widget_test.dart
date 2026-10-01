@@ -32,6 +32,10 @@ Future<void> _launchToHome(WidgetTester tester) async {
 /// ("Good morning" / "Good afternoon" / "Good evening"; no "Welcome back").
 final _noNameGreeting = find.textContaining(RegExp(r'^Good (morning|afternoon|evening)$'));
 
+/// A label in the primary bottom bar.
+Finder _navTab(String label) =>
+    find.descendant(of: find.byKey(const Key('primaryBottomNav')), matching: find.text(label));
+
 void main() {
   // T17: Profile (pushed by the third test below) now reads the display
   // name from shared_preferences on open. Without a mock store, that
@@ -67,7 +71,8 @@ void main() {
     expect(find.text('Home'), findsWidgets);
     expect(find.text('Paid to'), findsOneWidget);
     expect(find.text('Analytics'), findsOneWidget);
-    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
+    expect(find.text('Settings'), findsNothing);
     // Add has no text label — it's the centered FAB, icon-only.
     expect(find.byIcon(Icons.add), findsOneWidget);
   });
@@ -81,28 +86,39 @@ void main() {
     // `AppDatabase` connection on load -- per this project's disclosed
     // environment finding, a real `sqflite_common_ffi` `Database` hangs
     // indefinitely inside a `testWidgets` test, so this smoke test now
-    // targets Settings instead (still a placeholder, no DB access) to keep
+    // targets Profile instead (B48; its DB load just stays pending) to keep
     // testing the same thing (primary-nav routing) without tripping that
     // hang. Analytics' own real screen/interaction logic is covered by
     // `test/ui/screens/analytics_screen_test.dart` (fake DB) and
     // `test/data/analytics_dao_test.dart` (real in-memory sqlite3).
-    await tester.tap(find.text('Settings'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Settings'), findsWidgets);
-    expect(find.byIcon(Icons.settings_rounded), findsWidgets);
-  });
-
-  testWidgets('Tapping the Profile icon pushes the secondary Profile page '
-      'with back-arrow chrome (no bottom nav)', (WidgetTester tester) async {
-    await _launchToHome(tester);
-
-    await tester.tap(find.byTooltip('Profile'));
+    await tester.tap(_navTab('Profile'));
     await tester.pumpAndSettle();
 
     expect(find.text('Profile'), findsWidgets);
+    expect(find.byIcon(Icons.person_rounded), findsWidgets);
+  });
+
+  testWidgets('B48: Profile is a primary tab (bell, bottom bar, no back); '
+      'its Settings row opens Settings as a secondary page and back returns', (WidgetTester tester) async {
+    await _launchToHome(tester);
+
+    await tester.tap(_navTab('Profile'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Notifications'), findsOneWidget);
+    expect(find.byTooltip('Back'), findsNothing);
+    expect(find.byKey(const Key('primaryBottomNav')), findsOneWidget);
+
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    // Secondary chrome: back arrow, title Settings, no bottom bar.
     expect(find.byTooltip('Back'), findsOneWidget);
-    // Secondary pages don't render the 5-item bottom nav.
-    expect(find.text('Home'), findsNothing);
+    expect(find.text('Appearance'.toUpperCase()), findsOneWidget);
+    expect(find.byKey(const Key('primaryBottomNav')), findsNothing);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('primaryBottomNav')), findsOneWidget);
+    expect(find.text('Help and tips'), findsOneWidget);
+    expect(find.byTooltip('Back'), findsNothing);
   });
 }

@@ -1,13 +1,14 @@
 // T21 fix round 1:
-//  - F5: Home, Analytics, Paid to and Settings live in one PrimaryShell and
+//  - F5: Home, Analytics, Paid to and Profile live in one PrimaryShell and
 //    stay alive; a tab switch is instant and keeps each page's state; the
 //    Home-row and Paid to hand-offs retarget the live Analytics; back from a
 //    non-Home tab goes to Home; a page re-queries when it is shown again.
 //  - F6: Home and Analytics share the period LENGTH (last change wins).
 //
-// T22: the nav order is Home · Analytics · + · Paid to · Settings (indexes
-// 0, 1, 3, 4). Paid to is a stub here that calls the shell exactly as
-// PaidToScreen's row tap does; Settings is a bare primary page.
+// T22: the nav order is Home · Analytics · + · Paid to · Profile (indexes
+// 0, 1, 3, 4; B48 swapped Settings for Profile). Paid to is a stub here that
+// calls the shell exactly as PaidToScreen's row tap does; Profile is a bare
+// primary page.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/domain/analytics/analytics_period.dart';
@@ -128,7 +129,7 @@ Future<_ShellDb> _pumpShell(WidgetTester tester) async {
             0: HomeScreen(db: db, clock: clock),
             1: AnalyticsScreen(db: db, clock: clock),
             3: const _PaidToStub(),
-            4: const PrimaryScaffold(title: 'Settings', activeIndex: 4, body: Text('SETTINGS BODY')),
+            4: const PrimaryScaffold(title: 'Profile', activeIndex: 4, body: Text('PROFILE BODY')),
           },
         ),
       ),
@@ -185,7 +186,7 @@ void main() {
       await _pumpShell(tester);
       await _analyticsPlace(tester);
       await _tab(tester, 'Home');
-      await _tab(tester, 'Settings');
+      await _tab(tester, 'Profile');
       await _tab(tester, 'Analytics');
       expect(_pill(tester, 'analyticsPeriodValue'), '11–17 Sep');
       expect(find.byKey(const Key('analyticsFilterChipType')), findsOneWidget);
@@ -251,7 +252,7 @@ void main() {
       final db = await _pumpShell(tester);
       await _tab(tester, 'Analytics');
       expect(find.text('NEW PERSON'), findsNothing);
-      await _tab(tester, 'Settings');
+      await _tab(tester, 'Profile');
       // e.g. a row restored from Recently Deleted.
       db.transactions.add(fakeTx(id: 99, at: DateTime(2026, 9, 24, 12), label: 'NEW PERSON', amountCents: 7000));
       await _tab(tester, 'Analytics');
