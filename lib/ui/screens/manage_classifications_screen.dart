@@ -162,6 +162,8 @@ class _ManageClassificationsScreenState extends State<ManageClassificationsScree
         title: const Text('Rename classification'),
         content: TextField(
           controller: controller,
+          maxLength: classificationNameMaxLength,
+          buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
           autofocus: true,
           decoration: const InputDecoration(border: OutlineInputBorder()),
         ),
@@ -294,6 +296,8 @@ class _ManageClassificationsScreenState extends State<ManageClassificationsScree
             Expanded(
               child: TextField(
                 controller: _newNameController,
+                maxLength: classificationNameMaxLength,
+                buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                 enabled: _selectedGroup != null && !_creating,
                 style: TextStyle(color: palette.ink),
                 cursorColor: palette.primary,

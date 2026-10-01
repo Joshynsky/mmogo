@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import 'form_row.dart';
 
+/// B3: longest receiver / label text the Add form accepts (typing is cut here;
+/// longer values already saved are loaded as they are).
+const receiverFieldMaxLength = 200;
+
 /// §ADD.RECEIVER — receiver capture (T15/T6-D3), opt-in: the per-type label
 /// and fields (Name + Phone / Business + Account / Shop), plus the subline
 /// "So you can see them on Paid to. Leave it off to keep it private."
@@ -112,6 +116,8 @@ class ReceiverCard extends StatelessWidget {
         child: TextField(
           key: key,
           controller: controller,
+          maxLength: receiverFieldMaxLength,
+          buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
           keyboardType: keyboardType,
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: palette.ink),
           cursorColor: palette.primary,

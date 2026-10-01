@@ -256,6 +256,8 @@ class _CategoryChipsState extends State<CategoryChips> {
                 child: TextField(
                   key: const Key('addCategoryNewField'),
                   controller: _newNameController,
+                  maxLength: classificationNameMaxLength,
+                  buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                   style: TextStyle(color: palette.ink),
                   cursorColor: palette.primary,
                   decoration: InputDecoration(

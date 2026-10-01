@@ -1,5 +1,9 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+/// B3: longest classification name the Add and Manage inputs accept (typing is
+/// cut here; longer names already saved are loaded as they are).
+const classificationNameMaxLength = 100;
+
 /// One row of `classification_groups` — includes disabled groups (Pochi La
 /// Biashara, `enabled = 0`) unfiltered; the disabled Pochi La
 /// Biashara group tab must always be
