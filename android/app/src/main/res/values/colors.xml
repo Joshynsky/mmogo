@@ -4,4 +4,6 @@
          screen's surface so there is no colour jump into Flutter. Light:
          Ocean & Sun surface #FFFFFF. The dark value is in values-night. -->
     <color name="launch_background">#FFFFFF</color>
+    <!-- Launcher icon tile: Ocean #0A6E8A (PM logo decision 2026-10-01). -->
+    <color name="ic_launcher_background">#0A6E8A</color>
 </resources>

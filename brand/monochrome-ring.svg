@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+  <defs>
+    <mask id="mc" maskUnits="userSpaceOnUse" x="0" y="0" width="108" height="108">
+      <rect width="108" height="108" fill="#fff"/>
+      <path d="M28 46 H80 V64 C80 77 68 84 54 84 C40 84 28 77 28 64 Z" fill="#000" stroke="#000" stroke-width="7" stroke-linejoin="round"/>
+      
+    </mask>
+    <mask id="mp" maskUnits="userSpaceOnUse" x="0" y="0" width="108" height="108">
+      <path d="M28 46 H80 V64 C80 77 68 84 54 84 C40 84 28 77 28 64 Z" fill="#fff"/>
+      <path d="M28 55 H80" stroke="#000" stroke-width="2.6" fill="none"/>
+      <path d="M36 63 V65 C36 72 44 77 54 77 C64 77 72 72 72 65 V63" pathLength="57" stroke="#000" stroke-width="2.2" stroke-dasharray="3 3" fill="none"/>
+    </mask>
+  </defs>
+  <g mask="url(#mc)"><path fill-rule="evenodd" d="M48 34 a12 12 0 1 0 24 0 a12 12 0 1 0 -24 0 Z M53.5 34 a6.5 6.5 0 1 0 13 0 a6.5 6.5 0 1 0 -13 0 Z" fill="#000000"/></g>
+  <g mask="url(#mp)"><path d="M28 46 H80 V64 C80 77 68 84 54 84 C40 84 28 77 28 64 Z" fill="#000000"/></g>
+</svg>
