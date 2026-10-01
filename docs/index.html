@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="mmogo is a free, offline Android app that turns the M-Pesa messages you paste into a clear picture of your spending. No account, no server, no permissions.">
+<meta name="theme-color" content="#073B4C">
+<link rel="icon" type="image/png" href="img/icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="mmogo: see where your M-Pesa money goes">
+<meta property="og:description" content="mmogo is a free, offline Android app that turns the M-Pesa messages you paste into a clear picture of your spending. No account, no server, no permissions.">
+<meta property="og:image" content="https://joshynsky.github.io/mmogo/img/home.webp">
+<meta property="og:url" content="https://joshynsky.github.io/mmogo/">
+<title>mmogo: see where your M-Pesa money goes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one centred column (max 720px) of sections on a quiet ground; the deep-ocean hero is the single bold moment, the screenshot overlaps its lower edge. */
+:root {
+  --bg: #F4F8F9;
+  --card: #FFFFFF;
+  --ink: #13262E;
+  --soft: #3E5058;
+  --muted: #5B6B72;
+  --line: #D3DFE3;
+  --tint: #E0F1F5;
+  --primary: #0A6E8A;
+  --on-primary: #FFFFFF;
+  --hero: #073B4C;
+  --hero-ink: #FFFFFF;
+  --hero-soft: #BFE4EE;
+  --sun: #FFB703;
+  --on-sun: #13262E;
+  --focus: #1597B8;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1A1F; --card: #1A2C34; --ink: #E6F0F3; --soft: #A3B7BF; --muted: #A3B7BF;
+    --line: #2E444D; --tint: #133640; --primary: #3FB6D4; --on-primary: #06212B;
+    --hero: #0A2A35; --hero-ink: #E6F0F3; --hero-soft: #BFE4EE; --focus: #3FB6D4;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1A1F; --card: #1A2C34; --ink: #E6F0F3; --soft: #A3B7BF; --muted: #A3B7BF;
+  --line: #2E444D; --tint: #133640; --primary: #3FB6D4; --on-primary: #06212B;
+  --hero: #0A2A35; --hero-ink: #E6F0F3; --hero-soft: #BFE4EE; --focus: #3FB6D4;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 17px; line-height: 1.55; }
+*, *::before, *::after { box-sizing: border-box; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.12; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 6px; }
+.wrap { width: 100%; max-width: 720px; margin-inline: auto; padding-inline: 16px; }
+
+/* Top bar */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); border-bottom: 1px solid var(--line); }
+.bar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 800; font-size: 22px; text-decoration: none; margin-right: auto; }
+.brand img { width: 32px; height: 32px; border-radius: 8px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: 600 16px/1 var(--font-body); text-decoration: none; border: 0; cursor: pointer; border-radius: 999px; padding: 12px 20px; }
+.btn-sm { padding: 9px 16px; font-size: 15px; background: var(--primary); color: var(--on-primary); }
+.btn-sun { background: var(--sun); color: var(--on-sun); font-size: 18px; padding: 16px 28px; }
+.btn-sun:hover, .btn-sm:hover { filter: brightness(1.06); }
+.theme { width: 38px; height: 38px; padding: 0; background: var(--tint); color: var(--ink); }
+
+/* Hero */
+.hero { background: var(--hero); color: var(--hero-ink); padding-top: 44px; padding-bottom: 0; }
+.hero h1 { font-size: clamp(2.4rem, 9vw, 3.6rem); font-weight: 800; letter-spacing: -0.02em; }
+.hero h1 em { font-style: normal; color: var(--sun); }
+.hero .lede { margin-top: 16px; font-size: 1.15rem; color: var(--hero-soft); max-width: 34em; }
+.cta { margin-top: 26px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.meta { font-size: 0.95rem; color: var(--hero-soft); }
+.shot-hero { margin: 36px auto -90px; width: min(300px, 78%); position: relative; }
+.shot-hero img { display: block; width: 100%; border-radius: 22px; border: 6px solid #0b2630; box-shadow: 0 24px 50px rgba(0,0,0,.35); }
+.shot-hero figcaption { position: absolute; width: 1px; height: 1px; overflow: hidden; }
+
+/* Sections */
+section { padding-block: 64px; }
+.after-hero { padding-top: 140px; }
+.eyebrow { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--primary); margin-bottom: 10px; }
+h2 { font-size: clamp(1.7rem, 6vw, 2.3rem); font-weight: 800; letter-spacing: -0.015em; }
+.sec-lede { margin-top: 12px; color: var(--soft); max-width: 36em; }
+
+/* Slideshow */
+.show { margin-top: 28px; }
+.stage { position: relative; }
+.track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; gap: 16px; padding-block: 4px; -webkit-overflow-scrolling: touch; }
+.track::-webkit-scrollbar { display: none; }
+.slide { flex: 0 0 100%; scroll-snap-align: center; display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 20px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 18px; }
+.slide img { display: block; width: 100%; max-height: 420px; object-fit: cover; object-position: top; border-radius: 14px; border: 1px solid var(--line); }
+.slide .n { font-family: var(--font-mono); font-size: 0.85rem; color: var(--primary); }
+.slide h3 { font-size: 1.4rem; margin-top: 6px; }
+.slide p { margin-top: 8px; color: var(--soft); }
+.ctrl { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+.arrow { width: 44px; height: 44px; padding: 0; background: var(--tint); color: var(--ink); }
+.arrow[disabled] { opacity: .35; cursor: default; }
+.dots { display: flex; gap: 8px; }
+.dot { width: 10px; height: 10px; padding: 0; border: 0; border-radius: 50%; background: var(--line); cursor: pointer; }
+.dot[aria-current="true"] { background: var(--primary); width: 26px; border-radius: 999px; }
+
+/* Features */
+.grid { margin-top: 28px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.feat { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+.feat svg { width: 28px; height: 28px; color: var(--primary); }
+.feat h3 { font-size: 1.1rem; margin-top: 12px; }
+.feat p { margin-top: 6px; font-size: 0.95rem; color: var(--soft); }
+
+/* Private */
+.private { background: var(--tint); border-radius: 26px; padding: 36px 24px; }
+.checks { list-style: none; margin: 22px 0 0; padding: 0; display: grid; gap: 14px; }
+.checks li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 12px; align-items: start; }
+.checks svg { width: 26px; height: 26px; color: var(--primary); }
+.checks b { display: block; }
+.checks span { color: var(--soft); font-size: 0.97rem; }
+
+/* Install */
+.steps { margin: 24px 0 0; padding: 0; list-style: none; display: grid; gap: 14px; counter-reset: s; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; align-items: start; }
+.steps li::before { content: counter(s); width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; font-weight: 600; }
+.steps b { display: block; }
+.steps span { color: var(--soft); font-size: 0.97rem; }
+.sha { margin-top: 28px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+.sha .lab { font-size: 0.85rem; color: var(--muted); }
+.sha code { display: block; margin-top: 8px; font-family: var(--font-mono); font-size: 0.82rem; word-break: break-all; }
+.sha .row { margin-top: 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.copy { background: var(--tint); color: var(--ink); padding: 9px 16px; font-size: 15px; }
+.copied { font-size: 0.9rem; color: var(--primary); }
+
+/* FAQ */
+.faq { margin-top: 24px; border-top: 1px solid var(--line); }
+.faq details { border-bottom: 1px solid var(--line); }
+.faq summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; font-weight: 600; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font-size: 1.5rem; line-height: 1; color: var(--primary); }
+.faq details[open] summary::after { content: "–"; }
+.faq details p { padding: 0 0 18px; color: var(--soft); max-width: 38em; }
+
+/* Feedback */
+.fb { border: 1px solid var(--line); background: var(--card); border-radius: 26px; padding: 32px 24px; }
+.fb-form { margin-top: 22px; display: grid; gap: 16px; }
+.types { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.types legend { font-size: 0.9rem; font-weight: 600; color: var(--soft); padding: 0; margin-bottom: 10px; }
+.types label { cursor: pointer; }
+.types input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.types span { display: inline-block; padding: 10px 20px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg); font-weight: 600; }
+.types input:checked + span { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.types input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 3px; }
+.field { display: grid; gap: 6px; }
+.field label { font-size: 0.9rem; font-weight: 600; color: var(--soft); }
+.field .opt { font-weight: 400; color: var(--muted); }
+.field input, .field textarea { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1.5px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.field textarea { resize: vertical; min-height: 120px; }
+.field input:focus, .field textarea:focus { outline: 3px solid var(--focus); outline-offset: 1px; border-color: var(--primary); }
+.fb-err { margin: 0; color: #C62828; font-weight: 600; font-size: 0.93rem; }
+:root[data-theme="dark"] .fb-err { color: #FF8A80; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fb-err { color: #FF8A80; } }
+.fb-actions { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 12px; }
+.fb-actions .btn { text-align: center; line-height: 1.25; }
+.fb-note { margin-top: 16px; font-size: 0.93rem; color: var(--muted); max-width: 38em; }
+.dl-count { margin-top: 12px; font-size: 0.93rem; color: var(--primary); font-weight: 600; }
+
+/* Footer */
+footer { border-top: 1px solid var(--line); padding-block: 32px; color: var(--muted); font-size: 0.93rem; }
+footer .wrap { display: grid; gap: 8px; }
+footer a { color: var(--primary); }
+
+@media (max-width: 560px) {
+  .slide { grid-template-columns: minmax(0, 1fr); }
+  .slide img { max-height: 340px; width: auto; max-width: 100%; margin-inline: auto; }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .track { scroll-behavior: auto; } }
+@media (prefers-reduced-motion: no-preference) { .track { scroll-behavior: smooth; } }
+</style>
+
+<style>
+html { color-scheme: light; }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top"><img alt="" src="img/icon.png"> mmogo</a>
+    <button class="btn theme" id="theme" type="button" aria-label="Switch light or dark" title="Switch light or dark">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+    <a class="btn btn-sm" href="https://github.com/Joshynsky/mmogo/releases/latest/download/mmogo.apk">Download</a>
+  </div>
+</header>
+
+<main id="top">
+  <div class="hero">
+    <div class="wrap">
+      <h1>See where your <em>M-Pesa</em> money goes.</h1>
+      <p class="lede">Paste an M-Pesa message. mmogo sorts it, totals it and charts it. Everything stays on your phone.</p>
+      <div class="cta">
+        <a class="btn btn-sun" href="https://github.com/Joshynsky/mmogo/releases/latest/download/mmogo.apk">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>
+          Download for Android
+        </a>
+        <p class="meta">Version 0.1.0 · 56 MB · Free · No account</p>
+      </div>
+      <figure class="shot-hero">
+        <img alt="The mmogo Home screen: Ksh 6,990.00 spent this month, split into Send Money, Paybill, Buy Goods and Cash." src="img/home.webp">
+        <figcaption>The Home screen with this month's spending.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <section class="after-hero" id="how">
+    <div class="wrap">
+      <p class="eyebrow">How it works</p>
+      <h2>From a text message to a clear picture.</h2>
+      <p class="sec-lede">Swipe through, or use the arrows.</p>
+
+      <div class="show" id="show" aria-roledescription="carousel" aria-label="mmogo screenshots">
+        <div class="stage">
+          <div class="track" id="track" tabindex="0">
+            <article class="slide" aria-roledescription="slide" aria-label="1 of 5">
+              <img alt="An M-Pesa confirmation SMS for Ksh 1,200.00 sent to Grace Muthoni." src="img/step1.webp">
+              <div><span class="n">1 of 5</span><h3>Copy the M-Pesa SMS</h3><p>Long-press the confirmation message in your messages app and copy it. mmogo can't see your inbox, so it only ever works with the message you paste.</p></div>
+            </article>
+            <article class="slide" aria-roledescription="slide" aria-label="2 of 5">
+              <img alt="The Parse the M-Pesa message box, ready for a pasted message." src="img/step2.webp">
+              <div><span class="n">2 of 5</span><h3>Paste it in</h3><p>Tap Parse M-Pesa message on the Add screen and paste. Send Money, Paybill and Buy Goods messages all work.</p></div>
+            </article>
+            <article class="slide" aria-roledescription="slide" aria-label="3 of 5">
+              <img alt="The Add form filled in from the SMS: amount 1200.00, code, date and a fee of 22.00." src="img/step3.webp">
+              <div><span class="n">3 of 5</span><h3>Check what it filled in</h3><p>The amount, code, date, receiver and transaction cost are filled in for you. Look it over, then Review &amp; save.</p></div>
+            </article>
+            <article class="slide" aria-roledescription="slide" aria-label="4 of 5">
+              <img alt="Adding a cash payment of 350 with the Groceries category chosen." src="img/step4.webp">
+              <div><span class="n">4 of 5</span><h3>Sort it, or log cash</h3><p>Pick a category such as Groceries or Rent, or make your own. Paid cash? Add that too, so your total is complete.</p></div>
+            </article>
+            <article class="slide" aria-roledescription="slide" aria-label="5 of 5">
+              <img alt="This month's spending: Ksh 6,990.00, with a bar for each type and the transaction cost." src="img/step5.webp">
+              <div><span class="n">5 of 5</span><h3>See where it went</h3><p>Totals for the month, a bar for each type of payment, the cost of the transactions, and your latest entries.</p></div>
+            </article>
+          </div>
+        </div>
+        <div class="ctrl">
+          <button class="btn arrow" id="prev" type="button" aria-label="Previous screenshot"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <div class="dots" id="dots"></div>
+          <button class="btn arrow" id="next" type="button" aria-label="Next screenshot"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" style="padding-top:0">
+    <div class="wrap">
+      <p class="eyebrow">What you get</p>
+      <h2>Your spending, without the spreadsheet.</h2>
+      <div class="grid">
+        <div class="feat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg>
+          <h3>Classify</h3><p>Groceries, Rent, Transport or your own. mmogo remembers it for the next payment to the same person.</p>
+        </div>
+        <div class="feat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+          <h3>Analytics</h3><p>By day, week, month, year or any range you pick, with a chart you can tap and swipe.</p>
+        </div>
+        <div class="feat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.4c1.9.7 3.2 2.6 3.2 4.6"/></svg>
+          <h3>Paid to</h3><p>The people, paybills and shops you pay most, with search, filter and sort.</p>
+        </div>
+        <div class="feat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>
+          <h3>Export CSV</h3><p>Take your data to a spreadsheet or keep a copy, through the share sheet.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="private" style="padding-top:0">
+    <div class="wrap">
+      <div class="private">
+        <p class="eyebrow">Private by design</p>
+        <h2>Your money stays yours.</h2>
+        <ul class="checks">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>No account, no server</b><span>Entries live in a database on your phone. Nothing is sent anywhere.</span></div></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>No permissions, not even internet</b><span>The app asks Android for none, so it can't send your data out.</span></div></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Reads only the message you paste</b><span>mmogo reads the SMS you paste and picks out the amount, receiver, code, date and cost. It has no access to your inbox or any other message.</span></div></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Never saves your M-Pesa balance</b><span>The balance in the message is ignored. It isn't picked out, saved or shown anywhere, and the message text itself isn't kept either.</span></div></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <p class="eyebrow">Install</p>
+      <h2>Three steps, about a minute.</h2>
+      <ol class="steps">
+        <li><div><b>Download mmogo.apk</b><span>Use the button below. It's about 56 MB and works on 32-bit and 64-bit Android phones.</span></div></li>
+        <li><div><b>Open it from your file manager and allow "Install unknown apps"</b><span>When the download finishes, open your file manager app (Files, or the one that came with your phone), go to Downloads and tap mmogo.apk. Android will ask you to allow installs from unknown apps. Allow it for the file manager, not for Chrome or your browser. Play Protect may warn you because the app isn't from the Play Store. That's expected for an app shared directly.</span></div></li>
+        <li><div><b>Open mmogo</b><span>A short Welcome and a four-step walkthrough start the first time. You can skip them.</span></div></li>
+      </ol>
+      <p style="margin-top:26px"><a class="btn btn-sun" href="https://github.com/Joshynsky/mmogo/releases/latest/download/mmogo.apk">Download for Android</a></p>
+      <p class="dl-count" id="dlcount" hidden></p>
+      <div class="sha">
+        <p class="lab">Check your download: SHA-256 of mmogo.apk</p>
+        <code id="sha">62a6c91e947881d306c3fe4c15fa36ee2543f1b84ef07026fc9cbad2b150cb7c</code>
+        <div class="row"><button class="btn copy" id="copy" type="button">Copy</button><span class="copied" id="copied" role="status" aria-live="polite"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" style="padding-top:0">
+    <div class="wrap">
+      <p class="eyebrow">Questions</p>
+      <h2>Before you install.</h2>
+      <div class="faq">
+        <details><summary>Is it safe to install?</summary><p>The app requests no permissions and the source code is public on GitHub. Because it's not on the Play Store, check that your download matches the SHA-256 above.</p></details>
+        <details><summary>What if I lose my phone or uninstall the app?</summary><p>Your data is only on your phone, so it's gone unless you exported a copy. Use Export CSV in Settings now and then. Backup and restore is planned for a later version.</p></details>
+        <details><summary>Is there an iPhone version?</summary><p>Not yet. mmogo is Android only for now.</p></details>
+        <details><summary>Does it connect to my M-Pesa account?</summary><p>No. It never touches your M-Pesa account or PIN. It only reads the M-Pesa messages you paste in, and uses the parts it needs.</p></details>
+        <details><summary>Who makes it?</summary><p>mmogo is an independent project by Joshua Waga. It isn't made by, or connected to, Safaricom or M-Pesa.</p></details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><a href="https://github.com/Joshynsky/mmogo">GitHub</a> · <a href="https://github.com/Joshynsky/mmogo/blob/main/LICENSE">MIT licence</a> · <a href="https://github.com/Joshynsky/mmogo/releases">All releases</a></p>
+    <p>mmogo is an independent project. It is not made by, or connected to, Safaricom or M-Pesa.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  try { var t = localStorage.getItem('mmogo-theme'); if (t) root.setAttribute('data-theme', t); } catch (e) {}
+  document.getElementById('theme').addEventListener('click', function () {
+    var dark = root.getAttribute('data-theme') === 'dark' ||
+      (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    var next = dark ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('mmogo-theme', next); } catch (e) {}
+  });
+
+  var track = document.getElementById('track');
+  var slides = track.querySelectorAll('.slide');
+  var dots = document.getElementById('dots');
+  var prev = document.getElementById('prev');
+  var next = document.getElementById('next');
+  var idx = 0;
+  slides.forEach(function (s, i) {
+    var d = document.createElement('button');
+    d.type = 'button'; d.className = 'dot'; d.setAttribute('aria-label', 'Go to screenshot ' + (i + 1));
+    d.addEventListener('click', function () { go(i); });
+    dots.appendChild(d);
+  });
+  function paint() {
+    dots.querySelectorAll('.dot').forEach(function (d, i) { d.setAttribute('aria-current', i === idx ? 'true' : 'false'); });
+    prev.disabled = idx === 0; next.disabled = idx === slides.length - 1;
+  }
+  function go(i) {
+    idx = Math.max(0, Math.min(slides.length - 1, i));
+    track.scrollTo({ left: slides[idx].offsetLeft - track.offsetLeft, behavior: 'smooth' });
+    paint();
+  }
+  prev.addEventListener('click', function () { go(idx - 1); });
+  next.addEventListener('click', function () { go(idx + 1); });
+  track.addEventListener('scroll', function () {
+    var w = slides[0].offsetWidth + 16;
+    var i = Math.round(track.scrollLeft / w);
+    if (i !== idx) { idx = i; paint(); }
+  }, { passive: true });
+  track.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(idx + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(idx - 1); }
+  });
+  paint();
+
+  
+  /* Live download count from the GitHub release. Stays hidden if the request is blocked or fails. */
+  try {
+    fetch('https://api.github.com/repos/Joshynsky/mmogo/releases/latest')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (rel) {
+        if (!rel || !rel.assets) return;
+        var n = rel.assets.reduce(function (sum, a) { return sum + (a.download_count || 0); }, 0);
+        if (n > 0) { var el = document.getElementById('dlcount'); el.textContent = 'Downloaded ' + n.toLocaleString() + ' times so far'; el.hidden = false; }
+      }).catch(function () {});
+  } catch (e) {}
+
+  var copied = document.getElementById('copied');
+  document.getElementById('copy').addEventListener('click', function () {
+    var text = document.getElementById('sha').textContent.trim();
+    function ok() { copied.textContent = 'Copied'; setTimeout(function () { copied.textContent = ''; }, 2000); }
+    function sel() {
+      var r = document.createRange(); r.selectNodeContents(document.getElementById('sha'));
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      copied.textContent = 'Press Ctrl+C to copy';
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok, sel);
+    } else { sel(); }
+  });
+})();
+</script>
+</body>
+</html>
