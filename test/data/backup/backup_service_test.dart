@@ -291,10 +291,12 @@ void main() {
     await db.close();
   }, timeout: const Timeout(Duration(minutes: 2)));
 
-  test('export_refuses_a_file_the_validator_would_reject (legacy long name)', () async {
+  test('a legacy over-long name no longer fails the export (B9b: it is cut)', () async {
     final db = await _populated();
     await _addClass(db, 'SEND_MONEY', 'N' * 150); // over the 100 limit
-    await expectLater(_service(db).export(), throwsA(isA<BackupNotRestorable>()));
+    final result = await _service(db).export();
+    expect(result.repairedCount, 1);
+    expect(result.skipped, isEmpty);
     await db.close();
   });
 

@@ -46,7 +46,9 @@ const int kBackupMaxClassificationNameLength = 100;
 const int kBackupMaxLabelLength = 200;
 
 const int kBackupMaxPaybillAccountLength = 100;
-const int kBackupMaxCounterpartyKeyLength = 300;
+
+/// A PAYBILL key is `LABEL#ACCOUNT`: 200 + 1 + 100 = 301, so 310 leaves room.
+const int kBackupMaxCounterpartyKeyLength = 310;
 const int kBackupMaxDisplayNameLength = 30;
 
 // --- value ranges ---------------------------------------------------------------

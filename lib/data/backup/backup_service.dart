@@ -4,6 +4,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'backup_codec.dart';
 import 'backup_limits.dart';
+import 'backup_repair.dart';
 import 'backup_settings.dart';
 import 'backup_validator.dart';
 
@@ -40,9 +41,13 @@ class BackupExport {
     required this.transactions,
     required this.counterpartyMap,
     required this.excludedSoftDeleted,
+    this.repairedCount = 0,
+    this.skipped = const [],
   });
 
   final Uint8List bytes;
+
+  /// Rows IN the file (after any skips).
   final int classifications;
   final int transactions;
   final int counterpartyMap;
@@ -50,6 +55,16 @@ class BackupExport {
   /// Recently deleted (soft-deleted) transactions left OUT of the file (PM
   /// rule); the UI tells the user how many.
   final int excludedSoftDeleted;
+  int get deletedLeftOut => excludedSoftDeleted;
+
+  /// Rows that were kept but had to be tidied in the copy (stray characters,
+  /// spacing, over-long text). The database itself is never changed.
+  final int repairedCount;
+
+  /// Rows left out because they could not be made valid: table, row id,
+  /// field and rule only, never the value.
+  final List<BackupSkippedRow> skipped;
+  int get skippedCount => skipped.length;
 }
 
 /// Builds a backup file from the live database.
@@ -120,7 +135,7 @@ class BackupService {
       ];
       map = [
         for (final r in await txn.rawQuery(
-          'SELECT source_type, counterparty_key, '
+          'SELECT id, source_type, counterparty_key, '
           'classification_id AS classification, auto_apply, updated_at '
           'FROM counterparty_classification_map ORDER BY id',
         ))
@@ -143,34 +158,61 @@ class BackupService {
     _guardRows('transactions', txs.length, kBackupMaxTransactions);
     _guardRows('counterparty_map', map.length, kBackupMaxMapRows);
 
-    final bytes = BackupCodec.encode(
-      createdAtMs: _now().millisecondsSinceEpoch,
+    // Repair what is safe on the COPY (never the database), skip the rest.
+    final repair = BackupRepair(
       classifications: classes,
       transactions: txs,
       counterpartyMap: map,
-      prefs: await _settings.snapshot(),
+      enabledGroupCodes: enabledGroups,
     );
-
-    if (bytes.length > maxBytes) {
-      throw BackupTooLarge(what: 'bytes', size: bytes.length, limit: maxBytes);
-    }
+    final prefs = await _settings.snapshot();
+    final createdAt = _now().millisecondsSinceEpoch;
 
     // Round-trip guard: the file we are about to hand out must pass the same
-    // checks a restore will apply.
-    try {
-      BackupValidator.validate(bytes, enabledGroupCodes: enabledGroups);
-    } on RestoreRejected catch (e) {
-      throw BackupNotRestorable(e);
+    // checks a restore will apply. The repair mirrors those checks, so a
+    // refusal here is rare; when the validator still names a row, skip it and
+    // try again. Anything else is a real bug and throws.
+    RestoreRejected? last;
+    for (var pass = 0; pass <= _maxRepairPasses; pass++) {
+      final bytes = BackupCodec.encode(
+        createdAtMs: createdAt,
+        classifications: repair.classifications,
+        transactions: repair.transactions,
+        counterpartyMap: repair.counterpartyMap,
+        prefs: prefs,
+      );
+      if (bytes.length > maxBytes) {
+        throw BackupTooLarge(what: 'bytes', size: bytes.length, limit: maxBytes);
+      }
+      try {
+        BackupValidator.validate(bytes, enabledGroupCodes: enabledGroups);
+      } on RestoreRejected catch (e) {
+        last = e;
+        final table = e.table;
+        final index = e.rowIndex;
+        if (table == null ||
+            index == null ||
+            !repair.skipRow(table, index, e.field ?? '(row)', e.reason.name)) {
+          throw BackupNotRestorable(e);
+        }
+        continue;
+      }
+      return BackupExport(
+        bytes: bytes,
+        classifications: repair.classifications.length,
+        transactions: repair.transactions.length,
+        counterpartyMap: repair.counterpartyMap.length,
+        excludedSoftDeleted: excluded,
+        repairedCount: repair.repairedCount,
+        skipped: List.unmodifiable(repair.skipped),
+      );
     }
-
-    return BackupExport(
-      bytes: bytes,
-      classifications: classes.length,
-      transactions: txs.length,
-      counterpartyMap: map.length,
-      excludedSoftDeleted: excluded,
-    );
+    throw BackupNotRestorable(last!);
   }
+
+  /// Most validator-driven skips in one export (the repair's own checks catch
+  /// the usual cases first, so this is a backstop, not a normal path).
+  static const int _maxRepairPasses = 200;
 
   static void _guardRows(String what, int n, int cap) {
     if (n > cap) throw BackupTooLarge(what: what, size: n, limit: cap);

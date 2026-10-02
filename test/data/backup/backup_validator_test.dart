@@ -414,7 +414,7 @@ void main() {
       },
       'counterparty_map': {
         'source_type': ['CASH', 'X', '', 1, null],
-        'counterparty_key': ['', ' ', ' a', 'x' * 301, 'a\nb', 'a\u202Eb', 5, null],
+        'counterparty_key': ['', ' ', ' a', 'x' * 311, 'a\nb', 'a\u202Eb', 5, null],
         'classification': ['1', 1.5, null, true],
         'auto_apply': [2, -1, '1', true, null, 0.0],
         'updated_at': [0, kBackupMinEpochMs - 1, kBackupMaxEpochMs, '1', 1.5, null],
