@@ -15,9 +15,16 @@ String formatBackupTime(DateTime when) {
 /// `25 Sep 2026` (the Settings row subtitle).
 String formatBackupDay(DateTime when) => '${when.day} ${_months[when.month - 1]} ${when.year}';
 
-/// The "Last backup" line on the Backup page.
-String lastBackupLine(DateTime? manual) =>
-    manual == null ? 'Never backed up' : 'Last backup (manual): ${formatBackupTime(manual)}';
+/// The "Last backup" line on the Backup page: the manual backup, then the
+/// last automatic one when [auto] is given (the page passes it only while
+/// auto-backup is on, has a folder and is not paused).
+String lastBackupLine(DateTime? manual, {DateTime? auto}) {
+  final parts = [
+    if (manual != null) 'Last backup (manual): ${formatBackupTime(manual)}',
+    if (auto != null) 'Last auto-backup: ${formatBackupTime(auto)}',
+  ];
+  return parts.isEmpty ? 'Never backed up' : parts.join(' · ');
+}
 
 /// The Settings row subtitle: `Never backed up` or `Last backup 25 Sep 2026`.
 String backupRowSubtitle(DateTime? lastBackup) =>

@@ -11,6 +11,7 @@ import '../../../data/db/app_database.dart';
 import '../../../data/db/export_dao.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../../data/prefs/backup_prefs.dart';
+import '../../copy/data_copy.dart';
 import '../../shell/routes.dart';
 import '../../shell/secondary_scaffold.dart';
 import '../../theme/app_colors.dart';
@@ -72,6 +73,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // off->on once the real read resolves in the common case.
   bool _autoRecognize = true;
   String _backupSubtitle = 'Never backed up';
+  bool _backupPaused = false;
 
   // Coach-tour anchors.
   final _paletteTourKey = GlobalKey();
@@ -82,7 +84,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    BackupPrefs.pausedNotifier.addListener(_onPausedChanged);
     _bootstrap();
+  }
+
+  @override
+  void dispose() {
+    BackupPrefs.pausedNotifier.removeListener(_onPausedChanged);
+    super.dispose();
   }
 
   /// Shows the tour (or its unfinished rest) once the frame has painted.
@@ -112,12 +121,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  /// The newer of the manual and automatic backup times, or `Never backed up`.
+  /// The newer of the manual and automatic backup times, or `Never backed up`;
+  /// when auto-backup is paused the subtitle says so (and [_backupPaused]
+  /// shows the warning dot).
   Future<String> _readBackupSubtitle() async {
+    final paused = await BackupPrefs.readEnabled() && await BackupPrefs.readPaused();
+    _backupPaused = paused;
+    if (paused) return kAutoBackupPausedSubtitle;
     final manual = await BackupPrefs.readLastManualAt();
     final auto = await BackupPrefs.readLastAt();
     final last = (manual != null && auto != null) ? (manual.isAfter(auto) ? manual : auto) : (manual ?? auto);
     return backupRowSubtitle(last);
+  }
+
+  /// Auto-backup paused or resumed while this page is open.
+  Future<void> _onPausedChanged() async {
+    final subtitle = await _readBackupSubtitle();
+    if (!mounted) return;
+    setState(() => _backupSubtitle = subtitle);
   }
 
   /// Opens the Backup page and refreshes the row's subtitle when it closes.
@@ -250,6 +271,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onExport: _handleExport,
             backupSubtitle: _backupSubtitle,
             onBackup: _openBackup,
+            backupPaused: _backupPaused,
           ),
           const SizedBox(height: 14),
           PreferencesSection(

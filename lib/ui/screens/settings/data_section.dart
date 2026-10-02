@@ -17,6 +17,7 @@ class DataSection extends StatelessWidget {
     required this.onExport,
     this.backupSubtitle = 'Never backed up',
     this.onBackup,
+    this.backupPaused = false,
   });
 
   final AppPalette palette;
@@ -30,6 +31,9 @@ class DataSection extends StatelessWidget {
 
   /// Opens the Backup and restore page (defaults to the named route).
   final VoidCallback? onBackup;
+
+  /// Auto-backup is paused: the row shows a warning dot.
+  final bool backupPaused;
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +74,7 @@ class DataSection extends StatelessWidget {
                   icon: Icons.backup_outlined,
                   label: 'Backup and restore',
                   subtitle: backupSubtitle,
+                  warningDot: backupPaused,
                   onTap: onBackup ?? () => Navigator.of(context).pushNamed(Routes.backup),
                 ),
               ],

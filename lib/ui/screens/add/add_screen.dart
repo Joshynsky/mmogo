@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../../data/backup/auto_backup_service.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/db/counterparty_dao.dart';
 import '../../../data/db/transaction_dao.dart';
@@ -503,6 +504,10 @@ class _AddScreenState extends State<AddScreen> {
         }
       }
     }
+    // B20: the entry is saved. Count it for auto-backup (inert when it is
+    // off; never throws; never awaited, so a slow or failing backup cannot
+    // hold up or fail this save).
+    AutoBackupService.instance.onEntrySaved().ignore();
     return null;
   }
 

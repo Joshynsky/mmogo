@@ -32,6 +32,16 @@ class BackupPrefs {
   static const keyAutoBackupLastAt = 'auto_backup_last_at';
   static const keyBackupLastManualAt = 'backup_last_manual_at';
 
+  /// Consecutive failed automatic backups (0 when the last one worked). Not
+  /// one of the seven pinned F3 names; never in a backup file.
+  static const keyAutoBackupFailCount = 'auto_backup_fail_count';
+
+  /// URIs of the files THIS app wrote into the auto-backup folder; pruning
+  /// only ever deletes files on this list (see `AutoBackupService`). Not an
+  /// F3 name; never in a backup file.
+  static const keyAutoBackupWrittenUris = 'auto_backup_written_uris';
+  static const maxWrittenUris = 60;
+
   static const defaultEveryN = 10;
   static const minEveryN = 1;
   static const maxEveryN = 100;
@@ -150,6 +160,25 @@ class BackupPrefs {
     return ok;
   }
 
+  // --- failures and the written-files ledger ---------------------------------------
+
+  static Future<int> readFailCount() => _read(0, (p) {
+        final v = p.getInt(keyAutoBackupFailCount) ?? 0;
+        return v < 0 ? 0 : v;
+      });
+
+  static Future<bool> writeFailCount(int value) =>
+      _write((p) => p.setInt(keyAutoBackupFailCount, value < 0 ? 0 : value));
+
+  static Future<List<String>> readWrittenUris() =>
+      _read(const <String>[], (p) => List<String>.of(p.getStringList(keyAutoBackupWrittenUris) ?? const []));
+
+  /// Keeps only the newest [maxWrittenUris] entries.
+  static Future<bool> writeWrittenUris(List<String> uris) {
+    final cut = uris.length > maxWrittenUris ? uris.sublist(uris.length - maxWrittenUris) : uris;
+    return _write((p) => p.setStringList(keyAutoBackupWrittenUris, cut));
+  }
+
   // --- last-backup times ------------------------------------------------------------
 
   /// ISO-8601 string, as pinned by F3.
@@ -184,6 +213,8 @@ class BackupPrefs {
         keyAutoBackupEnabled,
         keyAutoBackupPaused,
         keyAutoBackupSinceCount,
+        keyAutoBackupFailCount,
+        keyAutoBackupWrittenUris,
       ]) {
         await p.remove(k);
       }

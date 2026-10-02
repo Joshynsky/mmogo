@@ -10,6 +10,9 @@ import '../../shell/primary_shell.dart';
 import '../../shell/secondary_scaffold.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_palette_scope.dart';
+import 'auto_backup_card.dart';
+import 'auto_backup_flow.dart';
+import 'auto_backup_state.dart';
 import 'backup_export_flow.dart';
 import 'backup_format.dart';
 import 'backup_section.dart';
@@ -19,7 +22,19 @@ import 'restore_flow.dart';
 /// page). B14 builds "Back up now"; Restore (B17), Auto-backup (B21) and the
 /// Privacy row (B32) are added to this page by later tasks.
 class BackupScreen extends StatefulWidget {
-  const BackupScreen({super.key, this.db, this.loadCounts, this.flow, this.restoreFlow, this.restoreService});
+  const BackupScreen({
+    super.key,
+    this.db,
+    this.loadCounts,
+    this.flow,
+    this.restoreFlow,
+    this.restoreService,
+    this.autoFlow,
+  });
+
+  /// Test seam: the Auto-backup card's actions (defaults to the real ones,
+  /// which use the app's `AutoBackupService` and `StorageBridge`).
+  final AutoBackupFlow? autoFlow;
 
   /// Test seam: a database to count rows in (defaults to the app database).
   final Database? db;
@@ -49,6 +64,8 @@ class _BackupScreenState extends State<BackupScreen> {
   bool _busy = false;
   String? _result;
   bool _restoring = false;
+  AutoBackupState _auto = const AutoBackupState();
+  late final AutoBackupFlow _autoFlow = widget.autoFlow ?? AutoBackupFlow(onChanged: _reloadAuto);
   late final BackupExportFlow _flow = widget.flow ?? BackupExportFlow();
   late final RestoreFlow _restoreFlow =
       widget.restoreFlow ?? RestoreFlow(service: widget.restoreService, onDataChanged: _refreshApp);
@@ -78,10 +95,24 @@ class _BackupScreenState extends State<BackupScreen> {
     }
   }
 
+  /// Re-reads the auto-backup prefs (after a change here, or when the service
+  /// pauses itself while this page is open).
+  Future<void> _reloadAuto() async {
+    final s = await AutoBackupState.load();
+    if (mounted) setState(() => _auto = s);
+  }
+
   @override
   void initState() {
     super.initState();
+    BackupPrefs.pausedNotifier.addListener(_reloadAuto);
     _load();
+  }
+
+  @override
+  void dispose() {
+    BackupPrefs.pausedNotifier.removeListener(_reloadAuto);
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -90,6 +121,7 @@ class _BackupScreenState extends State<BackupScreen> {
       _countsFailed = false;
     });
     final last = await BackupPrefs.readLastManualAt();
+    final auto = await AutoBackupState.load();
     BackupCounts? counts;
     try {
       final loader = widget.loadCounts;
@@ -102,6 +134,7 @@ class _BackupScreenState extends State<BackupScreen> {
     if (!mounted) return;
     setState(() {
       _lastManual = last;
+      _auto = auto;
       _counts = counts;
       _countsFailed = counts == null;
     });
@@ -179,6 +212,16 @@ class _BackupScreenState extends State<BackupScreen> {
             onRetry: _load,
             onRestore: _restore,
             restoring: _restoring,
+            lastAuto: _auto.lastForLine,
+          ),
+          const SizedBox(height: 14),
+          AutoBackupCard(
+            palette: palette,
+            state: _auto,
+            onToggle: (on) => _autoFlow.toggle(context, on, hasFolder: _auto.hasFolder),
+            onChooseFolder: () => _autoFlow.chooseFolder(context),
+            onEveryN: _autoFlow.stepEveryN,
+            onKeepK: _autoFlow.stepKeepK,
           ),
         ],
       ),

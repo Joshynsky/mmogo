@@ -5,11 +5,24 @@ import '../../theme/app_colors.dart';
 /// The amber warning panel (mock `.nwarn`): used for the unencrypted-file
 /// warning (W1) and, later, the other data-safety notices.
 class BackupWarning extends StatelessWidget {
-  const BackupWarning({super.key, required this.palette, required this.text, this.bottomGap = 12});
+  const BackupWarning({
+    super.key,
+    required this.palette,
+    required this.text,
+    this.bottomGap = 12,
+    this.title,
+    this.action,
+  });
 
   final AppPalette palette;
   final String text;
   final double bottomGap;
+
+  /// Bold lead-in before [text] (the paused banner).
+  final String? title;
+
+  /// A small button under the text (for example "Choose folder").
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +40,21 @@ class BackupWarning extends StatelessWidget {
           Icon(Icons.warning_amber_rounded, size: 18, color: palette.ink),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(text, style: TextStyle(fontSize: 12.5, height: 1.45, color: palette.ink)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      if (title != null) TextSpan(text: title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                      TextSpan(text: text),
+                    ],
+                  ),
+                  style: TextStyle(fontSize: 12.5, height: 1.45, color: palette.ink),
+                ),
+                if (action != null) ...[const SizedBox(height: 8), action!],
+              ],
+            ),
           ),
         ],
       ),

@@ -23,7 +23,12 @@ class BackupSection extends StatelessWidget {
     required this.onRetry,
     required this.onRestore,
     this.restoring = false,
+    this.lastAuto,
   });
+
+  /// The last automatic backup, shown after the manual one (null unless
+  /// auto-backup is on, has a folder and is not paused).
+  final DateTime? lastAuto;
 
   final AppPalette palette;
 
@@ -72,7 +77,7 @@ class BackupSection extends StatelessWidget {
             BackupPara(kUninstallErasesNotice, palette: palette),
             BackupPara(kPhoneTransferNotice, palette: palette),
             Text(
-              lastBackupLine(lastManual),
+              lastBackupLine(lastManual, auto: lastAuto),
               key: const Key('backupLastLine'),
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: palette.mutedInk),
             ),

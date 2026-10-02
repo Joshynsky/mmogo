@@ -57,6 +57,7 @@ class SettingsLink extends StatelessWidget {
     required this.subtitle,
     required this.onTap,
     this.first = false,
+    this.warningDot = false,
   });
 
   final AppPalette palette;
@@ -65,6 +66,9 @@ class SettingsLink extends StatelessWidget {
   final String subtitle;
   final VoidCallback? onTap;
   final bool first;
+
+  /// A small amber dot before the chevron (auto-backup paused).
+  final bool warningDot;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +94,16 @@ class SettingsLink extends StatelessWidget {
                   ],
                 ),
               ),
+              if (warningDot)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Container(
+                    key: const Key('settingsRowWarningDot'),
+                    width: 9,
+                    height: 9,
+                    decoration: BoxDecoration(color: palette.sun, shape: BoxShape.circle),
+                  ),
+                ),
               if (onTap != null) Icon(Icons.chevron_right, size: 18, color: palette.mutedInk),
             ],
           ),

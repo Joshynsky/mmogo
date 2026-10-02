@@ -111,6 +111,9 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   testWidgets('normal: header card, counts line, not-included line, warning, enabled button', (t) async {
+    t.view.physicalSize = const Size(420, 3000); // tall enough that the Auto-backup card (last) is built
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
     await _pump(t);
     expect(find.text('Your data lives only on this phone'), findsOneWidget);
     expect(find.text(kUninstallErasesNotice), findsOneWidget);
@@ -128,9 +131,10 @@ void main() {
     );
     expect(find.text(kBackupFileWarning), findsOneWidget);
     expect(t.widget<FilledButton>(find.byKey(const Key('backUpNowButton'))).onPressed, isNotNull);
-    // B17 added Restore; B21 and B32 add these later: not on the page yet.
+    // B17 added Restore, B21 the Auto-backup card (off: just the switch); B32 adds Privacy later.
     expect(find.text('Restore from a file'), findsOneWidget);
-    expect(find.text('Auto-backup'), findsNothing);
+    expect(find.text('Auto-backup'), findsOneWidget);
+    expect(find.byKey(const Key('autoBackupFolderRow')), findsNothing);
     expect(find.text('Privacy and your data'), findsNothing);
   });
 

@@ -24,6 +24,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/prefs/app_prefs.dart';
+import 'package:mmogo/data/prefs/backup_prefs.dart';
 import 'package:mmogo/ui/screens/notifications_screen.dart';
 import 'package:mmogo/ui/screens/settings_screen.dart';
 import 'package:mmogo/ui/shell/routes.dart';
@@ -372,6 +373,40 @@ void main() {
       expect(find.text('Never backed up'), findsOneWidget);
       expect(find.text('Send feedback'), findsNothing);
       expect(find.text('Check now'), findsNothing);
+      expect(find.byKey(const Key('settingsRowWarningDot')), findsNothing);
+    });
+
+    testWidgets('B21: a paused auto-backup shows the warning dot and the paused subtitle on the Backup row', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'auto_backup_enabled': true,
+        'auto_backup_paused': true,
+        'auto_backup_folder_uri': 'content://tree/x',
+      });
+      await pumpWithRoutes(tester);
+      expect(find.byKey(const Key('settingsRowWarningDot')), findsOneWidget);
+      expect(find.text('Auto-backup is paused. Choose a folder again to resume.'), findsOneWidget);
+      expect(find.text('Never backed up'), findsNothing);
+    });
+
+    testWidgets('B21: paused but switched off (stale flag) shows no dot', (tester) async {
+      SharedPreferences.setMockInitialValues({'auto_backup_enabled': false, 'auto_backup_paused': true});
+      await pumpWithRoutes(tester);
+      expect(find.byKey(const Key('settingsRowWarningDot')), findsNothing);
+      expect(find.text('Never backed up'), findsOneWidget);
+    });
+
+    testWidgets('B21: the dot appears live when auto-backup pauses while Settings is open', (tester) async {
+      SharedPreferences.setMockInitialValues({'auto_backup_enabled': true});
+      await pumpWithRoutes(tester);
+      expect(find.byKey(const Key('settingsRowWarningDot')), findsNothing);
+      await BackupPrefs.writePaused(true);
+      await _settle(tester);
+      await tester.pump();
+      expect(find.byKey(const Key('settingsRowWarningDot')), findsOneWidget);
+      await BackupPrefs.writePaused(false);
+      await _settle(tester);
+      await tester.pump();
+      expect(find.byKey(const Key('settingsRowWarningDot')), findsNothing);
     });
 
     testWidgets('the Updates row opens the notifications/updates page', (tester) async {

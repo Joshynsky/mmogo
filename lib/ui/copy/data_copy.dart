@@ -122,3 +122,27 @@ const kResultReplaceNote = 'Everything on this phone now matches the file.';
 const kResultSafetyCopyNote = 'A safety copy of what was on this phone is kept in the app, so you can undo.';
 const kResultUndoneNote = 'The data from before the replace is back. Entries added after the replace were not kept.';
 const kSettingsNotApplied = 'Restored, but some settings could not be applied.';
+
+/// Auto-backup card (B21), wording from the signed-off prototype.
+const kAutoBackupPausedSubtitle = 'Auto-backup is paused. Choose a folder again to resume.';
+const kAutoBackupOffSubtitle =
+    'Off. mmogo can save a backup file to a folder you choose, after every N saved entries.';
+const kAutoBackupOnNoFolderSubtitle = 'On. Choose a folder to start.';
+const kAutoBackupPausedBannerTitle = 'Auto-backup is paused.';
+const kAutoBackupPausedBannerBody =
+    ' mmogo can no longer use the folder you picked. Choose a folder again to resume.';
+const kAutoBackupNoFolderBanner = 'No folder yet. Choose where the backup files go and auto-backup starts.';
+const kAutoBackupFailedBanner = 'Last auto-backup failed. It will try again after your next saved entry.';
+const kAutoBackupPausedStatus = 'No automatic retry while paused.';
+const kAutoBackupFolderHint =
+    'On Android 11 and later, top-level folders such as Downloads are refused. '
+    'Pick or create a subfolder, for example Documents / mmogo-backups.';
+const kAutoBackupSetupTitle = 'Set up auto-backup';
+const kCloudSyncTitle = 'Is this folder synced?';
+
+String autoBackupOnSubtitle(int n) => 'On. A new file after every $n saved ${n == 1 ? 'entry' : 'entries'}.';
+String autoBackupSetupIntro(int n, int k) =>
+    'mmogo will save a backup file to a folder you choose, after every $n saved '
+    '${n == 1 ? 'entry' : 'entries'}, and keep the newest $k.';
+String autoBackupIsOnToast(int n) =>
+    'Auto-backup is on. The first backup is made after $n saved ${n == 1 ? 'entry' : 'entries'}.';
