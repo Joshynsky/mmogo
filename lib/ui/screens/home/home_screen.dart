@@ -18,6 +18,7 @@ import '../../shell/primary_scaffold.dart';
 import '../../shell/primary_shell.dart';
 import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
+import '../../whats_new/whats_new_dialog.dart';
 import '../../widgets/coach_tour.dart';
 import 'home_consts.dart';
 import 'recent_list.dart';
@@ -42,7 +43,11 @@ const homeRecentFetchLimit = 30;
 ///
 /// Data comes from `home_dashboard_dao.dart` (unchanged by T20).
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.db, this.clock, this.startUpdates});
+  const HomeScreen({super.key, this.db, this.clock, this.startUpdates, this.showWhatsNew});
+
+  /// Test seam: replaces the What's-new modal check that follows the update
+  /// start. `null` = the real one, and only when [db] is null.
+  final Future<void> Function(BuildContext context)? showWhatsNew;
 
   /// Test seam: replaces the inbox load and update check that start after
   /// Home's first load. `null` = the real ones, and only when [db] is null
@@ -162,10 +167,26 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
     // (a test that injects a database never starts a check). Not awaited:
     // Home never waits for the inbox or the network.
     final starter = widget.startUpdates;
-    if (starter != null) {
-      unawaited(starter());
+    final whatsNew = widget.showWhatsNew;
+    if (starter != null || widget.db == null) {
+      unawaited(_startUpdatesThenWhatsNew(starter ?? startUpdates, whatsNew));
+    } else if (whatsNew != null && mounted) {
+      unawaited(whatsNew(context));
+    }
+  }
+
+  /// B31: the inbox/check start first; then, once per update, the What's-new
+  /// modal (only in the real app, or when a test injects [HomeScreen.showWhatsNew]).
+  Future<void> _startUpdatesThenWhatsNew(
+    Future<void> Function() starter,
+    Future<void> Function(BuildContext context)? whatsNew,
+  ) async {
+    await starter();
+    if (!mounted) return;
+    if (whatsNew != null) {
+      await whatsNew(context);
     } else if (widget.db == null) {
-      unawaited(startUpdates());
+      await maybeShowWhatsNew(context);
     }
   }
 

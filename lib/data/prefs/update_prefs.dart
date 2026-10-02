@@ -47,6 +47,33 @@ class UpdatePrefs {
     }
   }
 
+  /// B31: the version whose What's-new modal was last shown (or silently
+  /// marked on a fresh install). `null` = never written (0.1.0 never wrote it).
+  static const keyWhatsNewSeenVersion = 'whatsnew_seen_version';
+
+  static Future<String?> readWhatsNewSeenVersion() async {
+    try {
+      return (await _prefs()).getString(keyWhatsNewSeenVersion);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<bool> writeWhatsNewSeenVersion(String versionName) async {
+    try {
+      return await (await _prefs()).setString(keyWhatsNewSeenVersion, versionName).timeout(_prefsTimeout);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Welcome calls this while onboarding is not done (a fresh install): the
+  /// installed version counts as seen, so the modal never shows for it. Only
+  /// writes when nothing is stored yet.
+  static Future<void> markWhatsNewSeenForFreshInstall(String versionName) async {
+    if (await readWhatsNewSeenVersion() == null) await writeWhatsNewSeenVersion(versionName);
+  }
+
   static Future<bool> writeLastCheckAt(DateTime at) async {
     try {
       return await (await _prefs())

@@ -131,11 +131,12 @@ void main() {
     );
     expect(find.text(kBackupFileWarning), findsOneWidget);
     expect(t.widget<FilledButton>(find.byKey(const Key('backUpNowButton'))).onPressed, isNotNull);
-    // B17 added Restore, B21 the Auto-backup card (off: just the switch); B32 adds Privacy later.
+    // B17 added Restore, B21 the Auto-backup card (off: just the switch); B32 added Privacy.
     expect(find.text('Restore from a file'), findsOneWidget);
     expect(find.text('Auto-backup'), findsOneWidget);
     expect(find.byKey(const Key('autoBackupFolderRow')), findsNothing);
-    expect(find.text('Privacy and your data'), findsNothing);
+    // B32: the link row to the Privacy page is the last thing on the page.
+    expect(find.text('Privacy and your data'), findsOneWidget);
   });
 
   testWidgets('last backup line reads the saved manual time', (t) async {

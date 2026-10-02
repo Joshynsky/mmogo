@@ -126,7 +126,15 @@ InkWell _rowInkWell(WidgetTester tester, String label) =>
 /// the palette card's subline). Scrolling flush to the end is independent
 /// of that.
 Future<void> _scrollToAutoRecognizeSwitch(WidgetTester tester) async {
-  await tester.drag(find.byKey(const Key('settingsScroll')), const Offset(0, -2000));
+  // B32/B33 added two groups below Preferences, so it is no longer the last
+  // card: scroll the switch to the middle of the viewport instead.
+  final switchFinder = find.byType(Switch);
+  await tester.scrollUntilVisible(
+    switchFinder,
+    200,
+    scrollable: find.descendant(of: find.byKey(const Key('settingsScroll')), matching: find.byType(Scrollable)),
+  );
+  await Scrollable.ensureVisible(tester.element(switchFinder), alignment: 0.5);
   await tester.pump();
 }
 
@@ -358,20 +366,28 @@ void main() {
       expect(find.byTooltip('Profile'), findsNothing);
     });
 
-    testWidgets('groups: Appearance, Your data, Preferences, Updates and feedback (in that order)', (tester) async {
+    testWidgets(
+      'groups: Appearance, Your data, Preferences, Privacy and security, Updates and feedback (in that order)',
+      (tester) async {
+        await pumpWithRoutes(tester);
+        final ys = [
+          for (final g in ['APPEARANCE', 'YOUR DATA', 'PREFERENCES', 'PRIVACY AND SECURITY', 'UPDATES AND FEEDBACK'])
+            tester.getTopLeft(find.text(g)).dy,
+        ];
+        expect([...ys]..sort(), ys);
+        expect(ys.toSet().length, 5);
+      },
+    );
+
+    testWidgets('rows: tips, Backup, Privacy and your data, Send feedback; no stray Check now', (tester) async {
       await pumpWithRoutes(tester);
-      final ys = [
-        for (final g in ['APPEARANCE', 'YOUR DATA', 'PREFERENCES', 'UPDATES AND FEEDBACK'])
-          tester.getTopLeft(find.text(g)).dy,
-      ];
-      expect([...ys]..sort(), ys);
       expect(find.text('Show tips again'), findsOneWidget);
-      // Rows whose destinations arrive later are not added yet.
-      expect(find.text('Privacy and security'.toUpperCase()), findsNothing);
       // B14 added the Backup and restore row (subtitle: never backed up in this fixture).
       expect(find.text('Backup and restore'), findsOneWidget);
       expect(find.text('Never backed up'), findsOneWidget);
-      expect(find.text('Send feedback'), findsNothing);
+      // B32/B33.
+      expect(find.text('Privacy and your data'), findsOneWidget);
+      expect(find.text('Send feedback'), findsOneWidget);
       expect(find.text('Check now'), findsNothing);
       expect(find.byKey(const Key('settingsRowWarningDot')), findsNothing);
     });

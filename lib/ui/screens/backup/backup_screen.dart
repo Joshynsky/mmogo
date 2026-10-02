@@ -6,7 +6,10 @@ import '../../../data/backup/restore_service.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../../data/prefs/backup_prefs.dart';
+import '../../copy/privacy_copy.dart';
 import '../../shell/primary_shell.dart';
+import '../../shell/routes.dart';
+import '../settings/settings_widgets.dart';
 import '../../shell/secondary_scaffold.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_palette_scope.dart';
@@ -19,8 +22,8 @@ import 'backup_section.dart';
 import 'restore_flow.dart';
 
 /// Settings > Your data > Backup and restore (Lead ruling F2: a dedicated
-/// page). B14 builds "Back up now"; Restore (B17), Auto-backup (B21) and the
-/// Privacy row (B32) are added to this page by later tasks.
+/// page): "Back up now" (B14), Restore (B17), Auto-backup (B21) and a link row
+/// to Privacy and your data (B32).
 class BackupScreen extends StatefulWidget {
   const BackupScreen({
     super.key,
@@ -222,6 +225,18 @@ class _BackupScreenState extends State<BackupScreen> {
             onChooseFolder: () => _autoFlow.chooseFolder(context),
             onEveryN: _autoFlow.stepEveryN,
             onKeepK: _autoFlow.stepKeepK,
+          ),
+          const SizedBox(height: 14),
+          SettingsCard(
+            palette: palette,
+            child: SettingsLink(
+              palette: palette,
+              icon: Icons.shield_outlined,
+              label: kPrivacyTitle,
+              subtitle: kBackupPrivacyRowSubtitle,
+              first: true,
+              onTap: () => Navigator.of(context).pushNamed(Routes.privacy),
+            ),
           ),
         ],
       ),

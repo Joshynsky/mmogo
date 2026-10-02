@@ -20,6 +20,7 @@ import 'appearance_section.dart';
 import '../backup/backup_format.dart';
 import 'data_section.dart';
 import 'preferences_section.dart';
+import 'privacy_section.dart';
 import 'updates_section.dart';
 
 /// Settings' coach-tour page id (the seen flag is `tour_seen_settings`).
@@ -281,6 +282,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onAutoRecognizeChanged: _loading ? null : _handleAutoRecognizeChanged,
             onShowTipsAgain: _showTipsAgain,
           ),
+          const SizedBox(height: 14),
+          PrivacySection(palette: palette),
           const SizedBox(height: 14),
           UpdatesSection(palette: palette),
           const SizedBox(height: 14),

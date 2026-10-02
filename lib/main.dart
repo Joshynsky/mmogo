@@ -4,6 +4,7 @@ import 'ui/screens/add/add_screen.dart';
 import 'ui/screens/backup/backup_screen.dart';
 import 'ui/screens/manage_classifications_screen.dart';
 import 'ui/screens/onboarding_screen.dart';
+import 'ui/screens/privacy/privacy_screen.dart';
 import 'ui/screens/recently_deleted_screen.dart';
 import 'ui/screens/settings_screen.dart';
 import 'ui/screens/updates/updates_screen.dart';
@@ -89,6 +90,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
           Routes.recentlyDeleted: (_) => const RecentlyDeletedScreen(),
           Routes.backup: (_) => const BackupScreen(),
           Routes.updates: (_) => const UpdatesScreen(),
+          Routes.privacy: (_) => const PrivacyScreen(),
         },
       ),
     );

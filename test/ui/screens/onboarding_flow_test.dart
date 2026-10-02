@@ -12,7 +12,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/app_info.dart';
 import 'package:mmogo/data/prefs/app_prefs.dart';
+import 'package:mmogo/data/prefs/update_prefs.dart';
 import 'package:mmogo/main.dart';
 import 'package:mmogo/ui/screens/onboarding_screen.dart';
 import 'package:mmogo/ui/screens/welcome_screen.dart';
@@ -110,6 +112,22 @@ void main() {
       expect(find.text('Welcome'), findsNothing);
       expect(find.text('Track every shilling'), findsOneWidget);
       expect(_onHome(tester), isFalse);
+    });
+
+    testWidgets("B31: a fresh install's Welcome silently marks this version's What's-new as seen", (tester) async {
+      await tester.pumpWidget(const MpesaTrackerApp());
+      await tester.pump();
+      expect(await UpdatePrefs.readWhatsNewSeenVersion(), isNull);
+      await _passWelcome(tester);
+      expect(await UpdatePrefs.readWhatsNewSeenVersion(), AppInfo.versionName);
+    });
+
+    testWidgets("B31: an upgrader's Welcome (onboarding done) leaves the seen version unset", (tester) async {
+      SharedPreferences.setMockInitialValues({AppPrefs.keyOnboardingComplete: true});
+      await tester.pumpWidget(const MpesaTrackerApp());
+      await tester.pump();
+      await _passWelcome(tester);
+      expect(await UpdatePrefs.readWhatsNewSeenVersion(), isNull);
     });
 
     testWidgets('flag set: Welcome still shows, then Home (never onboarding)', (tester) async {

@@ -97,6 +97,7 @@ Future<void> _pumpHome(
   DateTime? now,
   DateTime Function()? clock,
   Future<void> Function()? startUpdates,
+  Future<void> Function(BuildContext context)? showWhatsNew,
 }) async {
   tester.view.physicalSize = size * 3;
   tester.view.devicePixelRatio = 3;
@@ -108,7 +109,12 @@ Future<void> _pumpHome(
 
   await tester.pumpWidget(
     MaterialApp(
-      home: HomeScreen(db: db, clock: clock ?? () => now ?? db.now, startUpdates: startUpdates),
+      home: HomeScreen(
+        db: db,
+        clock: clock ?? () => now ?? db.now,
+        startUpdates: startUpdates,
+        showWhatsNew: showWhatsNew,
+      ),
       onGenerateRoute: (settings) {
         _pushed.add(settings);
         return MaterialPageRoute(
@@ -543,6 +549,30 @@ void main() {
       await _pumpHome(tester, _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 3));
       // No inbox load and no check: the singleton stays untouched.
       expect(UpdatesInbox.instance.hadStoredValue, isFalse);
+    });
+  });
+
+  group("B31: Home shows the What's-new check after the update start", () {
+    testWidgets('the check runs once, after the starter has finished', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final order = <String>[];
+      await _pumpHome(
+        tester,
+        _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 3),
+        startUpdates: () async => order.add('updates'),
+        showWhatsNew: (_) async => order.add('whatsnew'),
+      );
+      expect(order, ['updates', 'whatsnew']);
+    });
+
+    testWidgets('with an injected database and no seam, the real modal is never started', (tester) async {
+      SharedPreferences.setMockInitialValues({'onboarding_complete': true});
+      await _pumpHome(
+        tester,
+        _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 3),
+        startUpdates: () async {},
+      );
+      expect(find.byKey(const Key('whatsNewDialog')), findsNothing);
     });
   });
 }

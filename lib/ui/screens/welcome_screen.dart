@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../app_info.dart';
 import '../../data/prefs/app_prefs.dart';
+import '../../data/prefs/update_prefs.dart';
 import '../shell/routes.dart';
 import '../theme/app_colors.dart';
 
@@ -108,6 +110,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     _leaving = true;
     _timer?.cancel();
     final done = await _onboardingComplete;
+    // B31: a fresh install (onboarding not done) never sees the What's-new
+    // modal for the version it installed.
+    if (!done) await UpdatePrefs.markWhatsNewSeenForFreshInstall(AppInfo.versionName);
     if (!mounted) return;
     Navigator.of(context).pushReplacementNamed(done ? Routes.home : Routes.onboarding);
   }
