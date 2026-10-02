@@ -3,10 +3,14 @@
 //    subtle tint + shadow only when content scrolls under it;
 //  - Ocean & Sun chrome on every primary page, following dark mode only on
 //    pages that opt in (Home); the rest stay pinned light.
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mmogo/ui/screens/notifications_screen.dart';
+import 'package:mmogo/data/updates/updates_inbox.dart';
+import 'package:mmogo/ui/screens/updates/updates_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mmogo/ui/shell/chrome_widgets.dart';
 import 'package:mmogo/ui/shell/primary_scaffold.dart';
 import 'package:mmogo/ui/shell/routes.dart';
@@ -263,19 +267,55 @@ void main() {
     });
   });
 
-  group('T25 — notifications bell', () {
-    testWidgets('B48: the bell is the only top-right button (no Help ?, no Profile); same size/style; '
-        'tapping it opens Notifications', (tester) async {
+  group('T25/B27 — the Updates bell', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await UpdatesInbox.instance.load();
+    });
+
+    Future<void> pumpBell(WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: PrimaryScaffold(title: 'Profile', activeIndex: 4, body: const SizedBox.shrink()),
-          routes: {Routes.notifications: (_) => const NotificationsComingSoonScreen()},
+          routes: {Routes.updates: (_) => const UpdatesScreen()},
         ),
       );
       await tester.pumpAndSettle();
+    }
+
+    testWidgets('B27: no dot while nothing is unread', (tester) async {
+      await pumpBell(tester);
+      expect(find.byKey(const Key('bellUnreadDot')), findsNothing);
+    });
+
+    testWidgets('B27: a red dot while any notice is unread; opening the page and leaving clears it', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'updates_inbox_v1': jsonEncode([
+          {'tag': 'v0.2.0', 'notes': 'Shiny', 'receivedAt': 1000, 'read': false},
+        ]),
+      });
+      await UpdatesInbox.instance.load();
+      await pumpBell(tester);
+      expect(find.byKey(const Key('bellUnreadDot')), findsOneWidget);
+      expect(_iconCircleButton('Updates, 1 unread'), findsOneWidget);
+
+      await tester.tap(_iconCircleButton('Updates, 1 unread'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('noticeNewPill')), findsOneWidget, reason: 'New stays visible during the visit');
+
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('bellUnreadDot')), findsNothing);
+      expect(_iconCircleButton('Updates'), findsOneWidget);
+      expect(UpdatesInbox.instance.unreadCount.value, 0);
+    });
+
+    testWidgets('B48: the bell is the only top-right button (no Help ?, no Profile); same size/style; '
+        'tapping it opens Updates', (tester) async {
+      await pumpBell(tester);
 
       const p = AppPalette.light;
-      final bell = tester.widget<IconCircleButton>(_iconCircleButton('Notifications'));
+      final bell = tester.widget<IconCircleButton>(_iconCircleButton('Updates'));
       expect(bell.icon, Icons.notifications_none_rounded);
       expect(bell.size, 36);
       expect(bell.background, p.card);
@@ -290,10 +330,11 @@ void main() {
       expect(find.byKey(const Key('pageHelpButton')), findsNothing);
       expect(find.byTooltip('Show tips for this page'), findsNothing);
 
-      await tester.tap(_iconCircleButton('Notifications'));
+      await tester.tap(_iconCircleButton('Updates'));
       await tester.pumpAndSettle();
-      expect(find.text('Notifications'), findsOneWidget, reason: 'the secondary page title');
-      expect(find.text('Coming soon'), findsOneWidget);
+      expect(find.text('Updates'), findsOneWidget, reason: 'the secondary page title');
+      expect(find.text('Coming soon'), findsNothing);
+      expect(find.byKey(const Key('updatesEmpty')), findsOneWidget);
     });
   });
 }

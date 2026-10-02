@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'ui/screens/add/add_screen.dart';
 import 'ui/screens/backup/backup_screen.dart';
 import 'ui/screens/manage_classifications_screen.dart';
-import 'ui/screens/notifications_screen.dart';
 import 'ui/screens/onboarding_screen.dart';
 import 'ui/screens/recently_deleted_screen.dart';
 import 'ui/screens/settings_screen.dart';
+import 'ui/screens/updates/updates_screen.dart';
 import 'ui/screens/welcome_screen.dart';
 import 'ui/shell/app_messenger.dart';
 import 'ui/shell/primary_shell.dart';
@@ -88,7 +88,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
           Routes.manageClassifications: (_) => const ManageClassificationsScreen(),
           Routes.recentlyDeleted: (_) => const RecentlyDeletedScreen(),
           Routes.backup: (_) => const BackupScreen(),
-          Routes.notifications: (_) => const NotificationsComingSoonScreen(),
+          Routes.updates: (_) => const UpdatesScreen(),
         },
       ),
     );

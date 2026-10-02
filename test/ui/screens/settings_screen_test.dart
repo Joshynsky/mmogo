@@ -25,8 +25,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/prefs/app_prefs.dart';
 import 'package:mmogo/data/prefs/backup_prefs.dart';
-import 'package:mmogo/ui/screens/notifications_screen.dart';
 import 'package:mmogo/ui/screens/settings_screen.dart';
+import 'package:mmogo/ui/screens/updates/updates_screen.dart';
 import 'package:mmogo/ui/shell/routes.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
@@ -340,7 +340,7 @@ void main() {
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
         MaterialApp(
-          routes: {Routes.notifications: (_) => const NotificationsComingSoonScreen()},
+          routes: {Routes.updates: (_) => const UpdatesScreen()},
           home: AppPaletteScope(
             controller: AppPaletteController(),
             child: SettingsScreen(db: _FakeDb(transactions: []), exportCsv: (_, _) async {}),
@@ -409,11 +409,12 @@ void main() {
       expect(find.byKey(const Key('settingsRowWarningDot')), findsNothing);
     });
 
-    testWidgets('the Updates row opens the notifications/updates page', (tester) async {
+    testWidgets('the Updates row opens the Updates page', (tester) async {
       await pumpWithRoutes(tester);
       await tester.tap(find.text('Updates'));
       await tester.pumpAndSettle();
-      expect(find.text('Coming soon'), findsOneWidget);
+      expect(find.text('Coming soon'), findsNothing);
+      expect(find.text('Check for updates now'), findsOneWidget);
     });
   });
 }

@@ -104,7 +104,7 @@ void main() {
 
     await tester.tap(_navTab('Profile'));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Notifications'), findsOneWidget);
+    expect(find.byTooltip('Updates'), findsOneWidget);
     expect(find.byTooltip('Back'), findsNothing);
     expect(find.byKey(const Key('primaryBottomNav')), findsOneWidget);
 

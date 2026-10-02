@@ -9,8 +9,20 @@ import 'release_info.dart';
 /// implementation is [UpdateCheckClient]; tests pass a fake.
 abstract class UpdateCheckSource {
   /// The newest published release, or throws on ANY failure (offline, TLS,
-  /// timeout, non-200, too large, not JSON, not a usable release).
+  /// timeout, non-200, too large, not JSON, not a usable release). A 404
+  /// throws [NoReleaseYetException] (no release published yet).
   Future<ReleaseInfo> fetchLatest();
+}
+
+/// GitHub answered 404: the repository has no published release yet. The
+/// service counts this as a successful check with nothing new (ruling
+/// B25/B26 no. 2), so a repo without a release does not cause a request on
+/// every launch.
+class NoReleaseYetException implements Exception {
+  const NoReleaseYetException();
+
+  @override
+  String toString() => 'NoReleaseYetException';
 }
 
 /// The app's ONE outbound network call (criteria 14 to 17): a single GET to
@@ -69,6 +81,9 @@ class UpdateCheckClient implements UpdateCheckSource {
     // Host and User-Agent, so take it off.
     request.headers.removeAll(HttpHeaders.acceptEncodingHeader);
     final response = await request.close();
+    if (response.statusCode == HttpStatus.notFound) {
+      throw const NoReleaseYetException();
+    }
     if (response.statusCode != HttpStatus.ok) {
       throw HttpException('status ${response.statusCode}');
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
+import '../../data/updates/updates_inbox.dart';
 import '../theme/app_colors.dart';
 import 'chrome_widgets.dart';
 import 'primary_shell.dart';
@@ -129,13 +130,40 @@ class PrimaryScaffold extends StatelessWidget {
                 children: [
                   // B48: the bell is the only top-right button (the Help "?"
                   // moved into Profile; Profile is a bottom-nav tab).
-                  IconCircleButton(
-                    icon: Icons.notifications_none_rounded,
-                    tooltip: 'Notifications',
-                    size: 36,
-                    background: palette.card,
-                    foreground: palette.ink,
-                    onTap: () => Navigator.of(context).pushNamed(Routes.notifications),
+                  // B27: opens the Updates page; a red dot while any
+                  // update notice is unread.
+                  ValueListenableBuilder<int>(
+                    valueListenable: UpdatesInbox.instance.unreadCount,
+                    builder: (context, unread, _) => Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        IconCircleButton(
+                          icon: Icons.notifications_none_rounded,
+                          tooltip: unread > 0 ? 'Updates, $unread unread' : 'Updates',
+                          size: 36,
+                          background: palette.card,
+                          foreground: palette.ink,
+                          onTap: () => Navigator.of(context).pushNamed(Routes.updates),
+                        ),
+                        if (unread > 0)
+                          Positioned(
+                            top: 5,
+                            right: 6,
+                            child: IgnorePointer(
+                              child: Container(
+                                key: const Key('bellUnreadDot'),
+                                width: 9,
+                                height: 9,
+                                decoration: BoxDecoration(
+                                  color: palette.diffUp,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: palette.card, width: 2),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ],
               ),

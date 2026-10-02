@@ -100,7 +100,7 @@ void main() {
     expect(find.text(AppInfo.displayVersion), findsOneWidget);
     expect(find.textContaining('T17'), findsNothing);
     // B48: a primary tab: bell + bottom bar, no back arrow.
-    expect(find.byTooltip('Notifications'), findsOneWidget);
+    expect(find.byTooltip('Updates'), findsOneWidget);
     expect(find.byTooltip('Back'), findsNothing);
     expect(find.byKey(const Key('primaryBottomNav')), findsOneWidget);
   });

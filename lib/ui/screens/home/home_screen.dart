@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -7,6 +9,7 @@ import '../../../data/db/debug_seed.dart';
 import '../../../data/db/home_dashboard_dao.dart';
 import '../../../data/db/transaction_dao.dart';
 import '../../../data/prefs/app_prefs.dart';
+import '../../../data/updates/updates_startup.dart';
 import '../../../domain/home/home_diff.dart';
 import '../../../domain/home/home_greeting.dart';
 import '../../../domain/home/home_period.dart';
@@ -39,7 +42,12 @@ const homeRecentFetchLimit = 30;
 ///
 /// Data comes from `home_dashboard_dao.dart` (unchanged by T20).
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.db, this.clock});
+  const HomeScreen({super.key, this.db, this.clock, this.startUpdates});
+
+  /// Test seam: replaces the inbox load and update check that start after
+  /// Home's first load. `null` = the real ones, and only when [db] is null
+  /// (a test that injects a database never starts a check).
+  final Future<void> Function()? startUpdates;
 
   /// Test seam: the database to read. `null` = the app's real database
   /// (and, in debug builds only, the throwaway sample data is seeded).
@@ -150,6 +158,15 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
     }
     await _loadName();
     await _load();
+    // B27/B49: the Updates inbox and the weekly check. Only in the real app
+    // (a test that injects a database never starts a check). Not awaited:
+    // Home never waits for the inbox or the network.
+    final starter = widget.startUpdates;
+    if (starter != null) {
+      unawaited(starter());
+    } else if (widget.db == null) {
+      unawaited(startUpdates());
+    }
   }
 
   Future<void> _load() async {

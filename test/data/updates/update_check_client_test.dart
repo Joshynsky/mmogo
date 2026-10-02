@@ -102,13 +102,38 @@ void main() {
     expect(target.requests, isEmpty);
   });
 
-  for (final code in [301, 404, 403, 500, 204]) {
+  for (final code in [301, 403, 500, 204]) {
     test('status $code is failure', () async {
       final s = await serve((r) async {
         r.response.statusCode = code;
         await r.response.close();
       });
       await expectLater(UpdateCheckClient(urlOverride: s.url).fetchLatest(), throwsA(anything));
+    });
+  }
+
+  test('B27: status 404 throws NoReleaseYetException (no release published yet), nothing else', () async {
+    final s = await serve((r) async {
+      r.response.statusCode = 404;
+      await r.response.close();
+    });
+    await expectLater(
+      UpdateCheckClient(urlOverride: s.url).fetchLatest(),
+      throwsA(isA<NoReleaseYetException>()),
+    );
+    expect(s.requests, hasLength(1));
+  });
+
+  for (final code in [403, 500]) {
+    test('B27: status $code is NOT NoReleaseYetException', () async {
+      final s = await serve((r) async {
+        r.response.statusCode = code;
+        await r.response.close();
+      });
+      await expectLater(
+        UpdateCheckClient(urlOverride: s.url).fetchLatest(),
+        throwsA(isNot(isA<NoReleaseYetException>())),
+      );
     });
   }
 

@@ -15,18 +15,27 @@ class Notice {
     required this.notes,
     required this.receivedAt,
     this.read = false,
+    this.welcome = false,
   });
+
+  /// The tag of the greeting notice (B49). It is not a version.
+  static const welcomeTag = 'Welcome';
 
   final String tag;
   final String notes;
   final DateTime receivedAt;
   final bool read;
 
+  /// The first-launch greeting: not a release, so no "See what's new" button
+  /// and it is never removed for being older than the installed version.
+  final bool welcome;
+
   Notice copyWith({bool? read}) => Notice(
         tag: tag,
         notes: notes,
         receivedAt: receivedAt,
         read: read ?? this.read,
+        welcome: welcome,
       );
 
   Map<String, Object?> toJson() => {
@@ -34,6 +43,7 @@ class Notice {
         'notes': notes,
         'receivedAt': receivedAt.millisecondsSinceEpoch,
         'read': read,
+        if (welcome) 'welcome': true,
       };
 
   /// `null` when the stored map is unusable (wrong types, bad tag).
@@ -43,13 +53,16 @@ class Notice {
     final notes = raw['notes'];
     final at = raw['receivedAt'];
     final read = raw['read'];
-    if (tag is! String || ReleaseInfo.parseVersion(tag) == null) return null;
+    final welcome = raw['welcome'] == true;
+    if (tag is! String) return null;
+    if (welcome ? tag != welcomeTag : ReleaseInfo.parseVersion(tag) == null) return null;
     if (at is! int) return null;
     return Notice(
       tag: tag,
       notes: notes is String ? UntrustedText.sanitize(notes) : '',
       receivedAt: DateTime.fromMillisecondsSinceEpoch(at),
       read: read == true,
+      welcome: welcome,
     );
   }
 }
@@ -80,6 +93,11 @@ class UpdatesInbox {
 
   List<Notice> _notices = const [];
   Future<void>? _loading;
+  bool _hadStoredValue = false;
+
+  /// True when the last [load] found any stored inbox value (even an empty
+  /// or unreadable one). B49 shows the welcome notice only when it is false.
+  bool get hadStoredValue => _hadStoredValue;
 
   /// Loads once; later calls share the first load. [add] and [markAllRead]
   /// call it, so a write can never replace a list that was not read yet.
@@ -98,6 +116,7 @@ class UpdatesInbox {
     var changedOnLoad = false;
     try {
       final raw = (await _prefs()).getString(storageKey);
+      _hadStoredValue = raw != null;
       if (raw != null && raw.length <= maxStoredChars) {
         final json = jsonDecode(raw);
         if (json is List) {
@@ -120,7 +139,7 @@ class UpdatesInbox {
     }
     final installed = _installedVersion();
     final current = parsed
-        .where((n) => ReleaseInfo.isNewerVersion(n.tag, installed))
+        .where((n) => n.welcome || ReleaseInfo.isNewerVersion(n.tag, installed))
         .take(maxNotices)
         .toList(growable: false);
     if (current.length != parsed.length) changedOnLoad = true;
@@ -134,7 +153,11 @@ class UpdatesInbox {
   Future<bool> add(Notice notice) async {
     try {
       await ensureLoaded();
-      if (ReleaseInfo.parseVersion(notice.tag) == null) return false;
+      if (notice.welcome) {
+        if (notice.tag != Notice.welcomeTag) return false;
+      } else if (ReleaseInfo.parseVersion(notice.tag) == null) {
+        return false;
+      }
       final key = _key(notice.tag);
       if (_notices.any((n) => _key(n.tag) == key)) return false;
       final clean = Notice(
@@ -142,6 +165,7 @@ class UpdatesInbox {
         notes: UntrustedText.sanitize(notice.notes),
         receivedAt: notice.receivedAt,
         read: notice.read,
+        welcome: notice.welcome,
       );
       final next = [clean, ..._notices];
       _notices = List.unmodifiable(next.take(maxNotices));

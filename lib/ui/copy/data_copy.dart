@@ -27,9 +27,7 @@ const kUpdateCheckCadence = 'mmogo checks when you open the app, and at most onc
 
 /// W7 plus the cadence: what leaves the phone (Privacy page, What's new,
 /// Settings).
-const kNetworkDisclosure =
-    'The internet is used only to check for updates. GitHub sees your IP address and that the request comes '
-    'from the mmogo app. No entries, names or messages are sent. $kUpdateCheckCadence';
+const kNetworkDisclosure = '$kNetworkSentence $kUpdateCheckCadence';
 
 /// W6: under the Send feedback row.
 const kFeedbackHint = 'Do not paste M-Pesa messages, names or phone numbers into a public issue.';
@@ -146,3 +144,55 @@ String autoBackupSetupIntro(int n, int k) =>
     '${n == 1 ? 'entry' : 'entries'}, and keep the newest $k.';
 String autoBackupIsOnToast(int n) =>
     'Auto-backup is on. The first backup is made after $n saved ${n == 1 ? 'entry' : 'entries'}.';
+
+// --- B27 / B28 / B49: the Updates page and its Settings row ------------------
+
+/// W7 on its own (the cadence sentence follows separately where needed).
+const kNetworkSentence =
+    'The internet is used only to check for updates. GitHub sees your IP address and that the request comes '
+    'from the mmogo app. No entries, names or messages are sent.';
+
+const kUpdatesTitle = 'Updates';
+const kUpdatesSwitchTitle = 'Check for updates when you open the app, at most once a week';
+const kUpdatesCheckNowLabel = 'Check for updates now';
+const kUpdatesCheckingLabel = 'Checking...';
+const kUpdatesSeeWhatsNew = "See what's new";
+const kUpdatesShowAllNotes = 'Show all notes';
+const kUpdatesShowFewerNotes = 'Show fewer notes';
+const kUpdatesNewPill = 'New';
+const kUpdatesEmptyTitle = 'No updates yet.';
+const kUpdatesEmptyOff = 'Update checks are off. Turn them on with the switch above.';
+const kUpdatesFootnote =
+    'Release notes come from GitHub. They are shown as plain text only (no links), shortened to 30 lines. '
+    "\"See what's new\" opens the mmogo page in your browser.";
+const kUpdatesCouldNotOpen = 'Could not open the browser.';
+
+/// The switch row subtitle: the last successful check (or none yet) when on,
+/// "no request" when off, then the network sentence.
+String updatesSwitchSubtitle({required bool on, required String? lastChecked}) =>
+    '${on ? (lastChecked == null ? 'Not checked yet.' : 'Last checked $lastChecked.') : 'Off: mmogo makes no request.'} '
+    '$kNetworkSentence';
+
+/// The "Check for updates now" answer, in plain words.
+const kCheckNowOff = 'Update checks are off, so mmogo did not check. Turn the switch on first.';
+const kCheckNowNewVersion = 'A new version is out. Its notice is below.';
+const kCheckNowUpToDate = 'You have the latest version.';
+const kCheckNowFailed = 'Could not check just now. Check your internet connection and try again.';
+
+/// Settings > Updates row subtitle.
+const kSettingsUpdatesOff = 'Checking is off';
+const kSettingsUpdatesNewVersion = 'A new version is out';
+String settingsUpdatesOn(String? lastChecked) =>
+    lastChecked == null ? 'Checking is on. Not checked yet.' : 'Checking is on. Last checked $lastChecked.';
+
+/// A release notice's heading, from its tag (`v0.1.2` or `0.1.2`).
+String updateNoticeTitle(String tag) => 'mmogo ${tag.startsWith('v') ? tag.substring(1) : tag} is out';
+
+/// The first-launch greeting notice (B49).
+const kWelcomeNoticeTitle = 'Hello, and welcome to mmogo 0.1.1';
+const kWelcomeNoticeNotes =
+    'Thanks for installing mmogo. One thing is new: update checks are switched on.\n\n'
+    '$kNetworkSentence\n'
+    'When a new version is out, it shows up here and the bell shows a dot. '
+    'mmogo checks when you open the app, at most once a week.\n\n'
+    'You can switch update checks off at the top of this page.';

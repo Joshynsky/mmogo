@@ -7,9 +7,12 @@
 // HomeDashboardDao queries (the real SQL is proven against in-memory sqlite
 // in test/data/home_dashboard_dao_test.dart). The fake tells "this period"
 // from "prior period" sums by the start bound it is asked for.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/prefs/app_prefs.dart';
+import 'package:mmogo/data/updates/updates_inbox.dart';
 import 'package:mmogo/domain/home/home_period.dart';
 import 'package:mmogo/ui/screens/home_screen.dart';
 import 'package:mmogo/ui/shell/routes.dart';
@@ -93,6 +96,7 @@ Future<void> _pumpHome(
   Brightness brightness = Brightness.light,
   DateTime? now,
   DateTime Function()? clock,
+  Future<void> Function()? startUpdates,
 }) async {
   tester.view.physicalSize = size * 3;
   tester.view.devicePixelRatio = 3;
@@ -104,7 +108,7 @@ Future<void> _pumpHome(
 
   await tester.pumpWidget(
     MaterialApp(
-      home: HomeScreen(db: db, clock: clock ?? () => now ?? db.now),
+      home: HomeScreen(db: db, clock: clock ?? () => now ?? db.now, startUpdates: startUpdates),
       onGenerateRoute: (settings) {
         _pushed.add(settings);
         return MaterialPageRoute(
@@ -498,7 +502,7 @@ void main() {
       await _pumpHome(tester, _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 3));
       expect(find.byKey(coachTourBubbleKey), findsNothing);
       expect(find.byKey(const Key('pageHelpButton')), findsNothing);
-      expect(find.byTooltip('Notifications'), findsOneWidget);
+      expect(find.byTooltip('Updates'), findsOneWidget);
       expect(find.byTooltip('Profile'), findsNothing);
     });
 
@@ -514,6 +518,31 @@ void main() {
       await tester.tap(find.byKey(coachTourActionKey));
       await tester.pumpAndSettle();
       expect(_pushed.map((s) => s.name), contains(Routes.add));
+    });
+  });
+
+  group('B27: Home starts the Updates inbox and the check', () {
+    testWidgets('after Home has loaded, the starter runs once, and Home does not wait for it', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      var started = 0;
+      final never = Completer<void>(); // a check that never finishes must not block Home
+      await _pumpHome(
+        tester,
+        _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 3),
+        startUpdates: () {
+          started++;
+          return never.future;
+        },
+      );
+      expect(started, 1);
+      expect(find.byKey(const Key('homePeriodButton')), findsOneWidget, reason: 'Home painted its data');
+    });
+
+    testWidgets('with an injected database and no starter, nothing is started (tests never check)', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await _pumpHome(tester, _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 3));
+      // No inbox load and no check: the singleton stays untouched.
+      expect(UpdatesInbox.instance.hadStoredValue, isFalse);
     });
   });
 }

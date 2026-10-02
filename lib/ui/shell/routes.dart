@@ -43,7 +43,8 @@ class Routes {
   /// B14 (Lead ruling F2): opened from Settings > Your data > Backup and restore.
   static const backup = '/backup';
 
-  /// T25 — reached via the new bell button in the primary top bar
-  /// (`primary_scaffold.dart`); a placeholder "Coming soon" page.
-  static const notifications = '/notifications';
+  /// B27 — the Updates page (it replaced the T25 "Coming soon" notifications
+  /// page): opened by the bell in the primary top bar and by Settings >
+  /// Updates and feedback > Updates.
+  static const updates = '/updates';
 }

@@ -58,6 +58,7 @@ class SettingsLink extends StatelessWidget {
     required this.onTap,
     this.first = false,
     this.warningDot = false,
+    this.unreadDot = false,
   });
 
   final AppPalette palette;
@@ -69,6 +70,9 @@ class SettingsLink extends StatelessWidget {
 
   /// A small amber dot before the chevron (auto-backup paused).
   final bool warningDot;
+
+  /// A small red dot before the chevron (an unread update notice).
+  final bool unreadDot;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +106,16 @@ class SettingsLink extends StatelessWidget {
                     width: 9,
                     height: 9,
                     decoration: BoxDecoration(color: palette.sun, shape: BoxShape.circle),
+                  ),
+                ),
+              if (unreadDot)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Container(
+                    key: const Key('settingsRowUnreadDot'),
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(color: palette.diffUp, shape: BoxShape.circle),
                   ),
                 ),
               if (onTap != null) Icon(Icons.chevron_right, size: 18, color: palette.mutedInk),

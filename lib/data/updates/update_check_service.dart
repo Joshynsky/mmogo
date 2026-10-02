@@ -4,8 +4,24 @@ import 'package:flutter/foundation.dart' show debugPrint;
 
 import '../../app_info.dart';
 import '../prefs/update_prefs.dart';
+import 'release_info.dart';
 import 'update_check_client.dart';
 import 'updates_inbox.dart';
+
+/// What "Check for updates now" found.
+enum CheckNowResult {
+  /// The update-check switch is off; nothing was requested.
+  off,
+
+  /// A newer release exists (its notice is in the inbox).
+  newVersion,
+
+  /// The check worked and there is nothing newer.
+  upToDate,
+
+  /// The check could not complete (offline, timeout, bad answer).
+  failed,
+}
 
 /// Policy for the weekly update check (architecture D7). It only TELLS the
 /// user a newer version exists; it never downloads or installs anything.
@@ -57,23 +73,57 @@ class UpdateCheckService {
       // Set before the request so a second call in this process, even while
       // this one is still running, makes no request.
       _attemptedThisLaunch = true;
+      return await _fetchAndStore(at) != CheckNowResult.failed;
+    } catch (_) {
+      return false;
+    } finally {
+      _busy = false;
+    }
+  }
 
-      final info = await _clientFactory().fetchLatest();
-      await _inbox.ensureLoaded();
-      if (info.isNewerThan(_installedVersion()) && !_inbox.contains(info.tag)) {
-        await _inbox.add(Notice(tag: info.tag, notes: info.notes, receivedAt: at));
+  /// "Check for updates now" on the Updates page (B27). A person asked, so
+  /// the weekly cap and the once-per-launch flag do not apply; the switch
+  /// still does: when it is off this returns [CheckNowResult.off] and makes
+  /// no request. Never throws. A success writes the timestamp, a failure
+  /// does not (same rules as [maybeCheck]).
+  Future<CheckNowResult> checkNow({DateTime? now}) async {
+    try {
+      if (!await UpdatePrefs.readEnabled()) return CheckNowResult.off;
+      _attemptedThisLaunch = true;
+      return await _fetchAndStore(now ?? DateTime.now());
+    } catch (_) {
+      return CheckNowResult.failed;
+    }
+  }
+
+  /// One request, then the inbox and the timestamp. A 404 (no release
+  /// published yet) is a successful check with nothing new. Every other
+  /// failure is silent here and writes no timestamp.
+  Future<CheckNowResult> _fetchAndStore(DateTime at) async {
+    try {
+      ReleaseInfo? info;
+      try {
+        info = await _clientFactory().fetchLatest();
+      } on NoReleaseYetException {
+        info = null;
+      }
+      var newer = false;
+      if (info != null && info.isNewerThan(_installedVersion())) {
+        newer = true;
+        await _inbox.ensureLoaded();
+        if (!_inbox.contains(info.tag)) {
+          await _inbox.add(Notice(tag: info.tag, notes: info.notes, receivedAt: at));
+        }
       }
       await UpdatePrefs.writeLastCheckAt(at);
-      return true;
+      return newer ? CheckNowResult.newVersion : CheckNowResult.upToDate;
     } catch (e) {
       // Silent for the user; only the exception type in debug builds.
       assert(() {
         debugPrint('UpdateCheckService: check failed (${e.runtimeType})');
         return true;
       }());
-      return false;
-    } finally {
-      _busy = false;
+      return CheckNowResult.failed;
     }
   }
 
