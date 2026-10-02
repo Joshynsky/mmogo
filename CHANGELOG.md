@@ -16,6 +16,7 @@ What changed in each version of mmogo, newest first. Written for the people who 
 
 ### Changed
 - **Profile is now in the bottom bar**, and Settings opens from it. Help and tips moved into Profile.
+- Dialog boxes now follow your phone's dark mode and your chosen colours.
 - Names, phone numbers and accounts you type now stop at a sensible length.
 
 ### Fixed
