@@ -36,4 +36,4 @@ First public version.
 - Home, Analytics and Paid to to see where the money went.
 - Edit and delete with Undo, and Recently deleted.
 - Export CSV, three colour palettes, and a short guide on each page.
-- Everything stays on your phone.
+- Your entries stay on your phone. (0.1.1 adds one thing that leaves it: the update check.)
