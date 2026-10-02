@@ -128,8 +128,8 @@ void main() {
     );
     expect(find.text(kBackupFileWarning), findsOneWidget);
     expect(t.widget<FilledButton>(find.byKey(const Key('backUpNowButton'))).onPressed, isNotNull);
-    // B17, B21 and B32 add these later: not on the page yet.
-    expect(find.text('Restore from a file'), findsNothing);
+    // B17 added Restore; B21 and B32 add these later: not on the page yet.
+    expect(find.text('Restore from a file'), findsOneWidget);
     expect(find.text('Auto-backup'), findsNothing);
     expect(find.text('Privacy and your data'), findsNothing);
   });

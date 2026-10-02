@@ -57,6 +57,16 @@ class _ProfileScreenState extends State<ProfileScreen> with PrimaryTabRefresh<Pr
     // Independent loads: the name field must never wait on the database.
     _loadName();
     _loadSummary();
+    AppPrefs.userDisplayNameRevision.addListener(_onNameWritten);
+  }
+
+  // A restore (or another writer) changed the saved name while this tab is
+  // alive: show it now. A restore is an explicit action, so it wins over
+  // text the user had half typed.
+  void _onNameWritten() {
+    if (_saving) return;
+    _nameEdited = false;
+    _loadName();
   }
 
   // Back on the Profile tab (or a transaction was added): re-read the summary.
@@ -68,6 +78,7 @@ class _ProfileScreenState extends State<ProfileScreen> with PrimaryTabRefresh<Pr
 
   @override
   void dispose() {
+    AppPrefs.userDisplayNameRevision.removeListener(_onNameWritten);
     _nameController.dispose();
     super.dispose();
   }

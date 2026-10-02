@@ -21,6 +21,8 @@ class BackupSection extends StatelessWidget {
     required this.resultText,
     required this.onBackUp,
     required this.onRetry,
+    required this.onRestore,
+    this.restoring = false,
   });
 
   final AppPalette palette;
@@ -37,6 +39,12 @@ class BackupSection extends StatelessWidget {
   final String? resultText;
   final VoidCallback onBackUp;
   final VoidCallback onRetry;
+
+  /// Starts the Restore flow (B17).
+  final VoidCallback onRestore;
+
+  /// The Restore flow is running (the button is off so it cannot start twice).
+  final bool restoring;
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +123,35 @@ class BackupSection extends StatelessWidget {
                   ),
                 ),
               ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        BackupCard(
+          palette: palette,
+          children: [
+            Text(
+              'RESTORE',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+                color: palette.mutedInk,
+              ),
+            ),
+            const SizedBox(height: 8),
+            BackupPara(kRestoreIntro, palette: palette),
+            OutlinedButton(
+              key: const Key('restoreButton'),
+              onPressed: (busy || restoring) ? null : onRestore,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(46),
+                foregroundColor: palette.primary,
+                side: BorderSide(color: palette.primary, width: 1.5),
+                shape: const StadiumBorder(),
+                textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              ),
+              child: const Text(kRestoreButtonLabel),
+            ),
           ],
         ),
       ],

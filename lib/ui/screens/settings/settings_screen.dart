@@ -123,8 +123,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// Opens the Backup page and refreshes the row's subtitle when it closes.
   Future<void> _openBackup() async {
     await Navigator.of(context).pushNamed(Routes.backup);
+    if (!mounted) return;
+    // A restore on that page may have changed the data and the switches here.
+    final db = _db;
+    final count = db == null ? _activeCount : await ExportDao.activeTransactionCount(db);
+    final autoRecognize = await AppPrefs.readAutoRecognizeClassifications();
     final subtitle = await _readBackupSubtitle();
-    if (mounted) setState(() => _backupSubtitle = subtitle);
+    if (!mounted) return;
+    setState(() {
+      _activeCount = count;
+      _autoRecognize = autoRecognize;
+      _backupSubtitle = subtitle;
+    });
   }
 
   /// Flips the switch immediately (never waits on the write) then persists

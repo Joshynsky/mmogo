@@ -50,3 +50,75 @@ const kPhoneTransferNotice =
 /// W3: why a backup matters (Backup page header, What's-new, Privacy page).
 const kUninstallErasesNotice =
     'Uninstalling mmogo erases your data from this phone. Only a backup you saved can bring it back.';
+
+// --- B17: the Restore flow (prototype wording, `ui-surfaces.md` W4, W5) -------
+
+/// The button on the Backup page.
+const kRestoreButtonLabel = 'Restore from a file';
+
+/// One-line explanation under the Restore button.
+const kRestoreIntro = 'Pick a mmogo backup file. Nothing changes until you choose how to restore it.';
+
+/// Modal progress labels.
+const kRestoreCheckingFile = 'Checking file...';
+const kRestoreRestoring = 'Restoring...';
+const kRestoreReplacing = 'Saving a safety copy, then replacing...';
+const kRestoreUndoing = 'Undoing...';
+
+/// Rejection dialog (plain reason, then "Nothing was changed.").
+const kRestoreRejectTitle = "This file can't be restored";
+const kRestoreNothingChanged = 'Nothing was changed.';
+const kRejectNotMmogo = 'This is not a mmogo backup.';
+const kRejectNewer = 'This backup was made by a newer version of mmogo. Update the app first.';
+const kRejectDamaged = 'This file is damaged or incomplete.';
+const kRejectTooLarge = 'This file is too large to be a backup.';
+const kRejectInvalidEntry = 'This backup has an invalid entry';
+
+/// Every restore failure shows this one message (PM wording; B15/B16 ruling f).
+const kRestoreFailedTitle = 'Could not restore';
+const kRestoreFailedMessage = 'Could not restore. Nothing was changed.';
+
+/// Replace is refused when the safety copy could not hold every entry.
+const kReplaceNeedsCompleteCopy =
+    'Replace needs a complete safety copy and some entries cannot be saved in it. Use Merge instead.';
+
+/// Merge-or-replace dialog.
+const kMergeDialogTitle = 'Restore from this backup?';
+const kMergeOptionTitle = 'Merge';
+const kMergeOptionHelp = 'Keep what is here and add what is missing.';
+const kReplaceOptionTitle = 'Replace';
+const kReplaceOptionHelp = "Wipe this phone first, then put the file's data in.";
+const kBackupHasNoEntries = 'This backup has no entries.';
+
+/// Replace confirmation.
+const kReplaceConfirmTitle = 'Replace everything on this phone?';
+const kReplaceConfirmButton = 'Replace everything';
+const kReplaceEmptyFileNote =
+    'This backup has no entries. Replacing with it will leave this phone with no transactions at all.';
+
+/// Replace confirmation: why Undo is not exact (B15/B16 ruling b).
+const kUndoNotExactNotice =
+    'Undo is not exact. Recently deleted entries are gone for good. '
+    'Entries you add after Replacing are lost if you Undo. '
+    'A setting that was not set before keeps the value Replace gave it.';
+
+/// W5.
+String replaceRemovesLine(int transactions, int classifications, int receivers) =>
+    'Replace will remove ${_n(transactions, 'transaction', 'transactions')}, '
+    '${_n(classifications, 'classification', 'classifications')} and '
+    '${_n(receivers, 'saved receiver', 'saved receivers')} from this phone, '
+    "including recently deleted ones, and put the file's data in. "
+    'A safety copy of the current data is saved first so you can undo.';
+
+String _n(int n, String one, String many) => '$n ${n == 1 ? one : many}';
+
+/// Result sheet.
+const kResultMergedTitle = 'Merged from the backup';
+const kResultReplacedTitle = 'Replaced from the backup';
+const kResultUndoneTitle = 'Previous data restored';
+const kResultMergeNote =
+    'Skipped entries were already on this phone (matched by M-Pesa code). Nothing here was changed or deleted.';
+const kResultReplaceNote = 'Everything on this phone now matches the file.';
+const kResultSafetyCopyNote = 'A safety copy of what was on this phone is kept in the app, so you can undo.';
+const kResultUndoneNote = 'The data from before the replace is back. Entries added after the replace were not kept.';
+const kSettingsNotApplied = 'Restored, but some settings could not be applied.';
