@@ -18,6 +18,7 @@ import 'package:mmogo/data/updates/updates_inbox.dart';
 import 'package:mmogo/platform/storage_bridge.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
 import 'package:mmogo/ui/screens/updates/updates_screen.dart';
+import 'package:mmogo/ui/shell/routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../data/updates/fake_update_check_client.dart';
@@ -140,6 +141,44 @@ void main() {
       expect(kWelcomeNoticeNotes, contains(kNetworkSentence));
       expect(kWelcomeNoticeNotes, contains('at most once a week'));
       expect(kWelcomeNoticeNotes, contains('switch update checks off at the top of this page'));
+    });
+
+    testWidgets('backup paused: title, notes, Backup pill, Open button that goes to Backup and restore',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'updates_inbox_v1': jsonEncode([
+          {
+            'tag': 'BackupPaused',
+            'notes': '',
+            'receivedAt': _received.millisecondsSinceEpoch,
+            'read': false,
+            'backup_paused': true,
+          },
+        ]),
+      });
+      final rig = _Rig();
+      await rig.inbox.load();
+      tester.view.physicalSize = const Size(400, 3000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(MaterialApp(
+        home: UpdatesScreen(inbox: rig.inbox, service: rig.service),
+        routes: {Routes.backup: (_) => const Scaffold(body: Text('backup page'))},
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text(kBackupPausedNoticeTitle), findsOneWidget);
+      expect(find.text('Auto-backup is paused'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('noticeNotes'))).data, kBackupPausedNoticeNotes);
+      expect(find.text('Backup'), findsOneWidget, reason: 'the tag pill');
+      expect(find.text('BackupPaused'), findsNothing);
+      expect(find.byKey(const Key('noticeNewPill')), findsOneWidget);
+      expect(find.byKey(const Key('noticeSeeWhatsNew')), findsNothing);
+      expect(find.text('Open Backup and restore'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('noticeOpenBackup')));
+      await tester.pumpAndSettle();
+      expect(find.text('backup page'), findsOneWidget);
     });
 
     testWidgets('unread release: tag, date, New pill, title, notes, See what\'s new', (tester) async {

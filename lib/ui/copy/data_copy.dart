@@ -196,3 +196,11 @@ const kWelcomeNoticeNotes =
     'When a new version is out, it shows up here and the bell shows a dot. '
     'mmogo checks when you open the app, at most once a week.\n\n'
     'You can switch update checks off at the top of this page.';
+
+/// The "auto-backup is paused" notice (B52).
+const kBackupPausedNoticeTitle = 'Auto-backup is paused';
+const kBackupPausedNoticeNotes =
+    'mmogo can no longer use the backup folder you picked, so no new backup files are being made. '
+    'Your entries are safe on this phone. '
+    'Open Backup and restore and choose a folder again to start backing up.';
+const kBackupPausedNoticeButton = 'Open Backup and restore';

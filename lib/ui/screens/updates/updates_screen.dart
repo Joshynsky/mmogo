@@ -8,6 +8,7 @@ import '../../../data/updates/update_check_service.dart';
 import '../../../data/updates/updates_inbox.dart';
 import '../../../platform/storage_bridge.dart';
 import '../../copy/data_copy.dart';
+import '../../shell/routes.dart';
 import '../../shell/secondary_scaffold.dart';
 import '../../theme/app_colors.dart';
 import '../backup/backup_format.dart';
@@ -126,7 +127,12 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
           if (notices.isEmpty)
             _empty(palette)
           else ...[
-            for (final n in notices) NoticeCard(notice: n, onSeeWhatsNew: _seeWhatsNew),
+            for (final n in notices)
+              NoticeCard(
+                notice: n,
+                onSeeWhatsNew: _seeWhatsNew,
+                onOpenBackup: () => Navigator.of(context).pushNamed(Routes.backup),
+              ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(

@@ -16,10 +16,14 @@ class Notice {
     required this.receivedAt,
     this.read = false,
     this.welcome = false,
+    this.backupPaused = false,
   });
 
   /// The tag of the greeting notice (B49). It is not a version.
   static const welcomeTag = 'Welcome';
+
+  /// The tag of the "auto-backup is paused" notice (B52). Not a version.
+  static const backupPausedTag = 'BackupPaused';
 
   final String tag;
   final String notes;
@@ -30,12 +34,17 @@ class Notice {
   /// and it is never removed for being older than the installed version.
   final bool welcome;
 
+  /// Auto-backup paused itself (B52): not a release either, opens Backup and
+  /// restore instead of the mmogo page. Its wording is not stored.
+  final bool backupPaused;
+
   Notice copyWith({bool? read}) => Notice(
         tag: tag,
         notes: notes,
         receivedAt: receivedAt,
         read: read ?? this.read,
         welcome: welcome,
+        backupPaused: backupPaused,
       );
 
   Map<String, Object?> toJson() => {
@@ -44,6 +53,7 @@ class Notice {
         'receivedAt': receivedAt.millisecondsSinceEpoch,
         'read': read,
         if (welcome) 'welcome': true,
+        if (backupPaused) 'backup_paused': true,
       };
 
   /// `null` when the stored map is unusable (wrong types, bad tag).
@@ -54,8 +64,16 @@ class Notice {
     final at = raw['receivedAt'];
     final read = raw['read'];
     final welcome = raw['welcome'] == true;
+    final backupPaused = raw['backup_paused'] == true;
     if (tag is! String) return null;
-    if (welcome ? tag != welcomeTag : ReleaseInfo.parseVersion(tag) == null) return null;
+    if (welcome && backupPaused) return null;
+    if (welcome) {
+      if (tag != welcomeTag) return null;
+    } else if (backupPaused) {
+      if (tag != backupPausedTag) return null;
+    } else if (ReleaseInfo.parseVersion(tag) == null) {
+      return null;
+    }
     if (at is! int) return null;
     return Notice(
       tag: tag,
@@ -63,6 +81,7 @@ class Notice {
       receivedAt: DateTime.fromMillisecondsSinceEpoch(at),
       read: read == true,
       welcome: welcome,
+      backupPaused: backupPaused,
     );
   }
 }
@@ -139,7 +158,7 @@ class UpdatesInbox {
     }
     final installed = _installedVersion();
     final current = parsed
-        .where((n) => n.welcome || ReleaseInfo.isNewerVersion(n.tag, installed))
+        .where((n) => n.welcome || n.backupPaused || ReleaseInfo.isNewerVersion(n.tag, installed))
         .take(maxNotices)
         .toList(growable: false);
     if (current.length != parsed.length) changedOnLoad = true;
@@ -150,25 +169,49 @@ class UpdatesInbox {
 
   /// Adds [notice] unless its release is already in the inbox. The notes are
   /// sanitised here (at store). Returns true when it was added. Never throws.
+  /// A backup-paused notice is the exception: it replaces any earlier one
+  /// (put first, unread), so a second pause shows again.
   Future<bool> add(Notice notice) async {
     try {
       await ensureLoaded();
+      if (notice.welcome && notice.backupPaused) return false;
       if (notice.welcome) {
         if (notice.tag != Notice.welcomeTag) return false;
+      } else if (notice.backupPaused) {
+        if (notice.tag != Notice.backupPausedTag) return false;
       } else if (ReleaseInfo.parseVersion(notice.tag) == null) {
         return false;
       }
       final key = _key(notice.tag);
-      if (_notices.any((n) => _key(n.tag) == key)) return false;
+      if (!notice.backupPaused && _notices.any((n) => _key(n.tag) == key)) return false;
       final clean = Notice(
         tag: notice.tag,
         notes: UntrustedText.sanitize(notice.notes),
         receivedAt: notice.receivedAt,
-        read: notice.read,
+        read: notice.backupPaused ? false : notice.read,
         welcome: notice.welcome,
+        backupPaused: notice.backupPaused,
       );
-      final next = [clean, ..._notices];
+      final others = notice.backupPaused ? _notices.where((n) => _key(n.tag) != key) : _notices;
+      final next = [clean, ...others];
       _notices = List.unmodifiable(next.take(maxNotices));
+      _publishCount();
+      await _save();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Removes the notice with [tag] (the backup-paused one, once the user has
+  /// picked a folder again or turned auto-backup off). Returns true when one
+  /// was removed. Never throws.
+  Future<bool> remove(String tag) async {
+    try {
+      await ensureLoaded();
+      final key = _key(tag);
+      if (!_notices.any((n) => _key(n.tag) == key)) return false;
+      _notices = List.unmodifiable(_notices.where((n) => _key(n.tag) != key));
       _publishCount();
       await _save();
       return true;

@@ -202,4 +202,80 @@ void main() {
     await i.add(n('0.4.0', at: 2));
     expect(i.notices.map((x) => x.tag), ['0.4.0', '0.3.0']);
   });
+
+  group('backup-paused notice (B52)', () {
+    Notice paused({int at = 5, bool read = false}) => Notice(
+          tag: Notice.backupPausedTag,
+          notes: '',
+          receivedAt: DateTime.fromMillisecondsSinceEpoch(at),
+          read: read,
+          backupPaused: true,
+        );
+
+    test('round-trips through storage with backup_paused true', () async {
+      final i = make();
+      expect(await i.add(paused()), isTrue);
+      expect((await stored()).single['backup_paused'], isTrue);
+      final j = make();
+      await j.load();
+      expect(j.notices.single.backupPaused, isTrue);
+      expect(j.notices.single.tag, 'BackupPaused');
+      expect(j.unreadCount.value, 1);
+    });
+
+    test('the flag is only written when true', () async {
+      final i = make();
+      await i.add(n('v0.2.0'));
+      expect((await stored()).single.containsKey('backup_paused'), isFalse);
+    });
+
+    test('tag and flag must agree', () {
+      Map<String, Object?> raw(String tag, {bool flag = true}) =>
+          {'tag': tag, 'notes': '', 'receivedAt': 1, 'read': false, if (flag) 'backup_paused': true};
+      expect(Notice.tryFromJson(raw('BackupPaused')), isNotNull);
+      expect(Notice.tryFromJson(raw('v0.2.0')), isNull);
+      expect(Notice.tryFromJson(raw('BackupPaused', flag: false)), isNull);
+    });
+
+    test('a second pause replaces the first: one notice, first, unread', () async {
+      final i = make();
+      await i.add(paused(at: 5, read: true));
+      await i.add(n('v0.2.0', at: 6));
+      expect(await i.add(paused(at: 9)), isTrue);
+      expect(i.notices.map((x) => x.tag), ['BackupPaused', 'v0.2.0']);
+      expect(i.notices.first.receivedAt.millisecondsSinceEpoch, 9);
+      expect(i.notices.first.read, isFalse);
+      expect(i.unreadCount.value, 2);
+      expect(await stored(), hasLength(2));
+    });
+
+    test('remove deletes it, updates the count and storage; unknown tag is false', () async {
+      final i = make();
+      await i.add(paused());
+      await i.add(n('v0.2.0'));
+      expect(await i.remove('BackupPaused'), isTrue);
+      expect(i.notices.map((x) => x.tag), ['v0.2.0']);
+      expect(i.unreadCount.value, 1);
+      expect((await stored()).map((e) => e['tag']), ['v0.2.0']);
+      expect(await i.remove('BackupPaused'), isFalse);
+    });
+
+    test('load keeps it even though it is not newer than the installed version', () async {
+      final i = UpdatesInbox(installedVersion: () => '9.9.9');
+      await i.add(paused());
+      final j = UpdatesInbox(installedVersion: () => '9.9.9');
+      await j.load();
+      expect(j.notices.single.backupPaused, isTrue);
+    });
+
+    test('the cap of 10 still holds', () async {
+      final i = make();
+      for (var k = 0; k < 11; k++) {
+        await i.add(n('v1.0.$k', at: 100 + k));
+      }
+      await i.add(paused());
+      expect(i.notices, hasLength(UpdatesInbox.maxNotices));
+      expect(i.notices.first.backupPaused, isTrue);
+    });
+  });
 }

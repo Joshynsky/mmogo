@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/backup/auto_backup_service.dart';
 import 'package:mmogo/data/backup/backup_counts.dart';
 import 'package:mmogo/data/prefs/backup_prefs.dart';
+import 'package:mmogo/data/updates/updates_inbox.dart';
 import 'package:mmogo/platform/storage_bridge.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
 import 'package:mmogo/ui/screens/backup/backup_screen.dart';
@@ -71,6 +72,7 @@ void main() {
       bridge: () => _bridge,
       export: () async => Uint8List.fromList([123, 125]),
       notify: _notices.add,
+      inbox: UpdatesInbox(installedVersion: () => '0.1.1'),
     );
   });
   tearDown(() {

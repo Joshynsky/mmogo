@@ -13,10 +13,13 @@ import 'notes_text.dart';
 /// view, and "See what's new" (which opens the mmogo page, a constant) on a
 /// release notice. The welcome notice has no "See what's new".
 class NoticeCard extends StatefulWidget {
-  const NoticeCard({super.key, required this.notice, required this.onSeeWhatsNew});
+  const NoticeCard({super.key, required this.notice, required this.onSeeWhatsNew, this.onOpenBackup});
 
   final Notice notice;
   final VoidCallback onSeeWhatsNew;
+
+  /// Opens Backup and restore (the backup-paused notice's button).
+  final VoidCallback? onOpenBackup;
 
   /// Lines shown before "Show all notes".
   static const collapsedLines = 6;
@@ -32,9 +35,17 @@ class _NoticeCardState extends State<NoticeCard> {
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final n = widget.notice;
-    final title = n.welcome ? kWelcomeNoticeTitle : updateNoticeTitle(n.tag);
-    // The welcome wording lives in data_copy.dart, not in storage.
-    final notes = n.welcome ? kWelcomeNoticeNotes : plainReleaseNotes(n.notes);
+    final title = n.welcome
+        ? kWelcomeNoticeTitle
+        : n.backupPaused
+            ? kBackupPausedNoticeTitle
+            : updateNoticeTitle(n.tag);
+    // The welcome and backup-paused wording lives in data_copy.dart, not in storage.
+    final notes = n.welcome
+        ? kWelcomeNoticeNotes
+        : n.backupPaused
+            ? kBackupPausedNoticeNotes
+            : plainReleaseNotes(n.notes);
     final notesStyle = TextStyle(fontSize: 13, height: 1.5, color: palette.softInk);
 
     return Container(
@@ -58,7 +69,7 @@ class _NoticeCardState extends State<NoticeCard> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(color: palette.tint, borderRadius: BorderRadius.circular(8)),
                 child: Text(
-                  n.tag,
+                  n.backupPaused ? 'Backup' : n.tag,
                   style: TextStyle(fontSize: 11.5, fontFamily: 'monospace', color: palette.tintInk),
                 ),
               ),
@@ -131,7 +142,18 @@ class _NoticeCardState extends State<NoticeCard> {
               },
             ),
           ],
-          if (!n.welcome) ...[
+          if (n.backupPaused) ...[
+            const SizedBox(height: 6),
+            SizedBox(
+              height: 42,
+              child: FilledButton(
+                key: const Key('noticeOpenBackup'),
+                onPressed: widget.onOpenBackup,
+                style: FilledButton.styleFrom(backgroundColor: palette.primary, foregroundColor: palette.onPrimary),
+                child: const Text(kBackupPausedNoticeButton),
+              ),
+            ),
+          ] else if (!n.welcome) ...[
             const SizedBox(height: 6),
             SizedBox(
               height: 42,

@@ -6,6 +6,7 @@ import '../../platform/storage_bridge.dart';
 import '../../ui/shell/app_messenger.dart';
 import '../db/app_database.dart';
 import '../prefs/backup_prefs.dart';
+import '../updates/updates_inbox.dart';
 import 'backup_service.dart';
 
 /// Automatic backup (architecture D6, WBS B20). After every N newly saved
@@ -31,10 +32,14 @@ class AutoBackupService {
     Future<Uint8List> Function()? export,
     DateTime Function()? now,
     void Function(String message)? notify,
+    UpdatesInbox? inbox,
+    Duration? bridgeTimeout,
   })  : _bridge = bridge ?? (() => StorageBridge.instance),
         _export = export ?? _defaultExport,
         _now = now ?? DateTime.now,
-        _notify = notify ?? _snackbar;
+        _notify = notify ?? _snackbar,
+        _inbox = inbox ?? UpdatesInbox.instance,
+        _timeout = bridgeTimeout ?? AutoBackupService.bridgeTimeout;
 
   /// The one the app uses; `AddScreen._save` calls it.
   static AutoBackupService instance = AutoBackupService();
@@ -46,6 +51,10 @@ class AutoBackupService {
   /// Two failed writes in a row pause auto-backup.
   static const failuresBeforePause = 2;
 
+  /// A bridge call or export that takes longer counts as a failed write, so
+  /// one that never returns cannot leave a run stuck.
+  static const bridgeTimeout = Duration(seconds: 30);
+
   /// Names this service writes (and the only names it may prune), with the
   /// optional ` (n)` a provider adds to avoid a clash.
   static final autoFileName = RegExp(r'^mmogo-auto-(\d{8})-(\d{6})(?: \((\d+)\))?\.json$');
@@ -54,6 +63,8 @@ class AutoBackupService {
   final Future<Uint8List> Function() _export;
   final DateTime Function() _now;
   final void Function(String message) _notify;
+  final UpdatesInbox _inbox;
+  final Duration _timeout;
 
   bool _running = false;
   int _queued = 0;
@@ -115,13 +126,13 @@ class AutoBackupService {
 
     final bridge = _bridge();
     try {
-      if (!await bridge.hasWriteGrant(folder)) {
+      if (!await bridge.hasWriteGrant(folder).timeout(_timeout)) {
         await _pause();
         return;
       }
       final startedAt = _now();
-      final bytes = await _export();
-      final created = await bridge.createFile(folder, fileNameFor(startedAt), bytes);
+      final bytes = await _export().timeout(_timeout);
+      final created = await bridge.createFile(folder, fileNameFor(startedAt), bytes).timeout(_timeout);
       final files = await _listOrNull(bridge, folder);
       final mine = files?.where((f) => f.uri == created);
       if (mine != null && mine.isNotEmpty && mine.first.size != bytes.length) {
@@ -147,7 +158,7 @@ class AutoBackupService {
 
   Future<List<FolderFile>?> _listOrNull(StorageBridge bridge, String folder) async {
     try {
-      return await bridge.listFiles(folder);
+      return await bridge.listFiles(folder).timeout(_timeout);
     } catch (_) {
       return null;
     }
@@ -162,6 +173,22 @@ class AutoBackupService {
   Future<void> _pause() async {
     await BackupPrefs.writePaused(true);
     _notify(pausedMessage);
+    try {
+      await _inbox.add(Notice(
+        tag: Notice.backupPausedTag,
+        notes: '',
+        receivedAt: _now(),
+        backupPaused: true,
+      ));
+    } catch (_) {
+      // The notice is a courtesy; it never blocks saving an entry.
+    }
+  }
+
+  Future<void> _clearNotice() async {
+    try {
+      await _inbox.remove(Notice.backupPausedTag);
+    } catch (_) {}
   }
 
   /// A failed write keeps the counter (so the next saved entry retries); the
@@ -219,6 +246,7 @@ class AutoBackupService {
     ok = await BackupPrefs.writePaused(false) && ok;
     ok = await BackupPrefs.writeEnabled(true) && ok;
     if (old != null && old != folder.uri) await _releaseQuietly(old);
+    await _clearNotice();
     return ok;
   }
 
@@ -229,6 +257,7 @@ class AutoBackupService {
     final old = await BackupPrefs.readFolderUri();
     final ok = await BackupPrefs.clearAutoBackup();
     if (old != null) await _releaseQuietly(old);
+    await _clearNotice();
     return ok;
   }
 
