@@ -9,6 +9,7 @@ import '../../../data/prefs/backup_prefs.dart';
 import '../../copy/privacy_copy.dart';
 import '../../shell/primary_shell.dart';
 import '../../shell/routes.dart';
+import '../../widgets/palette_alert_dialog.dart';
 import '../settings/settings_widgets.dart';
 import '../../shell/secondary_scaffold.dart';
 import '../../theme/app_colors.dart';
@@ -170,7 +171,7 @@ class _BackupScreenState extends State<BackupScreen> {
         setState(() => _busy = false);
         await showDialog<void>(
           context: context,
-          builder: (ctx) => AlertDialog(
+          builder: (ctx) => PaletteAlertDialog(
             title: const Text('Could not create the backup'),
             content: const Text(kBackupFailedMessage),
             actions: [FilledButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],

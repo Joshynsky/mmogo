@@ -5,6 +5,7 @@ import '../../data/db/app_database.dart';
 import '../../data/db/classification_dao.dart';
 import '../shell/secondary_scaffold.dart';
 import '../theme/app_colors.dart';
+import '../widgets/palette_alert_dialog.dart';
 
 /// T8 — Manage Classifications. Own dedicated page (secondary chrome
 /// tier), reached from Settings: an active classification list per group
@@ -158,7 +159,7 @@ class _ManageClassificationsScreenState extends State<ManageClassificationsScree
     final controller = TextEditingController(text: item.name);
     final newName = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => PaletteAlertDialog(
         title: const Text('Rename classification'),
         content: TextField(
           controller: controller,
@@ -206,7 +207,7 @@ class _ManageClassificationsScreenState extends State<ManageClassificationsScree
             'It will be hidden, not deleted, and can be restored later.';
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => PaletteAlertDialog(
         title: const Text('Delete classification?'),
         content: Text(message),
         actions: [

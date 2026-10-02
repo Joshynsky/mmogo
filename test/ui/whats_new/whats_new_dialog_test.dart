@@ -7,6 +7,7 @@ import 'package:mmogo/data/prefs/update_prefs.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
 import 'package:mmogo/ui/copy/whats_new_copy.dart';
 import 'package:mmogo/ui/shell/routes.dart';
+import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:mmogo/ui/theme/app_theme.dart';
 import 'package:mmogo/ui/whats_new/whats_new_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,9 +38,9 @@ Future<void> _pump(WidgetTester tester, {required Map<String, Object> prefs, Str
 
 void main() {
   group('readable in dark mode', () {
-    // The app's dialogs are always the light Material surface; the body text
-    // must not take the dark palette's (pale) ink colour. Found on a phone in
-    // dark mode: pale text on a pale dialog.
+    // Dialogs follow the palette (PaletteAlertDialog): in dark mode the body
+    // text must contrast with the dark card. Found on a phone in dark mode
+    // when the dialog was still a pale card with pale text.
     testWidgets('body text contrasts with the dialog surface when the phone is dark', (tester) async {
       SharedPreferences.setMockInitialValues({'onboarding_complete': true});
       tester.view.physicalSize = const Size(400, 900);
@@ -64,7 +65,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       final dialogContext = tester.element(find.byKey(_dialog));
-      final surface = Theme.of(dialogContext).colorScheme.surfaceContainerHigh;
+      final surface = AppPalette.of(dialogContext).card;
       final body = tester.widget<RichText>(
         find.descendant(of: find.byKey(_dialog), matching: find.byType(RichText)).at(1),
       );
@@ -118,7 +119,7 @@ void main() {
       expect(text, contains(kUpdateCheckCadence));
       expect(text, contains('Updates page (Profile, Settings, Updates)'));
       expect(text, contains('not encrypted'));
-      expect(text, contains('the bell on Home shows a dot'));
+      expect(text, contains('a dot on the bell on Home'));
       expect(text.toLowerCase(), isNot(contains('nothing is sent anywhere')));
       expect(text.toLowerCase(), isNot(contains('no permissions')));
     });

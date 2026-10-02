@@ -8,6 +8,7 @@ import '../copy/data_copy.dart';
 import '../copy/whats_new_copy.dart';
 import '../shell/routes.dart';
 import 'whats_new_content.dart';
+import '../widgets/palette_alert_dialog.dart';
 
 /// What the person chose in the modal.
 enum WhatsNewChoice { gotIt, openBackup }
@@ -26,7 +27,7 @@ Future<WhatsNewChoice?> showWhatsNewDialog(BuildContext context) => showDialog<W
         TextSpan(text: body),
       ],
     );
-    return AlertDialog(
+    return PaletteAlertDialog(
       key: const Key('whatsNewDialog'),
       title: const Text(kWhatsNewTitle),
       content: SingleChildScrollView(
@@ -44,6 +45,7 @@ Future<WhatsNewChoice?> showWhatsNewDialog(BuildContext context) => showDialog<W
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Text.rich(span, style: const TextStyle(fontSize: 14, height: 1.45)),
               ),
+            const Text(kWhatsNewSignOff, key: Key('whatsNewSignOff'), style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic)),
           ],
         ),
       ),

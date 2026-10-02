@@ -6,6 +6,7 @@ import '../../../platform/storage_bridge.dart';
 import '../../copy/data_copy.dart';
 import '../../theme/app_colors.dart';
 import 'backup_widgets.dart';
+import '../../widgets/palette_alert_dialog.dart';
 
 /// What the user does on the Auto-backup card: switch it on or off, choose a
 /// folder, change N and K. Order of warnings (PM, criteria 23 and 24): the
@@ -68,7 +69,7 @@ class AutoBackupFlow {
       final use = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
+        builder: (ctx) => PaletteAlertDialog(
           title: const Text(kCloudSyncTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,

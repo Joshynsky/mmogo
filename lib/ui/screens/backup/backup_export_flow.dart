@@ -13,6 +13,7 @@ import '../../../data/prefs/backup_prefs.dart';
 import '../../copy/data_copy.dart';
 import '../../theme/app_colors.dart';
 import 'backup_widgets.dart';
+import '../../widgets/palette_alert_dialog.dart';
 
 /// Builds the backup (the real [BackupService.export] by default).
 typedef BackupExporter = Future<BackupExport> Function();
@@ -124,7 +125,7 @@ class BackupExportFlow {
     final palette = AppPalette.of(context);
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => PaletteAlertDialog(
         title: const Text('Before you back up'),
         content: SingleChildScrollView(
           child: Column(

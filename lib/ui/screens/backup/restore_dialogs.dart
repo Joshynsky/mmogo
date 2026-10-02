@@ -4,6 +4,7 @@ import '../../../data/backup/restore_types.dart';
 import '../../copy/data_copy.dart';
 import '../../theme/app_colors.dart';
 import 'restore_messages.dart';
+import '../../widgets/palette_alert_dialog.dart';
 
 /// A modal, non-dismissible progress dialog ("Checking file...",
 /// "Restoring..."). Returns a function that closes it.
@@ -15,7 +16,7 @@ VoidCallback showRestoreProgress(BuildContext context, String label) {
     barrierDismissible: false,
     builder: (ctx) => PopScope(
       canPop: false,
-      child: AlertDialog(
+      child: PaletteAlertDialog(
         key: const Key('restoreProgress'),
         content: Row(
           children: [
@@ -38,7 +39,7 @@ VoidCallback showRestoreProgress(BuildContext context, String label) {
 /// The rejection dialog: one plain reason, then "Nothing was changed.".
 Future<void> showRestoreRejectDialog(BuildContext context, String reason) => showDialog<void>(
   context: context,
-  builder: (ctx) => AlertDialog(
+  builder: (ctx) => PaletteAlertDialog(
     key: const Key('restoreRejectDialog'),
     title: const Text(kRestoreRejectTitle),
     content: Column(
@@ -58,7 +59,7 @@ Future<void> showRestoreRejectDialog(BuildContext context, String reason) => sho
 Future<void> showRestoreFailedDialog(BuildContext context, {String message = kRestoreFailedMessage}) =>
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => PaletteAlertDialog(
         key: const Key('restoreFailedDialog'),
         title: const Text(kRestoreFailedTitle),
         content: Text(message, key: const Key('restoreFailedMessage')),
@@ -114,7 +115,7 @@ class _MergeDialogState extends State<_MergeDialog> {
   Widget build(BuildContext context) {
     final p = widget.preview;
     final fileTotal = p.fileClassifications + p.fileTransactions + p.fileCounterpartyMap;
-    return AlertDialog(
+    return PaletteAlertDialog(
       key: const Key('restoreMergeDialog'),
       title: const Text(kMergeDialogTitle),
       content: SingleChildScrollView(
@@ -245,7 +246,7 @@ Future<bool> showReplaceConfirmDialog(BuildContext context, RestorePreview p) as
   final fileTotal = p.fileClassifications + p.fileTransactions + p.fileCounterpartyMap;
   final ok = await showDialog<bool>(
     context: context,
-    builder: (ctx) => AlertDialog(
+    builder: (ctx) => PaletteAlertDialog(
       key: const Key('restoreReplaceDialog'),
       title: const Text(kReplaceConfirmTitle),
       content: SingleChildScrollView(

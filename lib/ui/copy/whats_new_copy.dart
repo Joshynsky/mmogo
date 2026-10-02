@@ -13,17 +13,22 @@ const kWhatsNewBackupBody =
     'The file is not encrypted: it holds names and phone numbers, so keep it somewhere private.';
 
 /// Bold lead is [kUninstallErasesNotice]; the body is [kPhoneTransferNotice].
-const kWhatsNewInternetLead = 'A first for mmogo: it uses the internet.';
+const kWhatsNewInternetLead = 'mmogo now uses the internet.';
 const kWhatsNewInternetBody =
-    ' $kNetworkSentence $kUpdateCheckCadence '
-    'You can turn it off on the Updates page (Profile, Settings, Updates). '
-    'There are no Android notifications: when there is news, the bell on Home shows a dot.';
+    ' So you can get updates without leaving the app, mmogo asks GitHub whether a newer version is out. '
+    '$kNetworkSentence $kUpdateCheckCadence '
+    'You can turn this off any time on the Updates page (Profile, Settings, Updates). '
+    'News shows as a dot on the bell on Home. There are no Android notifications.';
 
 const kWhatsNewUnsupportedLead = 'Some messages are not understood yet.';
 const kWhatsNewUnsupportedBody =
-    ' mmogo does not yet recognise every M-Pesa message, for example Pochi la Biashara payments, '
-    'agent withdrawals and airtime purchases. You can still add those by hand. '
-    'Thank you for bearing with us while we add them in a future update.';
+    ' mmogo does not recognise every M-Pesa message you paste into it. Pochi la Biashara payments, '
+    'agent withdrawals and airtime purchases still need to be added by hand for now. '
+    'We have only just started, and they are coming in future updates. Thank you for bearing with us. '
+    'If you find one we are missing, tell us in Settings, Send feedback.';
+
+/// A personal sign-off, shown last in the What's-new message.
+const kWhatsNewSignOff = '— Josh';
 
 const kWhatsNewOpenBackup = 'Open Backup and restore';
 const kWhatsNewGotIt = 'Got it';
