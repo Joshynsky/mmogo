@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="mmogo is a free, offline Android app that turns the M-Pesa messages you paste into a clear picture of your spending. No account, no server, no permissions.">
+<meta name="description" content="mmogo is a free Android app that turns the M-Pesa messages you paste into a clear picture of your spending. No account, no server. Internet used only to check for updates.">
 <meta name="theme-color" content="#073B4C">
 <link rel="icon" type="image/png" href="img/icon.png">
 <meta property="og:type" content="website">
 <meta property="og:title" content="mmogo: see where your M-Pesa money goes">
-<meta property="og:description" content="mmogo is a free, offline Android app that turns the M-Pesa messages you paste into a clear picture of your spending. No account, no server, no permissions.">
+<meta property="og:description" content="mmogo is a free Android app that turns the M-Pesa messages you paste into a clear picture of your spending. No account, no server. Internet used only to check for updates.">
 <meta property="og:image" content="https://joshynsky.github.io/mmogo/img/home.webp">
 <meta property="og:url" content="https://joshynsky.github.io/mmogo/">
 <title>mmogo: see where your M-Pesa money goes</title>
@@ -220,7 +220,7 @@ img { max-width: 100%; }
   <div class="hero">
     <div class="wrap">
       <h1>See where your <em>M-Pesa</em> money goes.</h1>
-      <p class="lede">Paste an M-Pesa message. mmogo sorts it, totals it and charts it. Everything stays on your phone.</p>
+      <p class="lede">Paste an M-Pesa message. mmogo sorts it, totals it and charts it. Your entries stay on your phone.</p>
       <div class="cta">
         <a class="btn btn-sun dl" href="#install">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>
@@ -306,14 +306,31 @@ img { max-width: 100%; }
         <p class="eyebrow">Private by design</p>
         <h2>Your money stays yours.</h2>
         <ul class="checks">
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>No account, no server</b><span>Entries live in a database on your phone. Nothing is sent anywhere.</span></div></li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>No permissions, not even internet</b><span>The app asks Android for none, so it can't send your data out.</span></div></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>No account, no server</b><span>Entries live in a database on your phone. mmogo sends none of them anywhere.</span></div></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Internet only to check for updates</b><span>The only permission mmogo asks Android for is internet, used only to check for updates, when you open the app and at most once a week after a successful check. GitHub sees your IP address and that the request comes from the mmogo app. No entries, names or messages are sent. You can switch it off on the Updates page (Profile, Settings, Updates, or the bell); when it is off, mmogo makes no request.</span></div></li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Reads only the message you paste</b><span>mmogo reads the SMS you paste and picks out the amount, receiver, code, date and cost. It has no access to your inbox or any other message.</span></div></li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Never saves your M-Pesa balance</b><span>The balance in the message is ignored. It isn't picked out, saved or shown anywhere, and the message text itself isn't kept either.</span></div></li>
         </ul>
       </div>
     </div>
   </section>
+
+<!-- whats-new:start -->
+  <section id="whats-new" style="padding-top:0">
+    <div class="wrap">
+      <p class="eyebrow">What's new</p>
+      <h2>What's new in 0.1.1</h2>
+      <ul class="checks">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Backup and restore</b><span>Save your data to a backup file and restore it later, either merging it into what is on the phone or replacing it. The file is not encrypted: it holds names and phone numbers, so keep it somewhere private.</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Auto-backup to a folder you pick</b><span>mmogo can save a backup to a folder of your choice after every few saved entries, and keeps the newest few files.</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Update check</b><span>On by default, and you can switch it off on the Updates page. It uses the internet only to check for updates. GitHub sees your IP address and that the request comes from the mmogo app. No entries, names or messages are sent.</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Privacy and your data</b><span>A new page that says what is stored on your phone and what leaves it.</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Profile tab, with Settings inside</b><span>Profile is now in the bottom bar, and Settings opens from it.</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Send feedback</b><span>A row in Settings that opens the mmogo issues page on GitHub.</span></div></li>
+      </ul>
+    </div>
+  </section>
+<!-- whats-new:end -->
 
   <section id="install">
     <div class="wrap">
@@ -340,8 +357,8 @@ img { max-width: 100%; }
       <p class="eyebrow">Questions</p>
       <h2>Before you install.</h2>
       <div class="faq">
-        <details><summary>Is it safe to install?</summary><p>The app requests no permissions and the source code is public on GitHub. Because it's not on the Play Store, check that your download matches the SHA-256 above.</p></details>
-        <details><summary>What if I lose my phone or uninstall the app?</summary><p>Your data is only on your phone, so it's gone unless you exported a copy. Use Export CSV in Settings now and then. Backup and restore is planned for a later version.</p></details>
+        <details><summary>Is it safe to install?</summary><p>The app asks Android for one permission, internet, used only to check for updates (you can switch that off in the app), and the source code is public on GitHub. Because it's not on the Play Store, check that your download matches the SHA-256 above.</p></details>
+        <details><summary>What if I lose my phone or uninstall the app?</summary><p>Your data is only on your phone, and uninstalling the app erases it. Android's own backup is off, and Android's phone-to-phone transfer will not carry mmogo's data. In version 0.1.1 you can make a backup file yourself (Profile, Settings, Backup and restore) and restore it later, merging it in or replacing what is on the phone. The file is not encrypted and holds names and phone numbers, so keep it somewhere private. mmogo can also save a backup to a folder you pick after every few entries.</p></details>
         <details><summary>Is there an iPhone version?</summary><p>Not yet. mmogo is Android only for now.</p></details>
         <details><summary>Does it connect to my M-Pesa account?</summary><p>No. It never touches your M-Pesa account or PIN. It only reads the M-Pesa messages you paste in, and uses the parts it needs.</p></details>
         <details><summary>Who makes it?</summary><p>mmogo is an independent project by Joshua Waga. It isn't made by, or connected to, Safaricom or M-Pesa.</p></details>

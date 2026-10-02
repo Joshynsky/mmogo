@@ -4,7 +4,7 @@
 [![Downloads](https://img.shields.io/github/downloads/Joshynsky/mmogo/total)](https://github.com/Joshynsky/mmogo/releases)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
 
-An Android app for seeing where your M-Pesa money goes (the name is short for "My Money Goes"). You paste an M-Pesa message and mmogo reads the amount, who you paid, the code, the date and the transaction cost, then fills in an entry for you to check. You can also type an entry or log a cash payment. It sorts, totals and charts what you've entered. Everything stays on your phone: no account, no server, no tracking.
+An Android app for seeing where your M-Pesa money goes (the name is short for "My Money Goes"). You paste an M-Pesa message and mmogo reads the amount, who you paid, the code, the date and the transaction cost, then fills in an entry for you to check. You can also type an entry or log a cash payment. It sorts, totals and charts what you've entered. Your entries stay on your phone: no account, no server, no tracking. The only thing mmogo uses the internet for is checking for updates (see [Privacy](#privacy)).
 
 <p>
   <img src="docs/img/home.webp" alt="Home screen: this month's spending split by Send Money, Paybill, Buy Goods and Cash" width="30%">
@@ -20,7 +20,7 @@ mmogo is an independent project. It is not made by, or connected to, Safaricom o
 
 I could never say where my money went. I'd have enough at the start of the month, and then somewhere in the middle I'd be in Fuliza with no clear idea how I got there. A friend had the same problem, so I started building something to answer that one question.
 
-I didn't research the space properly first. When I did, I found that M-Pesa trackers already exist, with plenty of users, and some do more than mmogo does today (Mpesa: Ledger and Monee, for example). They are also on the Play Store and mmogo isn't, so it starts behind. What mmogo offers is a different set of trade-offs: you paste the message yourself, so it needs no SMS permission and no permissions at all; it works offline; it keeps no balance and no account; and the code is open. If that suits you, try it. If another app suits you better, that's a fair choice too.
+I didn't research the space properly first. When I did, I found that M-Pesa trackers already exist, with plenty of users, and some do more than mmogo does today (Mpesa: Ledger and Monee, for example). They are also on the Play Store and mmogo isn't, so it starts behind. What mmogo offers is a different set of trade-offs: you paste the message yourself, so it needs no SMS permission; its only permission is internet, used only to check for updates, and you can switch that off; it keeps no balance and no account; and the code is open. If that suits you, try it. If another app suits you better, that's a fair choice too.
 
 ## What you can do
 
@@ -36,8 +36,11 @@ I didn't research the space properly first. When I did, I found that M-Pesa trac
 - Your data is stored in a local SQLite database on the device. There are no accounts and no server.
 - mmogo reads **only the message you paste**. It picks out the amount, receiver, code, date and transaction cost. It has no access to your SMS inbox or any other message.
 - It **never saves your M-Pesa balance**. The balance in the message is ignored: it isn't picked out, stored or shown. The message text isn't kept either, only the fields above.
-- The release app requests **no permissions** (not even internet). `INTERNET` appears only in the debug and profile manifests that Flutter's tooling needs.
-- Android auto-backup is switched **off**, so your data is not copied to Google Drive. The flip side: there is no automatic restore on a new phone, and uninstalling the app erases your data. Use **Export CSV** to keep a copy. Backup and restore are planned.
+- The release app requests **one permission: `INTERNET`**, used only to check for updates, when you open the app and at most once a week after a successful check. GitHub sees your IP address and that the request comes from the mmogo app. No entries, names or messages are sent. The update check carries no identifier.
+- You can switch the update check off on the Updates page (Profile > Settings > Updates, or tap the bell). When it is off, mmogo makes no request at all.
+- Android's own backup is switched **off**, so Android does not copy your data to Google Drive, and there is no automatic restore on a new phone. Android's phone-to-phone transfer will not carry mmogo's data either. Uninstalling the app erases your data, so make a backup.
+- **Backup and restore** (Profile > Settings > Backup and restore): a backup is a JSON file that you make yourself. It is **not encrypted** and holds your transactions, including names and phone numbers, so keep it somewhere private. Restore can merge the file into what is on the phone or replace it. Optionally, mmogo can save a backup to a folder you pick after every few saved entries. If that folder syncs to a cloud service, your backup files go there too. mmogo itself never uploads a backup anywhere.
+- **Export CSV** is still there for taking your entries to a spreadsheet.
 
 ## Install (Android)
 
@@ -64,7 +67,7 @@ Found a bug, or want something added? [Open an issue](https://github.com/Joshyns
 
 An early release, under the [MIT License](LICENSE). See the [releases page](https://github.com/Joshynsky/mmogo/releases) for the current version and what changed.
 
-Planned next: backup and restore (uninstalling currently erases your data), then tracking money you receive, Profile in the bottom bar with Settings inside it, and a lighter Add form. Reading M-Pesa messages automatically, without pasting, is something I want to look at after that, if it can be done without asking for broad SMS access.
+Planned next: tracking money you receive and a lighter Add form. Reading M-Pesa messages automatically, without pasting, is something I want to look at after that, if it can be done without asking for broad SMS access.
 
 ---
 
