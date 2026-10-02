@@ -2,7 +2,7 @@
 
 What changed in each version of mmogo, newest first. Written for the people who use the app, so it says what you will notice, not how it was built. Dates are when the version was released.
 
-## 0.1.1 (not released yet)
+## 0.1.1 (2 October 2026)
 
 ### Added
 - **Backup and restore.** Profile, Settings, Backup and restore. Save your data to a file you keep, and restore it later on this phone or a new one. Restore can merge the file into what is on the phone, or replace everything on the phone with the file (a safety copy is made first, and Undo is offered).
