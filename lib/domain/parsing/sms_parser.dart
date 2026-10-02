@@ -37,7 +37,7 @@ class SmsParser {
   // Paybill ("sent to <business> for account <number>"). Checked SECOND —
   // must come before Send Money since both share the "sent to" prefix.
   static final RegExp _paybillRe = RegExp(
-    r'^([A-Z0-9]{10})\s+Confirmed\.\s+Ksh([\d,]+\.\d{2})\s+sent to\s+(.+?)\s+for account\s+(\S+)\s+on\s+'
+    r'^([A-Z0-9]{10})\s+Confirmed\.\s+Ksh([\d,]+\.\d{2})\s+sent to\s+(.+?)\s+for account\s+(.+?)\s+on\s+'
     r'(\d{1,2}/\d{1,2}/\d{2,4})\s+at\s+([\d:]+\s*[APMapm]{2})\b'
     r'[\s\S]*?Transaction cost,\s*Ksh([\d,]+\.\d{2})',
   );

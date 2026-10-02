@@ -102,6 +102,29 @@ void main() {
     });
   });
 
+  group('SmsParser.parse — Paybill account with spaces (B50)', () {
+    String msg(String account) =>
+        'UHL8E3PJ8Y Confirmed. Ksh100.00 sent to SAFARICOM DATA BUNDLES '
+        'for account $account on 21/8/26 at 4:24 PM New M-PESA balance is '
+        'Ksh0.00. Transaction cost, Ksh0.00.';
+
+    test('keeps a multi-word account whole', () {
+      final result = SmsParser.parse(msg('SAFARICOM DATA BUNDLES'));
+      expect(result, isA<ParseSuccess>());
+      final fields = (result as ParseSuccess).fields;
+      expect(fields.sourceType, SmsSourceType.payBill);
+      expect(fields.counterpartyLabel, 'SAFARICOM DATA BUNDLES');
+      expect(fields.paybillAccountNumber, 'SAFARICOM DATA BUNDLES');
+    });
+
+    test('single-token accounts still parse', () {
+      for (final account in ['Talkmore', 'Tunukiwa', 'SMSBundles', 'ATL12345']) {
+        final fields = (SmsParser.parse(msg(account)) as ParseSuccess).fields;
+        expect(fields.paybillAccountNumber, account);
+      }
+    });
+  });
+
   group('SmsParser.parse — check-order correctness', () {
     test(
         'a Paybill message is never misclassified as Send Money '

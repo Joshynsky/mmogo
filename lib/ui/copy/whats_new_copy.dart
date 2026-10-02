@@ -19,5 +19,11 @@ const kWhatsNewInternetBody =
     'You can turn it off on the Updates page (Profile, Settings, Updates). '
     'There are no Android notifications: when there is news, the bell on Home shows a dot.';
 
+const kWhatsNewUnsupportedLead = 'Some messages are not understood yet.';
+const kWhatsNewUnsupportedBody =
+    ' mmogo does not yet recognise every M-Pesa message, for example Pochi la Biashara payments, '
+    'agent withdrawals and airtime purchases. You can still add those by hand. '
+    'Thank you for bearing with us while we add them in a future update.';
+
 const kWhatsNewOpenBackup = 'Open Backup and restore';
 const kWhatsNewGotIt = 'Got it';

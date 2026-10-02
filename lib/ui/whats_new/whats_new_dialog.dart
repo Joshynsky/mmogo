@@ -37,6 +37,7 @@ Future<WhatsNewChoice?> showWhatsNewDialog(BuildContext context) => showDialog<W
               para(kWhatsNewBackupLead, kWhatsNewBackupBody),
               para(kUninstallErasesNotice, ' $kPhoneTransferNotice'),
               para(kWhatsNewInternetLead, kWhatsNewInternetBody),
+              para(kWhatsNewUnsupportedLead, kWhatsNewUnsupportedBody),
             ])
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
