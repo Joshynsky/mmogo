@@ -10,11 +10,13 @@ import '../../../app_info.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/db/export_dao.dart';
 import '../../../data/prefs/app_prefs.dart';
+import '../../../data/prefs/backup_prefs.dart';
 import '../../shell/routes.dart';
 import '../../shell/secondary_scaffold.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/coach_tour.dart';
 import 'appearance_section.dart';
+import '../backup/backup_format.dart';
 import 'data_section.dart';
 import 'preferences_section.dart';
 import 'updates_section.dart';
@@ -69,6 +71,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // documented default (ON) so the switch doesn't visibly flip from
   // off->on once the real read resolves in the common case.
   bool _autoRecognize = true;
+  String _backupSubtitle = 'Never backed up';
 
   // Coach-tour anchors.
   final _paletteTourKey = GlobalKey();
@@ -94,17 +97,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
     final count = await ExportDao.activeTransactionCount(db);
     final autoRecognize = await AppPrefs.readAutoRecognizeClassifications();
+    final backupSubtitle = await _readBackupSubtitle();
     if (!mounted) return;
     setState(() {
       _db = db;
       _activeCount = count;
       _autoRecognize = autoRecognize;
+      _backupSubtitle = backupSubtitle;
       _loading = false;
     });
     if (!_tourOffered) {
       _tourOffered = true;
       _offerTour();
     }
+  }
+
+  /// The newer of the manual and automatic backup times, or `Never backed up`.
+  Future<String> _readBackupSubtitle() async {
+    final manual = await BackupPrefs.readLastManualAt();
+    final auto = await BackupPrefs.readLastAt();
+    final last = (manual != null && auto != null) ? (manual.isAfter(auto) ? manual : auto) : (manual ?? auto);
+    return backupRowSubtitle(last);
+  }
+
+  /// Opens the Backup page and refreshes the row's subtitle when it closes.
+  Future<void> _openBackup() async {
+    await Navigator.of(context).pushNamed(Routes.backup);
+    final subtitle = await _readBackupSubtitle();
+    if (mounted) setState(() => _backupSubtitle = subtitle);
   }
 
   /// Flips the switch immediately (never waits on the write) then persists
@@ -145,15 +165,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await exportFn(csv, rows.length);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('CSV exported — ${rows.length} transaction${rows.length == 1 ? '' : 's'}'),
-        ),
+        SnackBar(content: Text('CSV exported — ${rows.length} transaction${rows.length == 1 ? '' : 's'}')),
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('CSV export failed — please try again')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('CSV export failed — please try again')));
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
@@ -165,9 +181,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _showTipsAgain() async {
     await AppPrefs.resetAllTours();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Tips reset. The guides will show again.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Tips reset. The guides will show again.')));
   }
 
   List<CoachStep> _tourSteps() => [
@@ -222,6 +238,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             exportSubtitle: _exportSubtitle,
             exportEnabled: exportEnabled,
             onExport: _handleExport,
+            backupSubtitle: _backupSubtitle,
+            onBackup: _openBackup,
           ),
           const SizedBox(height: 14),
           PreferencesSection(

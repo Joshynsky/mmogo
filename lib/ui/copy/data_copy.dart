@@ -46,3 +46,7 @@ const kWhyRestoreAsks =
 const kPhoneTransferNotice =
     "Android's phone-to-phone transfer will not carry mmogo data. "
     'A backup file is the only way to move to a new phone.';
+
+/// W3: why a backup matters (Backup page header, What's-new, Privacy page).
+const kUninstallErasesNotice =
+    'Uninstalling mmogo erases your data from this phone. Only a backup you saved can bring it back.';

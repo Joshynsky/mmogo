@@ -40,6 +40,9 @@ class Routes {
   static const manageClassifications = '/manage-classifications';
   static const recentlyDeleted = '/recently-deleted';
 
+  /// B14 (Lead ruling F2): opened from Settings > Your data > Backup and restore.
+  static const backup = '/backup';
+
   /// T25 — reached via the new bell button in the primary top bar
   /// (`primary_scaffold.dart`); a placeholder "Coming soon" page.
   static const notifications = '/notifications';

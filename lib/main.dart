@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'ui/screens/add/add_screen.dart';
+import 'ui/screens/backup/backup_screen.dart';
 import 'ui/screens/manage_classifications_screen.dart';
 import 'ui/screens/notifications_screen.dart';
 import 'ui/screens/onboarding_screen.dart';
@@ -86,6 +87,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
           Routes.settings: (_) => const SettingsScreen(),
           Routes.manageClassifications: (_) => const ManageClassificationsScreen(),
           Routes.recentlyDeleted: (_) => const RecentlyDeletedScreen(),
+          Routes.backup: (_) => const BackupScreen(),
           Routes.notifications: (_) => const NotificationsComingSoonScreen(),
         },
       ),

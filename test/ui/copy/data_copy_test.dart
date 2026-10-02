@@ -12,6 +12,7 @@ void main() {
     'kFeedbackHint': kFeedbackHint,
     'kWhyRestoreAsks': kWhyRestoreAsks,
     'kPhoneTransferNotice': kPhoneTransferNotice,
+    'kUninstallErasesNotice': kUninstallErasesNotice,
   };
 
   test('copy_contains_required_phrases_and_none_of_the_banned', () {
@@ -30,6 +31,8 @@ void main() {
     expect(kWhyRestoreAsks, contains('Replace'));
     expect(kPhoneTransferNotice, contains('phone-to-phone'));
     expect(kPhoneTransferNotice, contains('backup file is the only way'));
+
+    expect(kUninstallErasesNotice, contains('Uninstalling mmogo erases your data from this phone'));
 
     const banned = ['nothing is sent anywhere', 'no permissions', 'no internet', 'never connects'];
     for (final e in all.entries) {

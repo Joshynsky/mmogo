@@ -367,7 +367,9 @@ void main() {
       expect(find.text('Show tips again'), findsOneWidget);
       // Rows whose destinations arrive later are not added yet.
       expect(find.text('Privacy and security'.toUpperCase()), findsNothing);
-      expect(find.text('Backup and restore'), findsNothing);
+      // B14 added the Backup and restore row (subtitle: never backed up in this fixture).
+      expect(find.text('Backup and restore'), findsOneWidget);
+      expect(find.text('Never backed up'), findsOneWidget);
       expect(find.text('Send feedback'), findsNothing);
       expect(find.text('Check now'), findsNothing);
     });
