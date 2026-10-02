@@ -7,7 +7,6 @@ import '../../domain/whats_new/whats_new_gate.dart';
 import '../copy/data_copy.dart';
 import '../copy/whats_new_copy.dart';
 import '../shell/routes.dart';
-import '../theme/app_colors.dart';
 import 'whats_new_content.dart';
 
 /// What the person chose in the modal.
@@ -18,7 +17,9 @@ Future<WhatsNewChoice?> showWhatsNewDialog(BuildContext context) => showDialog<W
   context: context,
   barrierDismissible: false,
   builder: (ctx) {
-    final palette = AppPalette.of(ctx);
+    // No palette colours here: AlertDialog is always the light Material
+    // surface (AppTheme is light), so palette.ink in dark mode was pale text
+    // on a pale dialog. The theme's own dialog text colour reads in both.
     TextSpan para(String lead, String body) => TextSpan(
       children: [
         TextSpan(text: lead, style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -41,7 +42,7 @@ Future<WhatsNewChoice?> showWhatsNewDialog(BuildContext context) => showDialog<W
             ])
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: Text.rich(span, style: TextStyle(fontSize: 14, height: 1.45, color: palette.ink)),
+                child: Text.rich(span, style: const TextStyle(fontSize: 14, height: 1.45)),
               ),
           ],
         ),

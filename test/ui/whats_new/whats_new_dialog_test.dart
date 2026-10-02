@@ -7,6 +7,7 @@ import 'package:mmogo/data/prefs/update_prefs.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
 import 'package:mmogo/ui/copy/whats_new_copy.dart';
 import 'package:mmogo/ui/shell/routes.dart';
+import 'package:mmogo/ui/theme/app_theme.dart';
 import 'package:mmogo/ui/whats_new/whats_new_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -35,6 +36,47 @@ Future<void> _pump(WidgetTester tester, {required Map<String, Object> prefs, Str
 }
 
 void main() {
+  group('readable in dark mode', () {
+    // The app's dialogs are always the light Material surface; the body text
+    // must not take the dark palette's (pale) ink colour. Found on a phone in
+    // dark mode: pale text on a pale dialog.
+    testWidgets('body text contrasts with the dialog surface when the phone is dark', (tester) async {
+      SharedPreferences.setMockInitialValues({'onboarding_complete': true});
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.theme,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(platformBrightness: Brightness.dark),
+            child: child!,
+          ),
+          home: Builder(
+            builder: (context) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (context.mounted) maybeShowWhatsNew(context, installedVersionName: '0.1.1');
+              });
+              return const Scaffold(body: Text('HOME'));
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final dialogContext = tester.element(find.byKey(_dialog));
+      final surface = Theme.of(dialogContext).colorScheme.surfaceContainerHigh;
+      final body = tester.widget<RichText>(
+        find.descendant(of: find.byKey(_dialog), matching: find.byType(RichText)).at(1),
+      );
+      final ink = body.text.style?.color ?? DefaultTextStyle.of(dialogContext).style.color;
+      expect(ink, isNotNull);
+      final a = surface.computeLuminance();
+      final b = ink!.computeLuminance();
+      final ratio = (a > b ? a + 0.05 : b + 0.05) / (a > b ? b + 0.05 : a + 0.05);
+      expect(ratio, greaterThan(4.5));
+    });
+  });
+
   group('who sees it', () {
     testWidgets('an upgrade from 0.1.0 (nothing stored, onboarding done) sees it', (tester) async {
       await _pump(tester, prefs: {'onboarding_complete': true});
