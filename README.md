@@ -29,6 +29,8 @@ I didn't research the space properly first. When I did, I found that M-Pesa trac
 - **See where it went:** Home shows this month (or today, this week and more) with a bar for each type of payment and the transaction costs. Analytics breaks it down by day, week, month, year or any range, with a chart you can tap and swipe.
 - **See who you pay most:** Paid to ranks the people, paybills and shops you pay, with search, filter and sort.
 - **Fix mistakes:** swipe a row to edit or delete it, with Undo. Deleted entries wait in Recently deleted so you can restore them.
+- **Back up and restore:** save your data to a file you keep, restore it on this or a new phone (merge or replace), or let mmogo back up to a folder you pick after every few entries. Backup files are not encrypted, so keep them private.
+- **Hear about new versions:** mmogo can check for updates when you open the app, at most once a week, and tell you on the Updates page. You can switch the check off there.
 - **Make it yours:** three colour palettes (light and dark follow your phone), a short guided tip on each page, a name for the Home greeting, and **Export CSV** through the share sheet.
 
 ## Privacy
