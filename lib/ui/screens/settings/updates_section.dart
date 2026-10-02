@@ -112,6 +112,7 @@ class _UpdatesSectionState extends State<UpdatesSection> {
                 icon: Icons.chat_bubble_outline_rounded,
                 label: kSendFeedbackLabel,
                 subtitle: kSendFeedbackSubtitle,
+                trailingIcon: Icons.open_in_new_rounded,
                 onTap: _sendFeedback,
               ),
             ],

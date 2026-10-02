@@ -11,6 +11,7 @@ import 'package:mmogo/ui/copy/privacy_copy.dart';
 import 'package:mmogo/ui/screens/backup/backup_screen.dart';
 import 'package:mmogo/ui/screens/privacy/privacy_screen.dart';
 import 'package:mmogo/ui/screens/settings/privacy_section.dart';
+import 'package:mmogo/ui/screens/settings/settings_widgets.dart';
 import 'package:mmogo/ui/screens/settings/updates_section.dart';
 import 'package:mmogo/ui/shell/routes.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
@@ -145,6 +146,31 @@ void main() {
         findsOneWidget,
       );
       expect(kSendFeedbackSubtitle, contains(kFeedbackHint));
+    });
+
+    testWidgets('B33b: Send feedback ends in the open-in-new arrow, Updates keeps the chevron', (tester) async {
+      await pumpUpdates(tester);
+      expect(
+        find.descendant(
+          of: find.ancestor(of: find.text('Send feedback'), matching: find.byType(SettingsLink)),
+          matching: find.byIcon(Icons.open_in_new_rounded),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.ancestor(of: find.text('Send feedback'), matching: find.byType(SettingsLink)),
+          matching: find.byIcon(Icons.chevron_right),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.ancestor(of: find.text('Updates'), matching: find.byType(SettingsLink)),
+          matching: find.byIcon(Icons.chevron_right),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('feedback_row_shows_hint_and_opens_issues_constant', (tester) async {

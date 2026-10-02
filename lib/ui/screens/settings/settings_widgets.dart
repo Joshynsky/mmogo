@@ -59,6 +59,7 @@ class SettingsLink extends StatelessWidget {
     this.first = false,
     this.warningDot = false,
     this.unreadDot = false,
+    this.trailingIcon = Icons.chevron_right,
   });
 
   final AppPalette palette;
@@ -66,6 +67,10 @@ class SettingsLink extends StatelessWidget {
   final String label;
   final String subtitle;
   final VoidCallback? onTap;
+
+  /// The arrow at the end: a chevron for in-app pages, "open in new" for rows
+  /// that leave the app (Send feedback).
+  final IconData trailingIcon;
   final bool first;
 
   /// A small amber dot before the chevron (auto-backup paused).
@@ -118,7 +123,7 @@ class SettingsLink extends StatelessWidget {
                     decoration: BoxDecoration(color: palette.diffUp, shape: BoxShape.circle),
                   ),
                 ),
-              if (onTap != null) Icon(Icons.chevron_right, size: 18, color: palette.mutedInk),
+              if (onTap != null) Icon(trailingIcon, size: 18, color: palette.mutedInk),
             ],
           ),
         ),

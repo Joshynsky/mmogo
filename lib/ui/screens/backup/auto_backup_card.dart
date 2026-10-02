@@ -7,6 +7,7 @@ import '../settings/settings_widgets.dart';
 import 'auto_backup_state.dart';
 import 'backup_format.dart';
 import 'backup_widgets.dart';
+import 'hold_step_button.dart';
 
 /// The Auto-backup card on the Backup page (mock `autoCard`). Stateless: the
 /// page owns the [AutoBackupState]; every action goes out through callbacks
@@ -31,7 +32,7 @@ class AutoBackupCard extends StatelessWidget {
   final ValueChanged<bool> onToggle;
   final VoidCallback onChooseFolder;
 
-  /// Steps by +1 or -1.
+  /// Steps by a signed amount: +1 or -1 for a tap, more while a button is held.
   final ValueChanged<int> onEveryN;
   final ValueChanged<int> onKeepK;
 
@@ -123,6 +124,7 @@ class AutoBackupCard extends StatelessWidget {
         unit: 'entries',
         disabled: state.paused,
         onStep: onEveryN,
+        accelerate: true,
       ));
       children.add(_Stepper(
         keyName: 'autoKeepK',
@@ -187,8 +189,11 @@ class _Stepper extends StatelessWidget {
     required this.unit,
     required this.disabled,
     required this.onStep,
+    this.accelerate = false,
   });
 
+  /// Holding the buttons grows the step to 5 then 10 (the wide N range).
+  final bool accelerate;
   final String keyName;
   final AppPalette palette;
   final IconData icon;
@@ -203,8 +208,6 @@ class _Stepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canLess = !disabled && value > min;
-    final canMore = !disabled && value < max;
     return Opacity(
       opacity: disabled ? 0.55 : 1,
       child: Container(
@@ -225,11 +228,17 @@ class _Stepper extends StatelessWidget {
                 ],
               ),
             ),
-            IconButton(
-              key: Key('${keyName}Less'),
+            HoldStepButton(
+              buttonKey: Key('${keyName}Less'),
               tooltip: 'Fewer $unit',
-              onPressed: canLess ? () => onStep(-1) : null,
-              icon: const Icon(Icons.remove_rounded),
+              icon: Icons.remove_rounded,
+              direction: -1,
+              value: value,
+              min: min,
+              max: max,
+              enabled: !disabled,
+              accelerate: accelerate,
+              onStep: onStep,
             ),
             SizedBox(
               width: 30,
@@ -240,11 +249,17 @@ class _Stepper extends StatelessWidget {
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: palette.ink),
               ),
             ),
-            IconButton(
-              key: Key('${keyName}More'),
+            HoldStepButton(
+              buttonKey: Key('${keyName}More'),
               tooltip: 'More $unit',
-              onPressed: canMore ? () => onStep(1) : null,
-              icon: const Icon(Icons.add_rounded),
+              icon: Icons.add_rounded,
+              direction: 1,
+              value: value,
+              min: min,
+              max: max,
+              enabled: !disabled,
+              accelerate: accelerate,
+              onStep: onStep,
             ),
           ],
         ),

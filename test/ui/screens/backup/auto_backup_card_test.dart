@@ -330,6 +330,36 @@ void main() {
     });
   });
 
+  group('B21b: hold to repeat on the real card', () {
+    testWidgets('holding N plus keeps adding, stops at 100 and saves it; a plain tap is still +1', (t) async {
+      await _pump(t, prefs: _working(n: 90));
+      await t.tap(find.byKey(const Key('autoEveryNMore')));
+      await t.pumpAndSettle();
+      expect(await BackupPrefs.readEveryN(), 91);
+      final g = await t.startGesture(t.getCenter(find.byKey(const Key('autoEveryNMore'))));
+      for (var i = 0; i < 400; i++) {
+        await t.pump(const Duration(milliseconds: 20));
+      }
+      await g.up();
+      await t.pumpAndSettle();
+      expect(await BackupPrefs.readEveryN(), 100);
+      expect(t.widget<Text>(find.byKey(const Key('autoEveryNValue'))).data, '100');
+      expect(t.widget<IconButton>(find.byKey(const Key('autoEveryNMore'))).onPressed, isNull);
+    });
+
+    testWidgets('holding K minus stops at 2', (t) async {
+      await _pump(t, prefs: _working(k: 6));
+      final g = await t.startGesture(t.getCenter(find.byKey(const Key('autoKeepKLess'))));
+      for (var i = 0; i < 150; i++) {
+        await t.pump(const Duration(milliseconds: 20));
+      }
+      await g.up();
+      await t.pumpAndSettle();
+      expect(await BackupPrefs.readKeepK(), 2);
+      expect(t.widget<Text>(find.byKey(const Key('autoKeepKValue'))).data, '2');
+    });
+  });
+
   group('paused', () {
     Map<String, Object> paused() => {..._working(since: 3), 'auto_backup_paused': true};
 
