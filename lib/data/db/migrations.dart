@@ -1,7 +1,5 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'schema.dart';
-
 /// The database version this build creates and expects.
 ///
 /// 1 = the 0.1.0 schema. 2 = adds `classifications.seed_key` (0.1.1).
@@ -22,6 +20,14 @@ const int kDbVersion = 2;
 ///    and unique indexes are never at risk).
 class AppMigrations {
   AppMigrations._();
+
+  /// DB2: the FROZEN 12 built-ins as 0.1.1 shipped them (ids 1..12, in this
+  /// order). `_toV2` backfills `seed_key` from THIS list, never from the live
+  /// `AppSchema.seedClassifications`, which grows to 17 entries at version 3
+  /// (reading it would index ids 13..17 into a 0.1.0 file). A test pins the
+  /// length at 12 and fails if `_toV2` mentions the live list. Never edit.
+  static const List<({String group, String name, String seedKey})>
+      v2SeedClassifications = _v2SeedClassifications;
 
   /// Key = the version the step upgrades TO.
   static final Map<int, Future<void> Function(DatabaseExecutor db)> steps = {
@@ -67,8 +73,8 @@ class AppMigrations {
     // AUTOINCREMENT, rows are never hard-deleted), so the backfill is exact
     // even if the user renamed or deactivated a built-in. The group check is
     // a belt-and-braces guard.
-    for (var i = 0; i < AppSchema.seedClassifications.length; i++) {
-      final seed = AppSchema.seedClassifications[i];
+    for (var i = 0; i < _v2SeedClassifications.length; i++) {
+      final seed = _v2SeedClassifications[i];
       await db.rawUpdate(
         'UPDATE classifications SET seed_key = ? '
         'WHERE id = ? AND seed_key IS NULL '
@@ -78,3 +84,19 @@ class AppMigrations {
     }
   }
 }
+
+/// See [AppMigrations.v2SeedClassifications]. FROZEN: 12 entries, never edited.
+const List<({String group, String name, String seedKey})> _v2SeedClassifications = [
+  (group: 'SEND_MONEY', name: 'Family/Friends', seedKey: 'SEND_MONEY:family_friends'),
+  (group: 'SEND_MONEY', name: 'Rent', seedKey: 'SEND_MONEY:rent'),
+  (group: 'SEND_MONEY', name: 'Transport', seedKey: 'SEND_MONEY:transport'),
+  (group: 'SEND_MONEY', name: 'Groceries', seedKey: 'SEND_MONEY:groceries'),
+  (group: 'PAYBILL', name: 'Rent Payment', seedKey: 'PAYBILL:rent_payment'),
+  (group: 'PAYBILL', name: 'Shopping', seedKey: 'PAYBILL:shopping'),
+  (group: 'PAYBILL', name: 'Transport', seedKey: 'PAYBILL:transport'),
+  (group: 'PAYBILL', name: 'Groceries', seedKey: 'PAYBILL:groceries'),
+  (group: 'BUY_GOODS', name: 'Rent Payment', seedKey: 'BUY_GOODS:rent_payment'),
+  (group: 'BUY_GOODS', name: 'Shopping', seedKey: 'BUY_GOODS:shopping'),
+  (group: 'BUY_GOODS', name: 'Transport', seedKey: 'BUY_GOODS:transport'),
+  (group: 'BUY_GOODS', name: 'Groceries', seedKey: 'BUY_GOODS:groceries'),
+];

@@ -5,8 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'migrations.dart';
-import 'schema.dart';
+import 'db_open.dart';
 
 /// Owns the single sqflite [Database] instance for the whole app.
 ///
@@ -56,19 +55,8 @@ class AppDatabase {
     final dbPath = p.join(dbDirPath, 'mmogo.db');
     debugPrint('AppDatabase: opening $dbPath');
 
-    return openDatabase(
-      dbPath,
-      version: kDbVersion,
-      onConfigure: (db) async {
-        // Triggers + FK enforcement both require this ON per-connection.
-        await db.execute('PRAGMA foreign_keys = ON');
-      },
-      onCreate: (db, version) async {
-        await AppSchema.createSchema(db);
-        await AppSchema.seed(db);
-      },
-      onUpgrade: AppMigrations.migrate,
-    );
+    // DB1: the one shared open function (foreign-key rule lives there).
+    return openMmogoDatabase(databaseFactory, dbPath);
   }
 
   /// Test/dev-only: closes and clears the cached instance so a fresh

@@ -240,6 +240,11 @@ class ClassificationDao {
   /// Final list is sorted alphabetically (case-insensitive) for display,
   /// matching the prototype's `list.sort((a,b) =>
   /// a.name.localeCompare(b.name))`.
+  /// DB6 (Judge C-A9): only the three M-Pesa groups feed the Cash picker. From
+  /// version 3 the Pochi, Withdrawal and Airtime groups are enabled too, and
+  /// without this whitelist their categories (and a user's own Pochi ones) would
+  /// leak into Cash. On a 0.1.1 database the Pochi group is disabled, so the
+  /// result is unchanged there.
   static Future<List<ClassificationItem>> fetchFlatActiveClassifications(
     Database db,
   ) async {
@@ -248,6 +253,7 @@ class ClassificationDao {
       FROM classifications c
       JOIN classification_groups g ON g.id = c.group_id
       WHERE c.active = 1 AND g.enabled = 1
+        AND g.code IN ('SEND_MONEY','PAYBILL','BUY_GOODS')
       ORDER BY c.id ASC
     ''');
     final seenNames = <String>{};

@@ -9,6 +9,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/data/db/db_open.dart';
 import 'package:mmogo/data/db/migrations.dart';
 import 'package:mmogo/data/db/schema.dart';
 import 'package:path/path.dart' as p;
@@ -37,19 +38,9 @@ Future<Database> _openV1(String path) => databaseFactoryFfi.openDatabase(
       ),
     );
 
-/// Opens exactly the way AppDatabase does.
-Future<Database> _openLatest(String path) => databaseFactoryFfi.openDatabase(
-      path,
-      options: OpenDatabaseOptions(
-        version: kDbVersion,
-        onConfigure: _onConfigure,
-        onCreate: (db, v) async {
-          await AppSchema.createSchema(db);
-          await AppSchema.seed(db);
-        },
-        onUpgrade: AppMigrations.migrate,
-      ),
-    );
+/// Opens exactly the way AppDatabase does (the shared open function, DB1).
+Future<Database> _openLatest(String path) =>
+    openMmogoDatabase(databaseFactoryFfi, path, singleInstance: true);
 
 Future<int> _groupId(Database db, String code) async => (await db.rawQuery(
         'SELECT id FROM classification_groups WHERE code = ?', [code]))
