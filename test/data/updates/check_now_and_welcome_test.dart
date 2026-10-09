@@ -66,12 +66,15 @@ void main() {
   });
 
   group('checkNow', () {
-    test('switch off: says off, no client call, no timestamp', () async {
+    test('S2/Q2 switch off: Check now still checks once (always tappable); the automatic check stays silent',
+        () async {
       SharedPreferences.setMockInitialValues({'update_check_enabled': false});
       final r = _Rig(result: newer);
-      expect(await r.service.checkNow(now: t0), CheckNowResult.off);
-      expect(r.fake.calls, 0);
-      expect(await UpdatePrefs.readLastCheckAt(), isNull);
+      expect(await r.service.maybeCheck(now: t0), isFalse);
+      expect(r.fake.calls, 0, reason: 'the automatic path still honours the switch');
+      expect(await r.service.checkNow(now: t0), CheckNowResult.newVersion);
+      expect(r.fake.calls, 1);
+      expect(await UpdatePrefs.readEnabled(), isFalse, reason: 'the switch is not turned back on');
     });
 
     test('newer release: newVersion, notice in the inbox, timestamp written', () async {

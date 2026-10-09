@@ -10,9 +10,6 @@ import 'updates_inbox.dart';
 
 /// What "Check for updates now" found.
 enum CheckNowResult {
-  /// The update-check switch is off; nothing was requested.
-  off,
-
   /// A newer release exists (its notice is in the inbox).
   newVersion,
 
@@ -82,13 +79,12 @@ class UpdateCheckService {
   }
 
   /// "Check for updates now" on the Updates page (B27). A person asked, so
-  /// the weekly cap and the once-per-launch flag do not apply; the switch
-  /// still does: when it is off this returns [CheckNowResult.off] and makes
-  /// no request. Never throws. A success writes the timestamp, a failure
+  /// the weekly cap, the once-per-launch flag and the automatic-check switch
+  /// do not apply (S2/Q2: the button is always tappable; with the switch off
+  /// it goes online once, and the page says so). Never throws. A success writes the timestamp, a failure
   /// does not (same rules as [maybeCheck]).
   Future<CheckNowResult> checkNow({DateTime? now}) async {
     try {
-      if (!await UpdatePrefs.readEnabled()) return CheckNowResult.off;
       _attemptedThisLaunch = true;
       return await _fetchAndStore(now ?? DateTime.now());
     } catch (_) {

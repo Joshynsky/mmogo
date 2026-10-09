@@ -192,6 +192,26 @@ void main() {
       expect(find.textContaining('shortened to 30 lines'), findsOneWidget, reason: 'the footnote');
     });
 
+    testWidgets('S2 footnote: the PM sentence + the retained browser sentence + the network sentence, exact', (tester) async {
+      await _pump(tester, stored: [_notice('v0.2.0', 'x')]);
+      const expected =
+          'Release notes come from GitHub. They are shown as plain text only (no links), shortened to 30 lines. '
+          '"See what\'s new" opens the mmogo page in your browser. '
+          'The internet is used only to check for updates. GitHub sees your IP address and that the request comes '
+          'from the mmogo app. No entries, names or messages are sent.';
+      expect(kUpdatesFootnote, expected);
+      expect(tester.widget<Text>(find.byKey(const Key('updatesFootnote'))).data, expected);
+    });
+
+    testWidgets('S2 a Check now that finds a release keeps the dot until the page is left', (tester) async {
+      final rig = await _pump(tester,
+          prefs: {'update_check_enabled': false}, result: const ReleaseInfo(tag: 'v0.2.0', notes: 'n'));
+      await tester.tap(find.byKey(const Key('checkNowButton')));
+      await tester.pumpAndSettle();
+      expect(rig.inbox.unreadCount.value, 1);
+      expect(find.byKey(const Key('noticeNewPill')), findsOneWidget);
+    });
+
     testWidgets('read release: no New pill', (tester) async {
       await _pump(tester, stored: [_notice('v0.2.0', 'Faster Analytics', read: true)]);
       expect(find.byKey(const Key('noticeNewPill')), findsNothing);
@@ -301,22 +321,55 @@ void main() {
       expect(find.byKey(const Key('updatesEmpty')), findsOneWidget);
     });
 
-    testWidgets('switch off: says it is off and makes no request', (tester) async {
-      final rig = await _pump(tester, prefs: {'update_check_enabled': false}, result: const ReleaseInfo(tag: 'v0.2.0', notes: ''));
+    testWidgets('S2 switch off: the button is tappable, shows the caption, and checks once', (tester) async {
+      final rig = await _pump(tester, prefs: {'update_check_enabled': false}, result: const ReleaseInfo(tag: 'v0.1.1', notes: ''));
+      expect(tester.widget<OutlinedButton>(find.byKey(const Key('checkNowButton'))).onPressed, isNotNull);
+      expect(find.text('Automatic checks are off. This checks once, now.'), findsOneWidget);
+      expect(find.text(kUpdatesCheckNowOffCaption), findsOneWidget);
       await tester.tap(find.byKey(const Key('checkNowButton')));
       await tester.pumpAndSettle();
-      expect(find.text(kCheckNowOff), findsOneWidget);
-      expect(rig.client.calls, 0);
+      expect(rig.client.calls, 1);
+      expect(find.text(kCheckNowUpToDate), findsOneWidget);
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse, reason: 'the switch stays off');
     });
 
-    testWidgets('turning the switch off, then Check now: off, no request', (tester) async {
+    testWidgets('S2 turning the switch off, then Check now: still one request', (tester) async {
       final rig = await _pump(tester, result: const ReleaseInfo(tag: 'v0.2.0', notes: ''));
       await tester.tap(find.byType(Switch));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('checkNowButton')));
       await tester.pumpAndSettle();
-      expect(find.text(kCheckNowOff), findsOneWidget);
-      expect(rig.client.calls, 0);
+      expect(rig.client.calls, 1);
+      expect(find.text(kCheckNowNewVersion), findsOneWidget);
+    });
+
+    testWidgets('S2 caption: shown only while checks are off, gone when they are on', (tester) async {
+      await _pump(tester);
+      expect(find.byKey(const Key('checkNowOffCaption')), findsNothing);
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('checkNowOffCaption')), findsOneWidget);
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('checkNowOffCaption')), findsNothing);
+    });
+
+    testWidgets('S2 offline: error pattern A (warning icon), Last checked stays visible', (tester) async {
+      await _pump(tester,
+          prefs: {'update_last_check_at': _received.millisecondsSinceEpoch}, error: StateError('offline'));
+      await tester.tap(find.byKey(const Key('checkNowButton')));
+      await tester.pumpAndSettle();
+      expect(find.text(kCheckNowFailed), findsOneWidget);
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+      expect(find.textContaining('Last checked 2 Oct 2026.'), findsOneWidget);
+      expect(await UpdatePrefs.readLastCheckAt(), _received);
+    });
+
+    testWidgets('S2 the other results carry no warning icon', (tester) async {
+      await _pump(tester, result: const ReleaseInfo(tag: 'v0.1.1', notes: ''));
+      await tester.tap(find.byKey(const Key('checkNowButton')));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
     });
 
     testWidgets('failed (offline): plain words, no timestamp, no error dialog', (tester) async {
@@ -348,6 +401,7 @@ void main() {
       await tester.pump();
       await tester.pump();
       expect(find.text(kUpdatesCheckingLabel), findsOneWidget);
+      expect(find.byKey(const Key('checkNowOffCaption')), findsNothing);
       expect(tester.widget<OutlinedButton>(find.byKey(const Key('checkNowButton'))).onPressed, isNull);
 
       gate.complete(const ReleaseInfo(tag: 'v0.1.1', notes: ''));

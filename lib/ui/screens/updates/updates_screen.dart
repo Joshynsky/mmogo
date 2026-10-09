@@ -94,7 +94,6 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
       _checking = false;
       _lastChecked = last;
       _checkMessage = switch (result) {
-        CheckNowResult.off => kCheckNowOff,
         CheckNowResult.newVersion => kCheckNowNewVersion,
         CheckNowResult.upToDate => kCheckNowUpToDate,
         CheckNowResult.failed => kCheckNowFailed,
@@ -137,14 +136,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
                 kUpdatesFootnote,
-                style: TextStyle(fontSize: 12, height: 1.4, color: palette.mutedInk),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                kNetworkSentence,
+                key: const Key('updatesFootnote'),
                 style: TextStyle(fontSize: 12, height: 1.4, color: palette.mutedInk),
               ),
             ),
@@ -153,6 +145,12 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
       ),
     );
   }
+
+  bool get _checkFailed => _checkMessage == kCheckNowFailed;
+
+  /// The mock's error text colour (tokens.css --err-text), light and dark.
+  Color _errInk(AppPalette palette) =>
+      palette.brightness == Brightness.dark ? const Color(0xFFFF8A8E) : const Color(0xFFB3261E);
 
   Widget _controls(AppPalette palette) {
     final last = _lastChecked;
@@ -186,16 +184,44 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                     style: OutlinedButton.styleFrom(foregroundColor: palette.primary),
                   ),
                 ),
+                // Only while the automatic switch is off (Q2): the button still
+                // goes online once, and this says so. Hidden mid-check.
+                if (!_enabled && !_checking)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      kUpdatesCheckNowOffCaption,
+                      key: const Key('checkNowOffCaption'),
+                      style: TextStyle(fontSize: 12, height: 1.45, color: palette.mutedInk),
+                    ),
+                  ),
                 if (_checkMessage != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Semantics(
                       liveRegion: true,
-                      child: Text(
-                        _checkMessage!,
-                        key: const Key('checkNowResult'),
-                        style: TextStyle(fontSize: 13, height: 1.4, color: palette.softInk),
-                      ),
+                      child: _checkFailed
+                          // Error pattern A (C-B2/C-B10b): red text + warning icon, no timer.
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.warning_amber_rounded, size: 16, color: _errInk(palette)),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    _checkMessage!,
+                                    key: const Key('checkNowResult'),
+                                    style: TextStyle(
+                                        fontSize: 13, height: 1.4, fontWeight: FontWeight.w600, color: _errInk(palette)),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Text(
+                              _checkMessage!,
+                              key: const Key('checkNowResult'),
+                              style: TextStyle(fontSize: 13, height: 1.4, color: palette.softInk),
+                            ),
                     ),
                   ),
               ],

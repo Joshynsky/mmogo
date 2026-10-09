@@ -162,9 +162,17 @@ const kUpdatesShowFewerNotes = 'Show fewer notes';
 const kUpdatesNewPill = 'New';
 const kUpdatesEmptyTitle = 'No updates yet.';
 const kUpdatesEmptyOff = 'Update checks are off. Turn them on with the switch above.';
-const kUpdatesFootnote =
-    'Release notes come from GitHub. They are shown as plain text only (no links), shortened to 30 lines. '
-    "\"See what's new\" opens the mmogo page in your browser.";
+/// The Updates footnote, built from its three parts (C-B10 b/f, S2): the PM's
+/// sentence (08-10-2026, word for word), the retained 0.1.1 browser sentence,
+/// then [kNetworkSentence]. One constant for the page.
+const kUpdatesFootnotePm =
+    'Release notes come from GitHub. They are shown as plain text only (no links), shortened to 30 lines.';
+const kUpdatesFootnoteBrowser = "\"See what's new\" opens the mmogo page in your browser.";
+const kUpdatesFootnote = '$kUpdatesFootnotePm $kUpdatesFootnoteBrowser $kNetworkSentence';
+
+/// Under "Check for updates now" while the automatic switch is off (Q2, PM-signed
+/// 08-10-2026). Not shown when checks are on.
+const kUpdatesCheckNowOffCaption = 'Automatic checks are off. This checks once, now.';
 const kUpdatesCouldNotOpen = 'Could not open the browser.';
 
 /// The switch row subtitle: the last successful check (or none yet) when on,
@@ -174,7 +182,6 @@ String updatesSwitchSubtitle({required bool on, required String? lastChecked}) =
     '$kNetworkSentence';
 
 /// The "Check for updates now" answer, in plain words.
-const kCheckNowOff = 'Update checks are off, so mmogo did not check. Turn the switch on first.';
 const kCheckNowNewVersion = 'A new version is out. Its notice is below.';
 const kCheckNowUpToDate = 'You have the latest version.';
 const kCheckNowFailed = 'Could not check just now. Check your internet connection and try again.';
