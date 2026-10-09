@@ -39,6 +39,18 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Launcher label; the debug build type overrides it ("mmogo next").
+        manifestPlaceholders["appLabel"] = "mmogo"
+    }
+
+    // Compile-time feature switch (architecture E7). Both flavors share the
+    // applicationId, versionCode and the release signing config: only the
+    // source set differs (src/standard = no-op hooks, src/autoread = the
+    // auto-read feature, added in a later slice).
+    flavorDimensions += "feature"
+    productFlavors {
+        create("standard") { dimension = "feature" }
+        create("autoread") { dimension = "feature" }
     }
 
     signingConfigs {
@@ -56,6 +68,12 @@ android {
         release {
             // No key.properties means no release: never fall back to the debug key.
             signingConfig = signingConfigs.findByName("release")
+        }
+        // DEVIATION from E7 "no suffix" (PM, 08-10-2026), DEBUG ONLY: a debug
+        // build installs beside the real app as "mmogo next" with its own data.
+        debug {
+            applicationIdSuffix = ".next"
+            manifestPlaceholders["appLabel"] = "mmogo next"
         }
     }
 }

@@ -83,10 +83,12 @@ You need the [Flutter SDK](https://docs.flutter.dev/get-started/install) (Dart `
 
 ```
 flutter pub get
-flutter run                # a connected Android device, or -d windows
+flutter run --flavor standard    # a connected Android deviceflutter build apk --debug --flavor standard
 flutter analyze
 flutter test -j 1          # run the tests one file at a time
 ```
+
+The app has two Android flavors, `standard` (the shipping app, INTERNET only) and `autoread` (reserved for the opt-in auto-read build; it adds nothing yet). `standard` is the `default-flavor` in `pubspec.yaml`, but pass `--flavor` anyway on every Android `flutter run` and `flutter build`. A debug build installs as a separate app, **"mmogo next"** (`io.github.joshynsky.mmogo.next`), so it never replaces or shares data with a released mmogo on the same phone. Release builds keep `io.github.joshynsky.mmogo`.
 
 A debug build fills an empty database with sample entries so you can explore the screens without real messages. Release builds never do this.
 
@@ -97,7 +99,12 @@ Release builds are signed with a private key that lives **outside** this reposit
 1. Create a keystore once (`keytool -genkeypair ... -alias mmogo`) and keep the file and its passwords somewhere safe, with a backup in a second place. If the key is lost, installed apps can never be updated.
 2. Create `android/key.properties` (gitignored) with `storePassword`, `keyPassword`, `keyAlias` and `storeFile` (the path to the keystore).
 3. Bump `version:` in `pubspec.yaml` and `AppInfo.version` in `lib/app_info.dart` together (a test fails if they drift).
-4. `flutter build apk --release`, then name the result `mmogo.apk` and publish its SHA-256 next to it.
+4. Build with the script, which sets the flavor (and, for autoread, the dart-define) together and refuses to run without `android/key.properties`:
+   ```
+   powershell -File tool\build_apk.ps1 standard -StagingDir <folder>     # flutter build apk --release --flavor standard
+   powershell -File tool\build_apk.ps1 autoread -StagingDir <folder>     # ... --flavor autoread --dart-define=MMOGO_AUTOREAD=true
+   ```
+   The output is `build\app\outputs\flutter-apk\app-<flavor>-release.apk`. With `-StagingDir` it is copied as `mmogo.apk` (standard) or `mmogo-autoread.apk` (autoread); without it the copy command is only printed. Nothing is published. Then check it: `powershell -File tool\check_apk_manifest.ps1 <apk> standard` (permissions, no SMS/notification entries, no autoread code; prints applicationId, version and the signing-certificate SHA-256). Publish the SHA-256 of `mmogo.apk` next to it.
 5. Publish a GitHub Release with `mmogo.apk` attached. The website's download buttons use `releases/latest/download/mmogo.apk`, so they follow the newest release on their own. The version, size and SHA-256 text in `docs/index.html` is written by hand and must be updated to match.
 
 Without `android/key.properties` a release build is left unsigned; it never falls back to the debug key.

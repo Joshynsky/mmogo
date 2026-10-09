@@ -1,0 +1,5 @@
+# Tests that need the auto-read define run in their own invocation:
+#   flutter test --dart-define=MMOGO_AUTOREAD=true --tags autoread
+# The default `flutter test` run skips them (see test/autoread/).
+tags:
+  autoread:
