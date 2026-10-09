@@ -12,6 +12,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/prefs/app_prefs.dart';
+import 'package:mmogo/ui/copy/privacy_copy.dart';
 import 'package:mmogo/ui/screens/add/add_screen.dart';
 import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -345,6 +346,8 @@ void main() {
 
       await tester.tap(find.byKey(const Key('addPasteButton')));
       await _settle(tester);
+      // S1 C-B10(e): the paste sheet describes the product, so it carries the short independence line.
+      expect(find.text(kIndependenceShort), findsOneWidget);
       await tester.enterText(find.byKey(const Key('addPasteTextField')), _sendMoneySms);
       await tester.tap(find.byKey(const Key('addPasteSubmitButton')));
       await _settle(tester);

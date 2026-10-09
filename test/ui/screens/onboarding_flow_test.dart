@@ -16,6 +16,7 @@ import 'package:mmogo/app_info.dart';
 import 'package:mmogo/data/prefs/app_prefs.dart';
 import 'package:mmogo/data/prefs/update_prefs.dart';
 import 'package:mmogo/main.dart';
+import 'package:mmogo/ui/copy/privacy_copy.dart';
 import 'package:mmogo/ui/screens/onboarding_screen.dart';
 import 'package:mmogo/ui/screens/welcome_screen.dart';
 import 'package:mmogo/ui/shell/routes.dart';
@@ -198,6 +199,8 @@ void main() {
       await tester.tap(find.byKey(const Key('onboarding-next')));
       await tester.pumpAndSettle();
       expect(find.text('Paste an M-Pesa SMS'), findsOneWidget);
+      // S1 C-B10(e): the paste step describes the product, so it carries the short independence line.
+      expect(find.textContaining(kIndependenceShort), findsOneWidget);
       presented.complete();
       await tester.pump();
       await tester.pump(welcomeDuration * 2);

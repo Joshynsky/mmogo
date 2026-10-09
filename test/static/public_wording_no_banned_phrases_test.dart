@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
+import 'package:mmogo/ui/copy/privacy_copy.dart';
 
 const _banned = <String>[
   'nothing is sent',
@@ -45,7 +46,11 @@ void main() {
     final bad = <String>[];
     for (final f in Directory('lib').listSync(recursive: true).whereType<File>()) {
       if (!f.path.endsWith('.dart')) continue;
-      final hits = _hits(_withoutLineComments(f.readAsStringSync()));
+      var src = _withoutLineComments(f.readAsStringSync());
+      // 0.1.2 (C12, E8): the canonical sentence is the ONE allowed "No permissions ..." form, and
+      // only as the constant in privacy_copy.dart.
+      if (_norm(f.path).endsWith('ui/copy/privacy_copy.dart')) src = src.replaceAll(kPrivacySentenceStandard, '');
+      final hits = _hits(src);
       if (hits.isNotEmpty) bad.add('${_norm(f.path)}: $hits');
     }
     expect(bad, isEmpty);
@@ -62,6 +67,16 @@ void main() {
     // The app copy is wrapped across string literals, so check the constant.
     expect(kNetworkSentence, contains(who));
     expect(kNetworkSentence, contains(noData));
+  });
+
+  test('S1: the canonical privacy sentence is exact and defined in exactly one place in lib/', () {
+    expect(kPrivacySentenceStandard, 'No permissions except internet, used only to check for updates (switchable off).');
+    final defs = [
+      for (final f in Directory('lib').listSync(recursive: true).whereType<File>())
+        if (f.path.endsWith('.dart') && f.readAsStringSync().contains('No permissions except internet')) _norm(f.path),
+    ];
+    expect(defs, hasLength(1));
+    expect(defs.single, endsWith('ui/copy/privacy_copy.dart'));
   });
 
   test('landing page What is new block is plain static text', () {

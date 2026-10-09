@@ -13,6 +13,9 @@ import '../shell/routes.dart';
 import '../theme/app_colors.dart';
 import 'settings/settings_widgets.dart';
 
+/// P-Profile-04 (M9): what the Settings row now holds.
+const kProfileSettingsSubtitle = 'Look, categories, backup, privacy, updates';
+
 /// Primary destination 5 of 5 since B48 (PM 2026-10-01; it was a secondary
 /// page from T17): the bottom-nav "Profile" tab with the bell and the bar.
 /// Cards:
@@ -257,7 +260,7 @@ class _ProfileScreenState extends State<ProfileScreen> with PrimaryTabRefresh<Pr
                     palette: palette,
                     icon: Icons.settings_outlined,
                     label: 'Settings',
-                    subtitle: 'Colours, classifications, backup, updates, privacy',
+                    subtitle: kProfileSettingsSubtitle,
                     first: true,
                     onTap: () => Navigator.of(context).pushNamed(Routes.settings),
                   ),

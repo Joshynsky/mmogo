@@ -83,7 +83,9 @@ You need the [Flutter SDK](https://docs.flutter.dev/get-started/install) (Dart `
 
 ```
 flutter pub get
-flutter run --flavor standard    # a connected Android deviceflutter build apk --debug --flavor standard
+flutter run --flavor standard                  # a connected Android device
+flutter build apk --debug --flavor standard    # a debug APK
+flutter run -d windows                         # desktop check; no --flavor (flavors are Android-only here)
 flutter analyze
 flutter test -j 1          # run the tests one file at a time
 ```

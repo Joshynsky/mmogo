@@ -25,12 +25,23 @@ class PrivacyScreen extends StatelessWidget {
         key: const Key('privacyScroll'),
         padding: const EdgeInsets.fromLTRB(14, 6, 14, 32),
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 0, 2, 12),
+            child: Text(
+              kPrivacySentenceStandard,
+              key: const Key('privacySentenceStandard'),
+              style: TextStyle(fontSize: 15, height: 1.4, fontWeight: FontWeight.w800, color: palette.ink),
+            ),
+          ),
           _Section(
             palette: palette,
             icon: Icons.folder_outlined,
             title: kPrivacyStoredTitle,
             children: [
               _Para(palette, kPrivacyStoredBody),
+              _Para(palette, kPrivacyStoredReceiverDetails),
+              _Para(palette, kPrivacyStoredAgentNumber),
+              _Para(palette, kPrivacyStoredRememberedAnswers),
               _Para(palette, '$kUninstallErasesNotice $kPhoneTransferNotice'),
             ],
           ),
@@ -38,7 +49,11 @@ class PrivacyScreen extends StatelessWidget {
             palette: palette,
             icon: Icons.cloud_outlined,
             title: kPrivacyLeavesTitle,
-            children: [_Para(palette, kNetworkDisclosure), _Para(palette, kPrivacyLeavesBody)],
+            children: [
+              _Para(palette, kNetworkDisclosure),
+              _Para(palette, kPrivacyLeavesBody),
+              _Para(palette, kPrivacyCheckNowOnce, bold: true),
+            ],
           ),
           _Section(
             palette: palette,
@@ -53,7 +68,7 @@ class PrivacyScreen extends StatelessWidget {
             palette: palette,
             icon: Icons.sync_problem_outlined,
             title: kPrivacyCloudTitle,
-            children: [BackupWarning(palette: palette, text: kCloudSyncNotice, bottomGap: 0)],
+            children: [_Para(palette, kCloudSyncNotice)],
           ),
           SettingsCard(
             palette: palette,
@@ -65,6 +80,10 @@ class PrivacyScreen extends StatelessWidget {
               first: true,
               onTap: () => Navigator.of(context).pushNamed(Routes.backup),
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 14, 2, 0),
+            child: BackupCard(palette: palette, children: [_Para(palette, kIndependenceFull, key: const Key('privacyIndependence'))]),
           ),
         ],
       ),
@@ -105,14 +124,21 @@ class _Section extends StatelessWidget {
 }
 
 class _Para extends StatelessWidget {
-  const _Para(this.palette, this.text);
+  const _Para(this.palette, this.text, {this.bold = false, super.key});
 
   final AppPalette palette;
   final String text;
+  final bool bold;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
-    child: Text(text, style: TextStyle(fontSize: 13.5, height: 1.45, color: palette.ink)),
+    child: Text(text, style: TextStyle(
+        fontSize: 13.5,
+        height: 1.45,
+        color: palette.ink,
+        fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+      ),
+    ),
   );
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../domain/parsing/parse_result.dart';
 import '../../../domain/parsing/parsed_sms_fields.dart';
 import '../../../domain/parsing/sms_parser.dart';
+import '../../copy/privacy_copy.dart';
 import '../../theme/app_colors.dart';
 
 /// §ADD.PASTE — the paste-first card: a "Paste M-Pesa SMS" card that leads the M-Pesa form, a bottom sheet
@@ -167,6 +168,8 @@ class _PasteSheetState extends State<_PasteSheet> {
                 'Parse the M-Pesa message',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: palette.ink),
               ),
+              const SizedBox(height: 4),
+              Text(kIndependenceShort, style: TextStyle(fontSize: 12, color: palette.mutedInk)),
               const SizedBox(height: 10),
               TextField(
                 key: const Key('addPasteTextField'),

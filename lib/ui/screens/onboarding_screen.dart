@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../data/prefs/app_prefs.dart';
+import '../copy/privacy_copy.dart';
 import '../shell/routes.dart';
 import '../theme/app_colors.dart';
 
@@ -45,6 +46,7 @@ const _steps = <_Step>[
     lines: [
       'Copy the confirmation SMS, paste it into Add, and the details fill themselves in. '
           'You confirm before anything is saved.',
+      kIndependenceShort,
     ],
     frames: [
       (OnboardingAssets.step2Copy, 'Copy the M-Pesa SMS'),

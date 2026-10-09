@@ -9,6 +9,7 @@ import 'package:mmogo/platform/storage_bridge.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
 import 'package:mmogo/ui/copy/privacy_copy.dart';
 import 'package:mmogo/ui/screens/backup/backup_screen.dart';
+import 'package:mmogo/ui/screens/backup/backup_widgets.dart';
 import 'package:mmogo/ui/screens/privacy/privacy_screen.dart';
 import 'package:mmogo/ui/screens/settings/privacy_section.dart';
 import 'package:mmogo/ui/screens/settings/settings_widgets.dart';
@@ -82,10 +83,72 @@ void main() {
 
     testWidgets('privacy_page_has_no_banned_phrases', (tester) async {
       await _pumpPage(tester, const PrivacyScreen());
-      final text = _allText(tester).toLowerCase();
+      // 0.1.2: the canonical sentence is the one allowed "No permissions ..." form (C12).
+      final text = _allText(tester).replaceAll(kPrivacySentenceStandard, '').toLowerCase();
       expect(text, isNot(contains('nothing is sent anywhere')));
       expect(text, isNot(contains('no permissions')));
       expect(text, isNot(contains('never leaves')));
+      expect(text, isNot(contains('classification')));
+      expect(text, isNot(contains('no request at all')));
+      expect(text, isNot(contains('not even internet')));
+      expect(text, isNot(contains('zero permissions')));
+    });
+
+    testWidgets('S1 P-Privacy-08: canonical sentence is first, exact, once; independence full sentence present', (tester) async {
+      await _pumpPage(tester, const PrivacyScreen());
+      expect(kPrivacySentenceStandard, 'No permissions except internet, used only to check for updates (switchable off).');
+      expect(find.text(kPrivacySentenceStandard), findsOneWidget);
+      expect(find.byKey(const Key('privacySentenceStandard')), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(const Key('privacySentenceStandard'))).dy,
+        lessThan(tester.getTopLeft(find.text(kPrivacyStoredTitle)).dy),
+      );
+      expect(find.text(kIndependenceFull), findsOneWidget);
+      expect(kIndependenceFull, contains('not made, approved or checked by Safaricom'));
+    });
+
+    testWidgets('S1 P-Privacy-01 (C-B12): stored card says categories and names what is stored', (tester) async {
+      await _pumpPage(tester, const PrivacyScreen());
+      final text = _allText(tester);
+      expect(text, contains('your categories'));
+      expect(text, contains(kPrivacyStoredReceiverDetails));
+      expect(text, contains('learned'));
+      expect(text, contains(kPrivacyStoredAgentNumber));
+      expect(text, contains(kPrivacyStoredRememberedAnswers));
+      expect(kPrivacyStoredRememberedAnswers, contains('not in backups and not shared'));
+      expect(kPrivacyStoredRememberedAnswers, contains('only when the tick is on'));
+      expect(kPrivacyStoredReceiverDetails, contains('names and phone numbers'));
+    });
+
+    test('COPY AHEAD OF FEATURE: these sentences are true only after S3 (agent number) and S8 (remembered answers)', () {
+      // QA gate: do not release 0.1.2 unless slices S3 and S8 shipped, or these two are removed.
+      expect(kPrivacyCopyAheadOfFeature, [kPrivacyStoredAgentNumber, kPrivacyStoredRememberedAnswers]);
+      expect(kPrivacyStoredAgentNumber, contains('agent number'));
+    });
+
+    testWidgets('S1 P-Privacy-03: "no automatic request" and the once-online sentence stay visible', (tester) async {
+      await _pumpPage(tester, const PrivacyScreen());
+      expect(kPrivacyLeavesBody, contains('no automatic request'));
+      expect(kPrivacyLeavesBody, isNot(contains('no request at all')));
+      expect(find.text(kPrivacyCheckNowOnce), findsOneWidget);
+      expect(kPrivacyCheckNowOnce, 'Even with automatic checks off, Check for updates now goes online once when you tap it.');
+      expect(_allText(tester), contains(kPrivacyLeavesBody));
+    });
+
+    testWidgets('S1 P-Privacy-05/02 STAYS: the not-encrypted box and the phone-transfer paragraph are still there', (tester) async {
+      await _pumpPage(tester, const PrivacyScreen());
+      expect(find.text(kBackupFileWarning), findsOneWidget);
+      expect(find.byType(BackupWarning), findsOneWidget); // only the not-encrypted box
+      expect(_allText(tester), contains(kUninstallErasesNotice));
+      expect(_allText(tester), contains(kPhoneTransferNotice));
+    });
+
+    testWidgets('S1 P-Privacy-06: the cloud-folder notice is a plain card, not a warning box', (tester) async {
+      await _pumpPage(tester, const PrivacyScreen());
+      final cloud = find.text(kCloudSyncNotice);
+      expect(cloud, findsOneWidget);
+      expect(find.ancestor(of: cloud, matching: find.byType(BackupWarning)), findsNothing);
+      expect(find.ancestor(of: cloud, matching: find.byType(BackupCard)), findsOneWidget);
     });
 
     testWidgets('is static: it makes no network request and opens no URL', (tester) async {

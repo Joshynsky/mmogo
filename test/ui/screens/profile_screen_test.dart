@@ -243,7 +243,9 @@ void main() {
       await _settle(tester);
 
       expect(find.text('Settings'), findsOneWidget);
-      expect(find.text('Colours, classifications, backup, updates, privacy'), findsOneWidget);
+      expect(find.text('Look, categories, backup, privacy, updates'), findsOneWidget);
+      expect(kProfileSettingsSubtitle, 'Look, categories, backup, privacy, updates');
+      expect(find.textContaining('classification'), findsNothing);
       expect(find.text('Help and tips'), findsOneWidget);
       expect(find.text('Replay the guide on every page'), findsOneWidget);
 
