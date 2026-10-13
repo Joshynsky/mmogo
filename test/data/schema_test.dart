@@ -72,28 +72,32 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('seed data', () {
-    test('classification_groups has exactly 4 rows with correct enabled flags', () async {
+    // S3b (v3, signed 08-10-2026): 6 groups, all enabled, Pochi named 'Pochi'.
+    test('classification_groups has exactly 6 rows (v3), all enabled, in order', () async {
       final db = await _openFreshDb();
       final rows = await db.query('classification_groups', orderBy: 'id');
-      expect(rows, hasLength(4));
+      expect(rows, hasLength(6));
+      expect(rows.map((r) => r['code']).toList(), [
+        'SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'POCHI_LA_BIASHARA', 'AGENT_WITHDRAWAL', 'AIRTIME',
+      ]);
 
       final byCode = {for (final r in rows) r['code'] as String: r};
-      expect(byCode['SEND_MONEY']!['enabled'], 1);
-      expect(byCode['PAYBILL']!['enabled'], 1);
-      expect(byCode['BUY_GOODS']!['enabled'], 1);
-      expect(byCode['POCHI_LA_BIASHARA']!['enabled'], 0);
+      for (final r in rows) {
+        expect(r['enabled'], 1, reason: '${r['code']} is enabled on a fresh v3 install');
+      }
+      expect(byCode['POCHI_LA_BIASHARA']!['display_name'], 'Pochi');
 
       await db.close();
     });
 
-    test('classifications has exactly 12 rows, group-scoped correctly', () async {
+    test('classifications has exactly 17 rows (v3), group-scoped correctly', () async {
       final db = await _openFreshDb();
       final rows = await db.rawQuery('''
         SELECT g.code AS group_code, c.name AS name
         FROM classifications c
         JOIN classification_groups g ON g.id = c.group_id
       ''');
-      expect(rows, hasLength(12));
+      expect(rows, hasLength(17));
 
       final byGroup = <String, List<String>>{};
       for (final r in rows) {
@@ -102,17 +106,19 @@ void main() {
       expect(byGroup['SEND_MONEY']!..sort(), ['Family/Friends', 'Groceries', 'Rent', 'Transport']);
       expect(byGroup['PAYBILL']!..sort(), ['Groceries', 'Rent Payment', 'Shopping', 'Transport']);
       expect(byGroup['BUY_GOODS']!..sort(), ['Groceries', 'Rent Payment', 'Shopping', 'Transport']);
-      expect(byGroup.containsKey('POCHI_LA_BIASHARA'), isFalse);
+      expect(byGroup['POCHI_LA_BIASHARA']!..sort(), ['Groceries', 'Shopping', 'Transport']);
+      expect(byGroup['AGENT_WITHDRAWAL'], ['Withdrawal']);
+      expect(byGroup['AIRTIME'], ['Airtime']);
 
       await db.close();
     });
 
     test('per-group uniqueness: same name in two different groups is allowed', () async {
       final db = await _openFreshDb();
-      // "Transport" exists once under SEND_MONEY, once under PAYBILL, once
-      // under BUY_GOODS — three active rows, not a collision.
+      // "Transport" exists once under SEND_MONEY, PAYBILL, BUY_GOODS and (v3)
+      // POCHI_LA_BIASHARA — four active rows, not a collision.
       final rows = await db.query('classifications', where: 'name = ?', whereArgs: ['Transport']);
-      expect(rows, hasLength(3));
+      expect(rows, hasLength(4));
       await db.close();
     });
 
@@ -174,10 +180,11 @@ void main() {
         whereArgs: ['POCHI_LA_BIASHARA'],
       )).first['id'] as int;
 
-      // Pochi has no seeded classifications (no default set is
-      // defined this round) — insert one directly to exercise the
-      // disabled-group branch of the trigger, exactly as a future Pochi
-      // classification would if the group were ever enabled.
+      // v3: Pochi is enabled on a fresh install. Disable it here (as a user
+      // hiding the group would) to exercise the trigger's disabled-group
+      // branch, and insert a classification directly.
+      await db.update('classification_groups', {'enabled': 0},
+          where: 'id = ?', whereArgs: [pochiGroupId]);
       final pochiClassificationId = await db.insert('classifications', {
         'group_id': pochiGroupId,
         'name': 'Test Pochi Classification',

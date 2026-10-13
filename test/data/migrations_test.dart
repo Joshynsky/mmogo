@@ -42,6 +42,10 @@ Future<Database> _openV1(String path) => databaseFactoryFfi.openDatabase(
 Future<Database> _openLatest(String path) =>
     openMmogoDatabase(databaseFactoryFfi, path, singleInstance: true);
 
+/// Same, but stops at version 2 (the 0.1.1 ladder, still executable).
+Future<Database> _openAtV2(String path) =>
+    openMmogoDatabase(databaseFactoryFfi, path, singleInstance: true, version: 2);
+
 Future<int> _groupId(Database db, String code) async => (await db.rawQuery(
         'SELECT id FROM classification_groups WHERE code = ?', [code]))
     .first['id'] as int;
@@ -179,19 +183,58 @@ void main() {
     } catch (_) {}
   });
 
-  test('fresh install: version 2 with all 12 seed keys', () async {
-    expect(kDbVersion, 2);
+  // S3b retarget: a fresh install is now version 3 with all 17 seed keys.
+  test('fresh install: version 3 with all 17 seed keys', () async {
+    expect(kDbVersion, 3);
     final db = await _openLatest(path);
-    expect(await _userVersion(db), 2);
+    expect(await _userVersion(db), 3);
     final rows = await db
         .rawQuery('SELECT id, name, seed_key FROM classifications ORDER BY id');
-    expect(rows.length, 12);
-    for (var i = 0; i < 12; i++) {
+    expect(rows.length, 17);
+    for (var i = 0; i < 17; i++) {
       expect(rows[i]['id'], i + 1);
       expect(rows[i]['seed_key'], AppSchema.seedClassifications[i].seedKey);
       expect(rows[i]['name'], AppSchema.seedClassifications[i].name);
     }
-    expect(rows.map((r) => r['seed_key']).toSet().length, 12);
+    expect(rows.map((r) => r['seed_key']).toSet().length, 17);
+    await db.close();
+  });
+
+  // S3b: the same 0.1.0 file through the WHOLE ladder, v1 -> v3.
+  test('upgrade_v1_to_v3_keeps_every_transaction_and_adds_the_five_seeds', () async {
+    final v1 = await _openV1(path);
+    await _fillV1(v1);
+    final before = await _dump(v1);
+    await v1.close();
+
+    final db = await _openLatest(path);
+    expect(await _userVersion(db), 3);
+    final after = await _dump(db, dropSeedKey: true);
+    // Transactions: identical except for the new NULL agent_number column.
+    expect([
+      for (final r in after['transactions']!) {...r}..remove('agent_number')
+    ], before['transactions']);
+    expect(after['transactions']!.every((r) => r['agent_number'] == null), isTrue);
+    // The map: the one SEND_MONEY key is already canonical, so nothing changed.
+    expect(after['counterparty_classification_map'], before['counterparty_classification_map']);
+    // Classifications: the first 15 rows unchanged, then the five new built-ins.
+    expect(after['classifications']!.take(15).toList(), before['classifications']);
+    final tail = await db.rawQuery(
+        'SELECT name, seed_key FROM classifications WHERE id > 15 ORDER BY id');
+    expect(tail.map((r) => r['seed_key']).toList(), [
+      'AGENT_WITHDRAWAL:cash_withdrawal', 'AIRTIME:airtime', 'POCHI_LA_BIASHARA:transport',
+      'POCHI_LA_BIASHARA:groceries', 'POCHI_LA_BIASHARA:shopping',
+    ]);
+    // Groups: ids 1..4 keep their codes; Pochi is enabled and renamed; two new groups.
+    final groups = await db.rawQuery(
+        'SELECT id, code, display_name, enabled FROM classification_groups ORDER BY id');
+    expect(groups.map((g) => g['code']).toList(), [
+      'SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'POCHI_LA_BIASHARA', 'AGENT_WITHDRAWAL', 'AIRTIME',
+    ]);
+    expect(groups[3]['display_name'], 'Pochi');
+    expect(groups.every((g) => g['enabled'] == 1), isTrue);
+    expect((await db.rawQuery('PRAGMA integrity_check')).first.values.first, 'ok');
+    expect(await db.rawQuery('PRAGMA foreign_key_check'), isEmpty);
     await db.close();
   });
 
@@ -210,7 +253,7 @@ void main() {
     expect((before['transactions'] as List).length, 7);
     await v1.close();
 
-    final db = await _openLatest(path);
+    final db = await _openAtV2(path);
     expect(await _userVersion(db), 2);
 
     // Data intact, row for row; seed_key is the only new column.
@@ -240,11 +283,11 @@ void main() {
     await db.close();
   });
 
-  test('upgraded schema equals a fresh v2 schema (columns, indexes, triggers)',
+  test('upgraded (v1 -> v3) schema equals a fresh v3 schema (columns, indexes, triggers)',
       () async {
     final v1 = await _openV1(path);
     await v1.close();
-    final upgraded = await _openLatest(path);
+    final upgraded = await _openLatest(path); // v1 -> v3
     final upgradedShape = await _shape(upgraded);
     await upgraded.close();
 
@@ -330,7 +373,7 @@ void main() {
     await db.close();
 
     db = await _openLatest(path);
-    expect(await _userVersion(db), 2);
+    expect(await _userVersion(db), 3);
     expect(await _dump(db), first);
     expect(await _shape(db), firstShape);
     await db.close();

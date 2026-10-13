@@ -93,11 +93,14 @@ class ValidatedBackup {
 class BackupValidator {
   BackupValidator._();
 
-  /// Groups enabled on a fresh install (Pochi is off).
+  /// Groups enabled on a fresh install (all six since 0.1.2: Pochi is on).
   static const Set<String> defaultEnabledGroups = {
     'SEND_MONEY',
     'PAYBILL',
     'BUY_GOODS',
+    'POCHI_LA_BIASHARA',
+    'AGENT_WITHDRAWAL',
+    'AIRTIME',
   };
 
   /// Reads a stream into memory, aborting THE MOMENT the running total passes
@@ -210,9 +213,10 @@ class BackupValidator {
 
     // --- rows.
     final classGroupById = <int, String>{};
-    final classifications = _classifications(classRows, classGroupById);
+    final classifications =
+        _classifications(classRows, classGroupById, schemaVersion);
     final transactions =
-        _transactions(txRows, classGroupById, enabledGroupCodes);
+        _transactions(txRows, classGroupById, enabledGroupCodes, schemaVersion);
     final counterpartyMap = _map(mapRows, classGroupById);
     final prefs = _prefs(root['prefs']);
 
@@ -233,8 +237,13 @@ class BackupValidator {
   static List<Map<String, Object?>> _classifications(
     List rows,
     Map<int, String> classGroupById,
+    int schemaVersion,
   ) {
     const t = 'classifications';
+    // New group codes and seed keys are valid only in a schema >= 3 file.
+    final v3 = schemaVersion >= kBackupFirstSchemaWithAgentAndAirtime;
+    final groupCodes = v3 ? kBackupGroupCodes : kBackupGroupCodesV2;
+    final seedKeys = v3 ? kBackupSeedKeys : kBackupSeedKeysV2;
     final out = <Map<String, Object?>>[];
     final seedKeysSeen = <String>{};
     final activeNames = <String>{};
@@ -242,13 +251,13 @@ class BackupValidator {
       final row = _row(rows[i], kBackupClassificationKeys, t, i);
       final id = _int(row['id'], 1, kBackupMaxClassificationFileId, t, i, 'id');
       if (classGroupById.containsKey(id)) _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'id');
-      final group = _enum(row['group'], kBackupGroupCodes, t, i, 'group');
+      final group = _enum(row['group'], groupCodes, t, i, 'group');
       final name = _text(row['name'], 1, kBackupMaxClassificationNameLength, t, i, 'name');
       final active = _int(row['active'], 0, 1, t, i, 'active');
       final seedKey = row['seed_key'];
       if (seedKey != null) {
         if (seedKey is! String ||
-            !kBackupSeedKeys.contains(seedKey) ||
+            !seedKeys.contains(seedKey) ||
             !seedKey.startsWith('$group:') ||
             !seedKeysSeen.add(seedKey)) {
           _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'seed_key');
@@ -272,18 +281,24 @@ class BackupValidator {
     List rows,
     Map<int, String> classGroupById,
     Set<String> enabledGroupCodes,
+    int schemaVersion,
   ) {
     const t = 'transactions';
+    // Schema 2: the exact 12 keys and the original four source types; the row
+    // is copied with `agent_number: null` so later code sees one shape.
+    final v3 = schemaVersion >= kBackupFirstSchemaWithAgentAndAirtime;
+    final rowKeys = v3 ? kBackupTransactionKeys : kBackupTransactionKeysV2;
+    final sourceTypes = v3 ? kBackupSourceTypes : kBackupSourceTypesV2;
     final out = <Map<String, Object?>>[];
     final ids = <int>{};
     final mpesaCodes = <String>{};
     final cashKeys = <String>{};
     for (var i = 0; i < rows.length; i++) {
-      final row = _row(rows[i], kBackupTransactionKeys, t, i);
+      final row = _row(rows[i], rowKeys, t, i);
       final id = _int(row['id'], 1, 9007199254740991, t, i, 'id');
       if (!ids.add(id)) _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'id');
 
-      final source = _enum(row['source_type'], kBackupSourceTypes, t, i, 'source_type');
+      final source = _enum(row['source_type'], sourceTypes, t, i, 'source_type');
       final isCash = source == 'CASH';
       final code = row['display_code'];
       final codePattern = isCash ? kBackupCashCodePattern : kBackupMpesaCodePattern;
@@ -302,9 +317,21 @@ class BackupValidator {
       final label = row['counterparty_label'];
       final phone = row['counterparty_phone'];
       final account = row['paybill_account_number'];
+      final agent = v3 ? row['agent_number'] : null;
       if (label != null) {
-        if (isCash) _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'counterparty_label');
+        // Mirrors the v3 label CHECK: only the identity-carrying types hold a label.
+        if (!kBackupLabelSourceTypes.contains(source)) {
+          _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'counterparty_label');
+        }
         _text(label, 1, kBackupMaxLabelLength, t, i, 'counterparty_label');
+      }
+      if (agent != null) {
+        // Mirrors the v3 agent-number CHECK: Withdrawal rows only, 1 to 20 digits.
+        if (source != 'AGENT_WITHDRAWAL' ||
+            agent is! String ||
+            !kBackupAgentNumberPattern.hasMatch(agent)) {
+          _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'agent_number');
+        }
       }
       if (phone != null) {
         if (source != 'SEND_MONEY' || phone is! String || !kBackupPhonePattern.hasMatch(phone)) {
@@ -350,7 +377,9 @@ class BackupValidator {
           : mpesaCodes.add(code);
       if (!dupOk) _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'display_code');
 
-      out.add(Map<String, Object?>.from(row));
+      final copy = Map<String, Object?>.from(row);
+      if (!v3) copy['agent_number'] = null;
+      out.add(copy);
     }
     return out;
   }

@@ -18,6 +18,7 @@ class ExportTransactionRow {
     required this.classificationName,
     required this.groupDisplayName,
     required this.occurredAt,
+    this.agentNumber,
   });
 
   final String displayCode;
@@ -33,6 +34,9 @@ class ExportTransactionRow {
   final String classificationName;
   final String groupDisplayName;
   final DateTime occurredAt;
+
+  /// Withdrawal rows only: 1 to 20 ASCII digits, else `null` (0.1.2, AG1).
+  final String? agentNumber;
 }
 
 /// T10 — CSV Export's query + formatting layer. Follows the same raw-SQL-
@@ -61,6 +65,8 @@ class ExportDao {
     'Amount (KES)',
     'Transaction Cost (KES)',
     'M-Pesa/Cash Code',
+    // Last, so every existing column keeps its position in the PM's sheets.
+    'Agent Number',
   ];
 
   /// Count of active (non-soft-deleted) transactions — backs the Export CSV
@@ -81,6 +87,7 @@ class ExportDao {
     final rows = await db.rawQuery('''
       SELECT t.display_code, t.source_type, t.amount_cents, t.transaction_cost_cents,
              t.counterparty_label, t.counterparty_phone, t.paybill_account_number,
+             t.agent_number,
              c.name AS classification_name, g.display_name AS group_display_name,
              t.transaction_occurred_at
       FROM transactions t
@@ -99,6 +106,7 @@ class ExportDao {
             counterpartyLabel: row['counterparty_label'] as String?,
             counterpartyPhone: row['counterparty_phone'] as String?,
             paybillAccountNumber: row['paybill_account_number'] as String?,
+            agentNumber: row['agent_number'] as String?,
             classificationName: row['classification_name'] as String,
             groupDisplayName: row['group_display_name'] as String,
             occurredAt: DateTime.fromMillisecondsSinceEpoch(row['transaction_occurred_at'] as int),
@@ -148,6 +156,7 @@ class ExportDao {
         _decimal(r.amountCents),
         r.transactionCostCents != null ? _decimal(r.transactionCostCents!) : '',
         r.displayCode,
+        r.agentNumber ?? '',
       ].map(_csvField);
       buffer.write(fields.join(','));
       buffer.write('\r\n');

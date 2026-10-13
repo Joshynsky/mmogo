@@ -126,7 +126,7 @@ void main() {
     );
     final srcTx = await db.rawQuery(
       'SELECT id, display_code, source_type, amount_cents, transaction_cost_cents, '
-      'counterparty_label, counterparty_phone, paybill_account_number, '
+      'counterparty_label, counterparty_phone, paybill_account_number, agent_number, '
       'classification_id AS classification, raw_parse_source, '
       'transaction_occurred_at, created_at FROM transactions ORDER BY id',
     );
@@ -139,14 +139,14 @@ void main() {
     expect(v.counterpartyMap, srcMap);
     expect(v.createdAt, _t0 + 99999);
     expect(v.prefs, {'palette_id': 'indigo', 'user_display_name': 'Amina'});
-    expect(result.classifications, 14);
+    expect(result.classifications, 19); // 17 built-ins + School fees + Retired
     expect(result.transactions, 5);
     expect(result.counterpartyMap, 1);
     expect(result.excludedSoftDeleted, 0);
     // Seeds carry their key, including the renamed built-in; users do not.
     final landlord = v.classifications.firstWhere((c) => c['name'] == 'Landlord');
     expect(landlord['seed_key'], 'PAYBILL:rent_payment');
-    expect(v.classifications.where((c) => c['seed_key'] != null), hasLength(12));
+    expect(v.classifications.where((c) => c['seed_key'] != null), hasLength(17));
     // The raw text never mentions the forbidden settings.
     final text = utf8.decode(result.bytes);
     expect(text.contains('update_check_enabled'), isFalse);
@@ -177,7 +177,7 @@ void main() {
     final result = await _service(db).export();
     expect(result.excludedSoftDeleted, 0);
     expect(result.transactions, 0);
-    expect(result.classifications, 12);
+    expect(result.classifications, 17); // the 17 built-ins of schema 3
     await db.close();
   });
 

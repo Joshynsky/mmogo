@@ -2,14 +2,18 @@
 // list, the diff against the live 0.1.1 createSchema + seed, and the guard that
 // the v1 -> v2 step never reads the live seed list.
 //
-// RETIRE/RETARGET AT S3b: the "live equals frozen" tests compare the frozen v2
-// fixture with the LIVE createSchema/seed. They are meant to fail the moment S3b
-// switches createSchema to version 3; S3b replaces the live side with the
-// release-tag text. Everything else here stays.
+// RETARGETED AT S3b: S3a compared the frozen v2 fixture with the LIVE
+// createSchema/seed (empty diff). S3b switched the live schema to version 3, so
+// the 0.1.1 side is now pinned two ways without weakening it: (1) a content
+// digest of the frozen fixture's whole dump (schema text, sequences, seed rows),
+// computed when the diff against the live 0.1.1 code was still empty; (2) a
+// test that migrating an empty v2 fixture with the REAL ladder gives exactly a
+// fresh v3 database.
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/db/db_open.dart';
+import 'package:mmogo/data/db/migration_v3.dart' show kV2TxColumns;
 import 'package:mmogo/data/db/migrations.dart';
 import 'package:mmogo/data/db/schema.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -51,11 +55,12 @@ Future<List<String>> dumpAll(Database db) async {
 }
 
 Future<Database> _mem(
-    Future<void> Function(Database) create, Future<void> Function(Database) seed) async {
+    Future<void> Function(Database) create, Future<void> Function(Database) seed,
+    {int version = 2}) async {
   sqfliteFfiInit();
   return databaseFactoryFfi.openDatabase(inMemoryDatabasePath,
       options: OpenDatabaseOptions(
-          version: 2,
+          version: version,
           singleInstance: false,
           onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
           onCreate: (db, v) async {
@@ -90,26 +95,72 @@ void main() {
     expect(AppSchemaV2.seedClassifications, hasLength(12));
   });
 
-  test('the frozen list equals the fixture list and the live 0.1.1 list entry by entry', () {
+  test('the frozen list equals the fixture list and the FIRST 12 of the live 17, entry by entry', () {
     expect(AppMigrations.v2SeedClassifications, AppSchemaV2.seedClassifications);
-    expect(AppMigrations.v2SeedClassifications, AppSchema.seedClassifications,
-        reason: 'live is still the 12 of 0.1.1 (S3b retargets this line)');
+    expect(AppSchema.seedClassifications, hasLength(17));
+    expect(AppMigrations.v2SeedClassifications, AppSchema.seedClassifications.take(12).toList());
     expect(AppMigrations.v2SeedClassifications.map((s) => s.seedKey).toSet(), hasLength(12));
   });
 
-  test('diff: frozen v2 createSchema + seed vs live 0.1.1 createSchema + seed is EMPTY', () async {
-    final live = await _mem(AppSchema.createSchema, AppSchema.seed);
+  /// FNV-1a 64-bit over the dump lines (no crypto package is allowed).
+  int fnv(List<String> lines) {
+    var h = 0xcbf29ce484222325;
+    for (final c in lines.join('\n').codeUnits) {
+      h ^= c;
+      h *= 0x100000001b3;
+    }
+    return h;
+  }
+
+  // The digest was taken from the dump of the frozen fixture at S3b, when it
+  // was still byte-for-byte equal to 0.1.1's createSchema + seed (S3a's diff was
+  // empty; also re-proved against `git show v0.1.1:...schema.dart` in S3b).
+  const frozenV2Digest = -4239865023994304132;
+
+  test('the frozen v2 fixture still has the exact 0.1.1 shape (digest pin)', () async {
     final frozen = await _mem(AppSchemaV2.createSchema, AppSchemaV2.seed);
-    final a = await dumpAll(live);
-    final b = await dumpAll(frozen);
-    expect(a.length, greaterThan(30), reason: 'the dump actually holds the schema and rows');
-    expect(b, a);
-    await live.close();
+    final lines = await dumpAll(frozen);
+    expect(lines.length, greaterThan(30), reason: 'the dump actually holds the schema and rows');
+    expect(fnv(lines), frozenV2Digest);
+    // and the facts the digest stands for, stated plainly
+    expect(firstIntOf(await frozen.rawQuery('SELECT COUNT(*) FROM classification_groups')), 4);
+    expect(firstIntOf(await frozen.rawQuery('SELECT COUNT(*) FROM classifications')), 12);
+    expect(
+        (await frozen.rawQuery('PRAGMA table_info(transactions)')).map((c) => c['name']).toList(),
+        kV2TxColumns);
     await frozen.close();
   });
 
+  test('an EMPTY v2 file migrated by the real ladder equals a FRESH v3 database', () async {
+    final dir = Directory.systemTemp.createTempSync('mmogo_v2v3_');
+    final path = '${dir.path}${Platform.pathSeparator}e.db';
+    await (await buildV2Database(path, populate: false)).close();
+    final migrated = await openMmogoDatabase(databaseFactoryFfi, path, singleInstance: false);
+    final fresh = await _mem(AppSchema.createSchema, AppSchema.seed, version: 3);
+    // SQLite quotes the table name when a table is renamed into place; that is the
+    // only textual difference, and it is not a schema difference.
+    // Untouched objects keep 0.1.1's formatting of the same statement, so
+    // whitespace is collapsed before comparing.
+    String norm(String l) => l
+        .replaceAll('"classification_groups"', 'classification_groups')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll('( ', '(')
+        .replaceAll(' )', ')')
+        .trim();
+    // An INSERT .. SELECT of zero rows still leaves `transactions|0` in
+    // sqlite_sequence (a fresh file has no row); both mean "next id is 1".
+    bool notEmptySeq(String l) => l != 'S|transactions|0';
+    final a = (await dumpAll(migrated)).map(norm).where(notEmptySeq).toList();
+    final b = (await dumpAll(fresh)).map(norm).where(notEmptySeq).toList();
+    expect(a.length, greaterThan(30));
+    expect(a, b);
+    await migrated.close();
+    await fresh.close();
+    dir.deleteSync(recursive: true);
+  });
+
   test('NEGATIVE CONTROL: a one-character DDL change makes the diff non-empty', () async {
-    final live = await _mem(AppSchema.createSchema, AppSchema.seed);
+    final live = await _mem(AppSchemaV2.createSchema, AppSchemaV2.seed);
     final tampered = await _mem((db) async {
       await AppSchemaV2.createSchema(db);
       await db.execute('CREATE INDEX idx_extra ON transactions(amount_cents)');

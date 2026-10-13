@@ -202,6 +202,8 @@ class BackupRepair {
       case 'BUY_GOODS':
         t = SmsSourceType.buyGoods;
       default:
+        // CASH, POCHI_LA_BIASHARA, AGENT_WITHDRAWAL and AIRTIME never learn a
+        // receiver (kBackupMapSourceTypes stays three), so they have no key.
         return null;
     }
     String? s(String k) => r[k] is String ? r[k]! as String : null;
@@ -388,9 +390,21 @@ class BackupRepair {
     final phone = row['counterparty_phone'];
     final account = row['paybill_account_number'];
     if (label != null) {
-      if (isCash) return const _Problem('counterparty_label', 'not allowed for source');
+      // Mirrors the v3 label CHECK: CASH and AIRTIME never carry a label.
+      if (!kBackupLabelSourceTypes.contains(source)) {
+        return const _Problem('counterparty_label', 'not allowed for source');
+      }
       final p = _text(label, 'counterparty_label', kBackupMaxLabelLength);
       if (p != null) return p;
+    }
+    // Mirrors the v3 agent-number CHECK. Never repaired: the DB CHECK makes a bad
+    // stored value unreachable, so a failure here is a skip, not a fix.
+    final agent = row['agent_number'];
+    if (agent != null &&
+        (source != 'AGENT_WITHDRAWAL' ||
+            agent is! String ||
+            !kBackupAgentNumberPattern.hasMatch(agent))) {
+      return const _Problem('agent_number', 'format');
     }
     if (phone != null &&
         (source != 'SEND_MONEY' || phone is! String || !kBackupPhonePattern.hasMatch(phone))) {

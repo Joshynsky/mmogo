@@ -127,7 +127,8 @@ class BackupService {
         for (final r in await txn.rawQuery(
           'SELECT id, display_code, source_type, amount_cents, '
           'transaction_cost_cents, counterparty_label, counterparty_phone, '
-          'paybill_account_number, classification_id AS classification, '
+          'paybill_account_number, agent_number, '
+          'classification_id AS classification, '
           'raw_parse_source, transaction_occurred_at, created_at '
           'FROM transactions WHERE deleted_at IS NULL ORDER BY id',
         ))

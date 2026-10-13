@@ -14,10 +14,14 @@ const int kBackupFormatVersion = 1;
 /// The `schema_version` the exporter writes (the database version it exports).
 /// Mirrors `kDbVersion` in `migrations.dart` (a test pins the two together);
 /// kept as a literal here so this file stays import-free.
-const int kBackupSchemaVersion = 2;
+const int kBackupSchemaVersion = 3;
 
 /// The lowest `schema_version` a file may carry (`seed_key` exists from v2).
 const int kBackupMinSchemaVersion = 2;
+
+/// First schema that may carry the two new group codes, the two new source
+/// types, the five new seed keys and the `agent_number` row key (0.1.2).
+const int kBackupFirstSchemaWithAgentAndAirtime = 3;
 
 /// Last top-level key of every file. Lets a reader (and the auto-backup
 /// prune) see the file was written to the end.
@@ -47,6 +51,9 @@ const int kBackupMaxLabelLength = 200;
 
 const int kBackupMaxPaybillAccountLength = 100;
 
+/// Agent number: 1 to 20 ASCII digits (mirrors the DB CHECK).
+const int kBackupMaxAgentNumberLength = 20;
+
 /// A PAYBILL key is `LABEL#ACCOUNT`: 200 + 1 + 100 = 301, so 310 leaves room.
 const int kBackupMaxCounterpartyKeyLength = 310;
 const int kBackupMaxDisplayNameLength = 30;
@@ -63,18 +70,53 @@ const int kBackupMaxCostCents = 10000000;
 
 // --- enums ----------------------------------------------------------------------
 
+/// Group codes of a schema >= 3 file (six).
 const List<String> kBackupGroupCodes = [
+  'SEND_MONEY',
+  'PAYBILL',
+  'BUY_GOODS',
+  'POCHI_LA_BIASHARA',
+  'AGENT_WITHDRAWAL',
+  'AIRTIME',
+];
+
+/// Group codes a schema 2 file may carry (the original four, literal).
+const List<String> kBackupGroupCodesV2 = [
   'SEND_MONEY',
   'PAYBILL',
   'BUY_GOODS',
   'POCHI_LA_BIASHARA',
 ];
 
+/// Source types of a schema >= 3 file (seven). POCHI_LA_BIASHARA is a
+/// stored group code AND a source type since 0.1.2; a garbage type is not.
 const List<String> kBackupSourceTypes = [
   'SEND_MONEY',
   'BUY_GOODS',
   'PAYBILL',
   'CASH',
+  'POCHI_LA_BIASHARA',
+  'AGENT_WITHDRAWAL',
+  'AIRTIME',
+];
+
+/// Source types a schema 2 file may carry (the original four, literal).
+const List<String> kBackupSourceTypesV2 = [
+  'SEND_MONEY',
+  'BUY_GOODS',
+  'PAYBILL',
+  'CASH',
+];
+
+/// Source types whose `counterparty_label` may be set (mirrors the v3 label
+/// CHECK of `transactions`): every identity-carrying type. CASH and AIRTIME
+/// never carry a label.
+const List<String> kBackupLabelSourceTypes = [
+  'SEND_MONEY',
+  'BUY_GOODS',
+  'PAYBILL',
+  'POCHI_LA_BIASHARA',
+  'AGENT_WITHDRAWAL',
 ];
 
 /// Source types a counterparty-map row may carry (never CASH).
@@ -86,10 +128,8 @@ const List<String> kBackupMapSourceTypes = [
 
 const List<String> kBackupRawParseSources = ['SMS_PARSE', 'MANUAL'];
 
-/// The 12 built-in classification keys (`classifications.seed_key`). A file
-/// may carry each at most once, on a row of the matching group. A test pins
-/// this list to `AppSchema.seedClassifications`.
-const List<String> kBackupSeedKeys = [
+/// The 12 built-in keys a schema 2 file may carry (literal, frozen).
+const List<String> kBackupSeedKeysV2 = [
   'SEND_MONEY:family_friends',
   'SEND_MONEY:rent',
   'SEND_MONEY:transport',
@@ -103,6 +143,39 @@ const List<String> kBackupSeedKeys = [
   'BUY_GOODS:transport',
   'BUY_GOODS:groceries',
 ];
+
+/// The 17 built-in classification keys (`classifications.seed_key`) of a
+/// schema >= 3 file: the 12 above, then the five 0.1.2 seeds. A file may carry
+/// each at most once, on a row of the matching group. A test pins this list to
+/// `AppSchema.seedClassifications`.
+const List<String> kBackupSeedKeys = [
+  'SEND_MONEY:family_friends',
+  'SEND_MONEY:rent',
+  'SEND_MONEY:transport',
+  'SEND_MONEY:groceries',
+  'PAYBILL:rent_payment',
+  'PAYBILL:shopping',
+  'PAYBILL:transport',
+  'PAYBILL:groceries',
+  'BUY_GOODS:rent_payment',
+  'BUY_GOODS:shopping',
+  'BUY_GOODS:transport',
+  'BUY_GOODS:groceries',
+  'AGENT_WITHDRAWAL:cash_withdrawal',
+  'AIRTIME:airtime',
+  'POCHI_LA_BIASHARA:transport',
+  'POCHI_LA_BIASHARA:groceries',
+  'POCHI_LA_BIASHARA:shopping',
+];
+
+/// C-A10: the two built-ins a restore never writes (Withdrawal and Airtime):
+/// they stay active with their own names whatever a file says. Taken from
+/// [kBackupSeedKeys] by group prefix so the strings are not typed twice; a test
+/// pins the two values.
+final Set<String> kBackupLockedSeedKeys = {
+  for (final k in kBackupSeedKeys)
+    if (k.startsWith('AGENT_WITHDRAWAL:') || k.startsWith('AIRTIME:')) k,
+};
 
 // --- exact key sets (const; the file's keys are never used as column names) -----
 
@@ -134,7 +207,27 @@ const List<String> kBackupClassificationKeys = [
   'created_at',
 ];
 
+/// Row keys of a schema >= 3 file (13): `agent_number` is always present
+/// (null allowed). The exporter writes these.
 const List<String> kBackupTransactionKeys = [
+  'id',
+  'display_code',
+  'source_type',
+  'amount_cents',
+  'transaction_cost_cents',
+  'counterparty_label',
+  'counterparty_phone',
+  'paybill_account_number',
+  'agent_number',
+  'classification',
+  'raw_parse_source',
+  'transaction_occurred_at',
+  'created_at',
+];
+
+/// Row keys of a schema 2 file (12, literal): no `agent_number`. A schema 2
+/// file that carries the key is refused (exact-key defence).
+const List<String> kBackupTransactionKeysV2 = [
   'id',
   'display_code',
   'source_type',
@@ -166,6 +259,10 @@ final RegExp kBackupMpesaCodePattern = RegExp(r'^[A-Z0-9]{10}$');
 final RegExp kBackupCashCodePattern = RegExp(r'^CASH-\d{8}-\d{4}$');
 
 final RegExp kBackupPhonePattern = RegExp(r'^[0-9+ ]{7,20}$');
+
+/// Agent number: 1 to 20 ASCII digits. Dart `$` matches only at the end of
+/// input, so `12\n` fails here exactly as the DB's GLOB rejects it.
+final RegExp kBackupAgentNumberPattern = RegExp(r'^[0-9]{1,20}$');
 
 /// Manual backup file name (`mmogo-backup-YYYYMMDD-HHMMSS.json`).
 final RegExp kBackupManualFileNamePattern =

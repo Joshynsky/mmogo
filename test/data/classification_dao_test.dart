@@ -74,26 +74,31 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('fetchGroups', () {
-    test('returns all 4 seeded groups, ordered by id, with correct enabled flags', () async {
+    // S3b (v3, signed 08-10-2026): 6 groups, all enabled, Pochi named 'Pochi'.
+    test('returns all 6 seeded groups, ordered by id, with correct enabled flags', () async {
       final db = await _openFreshDb();
       final groups = await ClassificationDao.fetchGroups(db);
 
-      expect(groups, hasLength(4));
+      expect(groups, hasLength(6));
       expect(groups.map((g) => g.code), [
         'SEND_MONEY',
         'PAYBILL',
         'BUY_GOODS',
         'POCHI_LA_BIASHARA',
+        'AGENT_WITHDRAWAL',
+        'AIRTIME',
       ]);
       final byCode = {for (final g in groups) g.code: g};
       expect(byCode['SEND_MONEY']!.enabled, isTrue);
       expect(byCode['PAYBILL']!.enabled, isTrue);
       expect(byCode['BUY_GOODS']!.enabled, isTrue);
-      // Pochi must still be RETURNED (not filtered out server-side) even
-      // though disabled — it must always be visible, just
-      // non-interactive; that's a UI concern, not a query-layer filter.
-      expect(byCode['POCHI_LA_BIASHARA']!.enabled, isFalse);
-      expect(byCode['POCHI_LA_BIASHARA']!.displayName, 'Pochi La Biashara');
+      // v3: Pochi is enabled on a fresh install and named 'Pochi'. A disabled
+      // group must still be RETURNED (not filtered out server-side); that is
+      // a UI concern, not a query-layer filter.
+      expect(byCode['POCHI_LA_BIASHARA']!.enabled, isTrue);
+      expect(byCode['POCHI_LA_BIASHARA']!.displayName, 'Pochi');
+      expect(byCode['AGENT_WITHDRAWAL']!.displayName, 'Withdrawal');
+      expect(byCode['AIRTIME']!.displayName, 'Airtime');
       await db.close();
     });
   });
@@ -142,11 +147,11 @@ void main() {
       await db.close();
     });
 
-    test('Pochi La Biashara group returns an empty list (no seeded classifications)', () async {
+    test('Pochi group returns its 3 seeded classifications (v3)', () async {
       final db = await _openFreshDb();
       final pochiId = await _groupId(db, 'POCHI_LA_BIASHARA');
       final items = await ClassificationDao.fetchActiveClassifications(db, groupId: pochiId);
-      expect(items, isEmpty);
+      expect(items.map((c) => c.name).toList()..sort(), ['Groceries', 'Shopping', 'Transport']);
       await db.close();
     });
 
@@ -259,7 +264,7 @@ void main() {
       await db.close();
     });
 
-    test('empty group (Pochi, no seed rows) returns an empty inactive list', () async {
+    test('a group with no inactive rows (Pochi, v3) returns an empty inactive list', () async {
       final db = await _openFreshDb();
       final pochiId = await _groupId(db, 'POCHI_LA_BIASHARA');
       final inactive = await ClassificationDao.fetchInactiveClassifications(db, groupId: pochiId);
@@ -452,10 +457,11 @@ void main() {
       () async {
         final db = await _openFreshDb();
         final pochiId = await _groupId(db, 'POCHI_LA_BIASHARA');
-        // Pochi has no seeded classifications this round — insert one
-        // directly (active=1) to prove exclusion is genuinely enforced by
-        // the `g.enabled = 1` filter, not merely a byproduct of Pochi's
-        // seed being empty.
+        // v3: Pochi is enabled on a fresh install, so disable it first (as the
+        // user hiding the group would); then an active row in it must be
+        // excluded by the `g.enabled = 1` filter (not by the Cash whitelist).
+        await db.update('classification_groups', {'enabled': 0},
+            where: 'id = ?', whereArgs: [pochiId]);
         await db.insert('classifications', {
           'group_id': pochiId,
           'name': 'Pochi Test Classification',

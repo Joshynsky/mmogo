@@ -11,6 +11,7 @@ import 'package:mmogo/data/backup/backup_settings.dart';
 import 'package:mmogo/data/backup/restore_service.dart';
 import 'package:mmogo/data/backup/restore_writer.dart';
 import 'package:mmogo/data/backup/safety_copy_store.dart';
+import 'package:mmogo/data/db/db_open.dart';
 import 'package:mmogo/data/db/migrations.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -132,7 +133,7 @@ void main() {
     await svc(viaMerge).restore(file, RestoreMode.merge);
     final seeds = await viaMerge.rawQuery(
         'SELECT COUNT(*) AS n FROM classifications WHERE seed_key IS NOT NULL');
-    expect(seeds.first['n'], 12);
+    expect(seeds.first['n'], 17); // schema 3: all 17 built-ins, none duplicated
     // REN1111111 is on the built-in (matched by seed_key, B keeps its own name
     // "Rent"). A's user class "Rent" meets B's ACTIVE built-in "Rent" by
     // (group, name) and merges into it (data-model D, merge step 2; a second
@@ -237,6 +238,11 @@ void main() {
             ? _fixedCounts(bytes, keepCounts: e.key.startsWith('counts'))
             : bytes;
         final db = await openTestDb();
+        if (e.key.startsWith('cash on Pochi')) {
+          // 0.1.2: Pochi is enabled on a fresh install, so this case needs a
+          // phone whose Pochi group has been switched off.
+          await db.rawUpdate("UPDATE classification_groups SET enabled = 0 WHERE code = 'POCHI_LA_BIASHARA'");
+        }
         await populate(db);
         final before = await fullDump(db);
         for (final mode in RestoreMode.values) {
@@ -286,6 +292,9 @@ void main() {
 
   test('trigger_and_reference_backstops_on_the_restore_path (validator bypassed)', () async {
     final db = await openTestDb();
+    // Pochi is enabled on a fresh 0.1.2 install; switch it off for the
+    // disabled-group trigger case below.
+    await db.rawUpdate("UPDATE classification_groups SET enabled = 0 WHERE code = 'POCHI_LA_BIASHARA'");
     await populate(db);
     final before = await fullDump(db);
     Future<void> bypass(Map<String, Object?> json, Matcher m) => expectLater(
@@ -346,11 +355,9 @@ void main() {
     await addMap(v1, 'SEND_MONEY', '0712345678', 2);
     await v1.close();
 
-    final upgraded = await databaseFactoryFfi.openDatabase(path, options: OpenDatabaseOptions(
-      version: kDbVersion,
-      onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
-      onUpgrade: AppMigrations.migrate,
-    ));
+    // S3b: the v3 upgrade rebuilds tables and needs foreign_keys OFF while it
+    // runs, so open through the app's one shared open function.
+    final upgraded = await openMmogoDatabase(databaseFactoryFfi, path, singleInstance: false);
     final source = await contentDump(upgraded);
     final export = await backupOf(upgraded).export();
     expect(export.skippedCount, 0);
@@ -363,7 +370,7 @@ void main() {
     final r = await svc(merged).restore(export.bytes, RestoreMode.merge);
     expect(r.transactions.added, 4);
     expect((await merged.rawQuery('SELECT COUNT(*) AS n FROM classifications WHERE seed_key IS NOT NULL'))
-        .first['n'], 12);
+        .first['n'], 17); // the migrated 0.1.0 database now holds 17 built-ins
     await upgraded.close();
     await fresh.close();
     await merged.close();

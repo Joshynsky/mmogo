@@ -98,6 +98,39 @@ const List<BackupSettingSpec> kBackupSettingSpecs = [
     min: 2,
     max: 20,
   ),
+  // 0.1.2 (Judge C-B13): five Look / grouping choices travel in a backup. No
+  // new schema version and no version gating: a file without them leaves the
+  // phone alone. `appearance_mode` is DEVICE-ONLY and is deliberately absent.
+  BackupSettingSpec(
+    fileKey: 'first_day_of_week',
+    prefsKey: 'first_day_of_week',
+    kind: BackupSettingKind.integer,
+    min: 1, // 1 = Monday ... 7 = Sunday (pinned by test)
+    max: 7,
+  ),
+  BackupSettingSpec(
+    fileKey: 'month_chart_style',
+    prefsKey: 'month_chart_style',
+    kind: BackupSettingKind.choice,
+    choices: ['days', 'weeks'],
+  ),
+  BackupSettingSpec(
+    fileKey: 'year_view_amounts',
+    prefsKey: 'year_view_amounts',
+    kind: BackupSettingKind.choice,
+    choices: ['quarters', 'months'],
+  ),
+  BackupSettingSpec(
+    fileKey: 'show_withdrawals_in_chart',
+    prefsKey: 'show_withdrawals_in_chart',
+    kind: BackupSettingKind.boolean,
+  ),
+  BackupSettingSpec(
+    fileKey: 'where_it_went_style',
+    prefsKey: 'where_it_went_style',
+    kind: BackupSettingKind.choice,
+    choices: ['button', 'strip'],
+  ),
 ];
 
 /// The spec for [fileKey], or `null` when the key is not allowlisted.

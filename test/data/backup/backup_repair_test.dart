@@ -312,9 +312,9 @@ void main() {
     final db = await _openDb();
     final family = await _classId(db, 'SEND_MONEY', 'Family/Friends');
     await _addTx(db, code: 'KEY0000001', source: 'SEND_MONEY', classId: family,
-        label: 'A', phone: '0712-345-678');
+        label: 'A', phone: '0712.345.678');
     await db.insert('counterparty_classification_map', {
-      'source_type': 'SEND_MONEY', 'counterparty_key': '0712-345-678',
+      'source_type': 'SEND_MONEY', 'counterparty_key': '0712.345.678',
       'classification_id': family, 'auto_apply': 1, 'updated_at': _t0,
     });
     final r = await _service(db).export();

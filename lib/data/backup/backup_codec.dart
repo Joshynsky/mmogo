@@ -6,7 +6,7 @@ import 'backup_limits.dart';
 /// Writes the backup file: ONE compact UTF-8 JSON object, no encryption.
 ///
 /// ```
-/// {"app":"mmogo","format_version":1,"schema_version":2,"created_at":...,
+/// {"app":"mmogo","format_version":1,"schema_version":3,"created_at":...,
 ///  "counts":{...},"classifications":[...],"transactions":[...],
 ///  "counterparty_map":[...],"prefs":{...},"end":"mmogo-v1"}
 /// ```

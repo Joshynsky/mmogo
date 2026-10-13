@@ -28,7 +28,7 @@ void main() {
     expect(obj.keys.toList(), kBackupTopLevelKeys);
     expect(obj['app'], 'mmogo');
     expect(obj['format_version'], 1);
-    expect(obj['schema_version'], 2);
+    expect(obj['schema_version'], 3); // 0.1.2: schema 3
     expect(obj['created_at'], tBase);
     expect(obj['end'], 'mmogo-v1');
     expect(obj['counts'], {
@@ -44,9 +44,23 @@ void main() {
       kBackupSeedKeys,
       AppSchema.seedClassifications.map((s) => s.seedKey).toList(),
     );
+    expect(kBackupSeedKeys.length, 17);
     expect(kBackupGroupCodes.toSet(), {
       'SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'POCHI_LA_BIASHARA',
+      'AGENT_WITHDRAWAL', 'AIRTIME',
     });
+    expect(kBackupGroupCodes.length, 6);
+    // The schema-2 lists are literal and frozen: the original 12 / 4 / 4 / 12.
+    expect(kBackupSeedKeysV2, kBackupSeedKeys.take(12).toList());
+    expect(kBackupSeedKeysV2.length, 12);
+    expect(kBackupGroupCodesV2, kBackupGroupCodes.take(4).toList());
+    expect(kBackupSourceTypesV2.length, 4);
+    expect(kBackupSourceTypes.length, 7);
+    expect(kBackupTransactionKeys.length, 13);
+    expect(kBackupTransactionKeysV2.length, 12);
+    expect(kBackupMinSchemaVersion, 2);
+    expect(kBackupFormatVersion, 1);
+    expect(kBackupMapSourceTypes, ['SEND_MONEY', 'BUY_GOODS', 'PAYBILL']);
   });
 
   test('output is compact: app marker in the first 256 bytes, tail marker last', () {

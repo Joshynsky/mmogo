@@ -1,5 +1,6 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../domain/counterparty/phone_key.dart';
 import 'backup_validator.dart';
 
 /// What is already on this phone, read once at the start of a restore (inside
@@ -19,7 +20,7 @@ class RestoreLookups {
   /// `classification_groups.code` -> id (system rows, never written).
   final Map<String, int> groupIdByCode;
 
-  /// `classifications.seed_key` -> id (the 12 built-ins).
+  /// `classifications.seed_key` -> id (the built-ins: 17 on a version-3 phone).
   final Map<String, int> seedIdByKey;
 
   /// `(group code, name)` -> id of the ACTIVE row.
@@ -118,8 +119,12 @@ class ClassTarget {
 ///    rows planned earlier in the same file count as "already here";
 ///  - a non-CASH transaction whose M-Pesa code is live here is skipped; a
 ///    CASH transaction is skipped when `(display_code, created_at)` matches;
-///  - a learned receiver whose `(source_type, key)` exists here is skipped
-///    (the phone's choice wins).
+///  - a learned receiver: SEND_MONEY keys are first put through the phone key
+///    rule (`normalizePhoneKey`, C-A5), for every file whatever its schema;
+///    file rows that share a normalised `(source_type, key)` combine into one,
+///    the winner being the greatest `(updated_at, array index)`; the losers
+///    count as skipped. A combined key that exists here is skipped too (the
+///    phone's choice wins). The inserted row carries the NORMALISED key.
 class RestorePlan {
   RestorePlan._({
     required this.newClassifications,
@@ -199,17 +204,36 @@ class RestorePlan {
       }
     }
 
+    // Learned receivers: normalise SEND_MONEY keys, then group by the
+    // normalised (source_type, key). Groups keep first-appearance order.
+    final winners = <String, Map<String, Object?>>{};
+    final groupSize = <String, int>{};
+    for (var i = 0; i < file.counterpartyMap.length; i++) {
+      final row = file.counterpartyMap[i];
+      final source = row['source_type']! as String;
+      final rawKey = row['counterparty_key']! as String;
+      final key = source == 'SEND_MONEY' ? normalizePhoneKey(rawKey) : rawKey;
+      final mk = RestoreLookups.mapKey(source, key);
+      groupSize[mk] = (groupSize[mk] ?? 0) + 1;
+      final current = winners[mk];
+      // Later array index wins an equal updated_at, so `>=` on a walk in order.
+      if (current == null ||
+          (row['updated_at']! as int) >= (current['updated_at']! as int)) {
+        winners[mk] = key == rawKey ? row : {...row, 'counterparty_key': key};
+      }
+    }
     final mapKeys = Set<String>.of(l.mapKeys);
     final newMap = <Map<String, Object?>>[];
     var mapSkipped = 0;
-    for (final row in file.counterpartyMap) {
-      if (mapKeys.add(RestoreLookups.mapKey(
-          row['source_type']! as String, row['counterparty_key']! as String))) {
+    winners.forEach((mk, row) {
+      final size = groupSize[mk]!;
+      if (mapKeys.add(mk)) {
         newMap.add(row);
+        mapSkipped += size - 1; // in-file losers
       } else {
-        mapSkipped++;
+        mapSkipped += size; // the phone's choice wins
       }
-    }
+    });
 
     return RestorePlan._(
       newClassifications: newClasses,

@@ -1,5 +1,7 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'migration_v3_ddl.dart';
+
 /// Pure schema/seed logic, factored out of [AppDatabase] so it can be
 /// exercised directly against an in-memory database in unit tests without
 /// needing `path_provider`'s platform channel (unavailable outside a real
@@ -9,9 +11,10 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 class AppSchema {
   AppSchema._();
 
-  /// The 12 built-in classifications, in insertion order (so ids 1..12 on a
-  /// fresh install; `AppMigrations` relies on that order to backfill
-  /// `seed_key` for 0.1.0 databases). Never reorder or insert in the middle.
+  /// The 17 built-in classifications, in insertion order (ids 1..17 on a fresh
+  /// install). The first 12 are the 0.1.1 list (`AppMigrations.v2SeedClassifications`
+  /// is its frozen copy: `_toV2` relies on ids 1..12 to backfill `seed_key`);
+  /// the last 5 are `kV3NewSeeds`. Append only: never reorder or insert in the middle.
   static const List<({String group, String name, String seedKey})>
       seedClassifications = [
     (group: 'SEND_MONEY', name: 'Family/Friends', seedKey: 'SEND_MONEY:family_friends'),
@@ -26,214 +29,40 @@ class AppSchema {
     (group: 'BUY_GOODS', name: 'Shopping', seedKey: 'BUY_GOODS:shopping'),
     (group: 'BUY_GOODS', name: 'Transport', seedKey: 'BUY_GOODS:transport'),
     (group: 'BUY_GOODS', name: 'Groceries', seedKey: 'BUY_GOODS:groceries'),
+    // Added in version 3 (0.1.2); frozen as `kV3NewSeeds`. Ids 13..17 on a fresh install.
+    (group: 'AGENT_WITHDRAWAL', name: 'Withdrawal', seedKey: 'AGENT_WITHDRAWAL:cash_withdrawal'),
+    (group: 'AIRTIME', name: 'Airtime', seedKey: 'AIRTIME:airtime'),
+    (group: 'POCHI_LA_BIASHARA', name: 'Transport', seedKey: 'POCHI_LA_BIASHARA:transport'),
+    (group: 'POCHI_LA_BIASHARA', name: 'Groceries', seedKey: 'POCHI_LA_BIASHARA:groceries'),
+    (group: 'POCHI_LA_BIASHARA', name: 'Shopping', seedKey: 'POCHI_LA_BIASHARA:shopping'),
   ];
 
+  /// Creates the CURRENT (version 3) schema from the frozen constants in
+  /// `migration_v3_ddl.dart`, so a fresh install and a migrated 0.1.1 database
+  /// come from the same text. (The long design history of the `transactions`
+  /// CHECKs lives with the frozen 0.1.1 copy, `test/fixtures/schema_v2.dart`.)
   static Future<void> createSchema(Database db) async {
-    // --- classification_groups ---------------------------------------
-    await db.execute('''
-      CREATE TABLE classification_groups (
-        id            INTEGER PRIMARY KEY AUTOINCREMENT,
-        code          TEXT NOT NULL UNIQUE
-                      CHECK (code IN ('SEND_MONEY','PAYBILL','BUY_GOODS','POCHI_LA_BIASHARA')),
-        display_name  TEXT NOT NULL,
-        enabled       INTEGER NOT NULL DEFAULT 1,
-        created_at    INTEGER NOT NULL
-      )
-    ''');
-
-    // --- classifications ------------------------------------------------
-    await db.execute('''
-      CREATE TABLE classifications (
-        id            INTEGER PRIMARY KEY AUTOINCREMENT,
-        group_id      INTEGER NOT NULL REFERENCES classification_groups(id) ON DELETE RESTRICT,
-        name          TEXT NOT NULL,
-        active        INTEGER NOT NULL DEFAULT 1,
-        created_at    INTEGER NOT NULL,
-        seed_key      TEXT NULL
-      )
-    ''');
-    await db.execute('''
-      CREATE UNIQUE INDEX idx_classifications_active_name
-        ON classifications(group_id, name) WHERE active = 1
-    ''');
-    await db.execute('''
-      CREATE INDEX idx_classifications_group ON classifications(group_id)
-    ''');
-    // v2 (0.1.1): stable key of the 12 built-ins; NULL for user-created rows.
-    await db.execute('''
-      CREATE UNIQUE INDEX idx_classifications_seed_key
-        ON classifications(seed_key) WHERE seed_key IS NOT NULL
-    ''');
-
-    // --- transactions (revised DDL — current authoritative) -------------
-    await db.execute('''
-      CREATE TABLE transactions (
-        id                      INTEGER PRIMARY KEY AUTOINCREMENT,
-        display_code            TEXT NOT NULL,
-        source_type             TEXT NOT NULL
-                                 CHECK (source_type IN ('SEND_MONEY','BUY_GOODS','PAYBILL','CASH')),
-        amount_cents            INTEGER NOT NULL CHECK (amount_cents > 0),
-        transaction_cost_cents  INTEGER NULL,
-        counterparty_label      TEXT NULL,
-        counterparty_phone      TEXT NULL,
-        paybill_account_number  TEXT NULL,
-        classification_id       INTEGER NOT NULL REFERENCES classifications(id) ON DELETE RESTRICT,
-        raw_parse_source        TEXT NOT NULL CHECK (raw_parse_source IN ('SMS_PARSE','MANUAL')),
-        transaction_occurred_at INTEGER NOT NULL,
-        created_at              INTEGER NOT NULL,
-        deleted_at               INTEGER NULL,
-        CHECK ( (source_type = 'CASH' AND transaction_cost_cents IS NULL)
-             OR (source_type != 'CASH' AND transaction_cost_cents IS NOT NULL) ),
-        -- T6 schema amendment (2026-09-19, PM decision, cited directly per
-        -- this dispatch's own instruction — same citable-decision
-        -- discipline as classification_dao.dart's dedup-rule comment):
-        -- Add's M-Pesa tab gets a real manual-entry path back (PM direct
-        -- decision, 2026-09-17), which requires
-        -- Send Money/Paybill identity capture to be genuinely opt-in — an
-        -- unchecked "also record receiver/business identity" checkbox
-        -- must leave counterparty_label/counterparty_phone/
-        -- paybill_account_number truly NULL. The three CHECKs below
-        -- originally in this file (T1) made counterparty_label/
-        -- counterparty_phone/paybill_account_number mandatory for ALL of
-        -- SEND_MONEY/BUY_GOODS/PAYBILL, directly contradicting that later
-        -- decision (T1 predates it and was never updated). Loosened here:
-        -- counterparty_label stays mandatory ONLY for BUY_GOODS (no
-        -- toggle exists for it — merchant identity is the entire point of
-        -- a Buy Goods entry, hence the Buy Goods exemption);
-        -- counterparty_phone (SEND_MONEY) and
-        -- paybill_account_number (PAYBILL) become genuinely optional —
-        -- their "must be NOT NULL" CHECKs are dropped entirely below.
-        -- T6 return-pass-2 amendment (2026-09-19 PM decision, "M-Pesa entry
-        -- rules settled by the PM during the T6 guided device check", D3):
-        -- Buy Goods gets the same opt-in capture checkbox as Send Money/
-        -- Paybill now (superseding the 2026-09-17 "always captures the
-        -- merchant" rule) — counterparty_label is no longer mandatory for
-        -- BUY_GOODS either. The line below (`CHECK (source_type !=
-        -- 'BUY_GOODS' OR counterparty_label IS NOT NULL)`) is DELETED per
-        -- that decision; every source_type's identity field(s) are now
-        -- uniformly optional.
-        CHECK ( source_type IN ('SEND_MONEY','BUY_GOODS','PAYBILL') OR counterparty_label IS NULL ),
-        CHECK ( source_type = 'SEND_MONEY' OR counterparty_phone IS NULL ),
-        CHECK ( source_type = 'PAYBILL' OR paybill_account_number IS NULL ),
-        -- Paired-optionality safety net (T6, disclosed judgment call, not
-        -- explicit spec text): the Add — M-Pesa tab's single opt-in
-        -- checkbox controls both fields of each pair together, so a state
-        -- where one half is captured and the other silently isn't would
-        -- always be a bug, never a legitimate partial entry.
-        CHECK ( source_type != 'SEND_MONEY' OR (counterparty_label IS NULL) = (counterparty_phone IS NULL) ),
-        CHECK ( source_type != 'PAYBILL' OR (counterparty_label IS NULL) = (paybill_account_number IS NULL) ),
-        CHECK ( source_type != 'CASH' OR raw_parse_source = 'MANUAL' )
-      )
-    ''');
-    await db.execute('''
-      CREATE INDEX idx_transactions_classification ON transactions(classification_id)
-    ''');
-    await db.execute('''
-      CREATE INDEX idx_transactions_occurred ON transactions(transaction_occurred_at)
-    ''');
-    await db.execute('''
-      CREATE INDEX idx_transactions_source ON transactions(source_type)
-    ''');
-    await db.execute('''
-      CREATE INDEX idx_transactions_deleted_at ON transactions(deleted_at)
-    ''');
-    // D5 (2026-09-19 PM decision, T6 return-pass-2): an M-Pesa code must not
-    // exist twice. display_code stays non-unique in general on purpose
-    // (Cash codes, CASH-YYYYMMDD-HHMM, can legitimately collide within the
-    // same minute — hence the id/display_code split) so the
-    // uniqueness is scoped to non-Cash, non-soft-deleted rows only. A
-    // soft-deleted row frees its code for reuse (the WHERE clause excludes
-    // it). Enforced by SQLite, not re-validated in Dart — the form/DAO
-    // still perform an inline "already recorded" pre-check
-    // (TransactionDao.mpesaCodeExists) for a fast, friendly message, but
-    // this index is the real backstop, same discipline as every other
-    // constraint in this file.
-    await db.execute('''
-      CREATE UNIQUE INDEX idx_transactions_mpesa_code
-        ON transactions(display_code) WHERE source_type != 'CASH' AND deleted_at IS NULL
-    ''');
-
-    // --- group-scope guard triggers (INSERT / UPDATE) --------------------
-    await db.execute('''
-      CREATE TRIGGER trg_transactions_classification_scope_ins
-      BEFORE INSERT ON transactions
-      FOR EACH ROW
-      BEGIN
-        SELECT RAISE(ABORT, 'classification_id does not belong to the group matching source_type')
-        WHERE NEW.source_type != 'CASH'
-          AND (SELECT g.code FROM classifications c
-               JOIN classification_groups g ON g.id = c.group_id
-               WHERE c.id = NEW.classification_id) != NEW.source_type;
-
-        SELECT RAISE(ABORT, 'classification_id belongs to a disabled group')
-        WHERE NEW.source_type = 'CASH'
-          AND (SELECT g.enabled FROM classifications c
-               JOIN classification_groups g ON g.id = c.group_id
-               WHERE c.id = NEW.classification_id) != 1;
-      END
-    ''');
-    await db.execute('''
-      CREATE TRIGGER trg_transactions_classification_scope_upd
-      BEFORE UPDATE OF classification_id, source_type ON transactions
-      FOR EACH ROW
-      BEGIN
-        SELECT RAISE(ABORT, 'classification_id does not belong to the group matching source_type')
-        WHERE NEW.source_type != 'CASH'
-          AND (SELECT g.code FROM classifications c
-               JOIN classification_groups g ON g.id = c.group_id
-               WHERE c.id = NEW.classification_id) != NEW.source_type;
-
-        SELECT RAISE(ABORT, 'classification_id belongs to a disabled group')
-        WHERE NEW.source_type = 'CASH'
-          AND (SELECT g.enabled FROM classifications c
-               JOIN classification_groups g ON g.id = c.group_id
-               WHERE c.id = NEW.classification_id) != 1;
-      END
-    ''');
-
-    // --- counterparty_classification_map (empty at seed) -----------------
-    await db.execute('''
-      CREATE TABLE counterparty_classification_map (
-        id                INTEGER PRIMARY KEY AUTOINCREMENT,
-        source_type       TEXT NOT NULL CHECK (source_type IN ('SEND_MONEY','BUY_GOODS','PAYBILL')),
-        counterparty_key  TEXT NOT NULL,
-        classification_id INTEGER NOT NULL REFERENCES classifications(id) ON DELETE CASCADE,
-        auto_apply        INTEGER NOT NULL DEFAULT 0,
-        updated_at        INTEGER NOT NULL,
-        UNIQUE (source_type, counterparty_key)
-      )
-    ''');
-    await db.execute('''
-      CREATE INDEX idx_counterparty_map_classification
-        ON counterparty_classification_map(classification_id)
-    ''');
-    await db.execute('''
-      CREATE INDEX idx_counterparty_map_recency
-        ON counterparty_classification_map(updated_at DESC)
-    ''');
+    for (final sql in v3SchemaStatements()) {
+      await db.execute(sql);
+    }
   }
 
   static Future<void> seed(Database db) async {
     final now = DateTime.now().millisecondsSinceEpoch;
 
-    // classification_groups — 4 seed rows, POCHI_LA_BIASHARA disabled.
+    // classification_groups — 6 seed rows (ids 1..6), all enabled; Pochi is
+    // named 'Pochi' (renamed from 'Pochi La Biashara' in 0.1.2).
     final groupIds = <String, int>{};
-    for (final row in const [
-      ('SEND_MONEY', 'Send Money', 1),
-      ('PAYBILL', 'Paybill', 1),
-      ('BUY_GOODS', 'Buy Goods', 1),
-      ('POCHI_LA_BIASHARA', 'Pochi La Biashara', 0),
-    ]) {
-      final id = await db.insert('classification_groups', {
-        'code': row.$1,
-        'display_name': row.$2,
-        'enabled': row.$3,
+    for (final g in kV3GroupSeeds) {
+      groupIds[g.code] = await db.insert('classification_groups', {
+        'code': g.code,
+        'display_name': g.displayName,
+        'enabled': g.enabled,
         'created_at': now,
       });
-      groupIds[row.$1] = id;
     }
 
-    // classifications — 12 seed rows, group-scoped, each with its seed_key.
+    // classifications — 17 seed rows, group-scoped, each with its seed_key.
     for (final row in seedClassifications) {
       await db.insert('classifications', {
         'group_id': groupIds[row.group],

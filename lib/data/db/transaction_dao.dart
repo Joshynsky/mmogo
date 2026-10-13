@@ -32,6 +32,7 @@ class NewTransactionInput {
     required this.classificationId,
     required this.rawParseSource,
     required this.transactionOccurredAt,
+    this.agentNumber,
   });
 
   /// -> `transactions.display_code` (real M-Pesa code, or a
@@ -66,6 +67,12 @@ class NewTransactionInput {
   /// otherwise); optional, but paired with [counterpartyLabel] (both set or
   /// both NULL).
   final String? paybillAccountNumber;
+
+  /// -> `transactions.agent_number` (v3). Withdrawal rows only: digits only,
+  /// 1 to 20 characters, or null. [TransactionDao.insert] checks this BEFORE
+  /// the insert ([TransactionDao.checkAgentNumber]), so the database CHECK is
+  /// never the first line of defence.
+  final String? agentNumber;
 
   /// -> `transactions.classification_id`. Already-chosen (auto-applied,
   /// pill-accepted, or manually picked) per this dispatch's brief — this
@@ -125,7 +132,23 @@ class TransactionDao {
     return rows.isNotEmpty;
   }
 
+  /// The app-layer rule for `transactions.agent_number` (C-A2), the same rule
+  /// as the database CHECK and the backup validator: null, or a Withdrawal row
+  /// with 1 to 20 ASCII digits. Throws [ArgumentError] (never the value).
+  static void checkAgentNumber({required String sourceType, required String? agentNumber}) {
+    if (agentNumber == null) return;
+    if (sourceType != 'AGENT_WITHDRAWAL') {
+      throw ArgumentError('agent_number is only allowed on a Withdrawal row');
+    }
+    if (!_agentNumberPattern.hasMatch(agentNumber)) {
+      throw ArgumentError('agent_number must be 1 to 20 digits');
+    }
+  }
+
+  static final RegExp _agentNumberPattern = RegExp(r'^[0-9]{1,20}$');
+
   static Future<int> insert(Database db, NewTransactionInput input) {
+    checkAgentNumber(sourceType: input.sourceType, agentNumber: input.agentNumber);
     final now = DateTime.now().millisecondsSinceEpoch;
     return db.insert('transactions', {
       'display_code': input.displayCode,
@@ -135,6 +158,7 @@ class TransactionDao {
       'counterparty_label': input.counterpartyLabel,
       'counterparty_phone': input.counterpartyPhone,
       'paybill_account_number': input.paybillAccountNumber,
+      'agent_number': input.agentNumber,
       'classification_id': input.classificationId,
       'raw_parse_source': input.rawParseSource,
       'transaction_occurred_at': input.transactionOccurredAt,

@@ -9,6 +9,7 @@ import 'dart:typed_data';
 
 import 'package:mmogo/data/backup/backup_service.dart';
 import 'package:mmogo/data/backup/backup_settings.dart';
+import 'package:mmogo/data/db/migrations.dart' show kDbVersion;
 import 'package:mmogo/data/db/schema.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common/sqflite_logger.dart';
@@ -27,7 +28,7 @@ class Stmt {
   String toString() => sql;
 }
 
-/// Opens a fresh version-2 in-memory database. When [log] is given every
+/// Opens a fresh current-schema (version 3) in-memory database. When [log] is given every
 /// statement (including each operation inside a batch) is appended to it by
 /// sqflite's own logger.
 Future<Database> openTestDb({List<Stmt>? log}) async {
@@ -53,7 +54,7 @@ Future<Database> openTestDb({List<Stmt>? log}) async {
   return factory.openDatabase(
     inMemoryDatabasePath,
     options: OpenDatabaseOptions(
-      version: 2,
+      version: kDbVersion,
       singleInstance: false,
       onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: (db, v) async {
@@ -185,9 +186,14 @@ Future<Map<String, List<Map<String, Object?>>>> fullDump(DatabaseExecutor db) as
 /// same data compare equal even when their ids differ. Recently deleted
 /// rows are included only when [withDeleted].
 Future<Map<String, List<String>>> contentDump(DatabaseExecutor db, {bool withDeleted = false}) async {
+  // CA10: a restore never writes created_at of the two locked built-ins
+  // (Withdrawal, Airtime), so on a different phone it is that phone's install
+  // time. It is masked here; locked_seeds_test asserts it directly.
   final classes = [
     for (final r in await db.rawQuery(
-        'SELECT g.code, c.name, c.active, c.seed_key, c.created_at FROM classifications c '
+        "SELECT g.code, c.name, c.active, c.seed_key, "
+        "CASE WHEN c.seed_key IN ('AGENT_WITHDRAWAL:cash_withdrawal', 'AIRTIME:airtime') "
+        "THEN 0 ELSE c.created_at END FROM classifications c "
         'JOIN classification_groups g ON g.id = c.group_id'))
       r.values.join('|'),
   ]..sort();

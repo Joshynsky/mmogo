@@ -22,12 +22,10 @@
 /// dispatch's own instruction — same citable-decision convention
 /// `classification_dao.dart`'s `fetchFlatActiveClassifications` doc
 /// comment already uses for its own dedup rule):**
-///   - **SEND_MONEY** -> `counterparty_phone`, trimmed only. No
-///     case-folding (a phone number has no case) and no reformatting —
-///     the `transactions.counterparty_phone` column is stored "verbatim as
-///     the SMS carries it ... no reformatting assumed"; the derived key preserves that same
-///     verbatim discipline, only trimming incidental leading/trailing
-///     whitespace a parse or a manually-typed field could introduce.
+///   - **SEND_MONEY** -> `counterparty_phone` through the phone key rule in
+///     `phone_key.dart` (0.1.2, C-A4): 07xx / 01xx and their +254 / 254 /
+///     00254 forms are one key; anything else is the trimmed raw value (the
+///     0.1.1 rule). The stored `counterparty_phone` is never rewritten.
 ///   - **PAYBILL** -> `<label>#<account>`, where `<label>` is
 ///     `counterparty_label` trimmed, every run of internal whitespace
 ///     collapsed to one space, then upper-cased; `<account>` is
@@ -56,6 +54,7 @@
 library;
 
 import '../parsing/parsed_sms_fields.dart';
+import 'phone_key.dart';
 
 /// Derives the exact `counterparty_classification_map.counterparty_key`
 /// string for [sourceType] from whichever identity field(s) that
@@ -71,7 +70,7 @@ String deriveCounterpartyKey({
 }) {
   switch (sourceType) {
     case SmsSourceType.sendMoney:
-      return (counterpartyPhone ?? '').trim();
+      return normalizePhoneKey(counterpartyPhone);
     case SmsSourceType.payBill:
       return '${_normalizeLabel(counterpartyLabel)}#${_normalizeAccount(paybillAccountNumber)}';
     case SmsSourceType.buyGoods:

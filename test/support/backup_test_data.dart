@@ -6,8 +6,28 @@ import 'dart:typed_data';
 
 const int tBase = 1790000000000; // 2026-09-21, inside the valid epoch range.
 
-/// A small, realistic, valid backup as a decoded JSON object.
-Map<String, Object?> validBackupJson() => jsonDecode(jsonEncode(<String, Object?>{
+/// A small, realistic, valid SCHEMA 3 backup as a decoded JSON object (what
+/// the 0.1.2 exporter writes: 13 transaction keys, `agent_number` present).
+Map<String, Object?> validBackupJson() {
+  final m = _validBackupJsonV2Shape();
+  m['schema_version'] = 3;
+  for (final r in (m['transactions']! as List).cast<Map<String, Object?>>()) {
+    // Same position as the exporter: right after paybill_account_number.
+    final entries = r.entries.toList();
+    r.clear();
+    for (final e in entries) {
+      r[e.key] = e.value;
+      if (e.key == 'paybill_account_number') r['agent_number'] = null;
+    }
+  }
+  return m;
+}
+
+/// The same small backup as a SCHEMA 2 file (what 0.1.1 wrote): 12 transaction
+/// keys, no `agent_number`.
+Map<String, Object?> validBackupJsonV2() => _validBackupJsonV2Shape();
+
+Map<String, Object?> _validBackupJsonV2Shape() => jsonDecode(jsonEncode(<String, Object?>{
       'app': 'mmogo',
       'format_version': 1,
       'schema_version': 2,

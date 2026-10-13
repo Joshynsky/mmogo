@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'backup_limits.dart' show kBackupLockedSeedKeys;
 import 'backup_validator.dart';
 import 'restore_plan.dart';
 import 'restore_types.dart';
@@ -13,8 +14,8 @@ const List<String> kRestoreClassColumns = [
 const List<String> kRestoreTxColumns = [
   'display_code', 'source_type', 'amount_cents', 'transaction_cost_cents',
   'counterparty_label', 'counterparty_phone', 'paybill_account_number',
-  'classification_id', 'raw_parse_source', 'transaction_occurred_at',
-  'created_at', 'deleted_at',
+  'agent_number', 'classification_id', 'raw_parse_source',
+  'transaction_occurred_at', 'created_at', 'deleted_at',
 ];
 const List<String> kRestoreMapColumns = [
   'source_type', 'counterparty_key', 'classification_id', 'auto_apply', 'updated_at',
@@ -27,9 +28,9 @@ const String _insertClassSql =
 const String _insertTxSql =
     'INSERT INTO transactions (display_code, source_type, amount_cents, '
     'transaction_cost_cents, counterparty_label, counterparty_phone, '
-    'paybill_account_number, classification_id, raw_parse_source, '
+    'paybill_account_number, agent_number, classification_id, raw_parse_source, '
     'transaction_occurred_at, created_at, deleted_at) '
-    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)';
+    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)';
 const String _insertMapSql =
     'INSERT INTO counterparty_classification_map (source_type, '
     'counterparty_key, classification_id, auto_apply, updated_at) '
@@ -43,6 +44,10 @@ const String _setSeedSql =
 const String _countLiveTxSql =
     'SELECT COUNT(*) AS n FROM transactions WHERE deleted_at IS NULL';
 const String _countClassesSql = 'SELECT COUNT(*) AS n FROM classifications';
+const String _countSeedClassesSql =
+    'SELECT COUNT(*) AS n FROM classifications WHERE seed_key IS NOT NULL';
+const String _countOneSeedSql =
+    'SELECT COUNT(*) AS n FROM classifications WHERE seed_key = ?';
 const String _countMapSql = 'SELECT COUNT(*) AS n FROM counterparty_classification_map';
 const String _fkCheckSql = 'PRAGMA foreign_key_check';
 
@@ -121,25 +126,67 @@ class RestoreWriter {
       for (final r in file.classifications)
         if (r['seed_key'] != null) r,
     ];
+    // C-A10: the two locked built-ins (Withdrawal, Airtime) are never parked and
+    // never written: the file's name, active flag and date for them are
+    // ignored. They must still exist on this phone.
+    final writable = [
+      for (final r in seeds)
+        if (!kBackupLockedSeedKeys.contains(r['seed_key'])) r,
+    ];
     for (final r in seeds) {
+      if (kBackupLockedSeedKeys.contains(r['seed_key']) &&
+          await _countSeed(txn, r['seed_key']! as String) != 1) {
+        throw StateError('built-in missing on this phone');
+      }
+    }
+    for (final r in writable) {
       if (await txn.rawUpdate(_parkSeedSql, [r['seed_key']]) != 1) {
         throw StateError('built-in missing on this phone');
       }
     }
-    for (final r in seeds) {
+    for (final r in writable) {
       await txn.rawUpdate(_setSeedSql, [r['name'], r['active'], r['created_at'], r['seed_key']]);
     }
 
     final lookups = await RestoreLookups.load(txn);
     final plan = RestorePlan.build(file, lookups);
-    final tally = await _apply(txn, file, plan, lookups, builtInsUpdated: seeds.length);
+    final tally = await _apply(txn, file, plan, lookups, builtInsUpdated: writable.length);
     await _postCheck(txn, file, tally);
+    // The file's counts are not the phone's counts any more: saved receivers
+    // that combine into one (C-A5) make the map smaller than the file, and a
+    // built-in the file does not name (a version-2 file has 12 of the 17) stays
+    // on the phone. So the phone must hold exactly what the plan wrote.
     if (await _count(txn, _countLiveTxSql) != file.transactions.length ||
-        await _count(txn, _countMapSql) != file.counterpartyMap.length) {
+        await _count(txn, _countMapSql) != plan.newMapRows.length) {
       throw StateError('replace row counts do not match the file');
+    }
+    final dbSeeds = await _count(txn, _countSeedClassesSql);
+    final expectedClasses = expectedReplaceClassCount(
+      fileClassifications: file.classifications.length,
+      dbSeedRows: dbSeeds,
+      fileSeedRows: seeds.length,
+      mergedIntoExisting: plan.classSkipped - seeds.length,
+    );
+    if (await _count(txn, _countClassesSql) != expectedClasses) {
+      throw StateError('replace classification count does not match the file');
     }
     return tally;
   }
+
+  /// BK3: what `COUNT(classifications)` must be after a Replace. The file's
+  /// classification count, plus the built-ins this phone has that the file does
+  /// not name (a schema 2 file names 12 of the 17), minus the file's user rows
+  /// that landed on an existing row of the same group and name instead of
+  /// being inserted. Comparing with the file's count alone would roll back
+  /// every Replace of an older file.
+  @visibleForTesting
+  static int expectedReplaceClassCount({
+    required int fileClassifications,
+    required int dbSeedRows,
+    required int fileSeedRows,
+    required int mergedIntoExisting,
+  }) =>
+      fileClassifications + (dbSeedRows - fileSeedRows) - mergedIntoExisting;
 
   Future<RestoreTally> _apply(
     Transaction txn,
@@ -176,7 +223,7 @@ class RestoreWriter {
           r['display_code'], r['source_type'], r['amount_cents'],
           r['transaction_cost_cents'], r['counterparty_label'],
           r['counterparty_phone'], r['paybill_account_number'],
-          dbClassId(r['classification']), r['raw_parse_source'],
+          r['agent_number'], dbClassId(r['classification']), r['raw_parse_source'],
           r['transaction_occurred_at'], r['created_at'],
         ]);
 
@@ -226,6 +273,9 @@ class RestoreWriter {
 
   static int _end(int start, int length) =>
       start + chunkSize < length ? start + chunkSize : length;
+
+  static Future<int> _countSeed(DatabaseExecutor ex, String seedKey) async =>
+      (await ex.rawQuery(_countOneSeedSql, [seedKey])).first['n'] as int? ?? 0;
 
   static Future<int> _count(DatabaseExecutor ex, String sql) async =>
       (await ex.rawQuery(sql)).first['n'] as int? ?? 0;

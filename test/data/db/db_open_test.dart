@@ -71,16 +71,38 @@ void main() {
     await db.close();
   });
 
-  test('live path unchanged: a v2 file opens at kDbVersion 2 with ON, no upgrade', () async {
-    expect(kDbVersion, 2, reason: 'S3a does not flip the live version');
-    await (await buildV2Database(path)).close();
-    final db = await openMmogoDatabase(databaseFactoryFfi, path, singleInstance: false);
+  // S3b retarget: S3a pinned "a v2 file opens at kDbVersion 2, no upgrade".
+  // The live version is now 3, so the equivalent live-path facts are: a v3 file
+  // opens with ON and no upgrade; a v2 file upgrades live with OFF during the
+  // upgrade and ON after.
+  test('live path: a fresh file is created at kDbVersion 3 with ON, then reopens with no upgrade',
+      () async {
+    expect(kDbVersion, 3);
+    await (await openMmogoDatabase(databaseFactoryFfi, path, singleInstance: false)).close();
+    var upgraded = false;
+    final db = await openMmogoDatabase(databaseFactoryFfi, path,
+        singleInstance: false, onUpgrade: (db, a, b) async => upgraded = true);
+    expect(upgraded, isFalse);
     expect(await _fk(db), 1);
-    expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 2);
+    expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 3);
     await db.close();
   });
 
-  test('live path unchanged: v1 -> v2 upgrade keeps foreign_keys ON throughout (0.1.1 behaviour)',
+  test('live path: a v2 file is upgraded by the real ladder with OFF during, ON after', () async {
+    await (await buildV2Database(path)).close();
+    int? inUpgrade;
+    final db = await openMmogoDatabase(databaseFactoryFfi, path, singleInstance: false,
+        onUpgrade: (db, a, b) async {
+      inUpgrade = await _fk(db);
+      await AppMigrations.migrate(db, a, b);
+    });
+    expect(inUpgrade, 0);
+    expect(await _fk(db), 1);
+    expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 3);
+    await db.close();
+  });
+
+  test('a v1 -> v2 upgrade (target below 3) keeps foreign_keys ON throughout (0.1.1 behaviour)',
       () async {
     final v1 = await databaseFactoryFfi.openDatabase(path,
         options: OpenDatabaseOptions(
@@ -94,7 +116,7 @@ void main() {
     await v1.close();
     int? inUpgrade;
     final db = await openMmogoDatabase(databaseFactoryFfi, path, singleInstance: false,
-        onUpgrade: (db, a, b) async {
+        version: 2, onUpgrade: (db, a, b) async {
       inUpgrade = await _fk(db);
       await AppMigrations.migrate(db, a, b);
     });

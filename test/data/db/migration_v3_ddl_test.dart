@@ -92,31 +92,44 @@ void main() {
       ]);
     });
 
-    test('nothing live is switched: kDbVersion 2, 12 live seeds, 4-group live createSchema', () async {
-      expect(kDbVersion, 2);
-      expect(AppSchema.seedClassifications, hasLength(12));
+    // S3b retarget: S3a asserted "nothing live is switched". S3b switches the
+    // live schema, so the same two tests now assert the SWITCH happened, and that
+    // only the allowed live files read the frozen constants.
+    test('the live schema IS v3: kDbVersion 3, 17 live seeds, 6-group live createSchema', () async {
+      expect(kDbVersion, 3);
+      expect(AppSchema.seedClassifications, hasLength(17));
       sqfliteFfiInit();
       final db = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath,
           options: OpenDatabaseOptions(
-              version: 2,
+              version: 3,
               singleInstance: false,
               onCreate: (db, v) async {
                 await AppSchema.createSchema(db);
                 await AppSchema.seed(db);
               }));
-      expect(firstIntOf(await db.rawQuery('SELECT COUNT(*) FROM classification_groups')), 4);
-      expect(firstIntOf(await db.rawQuery('SELECT COUNT(*) FROM classifications')), 12);
+      expect(firstIntOf(await db.rawQuery('SELECT COUNT(*) FROM classification_groups')), 6);
+      expect(firstIntOf(await db.rawQuery('SELECT COUNT(*) FROM classifications')), 17);
       await db.close();
     });
 
-    test('the v3 constants are referenced by no live code (only this file and tests)', () {
+    test('the v3 constants are referenced only by the allowed live files', () {
+      const allowed = {
+        'lib/data/db/migration_v3_ddl.dart',
+        'lib/data/db/migration_v3.dart',
+        'lib/data/db/schema.dart',
+      };
       final offenders = <String>[];
+      final users = <String>[];
       for (final f in Directory('lib').listSync(recursive: true).whereType<File>()) {
-        final path = f.path.replaceAll('\\', '/');
-        if (!path.endsWith('.dart') || path.endsWith('data/db/migration_v3_ddl.dart')) continue;
-        if (mentionsV3Constants(f.readAsStringSync())) offenders.add(path);
+        final path = f.path.replaceAll(r'\', '/');
+        if (!path.endsWith('.dart')) continue;
+        if (mentionsV3Constants(f.readAsStringSync())) {
+          users.add(path);
+          if (!allowed.contains(path)) offenders.add(path);
+        }
       }
       expect(offenders, isEmpty);
+      expect(users, containsAll(allowed), reason: 'schema.dart and migration_v3.dart really use them');
     });
 
     test('NEGATIVE CONTROL: the reference scan flags a file that uses a v3 constant', () {

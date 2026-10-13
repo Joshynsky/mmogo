@@ -1,12 +1,16 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'migration_v3.dart';
+
 /// The database version this build creates and expects.
 ///
 /// 1 = the 0.1.0 schema. 2 = adds `classifications.seed_key` (0.1.1).
-/// Adding v3 later means: add `_toV3`, register it in [AppMigrations.steps],
+/// 3 = 0.1.2: 7 source types, `transactions.agent_number`, 6 groups, 17
+/// built-ins, canonical phone keys (`migration_v3.dart`).
+/// Adding v4 later means: add its step, register it in [AppMigrations.steps],
 /// bump this constant, and update `AppSchema.createSchema` to the latest
 /// shape in the same change.
-const int kDbVersion = 2;
+const int kDbVersion = 3;
 
 /// The `onUpgrade` ladder.
 ///
@@ -16,8 +20,9 @@ const int kDbVersion = 2;
 ///    previous `user_version` if anything throws), so a step uses the
 ///    [DatabaseExecutor] it is given and never opens a nested transaction or
 ///    touches `AppDatabase.instance`;
-///  - idempotent, and additive only (no table rebuilds, so the guard triggers
-///    and unique indexes are never at risk).
+///  - idempotent; `_toV2` is additive only. `_toV3` REBUILDS tables, so it
+///    needs `PRAGMA foreign_keys = OFF` (set by `openMmogoDatabase`), drops and
+///    recreates the guard triggers and indexes itself, and checks its work.
 class AppMigrations {
   AppMigrations._();
 
@@ -32,6 +37,7 @@ class AppMigrations {
   /// Key = the version the step upgrades TO.
   static final Map<int, Future<void> Function(DatabaseExecutor db)> steps = {
     2: _toV2,
+    3: migrateToV3, // `_toV3`, see migration_v3.dart
   };
 
   /// Wired as `openDatabase(onUpgrade: AppMigrations.migrate)`.

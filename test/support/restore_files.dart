@@ -19,8 +19,17 @@ Map<String, Object?> cls(int id, String group, String name,
       'created_at': createdAt,
     };
 
-/// The 12 built-ins as a file carries them (file ids 1..12, default names).
-List<Map<String, Object?>> seedRows({Map<String, String> renamed = const {}}) {
+/// The 12 built-ins as a SCHEMA 2 file carries them (file ids 1..12, default
+/// names). Use [seedRowsV3] for a schema 3 file (17 built-ins).
+List<Map<String, Object?>> seedRows({Map<String, String> renamed = const {}}) =>
+    _seedRows(kBackupSeedKeysV2, renamed);
+
+/// The 17 built-ins as a SCHEMA 3 file carries them (file ids 1..17).
+List<Map<String, Object?>> seedRowsV3({Map<String, String> renamed = const {}}) =>
+    _seedRows(kBackupSeedKeys, renamed);
+
+List<Map<String, Object?>> _seedRows(
+    List<String> keys, Map<String, String> renamed) {
   const names = {
     'SEND_MONEY:family_friends': 'Family/Friends',
     'SEND_MONEY:rent': 'Rent',
@@ -34,10 +43,15 @@ List<Map<String, Object?>> seedRows({Map<String, String> renamed = const {}}) {
     'BUY_GOODS:shopping': 'Shopping',
     'BUY_GOODS:transport': 'Transport',
     'BUY_GOODS:groceries': 'Groceries',
+    'AGENT_WITHDRAWAL:cash_withdrawal': 'Withdrawal',
+    'AIRTIME:airtime': 'Airtime',
+    'POCHI_LA_BIASHARA:transport': 'Transport',
+    'POCHI_LA_BIASHARA:groceries': 'Groceries',
+    'POCHI_LA_BIASHARA:shopping': 'Shopping',
   };
   var id = 0;
   return [
-    for (final k in kBackupSeedKeys)
+    for (final k in keys)
       cls(++id, k.split(':').first, renamed[k] ?? names[k]!, seedKey: k),
   ];
 }
@@ -51,6 +65,7 @@ Map<String, Object?> tx(
   String? label,
   String? phone,
   String? account,
+  String? agentNumber, // written only into a schema 3 file (see fileJson)
   int createdAt = f0,
 }) =>
     {
@@ -62,6 +77,7 @@ Map<String, Object?> tx(
       'counterparty_label': label,
       'counterparty_phone': phone,
       'paybill_account_number': account,
+      'agent_number': ?agentNumber,
       'classification': classification,
       'raw_parse_source': source == 'CASH' ? 'MANUAL' : 'SMS_PARSE',
       'transaction_occurred_at': createdAt,
@@ -69,13 +85,13 @@ Map<String, Object?> tx(
     };
 
 Map<String, Object?> mapRow(String source, String key, int classification,
-        {int autoApply = 1}) =>
+        {int autoApply = 1, int updatedAt = f0}) =>
     {
       'source_type': source,
       'counterparty_key': key,
       'classification': classification,
       'auto_apply': autoApply,
-      'updated_at': f0,
+      'updated_at': updatedAt,
     };
 
 Map<String, Object?> fileJson({
@@ -83,11 +99,12 @@ Map<String, Object?> fileJson({
   List<Map<String, Object?>> txs = const [],
   List<Map<String, Object?>> map = const [],
   Map<String, Object?> prefs = const {},
+  int schemaVersion = 2,
 }) =>
     {
       'app': 'mmogo',
       'format_version': 1,
-      'schema_version': 2,
+      'schema_version': schemaVersion,
       'created_at': f0,
       'counts': {
         'classifications': classes.length,
@@ -95,7 +112,14 @@ Map<String, Object?> fileJson({
         'counterparty_map': map.length,
       },
       'classifications': classes,
-      'transactions': txs,
+      // A schema 3 row always carries agent_number (null allowed); a schema 2
+      // row never does.
+      'transactions': [
+        for (final t in txs)
+          schemaVersion >= 3
+              ? {for (final e in t.entries) e.key: e.value, if (!t.containsKey('agent_number')) 'agent_number': null}
+              : t,
+      ],
       'counterparty_map': map,
       'prefs': prefs,
       'end': 'mmogo-v1',
@@ -117,9 +141,10 @@ Map<String, Object?> bigFileJson(int n, {String prefix = 'X'}) => fileJson(
 
 /// A [ValidatedBackup] built by hand, bypassing the validator (for the
 /// trigger and index backstop tests only).
-ValidatedBackup unvalidated(Map<String, Object?> json) => ValidatedBackup(
+ValidatedBackup unvalidated(Map<String, Object?> json, {int schemaVersion = 2}) =>
+    ValidatedBackup(
       formatVersion: 1,
-      schemaVersion: 2,
+      schemaVersion: schemaVersion,
       createdAt: f0,
       classifications: (json['classifications']! as List).cast<Map<String, Object?>>(),
       transactions: (json['transactions']! as List).cast<Map<String, Object?>>(),

@@ -46,7 +46,7 @@ void main() {
       final j = validBackupJson();
       final v = BackupValidator.validate(bytesOf(j));
       expect(v.formatVersion, 1);
-      expect(v.schemaVersion, 2);
+      expect(v.schemaVersion, 3);
       expect(v.createdAt, tBase);
       expect(v.classifications, rowsOf(j, 'classifications'));
       expect(v.transactions, rowsOf(j, 'transactions'));
@@ -116,7 +116,7 @@ void main() {
     });
 
     test('reject_newer_schema_version', () {
-      for (final v in [3, 4, 99, 2147483647]) {
+      for (final v in [4, 5, 99, 2147483647]) {
         _rejectJson(validBackupJson()..['schema_version'] = v,
             RestoreRejectReason.newer, field: 'schema_version');
       }
@@ -543,11 +543,21 @@ void main() {
       });
       rowsOf(j, 'transactions')[3]['classification'] = 6; // the CASH row
       fixCounts(j);
-      _rejectJson(j, RestoreRejectReason.invalidRow, table: 'transactions', field: 'classification');
-      // The same file is fine when this phone has that group enabled.
+      // 0.1.2: Pochi is enabled on a fresh install, so the disabled-group case
+      // is made explicit here: a phone whose Pochi group is switched off.
+      const pochiOff = {'SEND_MONEY', 'PAYBILL', 'BUY_GOODS'};
+      _rejected(
+        () => BackupValidator.validate(bytesOf(j), enabledGroupCodes: pochiOff),
+        RestoreRejectReason.invalidRow,
+        table: 'transactions',
+        field: 'classification',
+      );
+      // The same file is fine when this phone has that group enabled (the
+      // fresh-install default now includes it).
+      expect(() => BackupValidator.validate(bytesOf(j)), returnsNormally);
       expect(
         () => BackupValidator.validate(bytesOf(j),
-            enabledGroupCodes: {...BackupValidator.defaultEnabledGroups, 'POCHI_LA_BIASHARA'}),
+            enabledGroupCodes: {...pochiOff, 'POCHI_LA_BIASHARA'}),
         returnsNormally,
       );
       // A non-CASH row on a Pochi class is a group mismatch either way.
@@ -653,7 +663,7 @@ void main() {
       }
     });
 
-    test('all six allowlisted settings pass through', () {
+    test('the six original allowlisted settings still pass through', () {
       final p = {
         'user_display_name': 'Amina',
         'palette_id': 'leaf',
@@ -791,6 +801,11 @@ void main() {
         'kBackupMapSourceTypes',
         'kBackupRawParseSources',
         'kBackupSeedKeys',
+        'kBackupGroupCodesV2',
+        'kBackupSourceTypesV2',
+        'kBackupSeedKeysV2',
+        'kBackupTransactionKeysV2',
+        'kBackupLabelSourceTypes',
       ]) {
         expect(RegExp('^const List<String> $name = \\[', multiLine: true).hasMatch(src), isTrue,
             reason: '$name must be a const List<String>');
@@ -829,7 +844,7 @@ void main() {
     });
 
     test('runs in Isolate.run: a rejection crosses back with its reason', () async {
-      final bytes = bytesOf(validBackupJson()..['schema_version'] = 3);
+      final bytes = bytesOf(validBackupJson()..['schema_version'] = 4);
       await expectLater(
         Isolate.run(() => BackupValidator.validate(bytes)),
         throwsA(isA<RestoreRejected>()

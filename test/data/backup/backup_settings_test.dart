@@ -243,7 +243,15 @@ void main() {
       ['capture_identity_preference', 'capture_identity_preference', BackupSettingKind.boolean, null, null, null, null],
       ['auto_backup_every_n', 'auto_backup_every_n', BackupSettingKind.integer, 1, 100, null, null],
       ['auto_backup_keep_k', 'auto_backup_keep_k', BackupSettingKind.integer, 2, 20, null, null],
+      // 0.1.2 (Judge C-B13): five Look / grouping choices travel in a backup.
+      // first_day_of_week: 1 = Monday ... 7 = Sunday (pinned here).
+      ['first_day_of_week', 'first_day_of_week', BackupSettingKind.integer, 1, 7, null, null],
+      ['month_chart_style', 'month_chart_style', BackupSettingKind.choice, null, null, null, ['days', 'weeks']],
+      ['year_view_amounts', 'year_view_amounts', BackupSettingKind.choice, null, null, null, ['quarters', 'months']],
+      ['show_withdrawals_in_chart', 'show_withdrawals_in_chart', BackupSettingKind.boolean, null, null, null, null],
+      ['where_it_went_style', 'where_it_went_style', BackupSettingKind.choice, null, null, null, ['button', 'strip']],
     ]);
+    expect(kBackupSettingSpecs, hasLength(11));
 
     // Of the auto-backup keys only every-N and keep-K are in the file.
     final inFile = kBackupSettingSpecs.map((s) => s.prefsKey).toSet();
@@ -269,6 +277,37 @@ void main() {
     // No duplicate file keys.
     expect(kBackupSettingSpecs.map((s) => s.fileKey).toSet().length,
         kBackupSettingSpecs.length);
+  });
+
+  test('device_only_prefs_are_never_in_the_allowlist', () {
+    // The allowlist is EXACTLY these eleven prefs keys...
+    const eleven = {
+      'user_display_name', 'palette_id', 'auto_recognize_classifications',
+      'capture_identity_preference', 'auto_backup_every_n', 'auto_backup_keep_k',
+      'first_day_of_week', 'month_chart_style', 'year_view_amounts',
+      'show_withdrawals_in_chart', 'where_it_went_style',
+    };
+    // ...and none of these device-only keys is in it (denied by absence).
+    const deviceOnly = [
+      'appearance_mode', 'recipient_types_v1', 'pending_entries_v1',
+      'reset_pending_v1', 'phone_merge_report_v1',
+      'auto_backup_enabled', 'auto_backup_folder_uri', 'auto_backup_folder_name',
+      'auto_backup_since_count', 'auto_backup_paused', 'auto_backup_last_at',
+      'backup_last_manual_at',
+    ];
+    Set<String> leaks(Iterable<String> keys) => keys.toSet().intersection(deviceOnly.toSet());
+
+    final prefsKeys = kBackupSettingSpecs.map((s) => s.prefsKey).toList();
+    expect(prefsKeys.toSet(), eleven);
+    expect(prefsKeys, hasLength(11), reason: 'no duplicate');
+    expect(kBackupSettingSpecs.map((s) => s.fileKey).toSet(), eleven);
+    expect(leaks(prefsKeys), isEmpty);
+    for (final k in deviceOnly) {
+      expect(backupSettingSpecFor(k), isNull, reason: '$k is device-only');
+    }
+    // NEGATIVE CONTROL: the same predicate flags an allowlist that leaks one.
+    expect(leaks([...prefsKeys, 'appearance_mode']), {'appearance_mode'});
+    expect(leaks([...prefsKeys, 'recipient_types_v1', 'reset_pending_v1']), hasLength(2));
   });
 
   group('BackupPrefs pinned keys and defaults (F3)', () {

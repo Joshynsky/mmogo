@@ -100,10 +100,11 @@ void main() {
     );
     final r = await serviceFor(db).restore(fileBytes(file), RestoreMode.merge);
 
-    expect(r.classifications, const TableCounts(added: 1, skipped: 12));
+    expect(r.classifications, const TableCounts(added: 1, skipped: 12)); // the file's 12 built-ins
     final seeds = await db.rawQuery(
         'SELECT COUNT(*) AS n FROM classifications WHERE seed_key IS NOT NULL');
-    expect(seeds.first['n'], 12, reason: 'no built-in duplicated');
+    // The phone has all 17 built-ins (schema 3); the v2 file names 12 of them.
+    expect(seeds.first['n'], 17, reason: 'no built-in duplicated');
     final rentSeed = await seedId(db, 'SEND_MONEY:rent');
     final seedRow = await db.rawQuery('SELECT name FROM classifications WHERE id = ?', [rentSeed]);
     expect(seedRow.first['name'], 'Landlord', reason: 'merge never renames');
@@ -349,7 +350,7 @@ void main() {
     expect(p.phoneUserClassifications, 3);
     expect(p.phoneCounterpartyMap, 2);
     expect(p.phoneRecentlyDeleted, 1);
-    expect(p.fileSchemaVersion, 2);
+    expect(p.fileSchemaVersion, 3); // validBackupJson() is a schema 3 file
     await expectLater(serviceFor(db).inspect(bytesOf({'app': 'other'})),
         throwsA(isA<RestoreRejected>()));
     await db.close();

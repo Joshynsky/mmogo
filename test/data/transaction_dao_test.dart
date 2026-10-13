@@ -170,13 +170,16 @@ void main() {
       'DatabaseException — the guard trigger\'s CASH/enabled branch',
       () async {
         final db = await _openFreshDb();
-        // Pochi has no seeded classifications this round, so
-        // insert one directly to exercise the disabled-group branch.
+        // v3: Pochi is enabled on a fresh install; disable it (as the user
+        // hiding the group would) and insert a classification directly to
+        // exercise the disabled-group branch.
         final pochiGroupId = (await db.query(
           'classification_groups',
           where: 'code = ?',
           whereArgs: ['POCHI_LA_BIASHARA'],
         )).first['id'] as int;
+        await db.update('classification_groups', {'enabled': 0},
+            where: 'id = ?', whereArgs: [pochiGroupId]);
         final pochiClassificationId = await db.insert('classifications', {
           'group_id': pochiGroupId,
           'name': 'Test Pochi Classification',
