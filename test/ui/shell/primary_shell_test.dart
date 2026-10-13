@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/domain/analytics/analytics_period.dart';
 import 'package:mmogo/domain/counterparty/counterparty_key.dart';
 import 'package:mmogo/domain/home/home_period.dart';
+import 'package:mmogo/domain/money/spent_amount.dart';
 import 'package:mmogo/domain/parsing/parsed_sms_fields.dart';
 import 'package:mmogo/ui/screens/analytics_screen.dart';
 import 'package:mmogo/ui/screens/home_screen.dart';
@@ -52,7 +53,7 @@ class _ShellDb extends FakeAnalyticsDb {
         for (final e in out.entries) {'source_type': e.key, 'total': e.value.$1, 'cost': e.value.$2},
       ];
     }
-    if (sql.contains('SUM(amount_cents)') && !sql.contains('FROM transactions t')) {
+    if (sql.contains(kSpentCentsSql) && !sql.contains('FROM transactions t')) {
       return [
         {'total': _live.where((t) => _inWindow(t, args)).fold<int>(0, (s, t) => s + (t['amount_cents'] as int))},
       ];
@@ -167,14 +168,14 @@ Future<void> _drain(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// Analytics on 11–17 Sep with Cash's filter on.
+/// Analytics on 14–20 Sep with Cash's filter on.
 Future<void> _analyticsPlace(WidgetTester tester) async {
   await _tab(tester, 'Analytics');
   await tester.tap(find.byKey(const Key('analyticsPrev')));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const Key('analyticsTypeTile-CASH')));
   await tester.pumpAndSettle();
-  expect(_pill(tester, 'analyticsPeriodValue'), '11–17 Sep');
+  expect(_pill(tester, 'analyticsPeriodValue'), '14–20 Sep');
   expect(find.byKey(const Key('analyticsFilterChipType')), findsOneWidget);
 }
 
@@ -188,7 +189,7 @@ void main() {
       await _tab(tester, 'Home');
       await _tab(tester, 'Profile');
       await _tab(tester, 'Analytics');
-      expect(_pill(tester, 'analyticsPeriodValue'), '11–17 Sep');
+      expect(_pill(tester, 'analyticsPeriodValue'), '14–20 Sep');
       expect(find.byKey(const Key('analyticsFilterChipType')), findsOneWidget);
       expect(find.byType(AnalyticsScreen, skipOffstage: false), findsOneWidget);
     });
@@ -233,7 +234,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('analyticsPartyCard')), findsNothing);
       expect(_pill(tester, 'analyticsGranularity'), 'Week');
-      expect(_pill(tester, 'analyticsPeriodValue'), '11–17 Sep');
+      expect(_pill(tester, 'analyticsPeriodValue'), '14–20 Sep');
       expect(find.byKey(const Key('analyticsFilterChipType')), findsOneWidget);
     });
 
@@ -257,7 +258,7 @@ void main() {
       db.transactions.add(fakeTx(id: 99, at: DateTime(2026, 9, 24, 12), label: 'NEW PERSON', amountCents: 7000));
       await _tab(tester, 'Analytics');
       expect(find.text('NEW PERSON'), findsOneWidget);
-      expect(_pill(tester, 'analyticsPeriodValue'), '18–24 Sep', reason: 'the place is kept');
+      expect(_pill(tester, 'analyticsPeriodValue'), '21–27 Sep', reason: 'the place is kept');
     });
 
     testWidgets('dataChanged (Add saved) refreshes the live pages without a tab switch', (tester) async {
@@ -268,7 +269,7 @@ void main() {
       PrimaryShell.active!.dataChanged();
       await tester.pumpAndSettle();
       expect(find.text('NEW PERSON'), findsOneWidget);
-      expect(_pill(tester, 'analyticsPeriodValue'), '18–24 Sep', reason: 'the place is kept');
+      expect(_pill(tester, 'analyticsPeriodValue'), '21–27 Sep', reason: 'the place is kept');
     });
 
     testWidgets('Add from the FAB is pushed over the shell; the pages survive it', (tester) async {
@@ -279,20 +280,20 @@ void main() {
       expect(find.text('ADD PAGE'), findsOneWidget);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(_pill(tester, 'analyticsPeriodValue'), '11–17 Sep');
+      expect(_pill(tester, 'analyticsPeriodValue'), '14–20 Sep');
     });
   });
 
   group('F6: Home and Analytics share the period length', () {
-    testWidgets('first Analytics visit with Home untouched: the last 7 days', (tester) async {
+    testWidgets('first Analytics visit with Home untouched: this calendar week', (tester) async {
       await _pumpShell(tester);
       expect(_homePeriod(tester), 'This month');
       await _tab(tester, 'Analytics');
       expect(_pill(tester, 'analyticsGranularity'), 'Week');
-      expect(_pill(tester, 'analyticsPeriodValue'), '18–24 Sep');
+      expect(_pill(tester, 'analyticsPeriodValue'), '21–27 Sep');
     });
 
-    testWidgets('Home -> Analytics: Today = Day today, This week = last 7 days, This month = this month', (
+    testWidgets('Home -> Analytics: Today = Day today, This week = this calendar week, This month = this month', (
       tester,
     ) async {
       await _pumpShell(tester);
@@ -307,7 +308,7 @@ void main() {
       await tester.pumpAndSettle();
       await _tab(tester, 'Analytics');
       expect(_pill(tester, 'analyticsGranularity'), 'Week');
-      expect(_pill(tester, 'analyticsPeriodValue'), '18–24 Sep');
+      expect(_pill(tester, 'analyticsPeriodValue'), '21–27 Sep');
       await _tab(tester, 'Home');
       await tester.tap(find.byKey(const Key('homePeriodButton')));
       await tester.pumpAndSettle();
@@ -421,7 +422,7 @@ void main() {
     expect(homePeriodForAnalytics(AnalyticsGranularity.all), isNull);
     expect(homePeriodForAnalytics(AnalyticsGranularity.custom), isNull);
     expect(analyticsPeriodForHome(HomePeriod.today, today), AnalyticsPeriod.day(today));
-    expect(analyticsPeriodForHome(HomePeriod.week, today), AnalyticsPeriod.lastSevenDays(today));
+    expect(analyticsPeriodForHome(HomePeriod.week, today), AnalyticsPeriod.thisWeek(today));
     expect(analyticsPeriodForHome(HomePeriod.month, today), AnalyticsPeriod.month(today));
   });
 }

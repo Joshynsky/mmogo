@@ -211,6 +211,8 @@ class AppPalette {
     'PAYBILL' => typePaybill,
     'BUY_GOODS' => typeBuyGoods,
     'CASH' => typeCash,
+    // PLACEHOLDER (S4b replaces): Pochi, Withdrawal and Airtime have no
+    // signed colour yet and fall through to the muted ink.
     _ => mutedInk,
   };
 

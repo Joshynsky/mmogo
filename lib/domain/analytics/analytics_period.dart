@@ -8,8 +8,9 @@
 /// the onboarding mock (v7, "back to now"). It supersedes T9's
 /// Yesterday/Today/Week tabs and the Week-tab escalation ladder.
 ///
-/// All dates here are calendar days (local midnight). "Week" is a rolling
-/// 7 days ending on the anchor, like Home's "This week" — never Mon–Sun.
+/// All dates here are calendar days (local midnight). "Week" is the CALENDAR
+/// week containing the anchor, from the first day of the week (Monday by
+/// default, a preference) for seven days; the old moving window is gone.
 ///
 /// Pure and DB-free: every method takes "today" (and, where it matters, the
 /// first transaction's day) as an argument. Tested in
@@ -181,15 +182,23 @@ class ChartSpec {
 
 /// Immutable period state. Every transition returns a new instance.
 class AnalyticsPeriod {
-  AnalyticsPeriod._({required this.granularity, required DateTime anchor, this.custom, DateTime? monthWindowEnd})
-    : anchor = dateOnly(anchor),
-      monthWindowEnd = monthWindowEnd == null ? null : monthStart(monthWindowEnd);
+  AnalyticsPeriod._({
+    required this.granularity,
+    required DateTime anchor,
+    this.custom,
+    DateTime? monthWindowEnd,
+    this.firstDay = 1,
+  }) : anchor = dateOnly(anchor),
+       monthWindowEnd = monthWindowEnd == null ? null : monthStart(monthWindowEnd);
 
   final AnalyticsGranularity granularity;
 
-  /// Week: the last day of the rolling 7 days. Day/Month/Year: any day
+  /// Week: any day inside that calendar week. Day/Month/Year: any day
   /// inside that day/month/year.
   final DateTime anchor;
+
+  /// The first day of the calendar week, 1 = Monday ... 7 = Sunday.
+  final int firstDay;
 
   /// Custom only: the chosen days.
   final DayRange? custom;
@@ -198,9 +207,9 @@ class AnalyticsPeriod {
   /// the current month).
   final DateTime? monthWindowEnd;
 
-  /// The nav-bar default: the last 7 days ending today.
-  factory AnalyticsPeriod.lastSevenDays(DateTime today) =>
-      AnalyticsPeriod._(granularity: AnalyticsGranularity.week, anchor: today);
+  /// The nav-bar default: the whole calendar week containing [today].
+  factory AnalyticsPeriod.thisWeek(DateTime today, {int firstDay = 1}) =>
+      AnalyticsPeriod._(granularity: AnalyticsGranularity.week, anchor: today, firstDay: firstDay);
 
   /// One day (Home's row hand-off, a Week/Custom bar tap, the Day menu).
   factory AnalyticsPeriod.day(DateTime day) => AnalyticsPeriod._(granularity: AnalyticsGranularity.day, anchor: day);
@@ -246,7 +255,21 @@ class AnalyticsPeriod {
     anchor: anchor ?? this.anchor,
     custom: custom,
     monthWindowEnd: clearWindow ? null : (monthWindowEnd ?? this.monthWindowEnd),
+    firstDay: firstDay,
   );
+
+  /// The same period under another first day of the week (1..7).
+  AnalyticsPeriod withFirstDay(int day) => AnalyticsPeriod._(
+    granularity: granularity,
+    anchor: anchor,
+    custom: custom,
+    monthWindowEnd: monthWindowEnd,
+    firstDay: day,
+  );
+
+  /// The first day of the calendar week containing [d] under this period's
+  /// first-day-of-week.
+  DateTime _weekStart(DateTime d) => period_math.calendarWeekStart(d, firstDay: firstDay);
 
   // ---- range ---------------------------------------------------------------
 
@@ -256,11 +279,11 @@ class AnalyticsPeriod {
     final a = anchor;
     return switch (granularity) {
       AnalyticsGranularity.day => DayRange(a, a),
-      AnalyticsGranularity.week => DayRange(addDays(a, -6), a),
+      AnalyticsGranularity.week => DayRange(_weekStart(a), addDays(_weekStart(a), 6)),
       AnalyticsGranularity.month => DayRange(monthStart(a), monthLastDay(a)),
       AnalyticsGranularity.year => DayRange(DateTime(a.year, 1, 1), DateTime(a.year, 12, 31)),
       AnalyticsGranularity.all => DayRange(_minDay(first ?? today, today), today),
-      AnalyticsGranularity.custom => custom ?? DayRange(addDays(a, -6), a),
+      AnalyticsGranularity.custom => custom ?? DayRange(a, a),
     };
   }
 
@@ -317,8 +340,8 @@ class AnalyticsPeriod {
       case AnalyticsGranularity.week:
         return PeriodWords(
           value: fmtSpan(s, e),
-          spent: sameDay(e, t) ? 'Spent in the last 7 days' : 'Spent that week',
-          vs: 'vs prior week',
+          spent: !t.isBefore(s) && !t.isAfter(e) ? 'Spent this week' : 'Spent that week',
+          vs: 'vs last week',
         );
       case AnalyticsGranularity.month:
         return PeriodWords(
@@ -344,10 +367,16 @@ class AnalyticsPeriod {
 
   /// The pill's left half: switch the length, keeping the end of the current
   /// range (clamped to today) as the new anchor.
-  AnalyticsPeriod withGranularity(AnalyticsGranularity g, {required DateTime today, DateTime? first}) {
+  /// [firstDay] (1..7) overrides this period's first day of the week, so a
+  /// switch to Week uses the preference even from a Day or Month period.
+  AnalyticsPeriod withGranularity(AnalyticsGranularity g, {required DateTime today, DateTime? first, int? firstDay}) {
     final r = range(today: today, first: first);
     final end = _minDay(r.end, dateOnly(today));
-    return AnalyticsPeriod._(granularity: g, anchor: g == AnalyticsGranularity.month ? monthStart(end) : end);
+    return AnalyticsPeriod._(
+      granularity: g,
+      anchor: g == AnalyticsGranularity.month ? monthStart(end) : end,
+      firstDay: firstDay ?? this.firstDay,
+    );
   }
 
   /// The pill's right half. Empty for All time and Custom (they open the
@@ -369,13 +398,19 @@ class AnalyticsPeriod {
             ),
         ];
       case AnalyticsGranularity.week:
+        // Whole calendar weeks, this week first; the label is the whole week.
+        final thisStart = _weekStart(t);
         return [
           for (var k = 0; k < 6; k++)
             PeriodOption(
-              label: '${fmtDayMonth(addDays(t, -7 * k - 6))} – ${fmtDayMonth(addDays(t, -7 * k))}',
-              note: k == 0 ? 'last 7 days' : '',
-              selected: sameDay(addDays(t, -7 * k), anchor),
-              period: AnalyticsPeriod._(granularity: AnalyticsGranularity.week, anchor: addDays(t, -7 * k)),
+              label: fmtSpan(addDays(thisStart, -7 * k), addDays(thisStart, -7 * k + 6)),
+              note: k == 0 ? 'this week' : '',
+              selected: sameDay(_weekStart(anchor), addDays(thisStart, -7 * k)),
+              period: AnalyticsPeriod._(
+                granularity: AnalyticsGranularity.week,
+                anchor: k == 0 ? t : addDays(thisStart, -7 * k),
+                firstDay: firstDay,
+              ),
             ),
         ];
       case AnalyticsGranularity.month:
@@ -461,19 +496,27 @@ class AnalyticsPeriod {
     }
     if (granularity != AnalyticsGranularity.month && a.isAfter(t)) a = t;
     if (granularity == AnalyticsGranularity.year && a.year == t.year) a = t;
-    return AnalyticsPeriod._(granularity: granularity, anchor: a, custom: custom, monthWindowEnd: windowEnd);
+    return AnalyticsPeriod._(
+      granularity: granularity,
+      anchor: a,
+      custom: custom,
+      monthWindowEnd: windowEnd,
+      firstDay: firstDay,
+    );
   }
 
-  /// Pull to refresh: the current period of the same length. Day → today,
-  /// Week → the last 7 days, Month → this month, Year → this year, Custom of
-  /// N days → the last N days ending today; All time stays as it is.
+  /// Pull to refresh: the WHOLE current calendar period of the same length.
+  /// Day → today, Week → the whole current calendar week (its label shows
+  /// the whole week; data stops at today), Month → this month, Year → this
+  /// year, Custom of N days → the last N days ending today; All time stays
+  /// as it is.
   AnalyticsPeriod backToNow({required DateTime today}) {
     final t = dateOnly(today);
     if (granularity == AnalyticsGranularity.custom && custom != null) {
       final n = custom!.days;
       return AnalyticsPeriod.custom(addDays(t, -(n - 1)), t, today: t);
     }
-    return AnalyticsPeriod._(granularity: granularity, anchor: t, custom: custom);
+    return AnalyticsPeriod._(granularity: granularity, anchor: t, custom: custom, firstDay: firstDay);
   }
 
   // ---- chart buckets (the mock's `buckets()`) --------------------------------
@@ -511,8 +554,11 @@ class AnalyticsPeriod {
     }
 
     if (g == AnalyticsGranularity.week) {
-      for (var k = 6; k >= 0; k--) {
-        final d = addDays(a, -k);
+      // The whole calendar week, first day first; days after today are
+      // drawn faded and hold no data.
+      final weekStart = _weekStart(a);
+      for (var k = 0; k < 7; k++) {
+        final d = addDays(weekStart, k);
         final (s, e) = _dayMs(d);
         out.add(
           ChartBucket(

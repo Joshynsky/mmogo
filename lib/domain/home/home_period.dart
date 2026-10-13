@@ -29,7 +29,7 @@ enum HomePeriod {
 
   String get priorSuffix => switch (this) {
         HomePeriod.today => 'vs yesterday',
-        HomePeriod.week => 'vs prior week',
+        HomePeriod.week => 'vs last week',
         HomePeriod.month => 'vs last month',
       };
 
@@ -43,27 +43,27 @@ enum HomePeriod {
   /// Inclusive `(startMs, endMs)` epoch-millis bounds for this period,
   /// anchored at [now]:
   ///   - today: the calendar day containing [now], 00:00:00.000–23:59:59.999
-  ///   - week: a rolling 7-day window ending at today's day-end (today +
-  ///     the 6 preceding days) — NOT a calendar week (e.g. not Mon–Sun),
-  ///     matching the prototype's `weekBounds` exactly
+  ///   - week: the calendar week so far, the week's first day
+  ///     ([firstDay], 1 = Monday ... 7 = Sunday, default Monday) 00:00 up to
+  ///     the end of today (data only up to today)
   ///   - month: the calendar month containing [now], 1st 00:00:00.000 to
   ///     the last day 23:59:59.999
-  (int, int) bounds(DateTime now) => switch (this) {
+  (int, int) bounds(DateTime now, {int firstDay = 1}) => switch (this) {
         HomePeriod.today => period_math.dayBounds(now),
-        HomePeriod.week => period_math.weekBounds(now),
+        HomePeriod.week => period_math.weekBounds(now, firstDay: firstDay),
         HomePeriod.month => period_math.monthBounds(now),
       };
 
-  /// The immediately preceding period — e.g. for `week`, the 7 days
-  /// immediately before the current week's start; for `month`, the previous
-  /// calendar month.
-  /// Generalizes "vs last month" the same way Analytics'
-  /// period diff line does.
-  (int, int) priorBounds(DateTime now) {
+  /// The immediately preceding period: yesterday; for `week`, the WHOLE
+  /// previous calendar week; for `month`, the previous calendar month.
+  (int, int) priorBounds(DateTime now, {int firstDay = 1}) {
     // Month compares to the previous CALENDAR month (March vs February 1-28),
-    // not a same-length window. Today and week use same-length windows.
+    // not a same-length window; week to the whole previous calendar week.
     if (this == HomePeriod.month) {
       return period_math.monthBounds(DateTime(now.year, now.month - 1, 1));
+    }
+    if (this == HomePeriod.week) {
+      return period_math.previousWeekBounds(now, firstDay: firstDay);
     }
     final (start, end) = bounds(now);
     return period_math.priorBoundsOf(start, end);

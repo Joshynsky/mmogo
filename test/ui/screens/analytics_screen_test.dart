@@ -63,19 +63,19 @@ Future<void> _pickFromMenu(WidgetTester tester, Key button, String item) async {
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  group('from the nav bar: the last 7 days', () {
+  group('from the nav bar: this calendar week', () {
     testWidgets('pill, total, change pill and facts match the mock', (tester) async {
       await _pump(tester);
       expect(_pillGranularity(tester), 'Week');
-      expect(_pillValue(tester), '18–24 Sep');
+      expect(_pillValue(tester), '21–27 Sep');
       expect(find.byKey(const Key('analyticsSpentLabel')), findsOneWidget);
       expect(find.text('Spent'), findsOneWidget);
-      expect(_total(tester), '4,050.00');
+      expect(_total(tester), '3,550.00');
       expect(find.text('Ksh'), findsOneWidget);
-      // 4,050 vs 2,300 the week before.
-      expect(find.text('▲ 76% vs prior week'), findsOneWidget);
-      expect(_rich('4 transactions'), findsOneWidget);
-      expect(_rich('avg Ksh 579/day'), findsOneWidget);
+      // 3,550 vs 2,800 the whole week before.
+      expect(find.text('▲ 27% vs last week'), findsOneWidget);
+      expect(_rich('3 transactions'), findsOneWidget);
+      expect(_rich('avg Ksh 888/day'), findsOneWidget, reason: '3,550 over Monday to Thursday, the 4 days so far');
       expect(_rich('fees Ksh 37'), findsOneWidget);
       expect(_chartTitle(tester), 'BY DAY');
       expect(find.text('Tap a day to open it · swipe for other weeks'), findsOneWidget);
@@ -85,25 +85,35 @@ void main() {
       await _pump(tester);
       expect(find.text('Today'), findsOneWidget);
       expect(find.text('Yesterday'), findsOneWidget);
-      expect(find.text('Sun, 20 Sep'), findsOneWidget);
       expect(find.text('Ksh 2,350.00'), findsOneWidget); // today's day total
       final john = tester.getTopLeft(find.text('JOHN KAMAU'));
       final naivas = tester.getTopLeft(find.text('NAIVAS SUPERMARKET'));
       expect(naivas.dy, lessThan(john.dy), reason: '11:00 before 09:00');
       expect(find.text('Family/Friends · 09:00 · CODE1'), findsOneWidget);
       expect(find.text('+ Ksh 22 fee'), findsOneWidget);
-      // Cash: no code, no fee line.
-      expect(find.text('Cash — Groceries'), findsOneWidget);
-      expect(find.text('Groceries · 17:00'), findsOneWidget);
-      // Out of the period.
+      // Sunday 20 Sep belongs to LAST calendar week: not in this one.
+      expect(find.text('Sun, 20 Sep'), findsNothing);
+      expect(find.text('Cash — Groceries'), findsNothing);
       expect(find.text('MARY WANJIKU'), findsNothing);
       expect(find.text('Swipe a row right to edit, left to delete'), findsNothing, reason: 'the tour says it now');
+    });
+
+    testWidgets('the week before lists its Cash row with no code and no fee line', (tester) async {
+      await _pump(tester);
+      await tester.tap(find.byKey(const Key('analyticsPrev')));
+      await tester.pumpAndSettle();
+      expect(find.text('Sun, 20 Sep'), findsOneWidget);
+      expect(find.text('Cash — Groceries'), findsOneWidget);
+      expect(find.text('Groceries · 17:00'), findsOneWidget);
+      expect(find.text('MARY WANJIKU'), findsOneWidget);
+      expect(find.text('JOHN KAMAU'), findsNothing);
     });
 
     testWidgets('the whole data window (period, prior, chart bars) comes from one real-DAO query', (tester) async {
       final db = await _pump(tester);
       final (start, end) = db.windows.last;
-      expect(DateTime.fromMillisecondsSinceEpoch(start!), DateTime(2026, 9, 11));
+      // From the whole previous week's Monday to the end of TODAY (data stops at today).
+      expect(DateTime.fromMillisecondsSinceEpoch(start!), DateTime(2026, 9, 14));
       expect(DateTime.fromMillisecondsSinceEpoch(end!), DateTime(2026, 9, 24, 23, 59, 59, 999));
     });
   });
@@ -138,11 +148,12 @@ void main() {
       await _pump(tester);
       await tester.tap(find.byKey(const Key('analyticsPeriodValue')));
       await tester.pumpAndSettle();
-      expect(find.text('last 7 days'), findsOneWidget);
-      await tester.tap(find.text('11 Sep – 17 Sep'));
+      expect(find.text('this week'), findsOneWidget);
+      expect(find.text('last 7 days'), findsNothing);
+      await tester.tap(find.text('14–20 Sep'));
       await tester.pumpAndSettle();
-      expect(_pillValue(tester), '11–17 Sep');
-      expect(_total(tester), '2,300.00');
+      expect(_pillValue(tester), '14–20 Sep');
+      expect(_total(tester), '2,800.00');
       expect(find.text('MARY WANJIKU'), findsOneWidget);
     });
 
@@ -172,13 +183,13 @@ void main() {
       await tester.tap(find.byKey(const Key('analyticsCalendar')));
       await tester.pumpAndSettle();
       expect(find.text('Custom dates'), findsOneWidget);
-      expect(find.text('18 Sep 2026'), findsOneWidget);
-      expect(find.text('24 Sep 2026'), findsOneWidget);
+      expect(find.text('21 Sep 2026'), findsOneWidget);
+      expect(find.text('24 Sep 2026'), findsOneWidget, reason: 'To stops at today');
       await tester.tap(find.byKey(const Key('analyticsCustomShow')));
       await tester.pumpAndSettle();
       expect(_pillGranularity(tester), 'Custom');
-      expect(_pillValue(tester), '18–24 Sep');
-      expect(find.text('▲ 76% vs previous 7 days'), findsOneWidget);
+      expect(_pillValue(tester), '21–24 Sep');
+      expect(find.text('▲ 610% vs previous 4 days'), findsOneWidget); // 3,550 vs 500 (17-20 Sep)
       // On Custom the right half reopens the sheet.
       await tester.tap(find.byKey(const Key('analyticsPeriodValue')));
       await tester.pumpAndSettle();
@@ -194,13 +205,13 @@ void main() {
       await _pump(tester);
       await tester.tap(find.byKey(const Key('analyticsNext')));
       await tester.pumpAndSettle();
-      expect(_pillValue(tester), '18–24 Sep', reason: 'Next is disabled');
+      expect(_pillValue(tester), '21–27 Sep', reason: 'Next is disabled');
       await tester.tap(find.byKey(const Key('analyticsPrev')));
       await tester.pumpAndSettle();
-      expect(_pillValue(tester), '11–17 Sep');
+      expect(_pillValue(tester), '14–20 Sep');
       await tester.tap(find.byKey(const Key('analyticsNext')));
       await tester.pumpAndSettle();
-      expect(_pillValue(tester), '18–24 Sep');
+      expect(_pillValue(tester), '21–27 Sep');
     });
 
     testWidgets('swipe right = earlier, left = later; a short drag does nothing', (tester) async {
@@ -208,18 +219,18 @@ void main() {
       final chart = find.byKey(const Key('analyticsChart'));
       await tester.drag(chart, const Offset(30, 0));
       await tester.pumpAndSettle();
-      expect(_pillValue(tester), '18–24 Sep');
+      expect(_pillValue(tester), '21–27 Sep');
       await tester.drag(chart, const Offset(80, 0));
       await tester.pumpAndSettle();
-      expect(_pillValue(tester), '11–17 Sep');
+      expect(_pillValue(tester), '14–20 Sep');
       await tester.drag(chart, const Offset(-80, 0));
       await tester.pumpAndSettle();
-      expect(_pillValue(tester), '18–24 Sep');
+      expect(_pillValue(tester), '21–27 Sep');
     });
 
     testWidgets('tapping a day bar opens that Day', (tester) async {
       await _pump(tester);
-      await tester.tap(find.byKey(const Key('analyticsBar-5'))); // Wed 23 Sep
+      await tester.tap(find.byKey(const Key('analyticsBar-2'))); // Wed 23 Sep (Mon is bar 0)
       await tester.pumpAndSettle();
       expect(_pillGranularity(tester), 'Day');
       expect(_pillValue(tester), 'Yesterday');
@@ -230,7 +241,7 @@ void main() {
   group('By type | Where it went, type and category together (T26)', () {
     testWidgets('a type tile filters the list, shows its own chip, fades the others; ✕ clears', (tester) async {
       await _pump(tester);
-      expect(find.text('37%'), findsOneWidget); // Send Money 1,500 of 4,050
+      expect(find.text('42%'), findsOneWidget); // Send Money 1,500 of 3,550
       await tester.tap(find.byKey(const Key('analyticsTypeTile-BUY_GOODS')));
       await tester.pumpAndSettle();
       expect(find.text('Buy Goods · Ksh 850'), findsOneWidget);
@@ -268,6 +279,9 @@ void main() {
 
     testWidgets("Where it went respects an active type filter: only that type's classifications", (tester) async {
       await _pump(tester);
+      // September (a week has no Cash this week): a Buy Goods Groceries row of
+      // 640 is in the month too, so the type filter has something to exclude.
+      await _pickFromMenu(tester, const Key('analyticsGranularity'), 'Month');
       await tester.tap(find.byKey(const Key('analyticsTypeTile-CASH')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('analyticsTabWhere')));
@@ -290,10 +304,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('analyticsTabType')));
       await tester.pumpAndSettle();
-      // Shopping-only: Buy Goods 850 (21% of the 4,050 week) and Paybill
-      // 1,200 (30%); Send Money and Cash have no Shopping spend.
-      expect(find.text('21%'), findsOneWidget);
-      expect(find.text('30%'), findsOneWidget);
+      // Shopping-only: Buy Goods 850 (24% of the 3,550 week) and Paybill
+      // 1,200 (34%); Send Money and Cash have no Shopping spend.
+      expect(find.text('24%'), findsOneWidget);
+      expect(find.text('34%'), findsOneWidget);
       expect(find.text('Ksh 0.00'), findsNWidgets(2));
     });
 
@@ -350,18 +364,18 @@ void main() {
   });
 
   group('pull to refresh = back to now', () {
-    testWidgets('from an older week: back to the last 7 days, filters cleared', (tester) async {
+    testWidgets('from an older week: back to the whole current calendar week, filters cleared', (tester) async {
       await _pump(tester, size: const Size(400, 900));
       await tester.tap(find.byKey(const Key('analyticsPrev')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('analyticsTypeTile-SEND_MONEY')));
       await tester.pumpAndSettle();
-      expect(_pillValue(tester), '11–17 Sep');
+      expect(_pillValue(tester), '14–20 Sep');
       expect(find.byKey(const Key('analyticsFilterChipType')), findsOneWidget);
 
       await tester.fling(find.byKey(const Key('analyticsScroll')), const Offset(0, 400), 1500);
       await tester.pumpAndSettle();
-      expect(_pillValue(tester), '18–24 Sep');
+      expect(_pillValue(tester), '21–27 Sep', reason: 'the label is the whole week, Monday to Sunday');
       expect(find.byKey(const Key('analyticsFilterChipType')), findsNothing);
     });
   });

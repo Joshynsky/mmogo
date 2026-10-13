@@ -1,6 +1,8 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../domain/counterparty/counterparty_key.dart';
+import '../../domain/format/source_types.dart';
+import '../../domain/money/spent_amount.dart';
 import '../../domain/parsing/parsed_sms_fields.dart';
 
 /// One itemized row for Analytics' dated transaction list — the minimal
@@ -40,6 +42,11 @@ class AnalyticsTransactionRow {
   final int classificationId;
   final String classificationName;
   final DateTime occurredAt;
+
+  /// What this row adds to "spent" (the one rule, `spentCents`): a
+  /// withdrawal adds 0, every other type its amount. Every spent total
+  /// sums this, never [amountCents].
+  int get spent => spentCents(sourceType, amountCents, transactionCostCents);
 
   /// -> `transactions.transaction_cost_cents`. Always `null` for CASH rows
   /// (schema CHECK); NOT NULL for every other `source_type`. T13 — added
@@ -84,7 +91,9 @@ class AnalyticsTransactionRow {
 class AnalyticsDao {
   AnalyticsDao._();
 
-  static const allTypes = {'SEND_MONEY', 'CASH', 'PAYBILL', 'BUY_GOODS'};
+  /// Every stored source type, derived from [sourceTypeOrder] so a type
+  /// added there can never be left out of an Analytics query.
+  static final Set<String> allTypes = {for (final (code, _) in sourceTypeOrder) code};
 
   /// Builds a `t.source_type IN (?,?,...)` fragment and appends its bind
   /// values to [args]. An empty [types] set means "no type is active" —
@@ -123,7 +132,9 @@ class AnalyticsDao {
         'SEND_MONEY' => SmsSourceType.sendMoney,
         'PAYBILL' => SmsSourceType.payBill,
         'BUY_GOODS' => SmsSourceType.buyGoods,
-        _ => null, // CASH (or anything unrecognized): no counterparty identity at all.
+        // Pochi, Withdrawal and Airtime never learn a receiver (no map key),
+        // and CASH has no counterparty identity at all: no party match.
+        _ => null,
       };
 
   static bool _matchesParty({

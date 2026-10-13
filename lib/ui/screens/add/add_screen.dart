@@ -322,6 +322,9 @@ class _AddScreenState extends State<AddScreen> {
         'SEND_MONEY' => SmsSourceType.sendMoney,
         'PAYBILL' => SmsSourceType.payBill,
         'BUY_GOODS' => SmsSourceType.buyGoods,
+        'POCHI_LA_BIASHARA' => SmsSourceType.pochi,
+        'AGENT_WITHDRAWAL' => SmsSourceType.agentWithdrawal,
+        'AIRTIME' => SmsSourceType.airtime,
         _ => throw StateError('AddScreen._type must be a non-cash source type, got "$_type"'),
       };
 
@@ -345,6 +348,10 @@ class _AddScreenState extends State<AddScreen> {
         final label = _effectiveLabel;
         if (label == null || label.isEmpty) return '';
         return deriveCounterpartyKey(sourceType: SmsSourceType.buyGoods, counterpartyLabel: label);
+      case SmsSourceType.pochi:
+      case SmsSourceType.agentWithdrawal:
+      case SmsSourceType.airtime:
+        return ''; // these types never learn a receiver
     }
   }
 
@@ -433,6 +440,9 @@ class _AddScreenState extends State<AddScreen> {
         'SEND_MONEY' => 'Send Money',
         'PAYBILL' => 'Paybill',
         'BUY_GOODS' => 'Buy Goods',
+        'POCHI_LA_BIASHARA' => 'Pochi',
+        'AGENT_WITHDRAWAL' => 'Withdrawal',
+        'AIRTIME' => 'Airtime',
         _ => 'Cash',
       };
 

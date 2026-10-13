@@ -101,7 +101,7 @@ void main() {
       expect(row['source_type'], 'SEND_MONEY');
       expect(row['display_code'], 'CODE1');
       expect(find.text('Edit transaction'), findsNothing);
-      expect(_total(tester), '4,550.00');
+      expect(_total(tester), '4,050.00');
       expect(find.text('Rent · 09:00 · CODE1'), findsOneWidget);
       expect(_rowColor(tester, 'JOHN KAMAU'), AppPalette.light.highlight);
       await _drain(tester);
@@ -110,6 +110,9 @@ void main() {
 
     testWidgets('a Cash row: Amount / Date / Classification only, with the flat cross-group picker', (tester) async {
       final db = await _pump(tester);
+      // The Cash row (Sun 20 Sep) is in last calendar week: step back to it.
+      await tester.tap(find.byKey(const Key('analyticsPrev')));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Cash — Groceries'));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('editAmountField')), findsOneWidget);
@@ -144,14 +147,14 @@ void main() {
       expect(find.text('Edit transaction'), findsNothing);
       expect(db.byId(3)['deleted_at'], isNotNull);
       expect(find.text('DSTV KENYA'), findsNothing);
-      expect(_total(tester), '2,850.00');
+      expect(_total(tester), '2,350.00');
       expect(find.text('DSTV KENYA moved to Recently Deleted'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('analyticsUndo')));
       await tester.pumpAndSettle();
       expect(db.byId(3)['deleted_at'], isNull);
       expect(find.byKey(const Key('analyticsToast')), findsNothing);
-      expect(_total(tester), '4,050.00');
+      expect(_total(tester), '3,550.00');
       expect(_rowColor(tester, 'DSTV KENYA'), AppPalette.light.highlight);
       await _drain(tester);
     });
@@ -173,7 +176,7 @@ void main() {
       expect(find.text('Delete this transaction?'), findsNothing);
       expect(db.byId(1)['deleted_at'], isNotNull);
       expect(find.text('JOHN KAMAU'), findsNothing);
-      expect(_total(tester), '2,550.00');
+      expect(_total(tester), '2,050.00');
       expect(find.text('JOHN KAMAU moved to Recently Deleted'), findsOneWidget);
       expect(
         tester.widget<TextButton>(find.byKey(const Key('analyticsUndo'))).style!.foregroundColor!.resolve({}),
@@ -183,7 +186,7 @@ void main() {
       await tester.tap(find.byKey(const Key('analyticsUndo')));
       await tester.pumpAndSettle();
       expect(db.byId(1)['deleted_at'], isNull);
-      expect(_total(tester), '4,050.00');
+      expect(_total(tester), '3,550.00');
       expect(find.text('JOHN KAMAU'), findsOneWidget);
       await _drain(tester);
     });

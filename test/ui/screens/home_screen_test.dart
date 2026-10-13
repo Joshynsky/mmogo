@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/prefs/app_prefs.dart';
 import 'package:mmogo/data/updates/updates_inbox.dart';
 import 'package:mmogo/domain/home/home_period.dart';
+import 'package:mmogo/domain/money/spent_amount.dart';
 import 'package:mmogo/ui/screens/home_screen.dart';
 import 'package:mmogo/ui/shell/routes.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
@@ -71,7 +72,7 @@ class _FakeHomeDb implements Database {
           },
       ];
     }
-    if (sql.contains('SUM(amount_cents)')) {
+    if (sql.contains(kSpentCentsSql)) {
       final start = arguments!.first as int;
       sumStarts.add(start);
       final currentStarts = {for (final p in HomePeriod.values) p.bounds(now).$1};
@@ -232,12 +233,26 @@ void main() {
       expect(tester.widget<Text>(find.byKey(const Key('homeCost'))).data, 'Ksh 62.00');
     });
 
+    testWidgets('SP2: a withdrawal has no bar and adds 0 to the total, but its fee is in the cost row', (tester) async {
+      final fake = _FakeHomeDb(
+        now: _morning,
+        thisTotal: 5000,
+        priorTotal: 5000,
+        types: {'AIRTIME': (5000, 0), 'AGENT_WITHDRAWAL': (0, 2900)},
+      );
+      await _pumpHome(tester, fake);
+      expect(find.byKey(const Key('homeBar-AGENT_WITHDRAWAL')), findsNothing);
+      expect(find.byKey(const Key('homeBar-AIRTIME')), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('homeTypeAmount-AIRTIME'))).data, 'Ksh 50.00');
+      expect(tester.widget<Text>(find.byKey(const Key('homeCost'))).data, 'Ksh 29.00');
+    });
+
     testWidgets('the cost row is shown with Ksh 0.00 when nothing was spent', (tester) async {
       await _pumpHome(tester, _FakeHomeDb(now: _morning));
       expect(find.text('Transaction cost (all M-Pesa)'), findsOneWidget);
       expect(tester.widget<Text>(find.byKey(const Key('homeCost'))).data, 'Ksh 0.00');
-      expect(find.text('Ksh 0.00'), findsNWidgets(6)); // total + 4 types + cost
-      for (final c in ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'CASH']) {
+      expect(find.text('Ksh 0.00'), findsNWidgets(8)); // total + 6 bars + cost
+      for (final c in ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'CASH', 'POCHI_LA_BIASHARA', 'AIRTIME']) {
         expect(tester.widget<AnimatedFractionallySizedBox>(find.byKey(Key('homeBar-$c'))).widthFactor, 0);
         expect(tester.widget<Opacity>(find.byKey(Key('homeTypeLabel-$c'))).opacity, 0.6);
       }
@@ -260,6 +275,37 @@ void main() {
       await tester.tap(find.byKey(const Key('homePeriodButton')));
       await tester.pumpAndSettle();
       expect(find.text('This month'), findsOneWidget);
+    });
+
+    testWidgets('CW1: This week compares to LAST week: the caption reads "vs last week"', (tester) async {
+      final fake = _FakeHomeDb(now: _morning, thisTotal: 300000, priorTotal: 200000);
+      await _pumpHome(tester, fake);
+      await tester.tap(find.byKey(const Key('homePeriodButton'))); // month -> today
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('homePeriodButton'))); // today -> week
+      await tester.pumpAndSettle();
+      expect(find.text('This week'), findsOneWidget);
+      expect(find.text('▲ 50% vs last week'), findsOneWidget);
+      expect(find.textContaining('prior week'), findsNothing);
+      // The queries used the calendar week: this week from Monday 21 Sep, the
+      // comparison the WHOLE week before (Monday 14 Sep).
+      expect(fake.sumStarts, contains(DateTime(2026, 9, 21).millisecondsSinceEpoch));
+      expect(fake.sumStarts, contains(DateTime(2026, 9, 14).millisecondsSinceEpoch));
+    });
+
+    testWidgets('CW1: the first day of the week preference moves the week (Sunday first starts Sun 20 Sep)', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({'tour_seen_$homeTourId': true, 'first_day_of_week': 7});
+      final fake = _FakeHomeDb(now: _morning, thisTotal: 300000, priorTotal: 200000);
+      await _pumpHome(tester, fake);
+      await tester.tap(find.byKey(const Key('homePeriodButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('homePeriodButton')));
+      await tester.pumpAndSettle();
+      expect(fake.sumStarts, contains(DateTime(2026, 9, 20).millisecondsSinceEpoch));
+      expect(fake.sumStarts, contains(DateTime(2026, 9, 13).millisecondsSinceEpoch));
+      expect(fake.sumStarts, isNot(contains(DateTime(2026, 9, 21).millisecondsSinceEpoch)));
     });
 
     testWidgets('no-prior-spend state keeps its muted message', (tester) async {

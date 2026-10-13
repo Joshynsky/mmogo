@@ -194,8 +194,9 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
     final seq = ++_loadSeq;
     final db = await _db();
     final now = _now();
-    final (start, end) = _period.bounds(now);
-    final (priorStart, priorEnd) = _period.priorBounds(now);
+    final firstDay = await AppPrefs.readFirstDayOfWeek();
+    final (start, end) = _period.bounds(now, firstDay: firstDay);
+    final (priorStart, priorEnd) = _period.priorBounds(now, firstDay: firstDay);
 
     final results = await Future.wait([
       HomeDashboardDao.sumAmountCents(db, startMs: start, endMs: end),
@@ -306,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
 
   Widget _buildBody(AppPalette palette) {
     final diff = HomeDiff.compute(thisTotalCents: _thisTotalCents, priorTotalCents: _priorTotalCents);
-    final totalCost = homeTypeOrder.fold<int>(0, (s, t) => s + (_bySource[t.$1]?.costCents ?? 0));
+    final totalCost = _bySource.values.fold<int>(0, (s, t) => s + t.costCents); // every type: a withdrawal's fee counts
 
     return RefreshIndicator(
       key: const Key('homeRefresh'),

@@ -44,7 +44,7 @@ List<Widget> analyticsTransactionSections({
           (classFilter == null || r.classificationName == classFilter))
         r,
   ];
-  final subtotal = list.fold<int>(0, (s, r) => s + r.amountCents);
+  final subtotal = list.fold<int>(0, (s, r) => s + r.spent);
   final subtotalLabel = kshTrim(subtotal);
 
   final heading = ConstrainedBox(
@@ -134,7 +134,7 @@ List<Widget> analyticsTransactionSections({
                 ),
               ),
               Text(
-                formatKsh(g.fold<int>(0, (s, r) => s + r.amountCents)),
+                formatKsh(g.fold<int>(0, (s, r) => s + r.spent)),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,

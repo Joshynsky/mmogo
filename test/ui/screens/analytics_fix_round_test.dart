@@ -71,7 +71,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.byKey(const Key('analyticsPartyCard')), findsNothing);
-      expect(_pillValue(tester), '18–24 Sep');
+      expect(_pillValue(tester), '21–27 Sep');
     });
   });
 
@@ -172,7 +172,7 @@ void main() {
       await tester.tap(find.byKey(const Key('analyticsCustomTo')));
       await tester.pumpAndSettle();
       final dialog = tester.widget<DatePickerDialog>(find.byType(DatePickerDialog));
-      expect(dialog.firstDate, DateTime(2026, 9, 18));
+      expect(dialog.firstDate, DateTime(2026, 9, 21));
       expect(dialog.lastDate, today);
     });
 
@@ -180,25 +180,25 @@ void main() {
       await _pump(tester);
       await tester.tap(find.byKey(const Key('analyticsCalendar')));
       await tester.pumpAndSettle();
-      // Custom sheet: 18 Sep .. 24 Sep. First make To 20 Sep.
+      // Custom sheet: 21 Sep .. 24 Sep. First make To 22 Sep.
       await tester.tap(find.byKey(const Key('analyticsCustomTo')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('20'));
+      await tester.tap(find.text('22'));
       await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();
-      expect(find.text('20 Sep 2026'), findsOneWidget);
-      // Now move From to 22 Sep, past To.
+      expect(find.text('22 Sep 2026'), findsOneWidget);
+      // Now move From to 23 Sep, past To.
       await tester.tap(find.byKey(const Key('analyticsCustomFrom')));
       await tester.pumpAndSettle();
       final dialog = tester.widget<DatePickerDialog>(find.byType(DatePickerDialog));
       expect(dialog.lastDate, today);
-      await tester.tap(find.text('22'));
+      await tester.tap(find.text('23'));
       await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();
-      expect(find.text('22 Sep 2026'), findsNWidgets(2), reason: 'From and To are both 22 Sep');
+      expect(find.text('23 Sep 2026'), findsNWidgets(2), reason: 'From and To are both 23 Sep');
       await tester.tap(find.byKey(const Key('analyticsCustomShow')));
       await tester.pumpAndSettle();
-      expect(_pillValue(tester), '22–22 Sep'); // Custom's existing one-day label
+      expect(_pillValue(tester), '23–23 Sep'); // Custom's existing one-day label
     });
   });
 }

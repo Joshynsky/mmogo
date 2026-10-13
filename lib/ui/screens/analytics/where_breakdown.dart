@@ -37,7 +37,8 @@ class AnalyticsWherePanel extends StatelessWidget {
     final v = view;
     // T26: respects an active type filter (only that type's classifications).
     final inc = typeFilter == null ? v.inc : v.inc.where((r) => r.sourceType == typeFilter);
-    final groups = groupSpendByName(inc.map((r) => (r.classificationName, r.amountCents)));
+    // A row that adds nothing to spent (a withdrawal) is not "where it went".
+    final groups = groupSpendByName(inc.where((r) => r.spent > 0).map((r) => (r.classificationName, r.spent)));
     const limit = 4;
     final shown = showAll ? groups : groups.take(limit).toList();
     final max = groups.isEmpty ? 1 : math.max(groups.first.cents, 1);

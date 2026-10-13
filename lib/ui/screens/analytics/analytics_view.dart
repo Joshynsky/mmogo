@@ -46,7 +46,7 @@ class AnalyticsView {
 
   DateTime get today => dateOnly(now);
 
-  int get totalCents => inc.fold(0, (s, r) => s + r.amountCents);
+  int get totalCents => inc.fold(0, (s, r) => s + r.spent);
 }
 
 /// What Analytics looked like just before it entered the recipient (Paid to)

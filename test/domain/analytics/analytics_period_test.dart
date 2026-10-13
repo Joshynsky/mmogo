@@ -17,7 +17,7 @@ final first = DateTime(2026, 8, 15);
 
 DayRange d(DateTime s, DateTime e) => DayRange(s, e);
 
-AnalyticsPeriod week([DateTime? anchor]) => AnalyticsPeriod.lastSevenDays(anchor ?? today);
+AnalyticsPeriod week([DateTime? anchor]) => AnalyticsPeriod.thisWeek(anchor ?? today);
 
 void main() {
   group('ranges, prior ranges and labels', () {
@@ -35,17 +35,17 @@ void main() {
       expect(tue.spent, 'Spent on Tuesday, 22 Sep');
     });
 
-    test('Week is a rolling 7 days ending on the anchor (not Mon–Sun)', () {
+    test('Week is the calendar week Monday to Sunday containing the anchor; prior = the whole last week', () {
       final p = week();
-      expect(p.range(today: today), d(DateTime(2026, 9, 18), today));
-      expect(p.priorRange(today: today), d(DateTime(2026, 9, 11), DateTime(2026, 9, 17)));
+      expect(p.range(today: today), d(DateTime(2026, 9, 21), DateTime(2026, 9, 27)));
+      expect(p.priorRange(today: today), d(DateTime(2026, 9, 14), DateTime(2026, 9, 20)));
       final w = p.words(today: today);
-      expect(w.value, '18–24 Sep');
-      expect(w.spent, 'Spent in the last 7 days');
-      expect(w.vs, 'vs prior week');
+      expect(w.value, '21–27 Sep');
+      expect(w.spent, 'Spent this week');
+      expect(w.vs, 'vs last week');
       // Across a month boundary.
       final older = week(DateTime(2026, 9, 3));
-      expect(older.words(today: today).value, '28 Aug – 3 Sep');
+      expect(older.words(today: today).value, '31 Aug – 6 Sep');
       expect(older.words(today: today).spent, 'Spent that week');
     });
 
@@ -104,13 +104,14 @@ void main() {
 
     test('bounds run from 00:00:00.000 of the first day to 23:59:59.999 of the last', () {
       final (s, e) = week().range(today: today).bounds;
-      expect(DateTime.fromMillisecondsSinceEpoch(s), DateTime(2026, 9, 18));
-      expect(DateTime.fromMillisecondsSinceEpoch(e), DateTime(2026, 9, 24, 23, 59, 59, 999));
+      expect(DateTime.fromMillisecondsSinceEpoch(s), DateTime(2026, 9, 21));
+      expect(DateTime.fromMillisecondsSinceEpoch(e), DateTime(2026, 9, 27, 23, 59, 59, 999));
     });
 
     test('elapsed days stop at today (avg per day)', () {
       expect(AnalyticsPeriod.month(today).elapsedDays(today: today), 24);
-      expect(week().elapsedDays(today: today), 7);
+      expect(week().elapsedDays(today: today), 4); // Monday to Thursday
+      expect(week(DateTime(2026, 9, 3)).elapsedDays(today: today), 7); // a finished week
       expect(AnalyticsPeriod.allTime(today).elapsedDays(today: today, first: first), 41);
     });
   });
@@ -126,9 +127,11 @@ void main() {
       expect(m.range(today: today), d(DateTime(2026, 9, 1), DateTime(2026, 9, 30)));
       // From this month (ends 30 Sep) to Day: today, not 30 Sep.
       expect(m.withGranularity(AnalyticsGranularity.day, today: today).range(today: today), d(today, today));
-      // From an older week to Day: that week's last day.
+      // From an older week (31 Aug - 6 Sep) to Day: that week's last day.
       final day = week(DateTime(2026, 9, 3)).withGranularity(AnalyticsGranularity.day, today: today);
-      expect(day.range(today: today), d(DateTime(2026, 9, 3), DateTime(2026, 9, 3)));
+      expect(day.range(today: today), d(DateTime(2026, 9, 6), DateTime(2026, 9, 6)));
+      // From this week (ends Sun 27 Sep, after today) to Day: today.
+      expect(week().withGranularity(AnalyticsGranularity.day, today: today).range(today: today), d(today, today));
     });
 
     test('Day lists the last 7 days: Today, Yesterday, then "Tue 22 Sep"…', () {
@@ -146,16 +149,16 @@ void main() {
       expect(o[2].period, AnalyticsPeriod.day(DateTime(2026, 9, 22)));
     });
 
-    test('Week lists the last 6 rolling windows; the first is noted "last 7 days"', () {
+    test('Week lists the last 6 calendar weeks; the first is noted "this week"', () {
       final o = week().options(today: today);
       expect(o, hasLength(6));
-      expect(o.first.label, '18 Sep – 24 Sep');
-      expect(o.first.note, 'last 7 days');
+      expect(o.first.label, '21–27 Sep');
+      expect(o.first.note, 'this week');
       expect(o.first.selected, isTrue);
-      expect(o[1].label, '11 Sep – 17 Sep');
+      expect(o[1].label, '14–20 Sep');
       expect(o[1].note, '');
-      expect(o.last.label, '14 Aug – 20 Aug');
-      expect(o[1].period.range(today: today), d(DateTime(2026, 9, 11), DateTime(2026, 9, 17)));
+      expect(o.last.label, '17–23 Aug');
+      expect(o[1].period.range(today: today), d(DateTime(2026, 9, 14), DateTime(2026, 9, 20)));
     });
 
     test('Month lists the last 8 months', () {
@@ -188,20 +191,21 @@ void main() {
   });
 
   group('stepping and clamping', () {
-    test('Day and Week step by 1 and 7 days; Next is disabled at the present', () {
+    test('Day and Week step by 1 day and 1 calendar week; Next is disabled at the present', () {
       final day = AnalyticsPeriod.day(today);
       expect(day.canStepForward(today: today), isFalse);
       expect(day.canStepBack(today: today), isTrue);
       final yesterday = day.step(-1, today: today);
       expect(yesterday.range(today: today).start, DateTime(2026, 9, 23));
       expect(yesterday.canStepForward(today: today), isTrue);
-      expect(week().step(-1, today: today).range(today: today), d(DateTime(2026, 9, 11), DateTime(2026, 9, 17)));
+      expect(week().step(-1, today: today).range(today: today), d(DateTime(2026, 9, 14), DateTime(2026, 9, 20)));
       expect(week().canStepForward(today: today), isFalse);
     });
 
     test('stepping forward never passes today', () {
-      final w = week(DateTime(2026, 9, 20)).step(1, today: today);
-      expect(w.range(today: today).end, today);
+      final w = week(DateTime(2026, 9, 20)).step(1, today: today); // Sun 20 Sep + 7 = after today
+      expect(w.anchor, today);
+      expect(w.range(today: today), d(DateTime(2026, 9, 21), DateTime(2026, 9, 27)), reason: 'this week, not next');
       expect(AnalyticsPeriod.day(today).step(1, today: today).range(today: today).start, today);
     });
 
@@ -254,7 +258,7 @@ void main() {
   });
 
   group('back to now (pull to refresh)', () {
-    test('Day → today, Week → last 7 days, Month → this month, Year → this year', () {
+    test('Day → today, Week → this calendar week, Month → this month, Year → this year', () {
       expect(AnalyticsPeriod.day(DateTime(2026, 9, 2)).backToNow(today: today), AnalyticsPeriod.day(today));
       expect(week(DateTime(2026, 8, 30)).backToNow(today: today), week());
       final month = AnalyticsPeriod.month(DateTime(2026, 3, 1)).step(-1, today: today).backToNow(today: today);
@@ -298,8 +302,9 @@ void main() {
 
     test('Week: its 7 days (two-letter weekday), each opening that Day; avg line on', () {
       final s = week().chart(now: now);
-      expect(labels(s), ['Fr', 'Sa', 'Su', 'Mo', 'Tu', 'We', 'Th']);
-      expect(s.buckets.first.target, AnalyticsPeriod.day(DateTime(2026, 9, 18)));
+      expect(labels(s), ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']);
+      expect(s.buckets.first.target, AnalyticsPeriod.day(DateTime(2026, 9, 21)));
+      expect([for (final b in s.buckets) b.future], [false, false, false, false, true, true, true]);
       expect(s.title, 'By day');
       expect(s.hint, 'Tap a day to open it · swipe for other weeks');
       expect(s.showAverage, isTrue);

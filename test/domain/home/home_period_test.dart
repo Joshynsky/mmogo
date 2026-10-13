@@ -15,10 +15,10 @@ void main() {
       expect(DateTime.fromMillisecondsSinceEpoch(end), DateTime(2026, 9, 18, 23, 59, 59, 999));
     });
 
-    test('week is a rolling 7-day window ending today (today + 6 preceding days)', () {
+    test('week is the calendar week so far (Monday to today; Fri 18 Sep gives Mon 14 Sep)', () {
       final now = DateTime(2026, 9, 18, 14, 30);
       final (start, end) = HomePeriod.week.bounds(now);
-      expect(DateTime.fromMillisecondsSinceEpoch(start), DateTime(2026, 9, 12, 0, 0, 0, 0));
+      expect(DateTime.fromMillisecondsSinceEpoch(start), DateTime(2026, 9, 14, 0, 0, 0, 0));
       expect(DateTime.fromMillisecondsSinceEpoch(end), DateTime(2026, 9, 18, 23, 59, 59, 999));
     });
 
@@ -45,11 +45,11 @@ void main() {
       expect(DateTime.fromMillisecondsSinceEpoch(end), DateTime(2026, 9, 17, 23, 59, 59, 999));
     });
 
-    test('week\'s prior period is the 7 days immediately preceding the current window', () {
+    test('the week prior period is the WHOLE previous calendar week (Mon 7 to Sun 13 Sep)', () {
       final now = DateTime(2026, 9, 18, 14, 30);
       final (start, end) = HomePeriod.week.priorBounds(now);
-      expect(DateTime.fromMillisecondsSinceEpoch(start), DateTime(2026, 9, 5, 0, 0, 0, 0));
-      expect(DateTime.fromMillisecondsSinceEpoch(end), DateTime(2026, 9, 11, 23, 59, 59, 999));
+      expect(DateTime.fromMillisecondsSinceEpoch(start), DateTime(2026, 9, 7, 0, 0, 0, 0));
+      expect(DateTime.fromMillisecondsSinceEpoch(end), DateTime(2026, 9, 13, 23, 59, 59, 999));
     });
 
     test('month\'s prior period is the previous calendar month', () {
@@ -91,7 +91,7 @@ void main() {
       expect(HomePeriod.week.label, 'This week');
       expect(HomePeriod.month.label, 'This month');
       expect(HomePeriod.today.priorSuffix, 'vs yesterday');
-      expect(HomePeriod.week.priorSuffix, 'vs prior week');
+      expect(HomePeriod.week.priorSuffix, 'vs last week');
       expect(HomePeriod.month.priorSuffix, 'vs last month');
     });
   });

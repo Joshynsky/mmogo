@@ -7,6 +7,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../../../data/db/analytics_dao.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/db/transaction_dao.dart';
+import '../../../data/prefs/app_prefs.dart';
+import '../../../domain/period_math.dart' show dayBounds;
 import '../../../domain/analytics/analytics_period.dart';
 import '../../shell/primary_scaffold.dart';
 import '../../shell/primary_shell.dart';
@@ -70,6 +72,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
   AnalyticsRequest? _lastRequest;
 
   late AnalyticsPeriod _period;
+
+  /// The first day of the calendar week (1 = Monday), re-read on every load.
+  int _firstDay = AppPrefs.defaultFirstDayOfWeek;
   String? _partyType;
   String? _partyKey;
   String? _partyName;
@@ -115,7 +120,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
   @override
   void initState() {
     super.initState();
-    _period = AnalyticsPeriod.lastSevenDays(_now());
+    _period = AnalyticsPeriod.thisWeek(_now());
     // Back from the background: fresh data, but the period, filters and
     // scroll position stay where the user was (T21 brief, binding add-on).
     _lifecycle = AppLifecycleListener(onResume: _load);
@@ -131,7 +136,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     shell?.periodLength.addListener(_onSharedLength);
     // F6: a Home length change made before Analytics was first built.
     final last = shell?.periodLength.value;
-    if (last != null && !last.fromAnalytics) _period = analyticsPeriodForHome(last.length, dateOnly(_now()));
+    if (last != null && !last.fromAnalytics) _period = analyticsPeriodForHome(last.length, dateOnly(_now()), firstDay: _firstDay);
     // A hand-off waiting in the shell, else this route's own arguments.
     final pending = shell?.analyticsRequest.value;
     _lastRequest = pending;
@@ -202,7 +207,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
   void _onSharedLength() {
     final change = primaryShell?.periodLength.value;
     if (change == null || change.fromAnalytics || !mounted) return;
-    final next = analyticsPeriodForHome(change.length, dateOnly(_now()));
+    final next = analyticsPeriodForHome(change.length, dateOnly(_now()), firstDay: _firstDay);
     final saved = _beforeParty;
     if (_isParty && saved != null) {
       _beforeParty = AnalyticsBeforeParty(
@@ -269,7 +274,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     _partyType = null;
     _partyKey = null;
     _partyName = null;
-    _period = saved?.period ?? AnalyticsPeriod.lastSevenDays(_now());
+    _period = saved?.period ?? AnalyticsPeriod.thisWeek(_now(), firstDay: _firstDay);
     _typeFilter = saved?.typeFilter;
     _classFilter = saved?.classFilter;
     _whereTab = saved?.whereTab ?? false;
@@ -280,7 +285,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
 
   /// Home's row hand-off: open on the Day of that transaction, with the row
   /// highlighted. A missing / deleted row or a failed lookup keeps the
-  /// nav-bar default (the last 7 days) with no highlight.
+  /// nav-bar default (this calendar week) with no highlight.
   Future<void> _bootstrap(int? highlightId) async {
     if (highlightId != null) {
       DateTime? occurredAt;
@@ -304,6 +309,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     final db = await _db();
     final now = _now();
     final today = dateOnly(now);
+    // CW1: the first day of the week is a preference; a change (from Settings,
+    // a restore) re-anchors the period before it is read.
+    final firstDay = await AppPrefs.readFirstDayOfWeek();
+    if (!mounted || seq != _loadSeq) return;
+    if (firstDay != _firstDay) {
+      _firstDay = firstDay;
+      _period = _period.withFirstDay(firstDay);
+    }
     final firstAt = await AnalyticsDao.firstOccurredAt(db);
     final first = firstAt == null ? null : dateOnly(firstAt);
     final party = _isParty;
@@ -325,6 +338,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
       startMs = math.min(startMs, b.startMs);
       endMs = math.max(endMs, b.endMs);
     }
+    // The week shows all seven days, but its data stops at the end of today.
+    if (period.granularity == AnalyticsGranularity.week) endMs = math.min(endMs, dayBounds(today).$2);
     final rows = await AnalyticsDao.itemizedTransactions(
       db,
       startMs: startMs,
@@ -345,7 +360,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
       final (ps, pe) = prior.bounds;
       priorCents = rows
           .where((r) => r.occurredAt.millisecondsSinceEpoch >= ps && r.occurredAt.millisecondsSinceEpoch <= pe)
-          .fold<int>(0, (s, r) => s + r.amountCents);
+          .fold<int>(0, (s, r) => s + r.spent);
     }
     final bucketCents = [
       for (final b in chart.buckets)
@@ -353,7 +368,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
           for (final (code, _) in analyticsTypeOrder)
             rows
                 .where((r) => r.sourceType == code && b.contains(r.occurredAt.millisecondsSinceEpoch))
-                .fold<int>(0, (s, r) => s + r.amountCents),
+                .fold<int>(0, (s, r) => s + r.spent),
         ],
     ];
 
@@ -498,7 +513,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
       for (final (g, label) in analyticsGranularityMenu) (label, '', _period.granularity == g, g),
     ]);
     if (picked == null || !mounted) return;
-    _setPeriod(_period.withGranularity(picked, today: v.today, first: v.first));
+    _setPeriod(_period.withGranularity(picked, today: v.today, first: v.first, firstDay: _firstDay));
   }
 
   Future<void> _openValueMenu() async {

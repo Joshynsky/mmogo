@@ -75,6 +75,12 @@ String deriveCounterpartyKey({
       return '${_normalizeLabel(counterpartyLabel)}#${_normalizeAccount(paybillAccountNumber)}';
     case SmsSourceType.buyGoods:
       return _normalizeLabel(counterpartyLabel);
+    case SmsSourceType.pochi:
+    case SmsSourceType.agentWithdrawal:
+    case SmsSourceType.airtime:
+      // These types never learn a receiver (no counterparty map row), so
+      // there is no key: the empty string, as Cash has.
+      return '';
   }
 }
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../domain/analytics/analytics_period.dart';
 import '../../../domain/format/money.dart';
+import '../../../domain/format/source_types.dart';
 import '../../theme/app_colors.dart';
 
 /// §ANALYTICS.CHART.PAINT — the swipeable stacked bar chart and its painter.
@@ -177,7 +178,8 @@ class _ChartPainter extends CustomPainter {
   /// just the baseline and the x labels.
   final bool empty;
 
-  static const _types = ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'CASH'];
+  /// Same order as the bucket columns (`sourceTypeOrder`).
+  static final _types = [for (final (code, _) in sourceTypeOrder) code];
 
   void _text(
     Canvas canvas,

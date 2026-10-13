@@ -19,15 +19,36 @@ library;
   return (start.millisecondsSinceEpoch, end.millisecondsSinceEpoch);
 }
 
-/// Inclusive `(startMs, endMs)` epoch-millis bounds for a rolling 7-day
-/// window ending at [d]'s day-end (d + the 6 preceding days) — NOT a
-/// calendar week (e.g. not Mon-Sun), matching the prototype's `weekBounds`
-/// exactly.
-(int, int) weekBounds(DateTime d) {
-  final (_, end) = dayBounds(d);
-  const oneDayMs = 86400000;
-  final start = end - 6 * oneDayMs - 86399999;
-  return (start, end);
+/// The first day of the calendar week containing [d] (local midnight).
+/// [firstDay] is 1 = Monday ... 7 = Sunday (default Monday). Built from
+/// y/m/d, never from Durations, so a clock change cannot skew it.
+DateTime calendarWeekStart(DateTime d, {int firstDay = 1}) {
+  final back = (d.weekday - firstDay + 7) % 7;
+  return DateTime(d.year, d.month, d.day - back);
+}
+
+/// The last day of the calendar week containing [d] (local midnight).
+DateTime calendarWeekEnd(DateTime d, {int firstDay = 1}) {
+  final s = calendarWeekStart(d, firstDay: firstDay);
+  return DateTime(s.year, s.month, s.day + 6);
+}
+
+/// Inclusive `(startMs, endMs)` epoch-millis bounds for the calendar week
+/// SO FAR: the week's first day 00:00:00.000 up to the end of [d]'s own day
+/// (data only up to today). The whole week (Monday to Sunday by default) is
+/// [calendarWeekStart] to [calendarWeekEnd].
+(int, int) weekBounds(DateTime d, {int firstDay = 1}) {
+  final s = calendarWeekStart(d, firstDay: firstDay);
+  return (dayBounds(s).$1, dayBounds(d).$2);
+}
+
+/// Inclusive epoch-millis bounds of the WHOLE calendar week before the one
+/// containing [d].
+(int, int) previousWeekBounds(DateTime d, {int firstDay = 1}) {
+  final s = calendarWeekStart(d, firstDay: firstDay);
+  final prevStart = DateTime(s.year, s.month, s.day - 7);
+  final prevEnd = DateTime(s.year, s.month, s.day - 1);
+  return (dayBounds(prevStart).$1, dayBounds(prevEnd).$2);
 }
 
 /// Inclusive `(startMs, endMs)` epoch-millis bounds for the calendar month
@@ -42,7 +63,7 @@ library;
 }
 
 /// The immediately preceding period of the same length as `(startMs,
-/// endMs)` — e.g. for a 7-day window, the 7 days immediately before it.
+/// endMs)` — e.g. for a 3-day window, the 3 days immediately before it.
 /// Generalizes "vs last month" the same way Analytics' period diff
 /// line does.
 (int, int) priorBoundsOf(int startMs, int endMs) {

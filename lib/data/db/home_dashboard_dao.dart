@@ -1,6 +1,7 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../domain/home/recent_transaction.dart';
+import '../../domain/money/spent_amount.dart';
 
 /// One `source_type`'s totals within a period: the spent amount and the
 /// M-Pesa transaction cost paid on top of it (`transaction_cost_cents`,
@@ -37,7 +38,7 @@ class HomeDashboardDao {
   }) async {
     final rows = await db.rawQuery(
       '''
-      SELECT COALESCE(SUM(amount_cents), 0) AS total
+      SELECT COALESCE(SUM($kSpentCentsSql), 0) AS total
       FROM transactions
       WHERE deleted_at IS NULL
         AND transaction_occurred_at BETWEEN ? AND ?
@@ -58,7 +59,7 @@ class HomeDashboardDao {
     final rows = await db.rawQuery(
       '''
       SELECT source_type,
-             COALESCE(SUM(amount_cents), 0) AS total,
+             COALESCE(SUM($kSpentCentsSql), 0) AS total,
              COALESCE(SUM(transaction_cost_cents), 0) AS cost
       FROM transactions
       WHERE deleted_at IS NULL

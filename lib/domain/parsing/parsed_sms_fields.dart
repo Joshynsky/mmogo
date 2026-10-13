@@ -4,7 +4,9 @@
 // resolve to. Deliberately excludes CASH — no parser path ever produces a
 // cash transaction (the `transactions.source_type` CHECK and
 // `classification_groups` reflect this: CASH has no matching group/parser).
-enum SmsSourceType { sendMoney, payBill, buyGoods }
+// 0.1.2: pochi, agentWithdrawal and airtime exist as stored types; the parser
+// still produces only the first three.
+enum SmsSourceType { sendMoney, payBill, buyGoods, pochi, agentWithdrawal, airtime }
 
 /// Maps each [SmsSourceType] to the exact string stored in
 /// `transactions.source_type` / `classification_groups.code`
@@ -15,6 +17,9 @@ extension SmsSourceTypeDb on SmsSourceType {
         SmsSourceType.sendMoney => 'SEND_MONEY',
         SmsSourceType.payBill => 'PAYBILL',
         SmsSourceType.buyGoods => 'BUY_GOODS',
+        SmsSourceType.pochi => 'POCHI_LA_BIASHARA',
+        SmsSourceType.agentWithdrawal => 'AGENT_WITHDRAWAL',
+        SmsSourceType.airtime => 'AIRTIME',
       };
 }
 

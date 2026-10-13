@@ -213,8 +213,8 @@ Map<String, Object?> fakeTx({
 final analyticsTestNow = DateTime(2026, 9, 24, 13, 30);
 
 /// The mock's sample data (the PM's debug seed), on [analyticsTestNow]:
-///  - last 7 days (18–24 Sep): 1500 + 850 + 1200 + 500 = Ksh 4,050, fees 37;
-///  - the week before (11–17 Sep): 300 + 2000 = Ksh 2,300;
+///  - this calendar week (Mon 21 - Sun 27 Sep; Thu 24 is now): 1500 + 850 + 1200 = Ksh 3,550, fees 37;
+///  - the week before (14–20 Sep): 500 + 300 + 2000 = Ksh 2,800;
 ///  - older: 3 Sep (640) and 15 Aug (1750, the first transaction).
 List<Map<String, Object?>> analyticsSampleRows() => [
   fakeTx(id: 1, at: DateTime(2026, 9, 24, 9), label: 'JOHN KAMAU', amountCents: 150000, costCents: 2200),

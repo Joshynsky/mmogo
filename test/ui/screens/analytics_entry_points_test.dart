@@ -133,19 +133,19 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(_pillText(tester, 'analyticsGranularity'), 'Week');
-      expect(_pillText(tester, 'analyticsPeriodValue'), '18–24 Sep');
+      expect(_pillText(tester, 'analyticsPeriodValue'), '21–27 Sep');
       expect(_rowColor(tester, 'JOHN KAMAU'), AppPalette.light.card);
     });
 
     testWidgets('an unknown id or a failing lookup: the nav-bar default, no crash', (tester) async {
       await _pump(tester, rows: analyticsSampleRows(), args: 9999);
       await tester.pumpAndSettle();
-      expect(_pillText(tester, 'analyticsPeriodValue'), '18–24 Sep');
+      expect(_pillText(tester, 'analyticsPeriodValue'), '21–27 Sep');
 
       await _pump(tester, rows: analyticsSampleRows(), args: 7, failLookup: true);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(_pillText(tester, 'analyticsPeriodValue'), '18–24 Sep');
+      expect(_pillText(tester, 'analyticsPeriodValue'), '21–27 Sep');
     });
   });
 
@@ -182,7 +182,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('analyticsPartyCard')), findsNothing);
       expect(_pillText(tester, 'analyticsGranularity'), 'Week');
-      expect(_pillText(tester, 'analyticsPeriodValue'), '18–24 Sep');
+      expect(_pillText(tester, 'analyticsPeriodValue'), '21–27 Sep');
       expect(find.text('Spent'), findsOneWidget);
     });
 
@@ -245,7 +245,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('analyticsPartyCard')), findsNothing);
       expect(_pillText(tester, 'analyticsGranularity'), 'Week');
-      expect(_pillText(tester, 'analyticsPeriodValue'), '18–24 Sep');
+      expect(_pillText(tester, 'analyticsPeriodValue'), '21–27 Sep');
       expect(find.byKey(const Key('analyticsFilterChipClass')), findsNothing);
     });
 
@@ -280,7 +280,7 @@ void main() {
       expect(_pillText(tester, 'analyticsGranularity'), 'All time');
       expect(_t('JOHN KAMAU'), findsNothing);
       // Both Cash rows (20 Sep and 15 Sep) are in view — only reachable
-      // once the period is All time, not the last-7-days default.
+      // once the period is All time, not the this-week default.
       expect(_t('Cash — Groceries'), findsOneWidget);
       expect(_t('Cash — Transport'), findsOneWidget);
     });

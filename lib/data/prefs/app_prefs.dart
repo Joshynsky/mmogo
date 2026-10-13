@@ -51,6 +51,29 @@ class AppPrefs {
   /// except clearing the app's data.
   static const keyOnboardingComplete = 'onboarding_complete';
 
+  /// 0.1.2 CW1 — the first day of the calendar week, an int 1..7 (1 =
+  /// Monday ... 7 = Sunday). Same key the backup allowlist names. The
+  /// Settings control is a later slice; this is the typed reader only.
+  static const keyFirstDayOfWeek = 'first_day_of_week';
+
+  /// The default first day of the week: Monday.
+  static const defaultFirstDayOfWeek = 1;
+
+  /// The first day of the calendar week (1 = Monday ... 7 = Sunday).
+  /// Anything unset, out of range, of another type or unreadable gives
+  /// Monday ([defaultFirstDayOfWeek]); a period must never fail on a pref.
+  static Future<int> readFirstDayOfWeek() async {
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
+      final v = prefs.get(keyFirstDayOfWeek);
+      return v is int && v >= 1 && v <= 7 ? v : defaultFirstDayOfWeek;
+    } catch (_) {
+      return defaultFirstDayOfWeek;
+    }
+  }
+
   /// Read once per launch by the Welcome screen to pick the next route.
   ///
   /// Defensive: any read failure (missing plugin channel, storage error, a

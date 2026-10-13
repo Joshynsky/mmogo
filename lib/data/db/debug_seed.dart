@@ -19,7 +19,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 ///     clobbered or duplicated on a later launch
 ///
 /// Seeds a small, varied sample: all 4 `source_type`s, timestamps spanning
-/// today / this rolling week / this calendar month / last calendar month
+/// today / the last few days / this calendar month / last calendar month
 /// (so the period selector's diff line has real prior-period data to
 /// compare against for every one of its 3 settings, not just "no prior
 /// data"), and one soft-deleted row (to prove the `deleted_at IS NULL`
@@ -117,7 +117,7 @@ class DebugSampleData {
       'deleted_at': null,
     });
 
-    // 4. CASH, 4 days ago (within the current rolling week) — active.
+    // 4. CASH, 4 days ago (a few days back, in this or last week) — active.
     //    Cross-group per the trigger's CASH branch: references a
     //    Buy-Goods-group classification while itself typed CASH.
     await insertTx({

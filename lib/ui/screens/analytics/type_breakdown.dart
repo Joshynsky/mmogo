@@ -87,7 +87,7 @@ class AnalyticsTypePanel extends StatelessWidget {
         v.inc
             .where((r) => r.sourceType == code)
             .where((r) => classFilter == null || r.classificationName == classFilter)
-            .fold<int>(0, (s, r) => s + r.amountCents),
+            .fold<int>(0, (s, r) => s + r.spent),
     ];
     Widget tile(int i) {
       final (code, name) = analyticsTypeOrder[i];
