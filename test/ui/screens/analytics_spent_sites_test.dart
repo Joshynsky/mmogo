@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/db/analytics_dao.dart';
+import 'package:mmogo/ui/screens/analytics/analytics_filters.dart';
 import 'package:mmogo/ui/screens/analytics/analytics_view.dart';
 import 'package:mmogo/ui/screens/analytics/swipe_chart.dart';
 import 'package:mmogo/ui/screens/analytics_screen.dart';
@@ -13,6 +14,7 @@ import 'package:mmogo/ui/screens/analytics/transaction_list.dart';
 import 'package:mmogo/ui/screens/analytics/type_breakdown.dart';
 import 'package:mmogo/ui/screens/analytics/where_breakdown.dart';
 import 'package:mmogo/domain/analytics/analytics_period.dart';
+import 'package:mmogo/domain/analytics/chart_blocks.dart' show WhereItWentStyle;
 import 'package:mmogo/ui/theme/app_colors.dart';
 
 import '../../support/fake_analytics_db.dart';
@@ -77,7 +79,7 @@ void main() {
 
   testWidgets('By type: Buy Goods and Cash tiles show their spend, percentages use the spent total', (t) async {
     await t.pumpWidget(
-      _host(AnalyticsTypePanel(palette: palette, view: _view(_rows), typeFilter: null, classFilter: null, onToggleType: (_) {})),
+      _host(AnalyticsTypePanel(palette: palette, view: _view(_rows), filters: AnalyticsFilters.none, onToggleType: (_) {})),
     );
     // total = 42,000; Buy Goods 30,000 = 71%, Cash 7,000 = 17%.
     expect(find.text('Ksh 300.00'), findsOneWidget);
@@ -97,12 +99,11 @@ void main() {
       _host(
         AnalyticsWherePanel(
           palette: palette,
-          view: _view(_rows),
-          typeFilter: null,
-          classFilter: null,
-          showAll: true,
+          ranking: analyticsWhereRanking(_view(_rows).inc, AnalyticsFilters.none),
+          filters: AnalyticsFilters.none,
+          style: WhereItWentStyle.button,
           onToggleClass: (_) {},
-          onToggleShowAll: () {},
+          onOpenSheet: () {},
         ),
       ),
     );
@@ -120,8 +121,7 @@ void main() {
             children: analyticsTransactionSections(
               palette: palette,
               view: _view(_rows),
-              typeFilter: typeFilter,
-              classFilter: null,
+              filters: AnalyticsFilters.handOff(type: typeFilter),
               highlightedId: null,
               openRowId: null,
               rowKeyFor: (_) => GlobalKey(),
@@ -163,8 +163,7 @@ void main() {
           children: analyticsTransactionSections(
             palette: palette,
             view: _view(rows),
-            typeFilter: 'AGENT_WITHDRAWAL',
-            classFilter: 'Shopping',
+            filters: AnalyticsFilters.handOff(type: 'AGENT_WITHDRAWAL', classification: 'Shopping'),
             highlightedId: null,
             openRowId: null,
             rowKeyFor: (_) => GlobalKey(),

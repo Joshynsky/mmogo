@@ -18,6 +18,11 @@ enum MonthChartStyle { weeks, days }
 /// Preference `year_view_amounts` ('quarters' | 'months').
 enum YearViewAmounts { quarters, months }
 
+/// How Analytics' Where it went tab is drawn (0.1.2 S6c): a ranked top-3
+/// preview with a Categories button (default), or the two-row card strip.
+/// Preference `where_it_went_style` ('button' | 'strip').
+enum WhereItWentStyle { button, strip }
+
 const _mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const _monthFull = [
   'January',

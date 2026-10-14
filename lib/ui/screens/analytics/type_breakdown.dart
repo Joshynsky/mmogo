@@ -3,18 +3,39 @@ import 'package:flutter/material.dart';
 import '../../../domain/format/money.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/tabular.dart';
+import '../../widgets/tap_target.dart';
+import 'analytics_filters.dart';
 import 'analytics_view.dart';
+import 'categories_sheet.dart';
 import 'format.dart';
 import 'type_strip.dart';
 
-/// §ANALYTICS.BY_TYPE — the segmented By type | Where it went switch (mock
-/// `.bswitch`), and below it the By type tile grid.
+/// §ANALYTICS.BY_TYPE — the tab row: the segmented By type | Where it went
+/// switch (mock `.tabs`) filling the row, and at its right end the Categories
+/// button (Where it went tab, Button style only; M1b-final). On By type the
+/// 44 px slot stays, empty, so the switch keeps one width on both tabs; in the
+/// Strip style there is no slot. Below it, the By type tile strip.
 class AnalyticsBreakdownSwitch extends StatelessWidget {
-  const AnalyticsBreakdownSwitch({super.key, required this.palette, required this.whereTab, required this.onChanged});
+  const AnalyticsBreakdownSwitch({
+    super.key,
+    required this.palette,
+    required this.whereTab,
+    required this.onChanged,
+    this.showButtonSlot = false,
+    this.categoriesAvailable = 0,
+    this.categoriesSelected = 0,
+    this.onCategories,
+  });
 
   final AppPalette palette;
   final bool whereTab;
   final ValueChanged<bool> onChanged;
+
+  /// Button style: reserve the slot at the right end of the row.
+  final bool showButtonSlot;
+  final int categoriesAvailable;
+  final int categoriesSelected;
+  final VoidCallback? onCategories;
 
   @override
   Widget build(BuildContext context) {
@@ -52,29 +73,47 @@ class AnalyticsBreakdownSwitch extends StatelessWidget {
       );
     }
 
-    return Container(
+    final tabs = Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(color: palette.track, borderRadius: const BorderRadius.all(Radius.circular(12))),
       child: Row(children: [tab('By type', false), tab('Where it went', true)]),
     );
+    if (!showButtonSlot) return tabs;
+    return Row(
+      children: [
+        Expanded(child: tabs),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: kMinTapTarget,
+          height: kMinTapTarget,
+          child: whereTab
+              ? AnalyticsCategoriesButton(
+                  palette: palette,
+                  available: categoriesAvailable,
+                  selected: categoriesSelected,
+                  onTap: onCategories ?? () {},
+                )
+              : null,
+        ),
+      ],
+    );
   }
 }
 
-/// The By type panel: respects an active classification filter.
+/// The By type panel: respects the class set; a tile toggles its type in or
+/// out of the type set.
 class AnalyticsTypePanel extends StatelessWidget {
   const AnalyticsTypePanel({
     super.key,
     required this.palette,
     required this.view,
-    required this.typeFilter,
-    required this.classFilter,
+    required this.filters,
     required this.onToggleType,
   });
 
   final AppPalette palette;
   final AnalyticsView view;
-  final String? typeFilter;
-  final String? classFilter;
+  final AnalyticsFilters filters;
   final ValueChanged<String> onToggleType;
 
   @override
@@ -87,21 +126,24 @@ class AnalyticsTypePanel extends StatelessWidget {
       for (final (code, _) in analyticsTypeOrder)
         v.inc
             .where((r) => r.sourceType == code)
-            .where((r) => classFilter == null || r.classificationName == classFilter)
+            .where(filters.matchesClass)
             .fold<int>(0, (s, r) => s + (code == 'AGENT_WITHDRAWAL' ? r.withdrawn : r.spent)),
     ];
+    // The share base: the whole period's spending, or (a type set picked) the
+    // picked types' own total; the others show a dash.
+    final base = typeShareBase(filters, {for (var i = 0; i < analyticsTypeOrder.length; i++) analyticsTypeOrder[i].$1: byType[i]}, total);
     Widget tile(int i) {
       final (code, name) = analyticsTypeOrder[i];
-      final on = typeFilter == code;
+      final on = filters.types.contains(code);
       // Withdrawal is tracked, not spent (S4a rule): it adds 0 to spent, so
       // its tile reads "tracked" instead of a percentage.
       final withdrawal = code == 'AGENT_WITHDRAWAL';
-      final pct = withdrawal ? 'tracked' : (total > 0 ? '${(byType[i] / total * 100).round()}%' : '—');
+      final pct = typeShareText(filters, code, byType[i], base);
       // The Withdrawal tile shows the cash withdrawn in the period ('Ksh 0.00'
       // only when there is none), muted, with 'tracked' in place of a percent.
       // It is never added to the spent total or to another tile's percentage.
       final shown = byType[i];
-      final tap = on ? 'Showing only these; tap to show all' : 'Tap to show only these';
+      final tap = on ? 'Selected; tap to remove from the selection' : 'Tap to add to the selection';
       return _TypeTile(
         key: Key('analyticsTypeTile-$code'),
         palette: palette,
@@ -111,7 +153,7 @@ class AnalyticsTypePanel extends StatelessWidget {
         amount: formatKsh(shown),
         mutedAmount: withdrawal,
         pressed: on,
-        faded: typeFilter != null && !on,
+        faded: filters.types.isNotEmpty && !on,
         semanticsLabel: withdrawal
             ? '$name, ${formatKsh(shown)} withdrawn. Tracked, not spending. $tap'
             : '$name, ${formatKsh(shown)}. $tap',

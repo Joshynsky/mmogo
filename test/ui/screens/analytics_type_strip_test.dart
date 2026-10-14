@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/db/analytics_dao.dart';
 import 'package:mmogo/domain/analytics/analytics_period.dart';
 import 'package:mmogo/domain/format/source_types.dart';
+import 'package:mmogo/ui/screens/analytics/analytics_filters.dart';
 import 'package:mmogo/ui/screens/analytics/analytics_view.dart';
 import 'package:mmogo/ui/screens/analytics/type_breakdown.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
@@ -74,8 +75,7 @@ Future<void> _pump(
           child: AnalyticsTypePanel(
             palette: AppPalette.light,
             view: _view(rows),
-            typeFilter: typeFilter,
-            classFilter: classFilter,
+            filters: AnalyticsFilters.handOff(type: typeFilter, classification: classFilter),
             onToggleType: onToggle ?? (_) {},
           ),
         ),

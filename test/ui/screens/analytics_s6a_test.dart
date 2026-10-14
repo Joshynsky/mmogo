@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/db/analytics_dao.dart';
 import 'package:mmogo/domain/analytics/analytics_period.dart';
 import 'package:mmogo/ui/copy/spend_copy.dart';
+import 'package:mmogo/ui/screens/analytics/analytics_filters.dart';
 import 'package:mmogo/ui/screens/analytics/analytics_view.dart';
 import 'package:mmogo/ui/screens/analytics/hero_card.dart';
 import 'package:mmogo/ui/screens/analytics/transaction_list.dart';
@@ -83,8 +84,7 @@ Future<void> _pumpList(WidgetTester t, List<AnalyticsTransactionRow> rows, {Stri
         children: analyticsTransactionSections(
           palette: _p,
           view: _view(AnalyticsPeriod.month(_now), rows),
-          typeFilter: typeFilter,
-          classFilter: null,
+          filters: AnalyticsFilters.handOff(type: typeFilter),
           highlightedId: null,
           openRowId: null,
           rowKeyFor: (_) => GlobalKey(),

@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../data/db/analytics_dao.dart';
 import '../../../domain/analytics/analytics_period.dart';
 import '../../../domain/format/money.dart';
-import '../../../domain/format/source_types.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/removable_chip.dart';
 import '../../widgets/tabular.dart';
+import 'analytics_filters.dart';
 import 'analytics_view.dart';
 import 'parts.dart';
 import 'swipe_row.dart';
@@ -52,8 +52,7 @@ Widget _dayTotal(AppPalette palette, List<AnalyticsTransactionRow> g, bool onlyW
 List<Widget> analyticsTransactionSections({
   required AppPalette palette,
   required AnalyticsView view,
-  required String? typeFilter,
-  required String? classFilter,
+  required AnalyticsFilters filters,
   required int? highlightedId,
   required int? openRowId,
   required GlobalKey Function(int id) rowKeyFor,
@@ -66,18 +65,15 @@ List<Widget> analyticsTransactionSections({
   final v = view;
   // T26 "yes allow type and category": both can be active; the list shows
   // the AND of the two.
-  final typeName = typeFilter != null ? sourceTypeName(typeFilter) : null;
-  final className = classFilter;
-  final fNames = [?typeName, ?className];
+  final hasTypes = filters.types.isNotEmpty;
+  final hasClasses = filters.classes.isNotEmpty;
   final list = [
     for (final r in v.inc)
-      if ((typeFilter == null || r.sourceType == typeFilter) &&
-          (classFilter == null || r.classificationName == classFilter))
-        r,
+      if (filters.matches(r)) r,
   ];
   // Signed mock (analytics.html ~606): a Withdrawal-only list shows the cash
   // taken out + ' out'; every other list keeps the spent subtotal.
-  final onlyWithdrawal = typeFilter == 'AGENT_WITHDRAWAL';
+  final onlyWithdrawal = filters.onlyWithdrawal;
   final subtotal = list.fold<int>(0, (s, r) => s + (onlyWithdrawal ? r.withdrawn : r.spent));
   final subtotalLabel = onlyWithdrawal ? '${kshTrim(subtotal)} out' : kshTrim(subtotal);
   final subtotalWords = onlyWithdrawal ? ', ${kshTrim(subtotal)} withdrawn' : '';
@@ -94,7 +90,7 @@ List<Widget> analyticsTransactionSections({
           ),
           const SizedBox(width: 8),
           const Spacer(),
-          if (typeName != null)
+          if (hasTypes)
             Flexible(
               flex: 8,
               child: Align(
@@ -102,14 +98,16 @@ List<Widget> analyticsTransactionSections({
                 child: RemovableChip(
                   inkKey: const Key('analyticsFilterChipType'),
                   palette: palette,
-                  label: '$typeName · $subtotalLabel',
-                  semanticsLabel: 'Clear the $typeName filter$subtotalWords',
+                  label: '${filters.typeChipLabel} · $subtotalLabel',
+                  semanticsLabel: filters.types.length > 1
+                      ? 'Clear all ${filters.types.length} type filters$subtotalWords'
+                      : 'Clear the ${filters.typeChipLabel} filter$subtotalWords',
                   onTap: onClearType,
                 ),
               ),
             ),
-          if (typeName != null && className != null) const SizedBox(width: 6),
-          if (className != null)
+          if (hasTypes && hasClasses) const SizedBox(width: 6),
+          if (hasClasses)
             Flexible(
               flex: 8,
               child: Align(
@@ -117,8 +115,10 @@ List<Widget> analyticsTransactionSections({
                 child: RemovableChip(
                   inkKey: const Key('analyticsFilterChipClass'),
                   palette: palette,
-                  label: '$className · $subtotalLabel',
-                  semanticsLabel: 'Clear the $className filter$subtotalWords',
+                  label: '${filters.classChipLabel} · $subtotalLabel',
+                  semanticsLabel: filters.classes.length > 1
+                      ? 'Clear all ${filters.classes.length} category filters$subtotalWords'
+                      : 'Clear the ${filters.classChipLabel} filter$subtotalWords',
                   onTap: onClearClass,
                 ),
               ),
@@ -135,7 +135,7 @@ List<Widget> analyticsTransactionSections({
         palette: palette,
         child: AnalyticsEmpty(
           palette: palette,
-          text: 'No ${fNames.isEmpty ? '' : '${fNames.join(' ')} '}transactions in this period.',
+          text: filters.emptyText,
         ),
       ),
     );

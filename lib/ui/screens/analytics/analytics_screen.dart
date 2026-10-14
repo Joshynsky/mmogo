@@ -10,12 +10,15 @@ import '../../../data/db/transaction_dao.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../../domain/period_math.dart' show dayBounds;
 import '../../../domain/analytics/analytics_period.dart';
+import '../../../domain/analytics/chart_blocks.dart' show WhereItWentStyle;
 import '../../shell/primary_scaffold.dart';
 import '../../shell/primary_shell.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/coach_tour.dart';
 import '../../widgets/period_pill.dart';
+import 'analytics_filters.dart';
 import 'analytics_view.dart';
+import 'categories_sheet.dart';
 import 'chart_card.dart';
 import 'custom_dates_sheet.dart';
 import 'edit_sheet.dart';
@@ -88,11 +91,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
   /// Both can be active together (T26 "yes allow type and category"): a
   /// type code and/or a classification name; the transactions list filters
   /// on the AND of the two that are set.
-  String? _typeFilter;
-  String? _classFilter;
+  AnalyticsFilters _filters = AnalyticsFilters.none;
 
   bool _whereTab = false;
-  bool _showAllClasses = false;
+
+  WhereItWentStyle _whereStyle = WhereItWentStyle.button;
 
   AnalyticsView? _view;
   int _loadSeq = 0;
@@ -195,8 +198,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
           _partyKey = null;
           _partyName = null;
           _beforeParty = null;
-          _typeFilter = null;
-          _classFilter = null;
+          _filters = AnalyticsFilters.none;
           _openRowId = null;
           _crossNote = null;
         });
@@ -217,10 +219,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     if (_isParty && saved != null) {
       _beforeParty = AnalyticsBeforeParty(
         period: next,
-        typeFilter: null,
-        classFilter: null,
+        filters: AnalyticsFilters.none,
         whereTab: saved.whereTab,
-        showAllClasses: saved.showAllClasses,
         scroll: 0,
       );
       return;
@@ -243,12 +243,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     if (r.partyKey != null) {
       _enterParty(r.type!, r.partyKey!, r.partyName);
       _period = period;
-      _classFilter = r.classification;
+      _filters = AnalyticsFilters.handOff(classification: r.classification);
       return;
     }
     _period = period;
-    _typeFilter = r.type;
-    _classFilter = r.classification;
+    _filters = AnalyticsFilters.handOff(type: r.type, classification: r.classification);
     _openRowId = null;
   }
 
@@ -257,18 +256,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
   void _enterParty(String type, String key, [String? name]) {
     _beforeParty ??= AnalyticsBeforeParty(
       period: _period,
-      typeFilter: _typeFilter,
-      classFilter: _classFilter,
+      filters: _filters,
       whereTab: _whereTab,
-      showAllClasses: _showAllClasses,
       scroll: _scroll.hasClients ? _scroll.offset : 0,
     );
     _partyType = type;
     _partyKey = key;
     _partyName = name;
-    _typeFilter = null;
-    _classFilter = null;
-    _showAllClasses = false;
+    _filters = AnalyticsFilters.none;
     _openRowId = null;
   }
 
@@ -281,10 +276,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     _partyKey = null;
     _partyName = null;
     _period = saved?.period ?? AnalyticsPeriod.thisWeek(_now(), firstDay: _firstDay);
-    _typeFilter = saved?.typeFilter;
-    _classFilter = saved?.classFilter;
+    _filters = saved?.filters ?? AnalyticsFilters.none;
     _whereTab = saved?.whereTab ?? false;
-    _showAllClasses = saved?.showAllClasses ?? false;
     _openRowId = null;
     _pendingScroll = saved?.scroll ?? 0;
   }
@@ -321,6 +314,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     // S6b: the Month chart style and the Year amounts, read on every load.
     final monthStyle = await AppPrefs.readMonthChartStyle();
     final yearAmounts = await AppPrefs.readYearViewAmounts();
+    // S6c: the hatched withdrawals and the Where it went style, also per load.
+    final showHatch = await AppPrefs.readShowWithdrawalsInChart();
+    final whereStyle = await AppPrefs.readWhereItWentStyle();
     if (!mounted || seq != _loadSeq) return;
     if (firstDay != _firstDay) {
       _firstDay = firstDay;
@@ -396,7 +392,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
         chart: chart,
         bucketCents: bucketCents,
         partyName: party ? (_partyName ?? (rows.isEmpty ? null : rows.first.displayName)) : null,
+        hatchCents: withdrawnPerWindow([for (final b in chart.buckets) (b.startMs, b.endMs)], rows),
+        showHatch: showHatch,
       );
+      _whereStyle = whereStyle;
     });
     if (scrollTo != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -458,8 +457,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     }
     setState(() {
       _period = next;
-      _typeFilter = null;
-      _classFilter = null;
+      _filters = AnalyticsFilters.none;
       _openRowId = null;
       _crossNote = null;
     });
@@ -489,8 +487,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     setState(() {
       _period = _period.backToNow(today: today);
       _crossNote = null;
-      _typeFilter = null;
-      _classFilter = null;
+      _filters = AnalyticsFilters.none;
       _openRowId = null;
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
@@ -504,20 +501,36 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     _load();
   }
 
-  // T26 "yes allow type and category": a type tile and a "Where it went" row
-  // toggle only their own filter now; both can be active together (the list
-  // filters on the AND of the two, see `analyticsTransactionSections`).
-  void _toggleType(String code) => setState(() {
-    _typeFilter = _typeFilter == code ? null : code;
-  });
+  // 0.1.2 S6c (MS1, TL1): a type tile and a "Where it went" row toggle their
+  // value in or out of their own SET (OR within a set); the two sets AND
+  // together (see `AnalyticsFilters.matches`).
+  void _toggleType(String code) => setState(() => _filters = _filters.toggleType(code));
 
-  void _toggleClass(String name) => setState(() {
-    _classFilter = _classFilter == name ? null : name;
-  });
+  void _toggleClass(String name) => setState(() => _filters = _filters.toggleClass(name));
 
-  void _clearTypeFilter() => setState(() => _typeFilter = null);
+  void _clearTypeFilter() => setState(() => _filters = _filters.clearTypes());
 
-  void _clearClassFilter() => setState(() => _classFilter = null);
+  void _clearClassFilter() => setState(() => _filters = _filters.clearClasses());
+
+  /// The Categories sheet (grid button, "N categories", "See all N"). Apply
+  /// and Clear replace the class set; Close, scrim tap and Back leave it as is.
+  Future<void> _openCategories() async {
+    final v = _view;
+    if (v == null) return;
+    final picked = await showModalBottomSheet<Set<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: const Color(0x59000000),
+      builder: (ctx) => AnalyticsCategoriesSheet(
+        palette: AppPalette.of(context),
+        ranking: analyticsWhereRanking(v.inc, _filters),
+        selected: _filters.classes,
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _filters = _filters.withClasses(picked));
+  }
 
   // §ANALYTICS.SHELL.PILL — the two-part period pill's menus and the Custom sheet.
 
@@ -726,6 +739,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
 
   Widget _body(AnalyticsView v, AppPalette palette) {
     final words = v.period.words(today: v.today, first: v.first);
+    final ranking = analyticsWhereRanking(v.inc, _filters);
     final sections = <Widget>[
       // The mock's party slot still takes a flex gap; the party strip itself
       // is pinned above the scroll area (see build).
@@ -746,7 +760,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
         child: AnalyticsChartCard(
           palette: palette,
           view: v,
-          typeFilterIndex: _typeFilter == null ? null : analyticsTypeOrder.indexWhere((t) => t.$1 == _typeFilter),
+          typeFilterIndexes: {
+            for (var i = 0; i < analyticsTypeOrder.length; i++)
+              if (_filters.types.contains(analyticsTypeOrder[i].$1)) i,
+          },
           canBack: _period.canStepBack(today: v.today, first: v.first),
           canForward: _period.canStepForward(today: v.today),
           onStep: _step,
@@ -757,6 +774,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
         palette: palette,
         whereTab: _whereTab,
         onChanged: (where) => setState(() => _whereTab = where),
+        showButtonSlot: _whereStyle == WhereItWentStyle.button,
+        categoriesAvailable: ranking.length,
+        categoriesSelected: _filters.classes.length,
+        onCategories: _openCategories,
       ),
       KeyedSubtree(
         key: _breakdownTourKey,
@@ -765,27 +786,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
           child: _whereTab
               ? AnalyticsWherePanel(
                   palette: palette,
-                  view: v,
-                  typeFilter: _typeFilter,
-                  classFilter: _classFilter,
-                  showAll: _showAllClasses,
+                  ranking: ranking,
+                  filters: _filters,
+                  style: _whereStyle,
                   onToggleClass: _toggleClass,
-                  onToggleShowAll: () => setState(() => _showAllClasses = !_showAllClasses),
+                  onOpenSheet: _openCategories,
                 )
-              : AnalyticsTypePanel(
-                  palette: palette,
-                  view: v,
-                  typeFilter: _typeFilter,
-                  classFilter: _classFilter,
-                  onToggleType: _toggleType,
-                ),
+              : AnalyticsTypePanel(palette: palette, view: v, filters: _filters, onToggleType: _toggleType),
         ),
       ),
       ...analyticsTransactionSections(
         palette: palette,
         view: v,
-        typeFilter: _typeFilter,
-        classFilter: _classFilter,
+        filters: _filters,
         highlightedId: _highlightedId,
         openRowId: _openRowId,
         rowKeyFor: (id) => _rowKeys.putIfAbsent(id, GlobalKey.new),

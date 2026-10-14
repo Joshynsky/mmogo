@@ -337,7 +337,8 @@ void main() {
       expect(find.text('NAIVAS SUPERMARKET'), findsOneWidget);
     });
 
-    testWidgets('Where it went shows the top 4, then Show all N / Show fewer', (tester) async {
+    testWidgets('Where it went shows the top 3 (Button style) and "N categories", which opens the sheet', (tester) async {
+      // 0.1.2 S6c: was the top 4 then Show all N / Show fewer; that vertical expansion is gone.
       final rows = [
         for (var i = 0; i < 6; i++)
           fakeTx(id: 50 + i, at: DateTime(2026, 9, 22, 8 + i), amountCents: 10000 * (i + 1), classification: 'C$i'),
@@ -346,12 +347,13 @@ void main() {
       await tester.tap(find.byKey(const Key('analyticsTabWhere')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('analyticsWhere-C5')), findsOneWidget);
-      expect(find.byKey(const Key('analyticsWhere-C1')), findsNothing);
-      expect(find.text('Show all 6'), findsOneWidget);
-      await tester.tap(find.text('Show all 6'));
+      expect(find.byKey(const Key('analyticsWhere-C3')), findsOneWidget);
+      expect(find.byKey(const Key('analyticsWhere-C2')), findsNothing);
+      expect(find.text('6 categories'), findsOneWidget);
+      expect(find.text('Show all 6'), findsNothing);
+      await tester.tap(find.text('6 categories'));
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('analyticsWhere-C0')), findsOneWidget);
-      expect(find.text('Show fewer'), findsOneWidget);
+      expect(find.byKey(const Key('analyticsCatRow-C0')), findsOneWidget);
     });
 
     testWidgets('an empty period: the mock empty states', (tester) async {

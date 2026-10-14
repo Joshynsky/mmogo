@@ -9,14 +9,14 @@ import 'swipe_chart.dart';
 
 /// §ANALYTICS.CHART — the chart card: title, prev/next period buttons, the
 /// swipeable chart and its hint. [canBack]/[canForward] come from the shell's
-/// live `_period` (not `view.period`); [typeFilterIndex] is the index of the
-/// active type filter in `analyticsTypeOrder`, or null.
+/// live `_period` (not `view.period`); [typeFilterIndexes] are the indexes of
+/// the picked types in `analyticsTypeOrder` (empty = none).
 class AnalyticsChartCard extends StatelessWidget {
   const AnalyticsChartCard({
     super.key,
     required this.palette,
     required this.view,
-    required this.typeFilterIndex,
+    required this.typeFilterIndexes,
     required this.canBack,
     required this.canForward,
     required this.onStep,
@@ -25,7 +25,7 @@ class AnalyticsChartCard extends StatelessWidget {
 
   final AppPalette palette;
   final AnalyticsView view;
-  final int? typeFilterIndex;
+  final Set<int> typeFilterIndexes;
   final bool canBack;
   final bool canForward;
   final ValueChanged<int> onStep;
@@ -35,7 +35,7 @@ class AnalyticsChartCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final v = view;
     final canFwd = canForward;
-    final typeIndex = typeFilterIndex;
+    final legend = chartLegendText(v.chart.legend, hatched: v.showHatch, hasCash: v.hasHatch);
     return AppCard(
       palette: palette,
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
@@ -84,7 +84,9 @@ class AnalyticsChartCard extends StatelessWidget {
             palette: palette,
             spec: v.chart,
             bucketCents: v.bucketCents,
-            typeFilterIndex: typeIndex,
+            typeFilterIndexes: typeFilterIndexes,
+            hatchCents: v.hatchCents,
+            showHatch: v.showHatch,
             // F2: an all-zero chart has no scale to show; one muted line instead.
             emptyMessage: v.period.granularity == AnalyticsGranularity.day && v.range.start == v.today
                 ? 'No spending yet today'
@@ -93,11 +95,11 @@ class AnalyticsChartCard extends StatelessWidget {
             onSwipe: (dir) => onStep(dir),
             onBucket: onBucket,
           ),
-          if (v.chart.legend.isNotEmpty)
+          if (legend.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 2),
               child: Text(
-                v.chart.legend,
+                legend,
                 key: const Key('analyticsChartLegend'),
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 10.5, color: palette.mutedInk),
@@ -117,3 +119,11 @@ class AnalyticsChartCard extends StatelessWidget {
     );
   }
 }
+
+/// The line under the chart: the spec's own text (the part-week note) and, when
+/// the chart's period holds cash taken out, one more part joined with " · ":
+/// what the hatching means (preference on) or that it is not shown (off).
+String chartLegendText(String specLegend, {required bool hatched, required bool hasCash}) => [
+  if (specLegend.isNotEmpty) specLegend,
+  if (hasCash) hatched ? 'Hatched = cash withdrawn, not spent' : 'Cash withdrawn is not shown here (not spending)',
+].join(' · ');

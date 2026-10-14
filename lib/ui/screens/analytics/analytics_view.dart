@@ -1,5 +1,6 @@
 import '../../../data/db/analytics_dao.dart';
 import '../../../domain/analytics/analytics_period.dart';
+import 'analytics_filters.dart';
 
 /// §ANALYTICS.VIEW — everything one load derives from the data, for one
 /// period. The screen renders from this snapshot, so the pill, the totals and
@@ -18,6 +19,8 @@ class AnalyticsView {
     required this.chart,
     required this.bucketCents,
     required this.partyName,
+    this.hatchCents = const [],
+    this.showHatch = false,
   });
 
   final AnalyticsPeriod period;
@@ -44,6 +47,18 @@ class AnalyticsView {
 
   final String? partyName;
 
+  /// Per bucket, the cash taken out at agents in cents (0.1.2 S6c). Never part
+  /// of [bucketCents] or any total; it only feeds the hatched chart segment
+  /// and the legend. Empty = none.
+  final List<int> hatchCents;
+
+  /// The "Show withdrawals in the chart" preference: draw [hatchCents] as a
+  /// hatched segment on top of each bar.
+  final bool showHatch;
+
+  /// The chart's period holds some cash taken out.
+  bool get hasHatch => hatchCents.any((c) => c > 0);
+
   DateTime get today => dateOnly(now);
 
   int get totalCents => inc.fold(0, (s, r) => s + r.spent);
@@ -55,17 +70,13 @@ class AnalyticsView {
 class AnalyticsBeforeParty {
   const AnalyticsBeforeParty({
     required this.period,
-    required this.typeFilter,
-    required this.classFilter,
+    required this.filters,
     required this.whereTab,
-    required this.showAllClasses,
     required this.scroll,
   });
 
   final AnalyticsPeriod period;
-  final String? typeFilter;
-  final String? classFilter;
+  final AnalyticsFilters filters;
   final bool whereTab;
-  final bool showAllClasses;
   final double scroll;
 }

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../domain/analytics/chart_blocks.dart' show MonthChartStyle, YearViewAmounts;
+import '../../domain/analytics/chart_blocks.dart' show MonthChartStyle, WhereItWentStyle, YearViewAmounts;
 
 /// Real defect found and fixed live, this dispatch (T9): a bare
 /// `SharedPreferences.getInstance()` call can hang indefinitely rather than
@@ -104,6 +104,37 @@ class AppPrefs {
       return prefs.get(keyYearViewAmounts) == 'months' ? YearViewAmounts.months : YearViewAmounts.quarters;
     } catch (_) {
       return YearViewAmounts.quarters;
+    }
+  }
+
+  /// 0.1.2 S6c — draw withdrawals on the Analytics chart as a hatched
+  /// segment (true), or leave them out (false, the default). Same key the
+  /// backup allowlist names (a boolean). Reader only until S9.
+  static const keyShowWithdrawalsInChart = 'show_withdrawals_in_chart';
+
+  /// How the Where it went tab is drawn: 'button' (default) or 'strip'. Same
+  /// key the backup allowlist names. Reader only until S9.
+  static const keyWhereItWentStyle = 'where_it_went_style';
+
+  /// Only a stored `true` shows the hatched withdrawals; unset, of another
+  /// type, or unreadable gives `false`.
+  static Future<bool> readShowWithdrawalsInChart() async {
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      return prefs.get(keyShowWithdrawalsInChart) == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// The Where it went style. Anything unset, of another type, not one of
+  /// 'button' / 'strip', or unreadable gives [WhereItWentStyle.button].
+  static Future<WhereItWentStyle> readWhereItWentStyle() async {
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      return prefs.get(keyWhereItWentStyle) == 'strip' ? WhereItWentStyle.strip : WhereItWentStyle.button;
+    } catch (_) {
+      return WhereItWentStyle.button;
     }
   }
 

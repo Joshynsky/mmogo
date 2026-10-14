@@ -79,6 +79,22 @@ class AnalyticsTransactionRow {
   }
 }
 
+/// 0.1.2 S6c: the cash taken out at agents inside each window, in cents
+/// (one per `(startMs, endMs)`, both ends inclusive). Feeds only the chart's
+/// hatched segment and its legend; never a spent total.
+List<int> withdrawnPerWindow(List<(int, int)> windows, Iterable<AnalyticsTransactionRow> rows) {
+  final out = List<int>.filled(windows.length, 0);
+  for (final r in rows) {
+    final w = r.withdrawn;
+    if (w == 0) continue;
+    final ms = r.occurredAt.millisecondsSinceEpoch;
+    for (var i = 0; i < windows.length; i++) {
+      if (ms >= windows[i].$1 && ms <= windows[i].$2) out[i] += w;
+    }
+  }
+  return out;
+}
+
 /// Analytics' query layer — follows the same raw-SQL-against-`AppDatabase`
 /// idiom `home_dashboard_dao.dart` (T4) and `classification_dao.dart` (T3)
 /// already established for this project (no repository/ORM abstraction).
