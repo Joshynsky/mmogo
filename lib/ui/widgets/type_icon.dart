@@ -6,9 +6,10 @@ IconData sourceTypeIcon(String code) => switch (code) {
   'SEND_MONEY' => Icons.arrow_forward_rounded,
   'PAYBILL' => Icons.receipt_long_outlined,
   'BUY_GOODS' => Icons.shopping_bag_outlined,
-  // PLACEHOLDER (S4b replaces): Pochi, Withdrawal and Airtime have no signed
-  // icon yet and share the Cash icon.
-  _ => Icons.payments_outlined,
+  'POCHI_LA_BIASHARA' => Icons.account_balance_wallet_outlined, // mock: wallet
+  'AGENT_WITHDRAWAL' => Icons.output_outlined, // mock: note leaving, arrow up and out
+  'AIRTIME' => Icons.smartphone_outlined, // mock: smartphone_outlined
+  _ => Icons.payments_outlined, // CASH
 };
 
 class TypeIconTile extends StatelessWidget {

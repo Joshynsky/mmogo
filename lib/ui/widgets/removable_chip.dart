@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'tap_target.dart';
 
 /// §WIDGET.REMOVABLE_CHIP — an active filter (mock `.bfchip`): label + ✕; a
 /// tap removes it. [inkKey] goes on the `InkWell` (Analytics' T26 chips);
@@ -28,29 +29,33 @@ class RemovableChip extends StatelessWidget {
       button: true,
       label: semanticsLabel,
       excludeSemantics: true,
-      child: Material(
-        color: palette.primary,
-        borderRadius: pill,
-        child: InkWell(
-          key: inkKey,
+      child: TapTarget(
+        onTap: onTap,
+        expandWidth: false,
+        child: Material(
+          color: palette.primary,
           borderRadius: pill,
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(11, 6, 8, 6),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: palette.onPrimary),
+          child: InkWell(
+            key: inkKey,
+            borderRadius: pill,
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(11, 6, 8, 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: palette.onPrimary),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 6),
-                Icon(Icons.close_rounded, size: 13, color: palette.onPrimary.withValues(alpha: 0.85)),
-              ],
+                  const SizedBox(width: 6),
+                  Icon(Icons.close_rounded, size: 13, color: palette.onPrimary.withValues(alpha: 0.85)),
+                ],
+              ),
             ),
           ),
         ),

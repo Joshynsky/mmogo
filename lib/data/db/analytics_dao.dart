@@ -48,6 +48,11 @@ class AnalyticsTransactionRow {
   /// sums this, never [amountCents].
   int get spent => spentCents(sourceType, amountCents, transactionCostCents);
 
+  /// The cash this row took out at an agent (the amount of a withdrawal, 0
+  /// for every other type). Tracked, never spending; only the Withdrawal tile
+  /// reads it.
+  int get withdrawn => withdrawnCents(sourceType, amountCents);
+
   /// -> `transactions.transaction_cost_cents`. Always `null` for CASH rows
   /// (schema CHECK); NOT NULL for every other `source_type`. T13 — added
   /// so Analytics' edit form (this row's own re-render target) can

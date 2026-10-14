@@ -60,9 +60,9 @@ class DetailsCard extends StatelessWidget {
             ),
           ),
           if (codeShapeInvalid)
-            _errorText(key: const Key('addCodeShapeError'), text: 'Enter the 10-character M-Pesa code')
+            _errorText(palette, key: const Key('addCodeShapeError'), text: 'Enter the 10-character M-Pesa code')
           else if (codeDuplicate)
-            _errorText(key: const Key('addCodeDuplicateError'), text: 'This code is already recorded'),
+            _errorText(palette, key:const Key('addCodeDuplicateError'), text: 'This code is already recorded'),
           Divider(height: 1, color: palette.line),
           _row(
             context,
@@ -120,10 +120,10 @@ class DetailsCard extends StatelessWidget {
     );
   }
 
-  Widget _errorText({required Key key, required String text}) {
+  Widget _errorText(AppPalette palette, {required Key key, required String text}) {
     return Padding(
       padding: const EdgeInsets.only(left: 14, right: 14, bottom: 8),
-      child: Text(text, key: key, style: const TextStyle(fontSize: 11.5, color: Color(0xFFE5484D))),
+      child: Text(text, key: key, style: TextStyle(fontSize: 11.5, color: palette.error)),
     );
   }
 }

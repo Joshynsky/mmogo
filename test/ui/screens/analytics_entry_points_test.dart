@@ -196,7 +196,8 @@ void main() {
       final card = find.byKey(const Key('analyticsPartyCard'));
       final topBefore = tester.getTopLeft(card).dy;
       final scrollable = tester.state<ScrollableState>(
-        find.descendant(of: find.byKey(const Key('analyticsScroll')), matching: find.byType(Scrollable)),
+        // .first = the page's own vertical scroll (the By-type strip is a second, horizontal Scrollable inside it).
+        find.descendant(of: find.byKey(const Key('analyticsScroll')), matching: find.byType(Scrollable)).first,
       );
       scrollable.position.jumpTo(300.0.clamp(0, scrollable.position.maxScrollExtent));
       await tester.pumpAndSettle();

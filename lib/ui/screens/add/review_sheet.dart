@@ -139,7 +139,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
                   child: Text(
                     _error!,
                     key: const Key('addReviewError'),
-                    style: const TextStyle(fontSize: 12.5, color: Color(0xFFE5484D)),
+                    style: TextStyle(fontSize: 12.5, color: palette.error),
                   ),
                 ),
               const SizedBox(height: 14),

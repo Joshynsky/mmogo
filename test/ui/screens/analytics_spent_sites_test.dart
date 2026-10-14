@@ -84,8 +84,12 @@ void main() {
     expect(find.text('71%'), findsOneWidget);
     expect(find.text('Ksh 70.00'), findsOneWidget);
     expect(find.text('17%'), findsOneWidget);
-    // Not the raw amount of the withdrawal.
-    expect(find.text('Ksh 1,000.00'), findsNothing);
+    // The raw 1,000 shows only as the Withdrawal tile's own "withdrawn" figure,
+    // muted, with 'tracked' in place of a percent (amended rule, 13-10-2026).
+    final wd = find.byKey(const Key('analyticsTypeTile-AGENT_WITHDRAWAL'));
+    expect(find.descendant(of: wd, matching: find.text('Ksh 1,000.00')), findsOneWidget);
+    expect(find.descendant(of: wd, matching: find.text('tracked')), findsOneWidget);
+    expect(find.text('Ksh 1,000.00'), findsOneWidget); // nowhere else
   });
 
   testWidgets('Where it went: the withdrawal class is not a spending row; Airtime is', (t) async {
@@ -136,7 +140,46 @@ void main() {
     // Today's group: 50 + 300 + 70 = Ksh 420.00 (the withdrawal's 1,000 is not in it).
     expect(find.text('Ksh 420.00'), findsOneWidget);
     await pump('AGENT_WITHDRAWAL');
-    expect(find.text('Withdrawal · Ksh 0'), findsOneWidget);
+    // Changed 14-10-2026 (was 'Withdrawal · Ksh 0'): signed mock, 'X out'.
+    expect(find.text('Withdrawal · Ksh 1,000 out'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Clear the Withdrawal filter, Ksh 1,000 withdrawn')), findsOneWidget);
+    expect(find.textContaining('spent'), findsNothing);
+    // Another type's chip keeps the spent subtotal (no ' out').
+    await pump('BUY_GOODS');
+    expect(find.text('Buy Goods · Ksh 300'), findsOneWidget);
+    expect(find.textContaining(' out'), findsNothing);
+  });
+
+  testWidgets('Transaction list: Withdrawal + a class filter shows the withdrawn sum of the filtered rows', (t) async {
+    final rows = [
+      _row(1, 'AGENT_WITHDRAWAL', 100000, 2900, 'Withdrawal'),
+      _row(2, 'AGENT_WITHDRAWAL', 50000, 2500, 'Shopping'),
+      _row(3, 'AGENT_WITHDRAWAL', 20000, 1100, 'Shopping'),
+      _row(4, 'BUY_GOODS', 30000, 0, 'Shopping'),
+    ];
+    await t.pumpWidget(
+      _host(
+        Column(
+          children: analyticsTransactionSections(
+            palette: palette,
+            view: _view(rows),
+            typeFilter: 'AGENT_WITHDRAWAL',
+            classFilter: 'Shopping',
+            highlightedId: null,
+            openRowId: null,
+            rowKeyFor: (_) => GlobalKey(),
+            onOpened: (_, _) {},
+            onEdit: (_) {},
+            onDelete: (_) {},
+            onClearType: () {},
+            onClearClass: () {},
+          ),
+        ),
+      ),
+    );
+    // 500 + 200 withdrawn in Shopping; the 1,000 'Withdrawal' row and the Buy Goods row are out.
+    expect(find.text('Withdrawal · Ksh 700 out'), findsOneWidget);
+    expect(find.text('Shopping · Ksh 700 out'), findsOneWidget);
   });
 
   testWidgets('screen: prior total and chart buckets use the rule (a withdrawal adds 0), the fee stays in fees', (t) async {

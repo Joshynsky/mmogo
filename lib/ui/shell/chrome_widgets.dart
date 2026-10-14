@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../widgets/tap_target.dart';
 
 /// Shared small round icon-button (a light-grey circle (#eef1f4)
 /// with a dark icon) — used by both
@@ -45,6 +46,10 @@ class IconCircleButton extends StatelessWidget {
         ),
       ),
     );
-    return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
+    // TS1: the visible circle keeps its size; the tap target grows to at
+    // least 44 x 44 (the outer detector covers the ring around the circle,
+    // the InkWell inside keeps the ripple).
+    final target = TapTarget(onTap: onTap, child: button);
+    return tooltip == null ? target : Tooltip(message: tooltip!, child: target);
   }
 }

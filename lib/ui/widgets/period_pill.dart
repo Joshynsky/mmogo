@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'tap_target.dart';
 
 /// The two-part period pill: the left half (primary) picks the length, the
 /// right half (on the track) picks which one (mock `.bperiod`).
@@ -40,59 +41,79 @@ class PeriodPill extends StatelessWidget {
   Widget build(BuildContext context) {
     const pill = BorderRadius.all(Radius.circular(999));
     final style = TextStyle(fontSize: 12, fontWeight: FontWeight.w800, height: 1.3, color: palette.onPrimary);
-    return Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(color: palette.track, borderRadius: pill),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Semantics(
-            button: true,
-            label: 'Length: $granularity. Pick another',
-            excludeSemantics: true,
-            child: Material(
-              key: granKey,
-              color: palette.primary,
-              borderRadius: pill,
-              child: InkWell(
-                key: granularityTapKey,
+    // TS1: each half is at least 44 px tall to tap; the track is drawn in two
+    // pieces (one per half) so the pill keeps its look (the same 2 px ring).
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TapTarget(
+          onTap: onGranularity,
+          expandWidth: false,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(2, 2, 0, 2),
+            decoration: BoxDecoration(
+              color: palette.track,
+              borderRadius: const BorderRadius.horizontal(left: Radius.circular(999)),
+            ),
+            child: Semantics(
+              button: true,
+              label: 'Length: $granularity. Pick another',
+              excludeSemantics: true,
+              child: Material(
+                key: granKey,
+                color: palette.primary,
                 borderRadius: pill,
-                onTap: onGranularity,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(11, 5, 8, 5),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(granularity, style: style),
-                      const SizedBox(width: 4),
-                      Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: palette.onPrimary),
-                    ],
+                child: InkWell(
+                  key: granularityTapKey,
+                  borderRadius: pill,
+                  onTap: onGranularity,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(11, 5, 8, 5),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(granularity, style: style),
+                        const SizedBox(width: 4),
+                        Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: palette.onPrimary),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-          Semantics(
-            button: onValue != null,
-            label: onValue != null ? 'Period: $value. Pick another' : 'Period: $value',
-            excludeSemantics: true,
-            child: Material(
-              key: valueKey,
-              color: Colors.transparent,
-              borderRadius: pill,
-              child: InkWell(
-                key: valueTapKey,
+        ),
+        TapTarget(
+          onTap: onValue,
+          expandWidth: false,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(0, 2, 2, 2),
+            decoration: BoxDecoration(
+              color: palette.track,
+              borderRadius: const BorderRadius.horizontal(right: Radius.circular(999)),
+            ),
+            child: Semantics(
+              button: onValue != null,
+              label: onValue != null ? 'Period: $value. Pick another' : 'Period: $value',
+              excludeSemantics: true,
+              child: Material(
+                key: valueKey,
+                color: Colors.transparent,
                 borderRadius: pill,
-                onTap: onValue,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 5, 11, 5),
-                  child: Text(value, style: style.copyWith(color: palette.ink)),
+                child: InkWell(
+                  key: valueTapKey,
+                  borderRadius: pill,
+                  onTap: onValue,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 5, 11, 5),
+                    child: Text(value, style: style.copyWith(color: palette.ink)),
+                  ),
                 ),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

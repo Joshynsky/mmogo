@@ -62,10 +62,13 @@ void main() {
     expect(p.typeColor('PAYBILL'), p.typePaybill);
     expect(p.typeColor('BUY_GOODS'), p.typeBuyGoods);
     expect(p.typeColor('CASH'), p.typeCash);
-    // The new types use the S4b placeholder (muted ink) and never throw.
+    // The new types have their own signed colour (S4b) and never throw.
+    expect(p.typeColor('POCHI_LA_BIASHARA'), p.typePochi);
+    expect(p.typeColor('AGENT_WITHDRAWAL'), p.typeWithdrawal);
+    expect(p.typeColor('AIRTIME'), p.typeAirtime);
     for (final c in ['POCHI_LA_BIASHARA', 'AGENT_WITHDRAWAL', 'AIRTIME']) {
-      expect(p.typeColor(c), p.mutedInk, reason: c);
-      expect(sourceTypeIcon(c), isNotNull);
+      expect(p.typeColor(c), isNot(p.mutedInk), reason: c);
+      expect(sourceTypeIcon(c), isNot(sourceTypeIcon('CASH')), reason: c);
     }
   });
 }

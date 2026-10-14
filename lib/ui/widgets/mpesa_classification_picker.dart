@@ -227,7 +227,7 @@ class _MpesaClassificationPickerState extends State<MpesaClassificationPicker> {
             child: Text(
               _createError!,
               key: const Key('mpesaPickerCreateError'),
-              style: const TextStyle(fontSize: 12, color: Color(0xFFE5484D)),
+              style: TextStyle(fontSize: 12, color: p.error),
             ),
           ),
       ],

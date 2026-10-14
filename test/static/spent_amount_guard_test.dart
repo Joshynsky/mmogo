@@ -32,6 +32,26 @@ List<String> scanRawSpending(String path, String text) {
   return out;
 }
 
+/// The Withdrawal tile's separate "withdrawn" figure (never spending). It may
+/// be read in exactly one UI file; no spent total and no Home surface uses it.
+const _withdrawnAllowedFile = 'lib/ui/screens/analytics/type_breakdown.dart';
+/// Second and last use: the Withdrawal-only list chip's "Ksh X out" subtotal.
+const _withdrawnChipFile = 'lib/ui/screens/analytics/transaction_list.dart';
+final _withdrawnUse = RegExp(r'\.withdrawn\b|\bwithdrawnCents\b');
+
+/// Returns the offending "file:line" strings where the withdrawn figure is
+/// used outside its one allowed UI file (the domain and DAO definitions are
+/// not UI and are not scanned).
+List<String> scanWithdrawnUse(String path, String text) {
+  final out = <String>[];
+  if (!path.startsWith('lib/ui/') || path == _withdrawnAllowedFile || path == _withdrawnChipFile) return out;
+  final lines = text.split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    if (_withdrawnUse.hasMatch(lines[i])) out.add('$path:${i + 1} withdrawn figure used outside the Withdrawal tile');
+  }
+  return out;
+}
+
 List<File> _libFiles() => Directory('lib')
     .listSync(recursive: true)
     .whereType<File>()
@@ -75,5 +95,23 @@ void main() {
     expect(RegExp(r'SUM\(\$kSpentCentsSql\)').allMatches(home).length, 2);
     final view = File('lib/ui/screens/analytics/analytics_view.dart').readAsStringSync();
     expect(view, contains('s + r.spent'));
+  });
+
+  test('the withdrawn figure is read only by the Withdrawal tile (not Home bars, not any spent total)', () {
+    final bad = <String>[];
+    for (final f in _libFiles()) {
+      bad.addAll(scanWithdrawnUse(_norm(f.path), f.readAsStringSync()));
+    }
+    expect(bad, isEmpty, reason: bad.join('\n'));
+    expect(File(_withdrawnAllowedFile).readAsStringSync(), contains('r.withdrawn'));
+    expect(File(_withdrawnChipFile).readAsStringSync(), contains('r.withdrawn'));
+    final view = File('lib/ui/screens/analytics/analytics_view.dart').readAsStringSync();
+    expect(view, isNot(contains('withdrawn')));
+  });
+
+  test('the withdrawn scan can fail (negative case)', () {
+    expect(scanWithdrawnUse('lib/ui/screens/home/x.dart', 'bar = rows.fold(0, (s, r) => s + r.withdrawn);'), hasLength(1));
+    expect(scanWithdrawnUse('lib/ui/screens/analytics/analytics_view.dart', 'x = withdrawnCents(t, a);'), hasLength(1));
+    expect(scanWithdrawnUse('lib/ui/screens/analytics/type_breakdown.dart', 'r.withdrawn'), isEmpty);
   });
 }

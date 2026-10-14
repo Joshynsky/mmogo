@@ -308,7 +308,8 @@ void main() {
       // 1,200 (34%); Send Money and Cash have no Shopping spend.
       expect(find.text('24%'), findsOneWidget);
       expect(find.text('34%'), findsOneWidget);
-      expect(find.text('Ksh 0.00'), findsNWidgets(2));
+      // Seven tiles now: Send Money, Cash, Pochi, Withdrawal and Airtime are 0.
+      expect(find.text('Ksh 0.00'), findsNWidgets(5));
     });
 
     testWidgets('a type tile then a class row combine (AND); each chip ✕ clears only its own filter', (tester) async {

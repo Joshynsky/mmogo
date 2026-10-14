@@ -5,6 +5,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/tabular.dart';
 import 'analytics_view.dart';
 import 'format.dart';
+import 'type_strip.dart';
 
 /// §ANALYTICS.BY_TYPE — the segmented By type | Where it went switch (mock
 /// `.bswitch`), and below it the By type tile grid.
@@ -87,44 +88,47 @@ class AnalyticsTypePanel extends StatelessWidget {
         v.inc
             .where((r) => r.sourceType == code)
             .where((r) => classFilter == null || r.classificationName == classFilter)
-            .fold<int>(0, (s, r) => s + r.spent),
+            .fold<int>(0, (s, r) => s + (code == 'AGENT_WITHDRAWAL' ? r.withdrawn : r.spent)),
     ];
     Widget tile(int i) {
       final (code, name) = analyticsTypeOrder[i];
       final on = typeFilter == code;
-      final pct = total > 0 ? '${(byType[i] / total * 100).round()}%' : '—';
+      // Withdrawal is tracked, not spent (S4a rule): it adds 0 to spent, so
+      // its tile reads "tracked" instead of a percentage.
+      final withdrawal = code == 'AGENT_WITHDRAWAL';
+      final pct = withdrawal ? 'tracked' : (total > 0 ? '${(byType[i] / total * 100).round()}%' : '—');
+      // The Withdrawal tile shows the cash withdrawn in the period ('Ksh 0.00'
+      // only when there is none), muted, with 'tracked' in place of a percent.
+      // It is never added to the spent total or to another tile's percentage.
+      final shown = byType[i];
+      final tap = on ? 'Showing only these; tap to show all' : 'Tap to show only these';
       return _TypeTile(
         key: Key('analyticsTypeTile-$code'),
         palette: palette,
         color: palette.typeColor(code),
         name: name,
         percent: pct,
-        amount: formatKsh(byType[i]),
+        amount: formatKsh(shown),
+        mutedAmount: withdrawal,
         pressed: on,
         faded: typeFilter != null && !on,
-        semanticsLabel:
-            '$name, ${formatKsh(byType[i])}. ${on ? 'Showing only these; tap to show all' : 'Tap to show only these'}',
+        semanticsLabel: withdrawal
+            ? '$name, ${formatKsh(shown)} withdrawn. Tracked, not spending. $tap'
+            : '$name, ${formatKsh(shown)}. $tap',
         onTap: () => onToggleType(code),
       );
     }
 
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: tile(0)),
-            const SizedBox(width: 8),
-            Expanded(child: tile(1)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(child: tile(2)),
-            const SizedBox(width: 8),
-            Expanded(child: tile(3)),
-          ],
-        ),
+    // The signed mock's strip: two rows, the four 0.1.1 tiles in columns 1-2,
+    // Pochi over Withdrawal in column 3, Airtime in column 4 (order =
+    // sourceTypeOrder).
+    return AnalyticsTypeStrip(
+      palette: palette,
+      columns: [
+        [tile(0), tile(2)],
+        [tile(1), tile(3)],
+        [tile(4), tile(5)],
+        [tile(6)],
       ],
     );
   }
@@ -138,6 +142,7 @@ class _TypeTile extends StatelessWidget {
     required this.name,
     required this.percent,
     required this.amount,
+    this.mutedAmount = false,
     required this.pressed,
     required this.faded,
     required this.semanticsLabel,
@@ -149,6 +154,9 @@ class _TypeTile extends StatelessWidget {
   final String name;
   final String percent;
   final String amount;
+
+  /// Withdrawal: only the amount text is muted (mock `.tile.wd b`).
+  final bool mutedAmount;
   final bool pressed;
   final bool faded;
   final String semanticsLabel;
@@ -221,9 +229,9 @@ class _TypeTile extends StatelessWidget {
                             amount,
                             style: TextStyle(
                               fontSize: 13.5,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: mutedAmount ? FontWeight.w700 : FontWeight.w800,
                               fontFeatures: tabularFigures,
-                              color: ink ?? palette.ink,
+                              color: ink ?? (mutedAmount ? palette.mutedInk : palette.ink),
                             ),
                           ),
                         ),

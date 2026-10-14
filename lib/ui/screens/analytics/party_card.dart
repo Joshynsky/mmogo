@@ -41,10 +41,10 @@ class AnalyticsPartyCard extends StatelessWidget {
             width: 28,
             height: 28,
             alignment: Alignment.center,
-            decoration: BoxDecoration(color: palette.typeColor(type), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: palette.typePillFill(type), shape: BoxShape.circle),
             child: Text(
               initials,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: palette.onTypeColor),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: palette.typePillText(type)),
             ),
           ),
           const SizedBox(width: 10),

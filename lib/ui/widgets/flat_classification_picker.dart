@@ -205,7 +205,7 @@ class _FlatClassificationPickerState extends State<FlatClassificationPicker> {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               _createError!,
-              style: const TextStyle(fontSize: 12, color: Color(0xFFE5484D)),
+              style: TextStyle(fontSize: 12, color: p.error),
             ),
           ),
       ],

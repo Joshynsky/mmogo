@@ -20,6 +20,12 @@ bool isWithdrawal(String sourceType) => sourceType == kAgentWithdrawalType;
 int spentCents(String sourceType, int amountCents, int? feeCents) =>
     isWithdrawal(sourceType) ? 0 : amountCents;
 
+/// Cash taken out at an agent: the amount of a withdrawal, 0 for every other
+/// type. This is a separate, named figure for the Analytics Withdrawal tile.
+/// It is NOT spending and is never added to a spent total.
+int withdrawnCents(String sourceType, int amountCents) =>
+    isWithdrawal(sourceType) ? amountCents : 0;
+
 /// The SQL twin of [spentCents] for unaliased `transactions` columns.
 const String kSpentCentsSql =
     "CASE WHEN source_type = 'AGENT_WITHDRAWAL' THEN 0 ELSE amount_cents END";

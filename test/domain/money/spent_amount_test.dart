@@ -87,4 +87,13 @@ void main() {
     final ruled = await db.rawQuery('SELECT SUM($kSpentCentsSql) AS s FROM transactions');
     expect(ruled.first['s'], 0);
   });
+
+  test('withdrawnCents: the amount for a withdrawal, 0 for everything else; spentCents is its complement', () {
+    expect(withdrawnCents('AGENT_WITHDRAWAL', 100000), 100000);
+    for (final t in ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'CASH', 'POCHI_LA_BIASHARA', 'AIRTIME']) {
+      expect(withdrawnCents(t, 100000), 0, reason: t);
+      expect(withdrawnCents(t, 100000) + spentCents(t, 100000, 2900), 100000, reason: t);
+    }
+    expect(withdrawnCents('AGENT_WITHDRAWAL', 100000) + spentCents('AGENT_WITHDRAWAL', 100000, 2900), 100000);
+  });
 }

@@ -196,7 +196,7 @@ class _PasteSheetState extends State<_PasteSheet> {
                   child: Text(
                     _error!,
                     key: const Key('addPasteError'),
-                    style: const TextStyle(fontSize: 12, color: Color(0xFFE5484D)),
+                    style: TextStyle(fontSize: 12, color: palette.error),
                   ),
                 ),
               const SizedBox(height: 12),

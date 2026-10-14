@@ -86,6 +86,13 @@ class AppPalette {
     required this.typePaybill,
     required this.typeBuyGoods,
     required this.typeCash,
+    required this.typePochi,
+    required this.typeWithdrawal,
+    required this.typeAirtime,
+    required this.error,
+    this.pillSendMoney,
+    this.pillCash,
+    this.onPillAirtime,
     required this.bar,
     required this.barOn,
     required this.highlight,
@@ -180,6 +187,27 @@ class AppPalette {
   final Color typeBuyGoods;
   final Color typeCash;
 
+  /// The three types added in 0.1.2 (CB3, PM-approved 08-10-2026; Ocean &
+  /// Sun values are the signed mock's `--c5`..`--c7`). Withdrawal is
+  /// tracked, not spent.
+  final Color typePochi;
+  final Color typeWithdrawal;
+  final Color typeAirtime;
+
+  /// The app's error red (EP1 token): 6.5:1 on the light card, 6.4:1 on the
+  /// dark card. Replaces the old fixed 0.1.1 red.
+  final Color error;
+
+  /// Text-use shades (null = the chart colour already reaches 4.5:1 with
+  /// [onTypeColor]): a pill or avatar filled with Send Money / Cash uses
+  /// these when the chart colour is too light for white text. Chart colours
+  /// never change.
+  final Color? pillSendMoney;
+  final Color? pillCash;
+
+  /// Text on an Airtime pill when [onTypeColor] fails (Indigo light: ink).
+  final Color? onPillAirtime;
+
   // --- Analytics (T21; Analytics mock v4 view B `.phone` / `.phone.dark`). ---
 
   /// Muted bar fill (mock `--bar`); also the toast's Undo on dark.
@@ -204,17 +232,29 @@ class AppPalette {
   /// colour — see the new palettes' own dark `onTypeColor`).
   final Color onTypeColor;
 
-  /// The chart colour for a `source_type` code ('SEND_MONEY', 'PAYBILL',
-  /// 'BUY_GOODS', 'CASH'); [mutedInk] for anything else.
+  /// The chart colour for a `source_type` code (the seven stored types);
+  /// [mutedInk] for anything else.
   Color typeColor(String sourceType) => switch (sourceType) {
     'SEND_MONEY' => typeSendMoney,
     'PAYBILL' => typePaybill,
     'BUY_GOODS' => typeBuyGoods,
     'CASH' => typeCash,
-    // PLACEHOLDER (S4b replaces): Pochi, Withdrawal and Airtime have no
-    // signed colour yet and fall through to the muted ink.
+    'POCHI_LA_BIASHARA' => typePochi,
+    'AGENT_WITHDRAWAL' => typeWithdrawal,
+    'AIRTIME' => typeAirtime,
     _ => mutedInk,
   };
+
+  /// The fill of a pill or avatar for [sourceType]: the chart colour, or the
+  /// darker text-use shade where white text on the chart colour fails 4.5:1.
+  Color typePillFill(String sourceType) => switch (sourceType) {
+    'SEND_MONEY' => pillSendMoney ?? typeSendMoney,
+    'CASH' => pillCash ?? typeCash,
+    _ => typeColor(sourceType),
+  };
+
+  /// The text colour on [typePillFill].
+  Color typePillText(String sourceType) => sourceType == 'AIRTIME' ? (onPillAirtime ?? onTypeColor) : onTypeColor;
 
   static const light = AppPalette(
     brightness: Brightness.light,
@@ -246,6 +286,12 @@ class AppPalette {
     typePaybill: Color(0xFF5B4FC4),
     typeBuyGoods: Color(0xFFC2366B),
     typeCash: Color(0xFFB07800),
+    typePochi: Color(0xFF1B6E2A),
+    typeWithdrawal: Color(0xFF5F6F77),
+    typeAirtime: Color(0xFFCC461C),
+    error: Color(0xFFB3261E),
+    pillSendMoney: Color(0xFF0F7C9B), // white 4.80:1 (the chart colour #1283A3 gives 4.37)
+    pillCash: Color(0xFF8C6100),
     bar: Color(0xFF9CC9D6),
     barOn: Color(0xFF0A6E8A),
     highlight: Color(0xFFFFF4D6),
@@ -284,6 +330,10 @@ class AppPalette {
     typePaybill: Color(0xFF8479E8),
     typeBuyGoods: Color(0xFFE0628F),
     typeCash: Color(0xFFBF8A00),
+    typePochi: Color(0xFF4DBF63),
+    typeWithdrawal: Color(0xFF9AAAB1),
+    typeAirtime: Color(0xFFF2784B),
+    error: Color(0xFFFF8A8E),
     bar: Color(0xFF2E5561),
     barOn: Color(0xFF3FB6D4),
     highlight: Color(0xFF3A3320),
@@ -326,6 +376,12 @@ class AppPalette {
     typePaybill: Color(0xFF3D6FD6),
     typeBuyGoods: Color(0xFFC2366B),
     typeCash: Color(0xFFB07800),
+    typePochi: Color(0xFF6A3FB5),
+    typeWithdrawal: Color(0xFF646B66),
+    typeAirtime: Color(0xFFCC461C),
+    error: Color(0xFFB3261E),
+    pillSendMoney: Color(0xFF0B7F44),
+    pillCash: Color(0xFF8C6100),
     bar: Color(0xFFA6D8B9),
     barOn: Color(0xFF007A3D),
     highlight: Color(0xFFFFF4D6),
@@ -364,6 +420,10 @@ class AppPalette {
     typePaybill: Color(0xFF7FA2F0),
     typeBuyGoods: Color(0xFFE0628F),
     typeCash: Color(0xFFBF8A00),
+    typePochi: Color(0xFF9D70E6),
+    typeWithdrawal: Color(0xFFA0A8A2),
+    typeAirtime: Color(0xFFF2784B),
+    error: Color(0xFFFF8A8E),
     bar: Color(0xFF2E5A40),
     barOn: Color(0xFF3DCB7E),
     highlight: Color(0xFF3A3320),
@@ -404,6 +464,11 @@ class AppPalette {
     typePaybill: Color(0xFF0C77A6),
     typeBuyGoods: Color(0xFFC0397F),
     typeCash: Color(0xFF9A5B06),
+    typePochi: Color(0xFF14532A),
+    typeWithdrawal: Color(0xFF666677),
+    typeAirtime: Color(0xFFE2603A),
+    error: Color(0xFFB3261E),
+    onPillAirtime: Color(0xFF1E1B3A), // ink: white on #E2603A is 3.52:1 and fails
     bar: Color(0xFFB9B5F5),
     barOn: Color(0xFF4F46E5),
     highlight: Color(0xFFFFEDE4),
@@ -442,6 +507,10 @@ class AppPalette {
     typePaybill: Color(0xFF3FA9D9),
     typeBuyGoods: Color(0xFFE0628F),
     typeCash: Color(0xFFC98A3A),
+    typePochi: Color(0xFF6FD58A),
+    typeWithdrawal: Color(0xFFA5A5BA),
+    typeAirtime: Color(0xFFFF9272),
+    error: Color(0xFFFF8A8E),
     bar: Color(0xFF3F3A78),
     barOn: Color(0xFF8F89FF),
     highlight: Color(0xFF3D2A22),

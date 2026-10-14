@@ -283,7 +283,7 @@ class _CategoryChipsState extends State<CategoryChips> {
           if (_createError != null)
             Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: Text(_createError!, key: const Key('addCategoryNewError'), style: const TextStyle(fontSize: 12, color: Color(0xFFE5484D))),
+              child: Text(_createError!, key: const Key('addCategoryNewError'), style: TextStyle(fontSize: 12, color: palette.error)),
             ),
         ],
       ),

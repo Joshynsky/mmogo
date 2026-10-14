@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
+import '../../widgets/tap_target.dart';
 
 /// §ANALYTICS.PARTS — the Analytics empty-state text and round icon button.
 class AnalyticsEmpty extends StatelessWidget {
@@ -45,18 +46,21 @@ class AnalyticsRoundButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: tooltip,
-      child: Opacity(
-        opacity: onTap == null ? 0.3 : 1,
-        child: Material(
-          color: background,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: SizedBox(
-              width: size,
-              height: size,
-              child: Icon(icon, size: iconSize, color: foreground),
+      child: TapTarget(
+        onTap: onTap,
+        child: Opacity(
+          opacity: onTap == null ? 0.3 : 1,
+          child: Material(
+            color: background,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              child: SizedBox(
+                width: size,
+                height: size,
+                child: Icon(icon, size: iconSize, color: foreground),
+              ),
             ),
           ),
         ),

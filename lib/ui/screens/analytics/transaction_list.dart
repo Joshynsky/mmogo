@@ -44,8 +44,12 @@ List<Widget> analyticsTransactionSections({
           (classFilter == null || r.classificationName == classFilter))
         r,
   ];
-  final subtotal = list.fold<int>(0, (s, r) => s + r.spent);
-  final subtotalLabel = kshTrim(subtotal);
+  // Signed mock (analytics.html ~606): a Withdrawal-only list shows the cash
+  // taken out + ' out'; every other list keeps the spent subtotal.
+  final onlyWithdrawal = typeFilter == 'AGENT_WITHDRAWAL';
+  final subtotal = list.fold<int>(0, (s, r) => s + (onlyWithdrawal ? r.withdrawn : r.spent));
+  final subtotalLabel = onlyWithdrawal ? '${kshTrim(subtotal)} out' : kshTrim(subtotal);
+  final subtotalWords = onlyWithdrawal ? ', ${kshTrim(subtotal)} withdrawn' : '';
 
   final heading = ConstrainedBox(
     constraints: const BoxConstraints(minHeight: 30),
@@ -68,7 +72,7 @@ List<Widget> analyticsTransactionSections({
                   inkKey: const Key('analyticsFilterChipType'),
                   palette: palette,
                   label: '$typeName · $subtotalLabel',
-                  semanticsLabel: 'Clear the $typeName filter',
+                  semanticsLabel: 'Clear the $typeName filter$subtotalWords',
                   onTap: onClearType,
                 ),
               ),
@@ -83,7 +87,7 @@ List<Widget> analyticsTransactionSections({
                   inkKey: const Key('analyticsFilterChipClass'),
                   palette: palette,
                   label: '$className · $subtotalLabel',
-                  semanticsLabel: 'Clear the $className filter',
+                  semanticsLabel: 'Clear the $className filter$subtotalWords',
                   onTap: onClearClass,
                 ),
               ),
