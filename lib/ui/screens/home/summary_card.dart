@@ -21,7 +21,17 @@ class HomeSummaryCard extends StatelessWidget {
     required this.costCents,
     required this.onPeriodTap,
     this.periodTourKey,
+    this.cashWithdrawnCents,
+    this.withdrawalFeeCents = 0,
   });
+
+  /// Cash withdrawn in the period, shown as a muted "not counted" line.
+  /// `null` = no withdrawal in the period (no line). Never part of the total.
+  final int? cashWithdrawnCents;
+
+  /// The withdrawal part of [costCents] (already inside it); 0 hides the
+  /// "incl. Ksh X withdrawal fees" sub-line.
+  final int withdrawalFeeCents;
 
   /// Lets Home's coach tour spotlight the period button.
   final GlobalKey? periodTourKey;
@@ -96,27 +106,94 @@ class HomeSummaryCard extends StatelessWidget {
               animate: animate,
             ),
           ],
+          if (cashWithdrawnCents != null) ...[
+            const SizedBox(height: 9),
+            _CashWithdrawnLine(palette: palette, cents: cashWithdrawnCents!),
+          ],
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.only(top: 9),
             decoration: BoxDecoration(
               border: Border(top: BorderSide(color: palette.line)),
             ),
-            child: HomeSplitLine(
-              start: Text('Transaction cost (all M-Pesa)', style: TextStyle(fontSize: 12, color: palette.mutedInk)),
-              end: Text(
-                formatKsh(costCents),
-                key: const Key('homeCost'),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  fontFeatures: tabularFigures,
-                  color: palette.softInk,
-                ),
+            child: Semantics(
+              key: const Key('homeCostRow'),
+              container: true,
+              label:
+                  'Transaction cost, all M-Pesa, ${formatKsh(costCents)}'
+                  '${withdrawalFeeCents > 0 ? ', including ${formatKsh(withdrawalFeeCents)} for withdrawals' : ''}',
+              excludeSemantics: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  HomeSplitLine(
+                    start: Text('Transaction cost (all M-Pesa)', style: TextStyle(fontSize: 12, color: palette.mutedInk)),
+                    end: Text(
+                      formatKsh(costCents),
+                      key: const Key('homeCost'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: tabularFigures,
+                        color: palette.softInk,
+                      ),
+                    ),
+                  ),
+                  if (withdrawalFeeCents > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Text(
+                        'incl. ${kshTrim(withdrawalFeeCents)} withdrawal fees',
+                        key: const Key('homeCostWithdrawalFees'),
+                        textAlign: TextAlign.end,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          height: 1.35,
+                          fontFeatures: tabularFigures,
+                          color: palette.mutedInk,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "Cash withdrawn: Ksh X (not counted)": one muted line under the bars, only
+/// when the period has a withdrawal (signed mock `.wdline`). Not a bar, not in
+/// the total or any percentage.
+class _CashWithdrawnLine extends StatelessWidget {
+  const _CashWithdrawnLine({required this.palette, required this.cents});
+
+  final AppPalette palette;
+  final int cents;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      key: const Key('homeCashWithdrawn'),
+      padding: const EdgeInsets.only(top: 2),
+      child: Semantics(
+        label: 'Cash withdrawn, ${formatKsh(cents)}, not counted as spending',
+        excludeSemantics: true,
+        child: Text.rich(
+          TextSpan(
+            style: TextStyle(fontSize: 12, color: palette.mutedInk),
+            children: [
+              const TextSpan(text: 'Cash withdrawn: '),
+              TextSpan(
+                text: formatKsh(cents),
+                style: TextStyle(fontWeight: FontWeight.w700, color: palette.softInk, fontFeatures: tabularFigures),
+              ),
+              const TextSpan(text: ' (not counted)'),
+            ],
+          ),
+        ),
       ),
     );
   }

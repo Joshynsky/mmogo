@@ -37,14 +37,21 @@ List<String> scanRawSpending(String path, String text) {
 const _withdrawnAllowedFile = 'lib/ui/screens/analytics/type_breakdown.dart';
 /// Second and last use: the Withdrawal-only list chip's "Ksh X out" subtotal.
 const _withdrawnChipFile = 'lib/ui/screens/analytics/transaction_list.dart';
-final _withdrawnUse = RegExp(r'\.withdrawn\b|\bwithdrawnCents\b');
+/// Third and last use (S5): Home reads the period's cash withdrawn once, to
+/// print the muted "Cash withdrawn: Ksh X (not counted)" line. The Home
+/// summary card and bars get it only as a plain number, never through the rule.
+const _withdrawnHomeFile = 'lib/ui/screens/home/home_screen.dart';
+final _withdrawnUse =RegExp(r'\.withdrawn\b|\bwithdrawnCents\b');
 
 /// Returns the offending "file:line" strings where the withdrawn figure is
 /// used outside its one allowed UI file (the domain and DAO definitions are
 /// not UI and are not scanned).
 List<String> scanWithdrawnUse(String path, String text) {
   final out = <String>[];
-  if (!path.startsWith('lib/ui/') || path == _withdrawnAllowedFile || path == _withdrawnChipFile) return out;
+  if (!path.startsWith('lib/ui/') || path == _withdrawnAllowedFile || path == _withdrawnChipFile ||
+      path == _withdrawnHomeFile) {
+    return out;
+  }
   final lines = text.split('\n');
   for (var i = 0; i < lines.length; i++) {
     if (_withdrawnUse.hasMatch(lines[i])) out.add('$path:${i + 1} withdrawn figure used outside the Withdrawal tile');
@@ -113,5 +120,21 @@ void main() {
     expect(scanWithdrawnUse('lib/ui/screens/home/x.dart', 'bar = rows.fold(0, (s, r) => s + r.withdrawn);'), hasLength(1));
     expect(scanWithdrawnUse('lib/ui/screens/analytics/analytics_view.dart', 'x = withdrawnCents(t, a);'), hasLength(1));
     expect(scanWithdrawnUse('lib/ui/screens/analytics/type_breakdown.dart', 'r.withdrawn'), isEmpty);
+  });
+
+  test('Home: the withdrawn figure is read only in home_screen.dart (S5), with its own negative case', () {
+    final bad = <String>[];
+    for (final f in _libFiles()) {
+      bad.addAll(scanWithdrawnUse(_norm(f.path), f.readAsStringSync()));
+    }
+    expect(bad, isEmpty, reason: bad.join('\n'));
+    expect(File(_withdrawnHomeFile).readAsStringSync(), contains('.withdrawnCents'));
+    // Not the bars, not the summary total, not the recent rows, not the DAO's spent sums.
+    expect(scanWithdrawnUse('lib/ui/screens/home/summary_card.dart', 'bar = t.withdrawnCents;'), hasLength(1));
+    expect(scanWithdrawnUse('lib/ui/screens/home/recent_list.dart', 'x = withdrawnCents(a, b);'), hasLength(1));
+    expect(scanWithdrawnUse('lib/ui/screens/home/home_screen.dart', 'x = w.withdrawnCents;'), isEmpty);
+    // The Home SQL keeps exactly two spent sums; the withdrawn sum is its own named expression.
+    final dao = File('lib/data/db/home_dashboard_dao.dart').readAsStringSync();
+    expect(RegExp(r'SUM\(\$kWithdrawnCentsSql\)').allMatches(dao).length, 1);
   });
 }

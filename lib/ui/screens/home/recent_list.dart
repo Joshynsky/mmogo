@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../domain/format/money.dart';
 import '../../../domain/format/source_types.dart';
 import '../../../domain/home/recent_transaction.dart';
+import '../../copy/spend_copy.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/tabular.dart';
 import 'home_consts.dart';
@@ -167,9 +168,26 @@ class _RecentRow extends StatelessWidget {
   final TextStyle subStyle;
   final VoidCallback onTap;
 
+  /// Second line: `Type · agent number (when it has one) · date`.
+  String get _subtitle {
+    final agent = tx.agentNumber;
+    return [
+      sourceTypeName(tx.sourceType),
+      if (agent != null && agent.isNotEmpty) agent,
+      formatShortDate(tx.occurredAt),
+    ].join(' · ');
+  }
+
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    final wd = tx.isWithdrawalRow;
+    final amountStyle = nameStyle.copyWith(
+      fontFeatures: tabularFigures,
+      // Withdrawal: tracked, not spent, so its amount is muted (mock `.row.wd .amt`).
+      color: wd ? palette.mutedInk : null,
+      fontWeight: wd ? FontWeight.w600 : null,
+    );
+    final row = InkWell(
       key: Key('homeRecentRow-${tx.id}'),
       onTap: onTap,
       child: SizedBox(
@@ -180,7 +198,14 @@ class _RecentRow extends StatelessWidget {
               key: Key('homeRecentDot-${tx.id}'),
               width: 9,
               height: 9,
-              decoration: BoxDecoration(color: palette.typeColor(tx.sourceType), shape: BoxShape.circle),
+              decoration: wd
+                  // Hollow dot: a Withdrawal is not spending (mock `.row.wd .dot`).
+                  ? BoxDecoration(
+                      color: Colors.transparent,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: palette.typeColor(tx.sourceType), width: 2),
+                    )
+                  : BoxDecoration(color: palette.typeColor(tx.sourceType), shape: BoxShape.circle),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -193,19 +218,48 @@ class _RecentRow extends StatelessWidget {
                     Text(tx.displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: nameStyle),
                     const SizedBox(height: 1),
                     Text(
-                      '${sourceTypeName(tx.sourceType)} · ${formatShortDate(tx.occurredAt)}',
+                      _subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: subStyle,
                     ),
                   ],
                 ),
-                end: Text(formatKsh(tx.amountCents), style: nameStyle.copyWith(fontFeatures: tabularFigures)),
+                end: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(formatKsh(tx.amountCents), key: Key('homeRecentAmount-${tx.id}'), style: amountStyle),
+                    // Any row with a cost: a small muted note under the amount.
+                    // The row height is fixed, so the note never makes it taller.
+                    if (tx.feeCents > 0) ...[
+                      const SizedBox(height: 1),
+                      Text(
+                        '+ ${formatKsh(tx.feeCents)} fee',
+                        key: Key('homeRecentFee-${tx.id}'),
+                        maxLines: 1,
+                        style: subStyle.copyWith(fontFeatures: tabularFigures),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+    if (!wd) return row;
+    // The long sentence is for the screen reader only; the row prints no words.
+    return Semantics(
+      container: true,
+      button: true,
+      excludeSemantics: true,
+      onTap: onTap,
+      label:
+          '${tx.displayName}, ${formatKsh(tx.amountCents)}, ${notCountedLabel(feeCents: tx.feeCents)}, '
+          '${_subtitle.replaceAll(' · ', ', ')}',
+      child: row,
     );
   }
 }

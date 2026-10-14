@@ -12,6 +12,8 @@ class RecentTransaction {
     required this.counterpartyLabel,
     required this.classificationName,
     required this.occurredAt,
+    this.feeCents = 0,
+    this.agentNumber,
   });
 
   final int id;
@@ -22,12 +24,23 @@ class RecentTransaction {
   final String classificationName;
   final DateTime occurredAt;
 
+  /// The M-Pesa transaction cost of this row (0 when none; NULL for Cash).
+  final int feeCents;
+
+  /// The agent number of a withdrawal (null for every other row).
+  final String? agentNumber;
+
+  bool get isWithdrawalRow => sourceType == 'AGENT_WITHDRAWAL';
+
   /// Matches the prototype's row-title logic exactly: Cash rows show their
   /// classification (no counterparty exists for cash); every other row
   /// prefers its captured counterparty label, falling back to the
   /// classification name only in the schema-disallowed edge case where a
   /// label is somehow missing.
   String get displayName {
+    // Withdrawal and Airtime rows have no payee: the title is the type name.
+    if (sourceType == 'AGENT_WITHDRAWAL') return 'Withdrawal';
+    if (sourceType == 'AIRTIME') return 'Airtime';
     if (sourceType == 'CASH') return 'Cash — $classificationName';
     return (counterpartyLabel != null && counterpartyLabel!.isNotEmpty)
         ? counterpartyLabel!

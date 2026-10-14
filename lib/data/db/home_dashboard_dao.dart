@@ -7,10 +7,23 @@ import '../../domain/money/spent_amount.dart';
 /// M-Pesa transaction cost paid on top of it (`transaction_cost_cents`,
 /// always NULL for CASH).
 class SourceTypeTotal {
-  const SourceTypeTotal({required this.totalCents, required this.costCents});
+  const SourceTypeTotal({
+    required this.totalCents,
+    required this.costCents,
+    this.withdrawnCents = 0,
+    this.count = 0,
+  });
 
   final int totalCents;
   final int costCents;
+
+  /// Cash taken out at an agent in the period (S5): the amount of the
+  /// withdrawals through the `withdrawnCents` rule, 0 for every other type.
+  /// It is NOT spending and is never part of [totalCents].
+  final int withdrawnCents;
+
+  /// How many (not deleted) transactions of this type are in the period.
+  final int count;
 }
 
 /// Minimal, ad hoc query layer against `AppDatabase`/`AppSchema` directly —
@@ -60,7 +73,9 @@ class HomeDashboardDao {
       '''
       SELECT source_type,
              COALESCE(SUM($kSpentCentsSql), 0) AS total,
-             COALESCE(SUM(transaction_cost_cents), 0) AS cost
+             COALESCE(SUM(transaction_cost_cents), 0) AS cost,
+             COALESCE(SUM($kWithdrawnCentsSql), 0) AS withdrawn,
+             COUNT(*) AS n
       FROM transactions
       WHERE deleted_at IS NULL
         AND transaction_occurred_at BETWEEN ? AND ?
@@ -73,6 +88,8 @@ class HomeDashboardDao {
       result[row['source_type'] as String] = SourceTypeTotal(
         totalCents: (row['total'] as num).toInt(),
         costCents: (row['cost'] as num).toInt(),
+        withdrawnCents: ((row['withdrawn'] ?? 0) as num).toInt(),
+        count: ((row['n'] ?? 0) as num).toInt(),
       );
     }
     return result;
@@ -88,6 +105,7 @@ class HomeDashboardDao {
       '''
       SELECT t.id, t.display_code, t.source_type, t.amount_cents,
              t.counterparty_label, t.transaction_occurred_at,
+             t.transaction_cost_cents, t.agent_number,
              c.name AS classification_name
       FROM transactions t
       JOIN classifications c ON c.id = t.classification_id
@@ -105,6 +123,8 @@ class HomeDashboardDao {
             sourceType: row['source_type'] as String,
             amountCents: (row['amount_cents'] as num).toInt(),
             counterpartyLabel: row['counterparty_label'] as String?,
+            feeCents: ((row['transaction_cost_cents'] ?? 0) as num).toInt(),
+            agentNumber: row['agent_number'] as String?,
             classificationName: row['classification_name'] as String,
             occurredAt: DateTime.fromMillisecondsSinceEpoch(
               row['transaction_occurred_at'] as int,

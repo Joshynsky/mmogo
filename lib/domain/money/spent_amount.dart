@@ -30,6 +30,10 @@ int withdrawnCents(String sourceType, int amountCents) =>
 const String kSpentCentsSql =
     "CASE WHEN source_type = 'AGENT_WITHDRAWAL' THEN 0 ELSE amount_cents END";
 
+/// The SQL twin of [withdrawnCents] for unaliased `transactions` columns.
+const String kWithdrawnCentsSql =
+    "CASE WHEN source_type = 'AGENT_WITHDRAWAL' THEN amount_cents ELSE 0 END";
+
 /// The same expression for a table alias, e.g. `spentCentsSqlFor('t')`.
 String spentCentsSqlFor(String alias) =>
     "CASE WHEN $alias.source_type = 'AGENT_WITHDRAWAL' THEN 0 ELSE $alias.amount_cents END";

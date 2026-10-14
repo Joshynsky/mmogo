@@ -14,6 +14,7 @@ import '../../../domain/home/home_diff.dart';
 import '../../../domain/home/home_greeting.dart';
 import '../../../domain/home/home_period.dart';
 import '../../../domain/home/recent_transaction.dart';
+import '../../../domain/money/spent_amount.dart';
 import '../../shell/primary_scaffold.dart';
 import '../../shell/primary_shell.dart';
 import '../../shell/routes.dart';
@@ -307,6 +308,7 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
 
   Widget _buildBody(AppPalette palette) {
     final diff = HomeDiff.compute(thisTotalCents: _thisTotalCents, priorTotalCents: _priorTotalCents);
+    final withdrawal = _bySource[kAgentWithdrawalType];
     final totalCost = _bySource.values.fold<int>(0, (s, t) => s + t.costCents); // every type: a withdrawal's fee counts
 
     return RefreshIndicator(
@@ -332,6 +334,10 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
                 diff: diff,
                 typeTotals: {for (final (code, _) in homeTypeOrder) code: _bySource[code]?.totalCents ?? 0},
                 costCents: totalCost,
+                // S5: cash withdrawn in the period (only when there is one) and the
+                // withdrawal part of the cost; neither is in the total or the bars.
+                cashWithdrawnCents: withdrawal != null && withdrawal.count > 0 ? withdrawal.withdrawnCents : null,
+                withdrawalFeeCents: withdrawal?.costCents ?? 0,
                 onPeriodTap: _cyclePeriod,
                 ),
               ),
