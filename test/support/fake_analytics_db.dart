@@ -107,6 +107,7 @@ class FakeAnalyticsDb implements Database {
             'classification_name': _classificationName(t),
             'transaction_occurred_at': t['transaction_occurred_at'],
             'transaction_cost_cents': t['transaction_cost_cents'],
+            'agent_number': t['agent_number'],
           },
       ];
     }
@@ -190,6 +191,7 @@ Map<String, Object?> fakeTx({
   int? classificationId,
   String? code,
   int? deletedAt,
+  String? agentNumber,
 }) {
   final isCash = type == 'CASH';
   return {
@@ -205,6 +207,7 @@ Map<String, Object?> fakeTx({
     'classification_name': classification,
     'transaction_occurred_at': at.millisecondsSinceEpoch,
     'deleted_at': deletedAt,
+    'agent_number': agentNumber,
   };
 }
 

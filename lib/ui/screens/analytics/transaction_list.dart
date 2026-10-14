@@ -12,6 +12,37 @@ import 'analytics_view.dart';
 import 'parts.dart';
 import 'swipe_row.dart';
 
+/// The right side of a day header (mock `dtot`, analytics.html ~615): a
+/// Withdrawal-only list shows the day's withdrawn sum, muted, with
+/// "withdrawn"; a day with a withdrawal but nothing spent says "not spent",
+/// muted; every other day shows its spending total.
+Widget _dayTotal(AppPalette palette, List<AnalyticsTransactionRow> g, bool onlyWithdrawal) {
+  final spent = g.fold<int>(0, (s, r) => s + r.spent);
+  final hasWithdrawal = g.any((r) => r.sourceType == 'AGENT_WITHDRAWAL');
+  final String text;
+  final bool muted;
+  if (onlyWithdrawal) {
+    text = '${formatKsh(g.fold<int>(0, (s, r) => s + r.withdrawn))} withdrawn';
+    muted = true;
+  } else if (spent == 0 && hasWithdrawal) {
+    text = 'not spent';
+    muted = true;
+  } else {
+    text = formatKsh(spent);
+    muted = false;
+  }
+  return Text(
+    text,
+    key: const Key('analyticsDayTotal'),
+    style: TextStyle(
+      fontSize: 12,
+      fontWeight: muted ? FontWeight.w700 : FontWeight.w800,
+      fontFeatures: tabularFigures,
+      color: muted ? palette.mutedInk : palette.softInk,
+    ),
+  );
+}
+
 /// §ANALYTICS.TX_LIST — the transactions section: heading with filter chips,
 /// day groups of swipe rows (or the empty card) and the swipe hint footer.
 /// Returns a list, not a widget: the shell splices these into its spaced
@@ -137,15 +168,7 @@ List<Widget> analyticsTransactionSections({
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: palette.mutedInk),
                 ),
               ),
-              Text(
-                formatKsh(g.fold<int>(0, (s, r) => s + r.spent)),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  fontFeatures: tabularFigures,
-                  color: palette.softInk,
-                ),
-              ),
+              _dayTotal(palette, g, onlyWithdrawal),
             ],
           ),
         ),

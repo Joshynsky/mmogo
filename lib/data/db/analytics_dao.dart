@@ -30,6 +30,7 @@ class AnalyticsTransactionRow {
     required this.classificationName,
     required this.occurredAt,
     required this.transactionCostCents,
+    this.agentNumber,
   });
 
   final int id;
@@ -60,6 +61,9 @@ class AnalyticsTransactionRow {
   /// prior to T13 needed this column on this class.
   final int? transactionCostCents;
 
+  /// -> `transactions.agent_number` (v3). Withdrawal rows only, else null.
+  final String? agentNumber;
+
   /// Row title: Cash rows show their classification (no counterparty exists
   /// for cash); every other row prefers its captured counterparty label,
   /// falling back to the classification name in the schema-disallowed edge
@@ -67,6 +71,8 @@ class AnalyticsTransactionRow {
   /// `recent_transaction.dart` (T4) already established for Home's list.
   String get displayName {
     if (sourceType == 'CASH') return 'Cash — $classificationName';
+    // Airtime has no payee: its title is always the type name (S6a, mock).
+    if (sourceType == 'AIRTIME') return 'Airtime';
     return (counterpartyLabel != null && counterpartyLabel!.isNotEmpty)
         ? counterpartyLabel!
         : classificationName;
@@ -220,7 +226,7 @@ class AnalyticsDao {
       SELECT t.id, t.display_code, t.source_type, t.amount_cents,
              t.counterparty_label, t.counterparty_phone, t.paybill_account_number,
              t.classification_id, c.name AS classification_name,
-             t.transaction_occurred_at, t.transaction_cost_cents
+             t.transaction_occurred_at, t.transaction_cost_cents, t.agent_number
       FROM transactions t
       JOIN classifications c ON c.id = t.classification_id
       WHERE $where
@@ -244,6 +250,7 @@ class AnalyticsDao {
               row['transaction_occurred_at'] as int,
             ),
             transactionCostCents: (row['transaction_cost_cents'] as num?)?.toInt(),
+            agentNumber: row['agent_number'] as String?,
           ),
         )
         .toList();

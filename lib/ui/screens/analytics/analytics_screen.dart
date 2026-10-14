@@ -590,6 +590,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
         counterpartyPhone: result.counterpartyPhone,
         paybillAccountNumber: result.paybillAccountNumber,
         transactionCostCents: result.transactionCostCents,
+        agentNumber: result.agentNumber,
       );
     } on DatabaseException {
       // Plain wording only; the raw database text means nothing to the user.

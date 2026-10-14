@@ -202,7 +202,7 @@ void main() {
     // 2,000 vs 1,000 = +100% (with the raw amounts it would be +26%).
     expect(find.text('▲ 100% vs last week'), findsOneWidget);
     // fees = the withdrawal's 29 (the airtime row has none).
-    expect(find.text('fees Ksh 29', findRichText: true), findsOneWidget);
+    expect(find.text('Transaction cost Ksh 29', findRichText: true), findsOneWidget);
     // Chart buckets: Tue (index 1) holds only the withdrawal -> 0 for every type;
     // Wed (index 2) holds the 2,000 of Airtime (type index 6).
     final chart = t.widget<AnalyticsSwipeChart>(find.byType(AnalyticsSwipeChart));

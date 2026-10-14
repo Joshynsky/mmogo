@@ -192,7 +192,7 @@ class AnalyticsHeroCard extends StatelessWidget {
                   const TextSpan(text: '/day'),
                 ]),
               fact(const Key('analyticsFactFees'), [
-                const TextSpan(text: 'fees '),
+                const TextSpan(text: 'Transaction cost '),
                 TextSpan(text: kshTrim(fees), style: factBold),
               ]),
             ],

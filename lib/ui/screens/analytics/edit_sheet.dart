@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../../data/db/analytics_dao.dart';
 import '../../../data/db/classification_dao.dart';
 import '../../../domain/analytics/analytics_period.dart';
 import '../../../domain/format/ksh_amount.dart';
+import '../../../domain/format/money.dart';
 import '../../../domain/format/source_types.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/bottom_sheet_shell.dart';
@@ -34,6 +36,7 @@ class AnalyticsEditResult {
     this.counterpartyPhone,
     this.paybillAccountNumber,
     this.transactionCostCents,
+    this.agentNumber,
   });
 
   final int amountCents;
@@ -43,6 +46,9 @@ class AnalyticsEditResult {
   final String? counterpartyPhone;
   final String? paybillAccountNumber;
   final int? transactionCostCents;
+
+  /// Withdrawal rows only: digits, 1 to 20, or null when left empty.
+  final String? agentNumber;
 }
 
 String _fmtEditDateTime(DateTime d, DateTime now) {
@@ -74,6 +80,7 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
   late final _labelController = TextEditingController(text: widget.tx.counterpartyLabel ?? '');
   late final _phoneController = TextEditingController(text: widget.tx.counterpartyPhone ?? '');
   late final _accountController = TextEditingController(text: widget.tx.paybillAccountNumber ?? '');
+  late final _agentNumberController = TextEditingController(text: widget.tx.agentNumber ?? '');
   late final _costController = TextEditingController(
     text: widget.tx.transactionCostCents == null ? '' : (widget.tx.transactionCostCents! / 100).toStringAsFixed(2),
   );
@@ -83,6 +90,12 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
   late String _classificationName = widget.tx.classificationName;
 
   bool get _isCash => widget.tx.sourceType == 'CASH';
+  bool get _isWithdrawal => widget.tx.sourceType == 'AGENT_WITHDRAWAL';
+
+  // ED1: the fields follow the type. Cash and Airtime have no name field;
+  // Airtime also has no cost field (it stays as stored, 0).
+  bool get _hasName => !_isCash && widget.tx.sourceType != 'AIRTIME';
+  bool get _hasCost => _hasName;
 
   @override
   void dispose() {
@@ -90,6 +103,7 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
     _labelController.dispose();
     _phoneController.dispose();
     _accountController.dispose();
+    _agentNumberController.dispose();
     _costController.dispose();
     super.dispose();
   }
@@ -103,13 +117,39 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
     return text.isEmpty ? 0 : parseKshCents(text, allowZero: true);
   }
 
-  bool get _canSave => _parsedAmountCents() != null && (_isCash || _parsedCostCents() != null);
+  bool get _canSave => _parsedAmountCents() != null && (!_hasCost || _parsedCostCents() != null);
 
   /// Blank identity fields are stored as NULL, never `''`.
   String? _orNull(TextEditingController c) {
     final t = c.text.trim();
     return t.isEmpty ? null : t;
   }
+
+  Future<void> _showTypeModal() => showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      key: const Key('editTypeModal'),
+      backgroundColor: widget.palette.card,
+      title: Text(
+        'Type cannot be changed',
+        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: widget.palette.ink),
+      ),
+      content: Text(
+        'The type cannot be changed. If it is wrong, delete this transaction and add it again.',
+        style: TextStyle(fontSize: 13, color: widget.palette.softInk),
+      ),
+      actions: [
+        TextButton(
+          key: const Key('editTypeModalOk'),
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: Text(
+            'OK',
+            style: TextStyle(fontWeight: FontWeight.w700, color: widget.palette.primary),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Future<void> _pickDateTime() async {
     final date = await showDatePicker(
@@ -157,10 +197,12 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
         amountCents: amountCents,
         transactionOccurredAt: _occurredAt.millisecondsSinceEpoch,
         classificationId: _classificationId,
-        counterpartyLabel: _isCash ? null : _orNull(_labelController),
+        // Airtime has no name field: its stored label is written back as it was.
+        counterpartyLabel: _isCash ? null : (_hasName ? _orNull(_labelController) : widget.tx.counterpartyLabel),
         counterpartyPhone: (!_isCash && widget.tx.sourceType == 'SEND_MONEY') ? _orNull(_phoneController) : null,
         paybillAccountNumber: (!_isCash && widget.tx.sourceType == 'PAYBILL') ? _orNull(_accountController) : null,
-        transactionCostCents: _isCash ? null : _parsedCostCents(),
+        transactionCostCents: _isCash ? null : (_hasCost ? _parsedCostCents() : (widget.tx.transactionCostCents ?? 0)),
+        agentNumber: _isWithdrawal ? _orNull(_agentNumberController) : null,
       ),
     );
   }
@@ -168,6 +210,7 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
   String get _labelFieldLabel => switch (widget.tx.sourceType) {
     'PAYBILL' => 'Business name',
     'BUY_GOODS' => 'Merchant name',
+    'AGENT_WITHDRAWAL' => 'Agent name',
     _ => 'Receiver name',
   };
 
@@ -177,6 +220,7 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
     TextInputType? keyboard,
     bool onChange = false,
     bool money = false,
+    bool digitsOnly = false,
     int? maxLength,
     String? errorText,
   }) {
@@ -190,10 +234,12 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
       controller: controller,
       keyboardType: keyboard,
       maxLength: maxLength,
-      buildCounter: maxLength == null
-          ? null
-          : (_, {required currentLength, required isFocused, maxLength}) => null,
-      inputFormatters: money ? const [KshInputFormatter()] : null,
+      buildCounter: maxLength == null ? null : (_, {required currentLength, required isFocused, maxLength}) => null,
+      inputFormatters: money
+          ? const [KshInputFormatter()]
+          : digitsOnly
+          ? [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(maxLength ?? 20)]
+          : null,
       cursorColor: p.primary,
       style: TextStyle(fontSize: 13, color: p.ink),
       decoration: InputDecoration(
@@ -230,7 +276,10 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
           children: [
             Expanded(
               child: Text(
-                'Edit transaction',
+                _isWithdrawal ? tx.displayName : 'Edit transaction',
+                key: const Key('editTitle'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: p.ink),
               ),
             ),
@@ -247,10 +296,39 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
           ],
         ),
         Text(
-          '${tx.displayName} · ${sourceTypeName(tx.sourceType)}${tx.sourceType == 'CASH' ? '' : ' · ${tx.displayCode}'}',
+          '${_isWithdrawal ? sourceTypeName(tx.sourceType) : '${tx.displayName} · ${sourceTypeName(tx.sourceType)}'}${tx.sourceType == 'CASH' ? '' : ' · ${tx.displayCode}'}',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.mutedInk),
+        ),
+        // P-Analytics-13: a small greyed label; tapping it explains why the type
+        // cannot be changed (there is no Change-type control).
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            key: const Key('editTypeLabel'),
+            onPressed: _showTypeModal,
+            style: TextButton.styleFrom(
+              minimumSize: const Size(44, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              tapTargetSize: MaterialTapTargetSize.padded,
+            ),
+            child: Semantics(
+              label: 'Type: ${sourceTypeName(tx.sourceType)}. Tap to see why it cannot be changed',
+              excludeSemantics: true,
+              child: Text(
+                'Type: ${sourceTypeName(tx.sourceType)}',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: p.mutedInk,
+                  decoration: TextDecoration.underline,
+                  decorationStyle: TextDecorationStyle.dotted,
+                  decorationColor: p.mutedInk,
+                ),
+              ),
+            ),
+          ),
         ),
         group(
           _field(
@@ -261,7 +339,9 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
               keyboard: const TextInputType.numberWithOptions(decimal: true),
               onChange: true,
               money: true,
-              errorText: _amountController.text.trim().isNotEmpty && _parsedAmountCents() == null ? kshAmountHelp : null,
+              errorText: _amountController.text.trim().isNotEmpty && _parsedAmountCents() == null
+                  ? kshAmountHelp
+                  : null,
             ),
           ),
         ),
@@ -287,19 +367,47 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
             ],
           ),
         ]),
-        if (!_isCash) ...[
-          group(_field(_labelFieldLabel, _input(const Key('editLabelField'), _labelController, maxLength: receiverFieldMaxLength))),
+        if (_hasName) ...[
+          group(
+            _field(
+              _labelFieldLabel,
+              _input(const Key('editLabelField'), _labelController, maxLength: receiverFieldMaxLength),
+            ),
+          ),
+          if (_isWithdrawal)
+            group(
+              _field(
+                'Agent number',
+                _input(
+                  const Key('editAgentNumberField'),
+                  _agentNumberController,
+                  keyboard: TextInputType.number,
+                  digitsOnly: true,
+                  maxLength: 20,
+                ),
+              ),
+            ),
           if (tx.sourceType == 'SEND_MONEY')
             group(
-              _field('Phone', _input(
-                const Key('editPhoneField'),
-                _phoneController,
-                keyboard: TextInputType.phone,
-                maxLength: receiverFieldMaxLength,
-              )),
+              _field(
+                'Phone',
+                _input(
+                  const Key('editPhoneField'),
+                  _phoneController,
+                  keyboard: TextInputType.phone,
+                  maxLength: receiverFieldMaxLength,
+                ),
+              ),
             ),
           if (tx.sourceType == 'PAYBILL')
-            group(_field('Account number', _input(const Key('editAccountField'), _accountController, maxLength: receiverFieldMaxLength))),
+            group(
+              _field(
+                'Account number',
+                _input(const Key('editAccountField'), _accountController, maxLength: receiverFieldMaxLength),
+              ),
+            ),
+        ],
+        if (_hasCost) ...[
           group(
             _field(
               'Transaction cost (Ksh)',
@@ -313,6 +421,20 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
               ),
             ),
           ),
+          // FN1 long sentence: the edit sheet only, never on a list row.
+          if (_isWithdrawal && _parsedCostCents() != null)
+            Container(
+              key: const Key('editWithdrawalNote'),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(color: p.track, borderRadius: const BorderRadius.all(Radius.circular(10))),
+              child: Semantics(
+                liveRegion: true,
+                child: Text(
+                  'Not counted as spending, only the fee of ${kshTrim(_parsedCostCents()!)}.',
+                  style: TextStyle(fontSize: 11.5, height: 1.4, color: p.mutedInk),
+                ),
+              ),
+            ),
         ],
         group([
           analyticsFieldLabel(p, 'Classification'),

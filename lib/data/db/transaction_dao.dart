@@ -205,6 +205,7 @@ class TransactionDao {
     String? counterpartyPhone,
     String? paybillAccountNumber,
     int? transactionCostCents,
+    String? agentNumber,
   }) async {
     final rows = await db.query(
       'transactions',
@@ -217,6 +218,9 @@ class TransactionDao {
       throw StateError('TransactionDao.update: no transaction with id $id');
     }
     final sourceType = rows.first['source_type'] as String;
+    // S6a: a Withdrawal row's agent number is written with its other fields
+    // (digits only, 1 to 20, null clears it); on any other type a number is refused.
+    checkAgentNumber(sourceType: sourceType, agentNumber: agentNumber);
 
     final values = <String, Object?>{
       'amount_cents': amountCents,
@@ -232,6 +236,7 @@ class TransactionDao {
       } else if (sourceType == 'PAYBILL') {
         values['paybill_account_number'] = paybillAccountNumber;
       }
+      if (sourceType == 'AGENT_WITHDRAWAL') values['agent_number'] = agentNumber;
       // BUY_GOODS: neither counterparty_phone nor paybill_account_number is
       // touched — both are already NULL for BUY_GOODS and stay that way,
       // matching the prototype's edit form (no phone/account field renders

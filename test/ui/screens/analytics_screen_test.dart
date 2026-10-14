@@ -76,7 +76,7 @@ void main() {
       expect(find.text('▲ 27% vs last week'), findsOneWidget);
       expect(_rich('3 transactions'), findsOneWidget);
       expect(_rich('avg Ksh 888/day'), findsOneWidget, reason: '3,550 over Monday to Thursday, the 4 days so far');
-      expect(_rich('fees Ksh 37'), findsOneWidget);
+      expect(_rich('Transaction cost Ksh 37'), findsOneWidget);
       expect(_chartTitle(tester), 'BY DAY');
       expect(find.text('Tap a day to open it · swipe for other weeks'), findsOneWidget);
     });

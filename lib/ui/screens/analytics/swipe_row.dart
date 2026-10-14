@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../../data/db/analytics_dao.dart';
 import '../../../domain/format/money.dart';
 import '../../../domain/format/source_types.dart';
+import '../../copy/spend_copy.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/tabular.dart';
 import '../../widgets/type_icon.dart';
@@ -82,7 +83,16 @@ class _SwipeRowState extends State<AnalyticsSwipeRow> {
     final tx = widget.tx;
     final isCash = tx.sourceType == 'CASH';
     final color = p.typeColor(tx.sourceType);
-    final meta = [tx.classificationName, analyticsHhmm(tx.occurredAt), if (!isCash) tx.displayCode].join(' · ');
+    final wd = tx.sourceType == 'AGENT_WITHDRAWAL';
+    final agent = tx.agentNumber;
+    // Second line: Class . agent number (a Withdrawal that has one) . time . code
+    // (a Cash row has no code).
+    final meta = [
+      tx.classificationName,
+      if (wd && agent != null && agent.isNotEmpty) agent,
+      analyticsHhmm(tx.occurredAt),
+      if (!isCash) tx.displayCode,
+    ].join(' · ');
     final fee = tx.transactionCostCents ?? 0;
 
     Widget action({required Key key, required bool edit}) {
@@ -117,7 +127,21 @@ class _SwipeRowState extends State<AnalyticsSwipeRow> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       child: Row(
         children: [
-          TypeIconTile(code: tx.sourceType, color: color),
+          wd
+              // Hollow tile: a Withdrawal is not spending (mock `.bin.wd .ic`).
+              ? Container(
+                  key: Key('analyticsRowIcon-${tx.id}'),
+                  width: 34,
+                  height: 34,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    border: Border.all(color: color, width: 2),
+                    borderRadius: const BorderRadius.all(Radius.circular(11)),
+                  ),
+                  child: Icon(sourceTypeIcon(tx.sourceType), size: 18, color: color),
+                )
+              : TypeIconTile(code: tx.sourceType, color: color),
           const SizedBox(width: 11),
           Expanded(
             child: Column(
@@ -145,7 +169,13 @@ class _SwipeRowState extends State<AnalyticsSwipeRow> {
             children: [
               Text(
                 formatKsh(tx.amountCents),
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, fontFeatures: tabularFigures, color: p.ink),
+                key: Key('analyticsRowAmount-${tx.id}'),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: wd ? FontWeight.w700 : FontWeight.w800,
+                  fontFeatures: tabularFigures,
+                  color: wd ? p.mutedInk : p.ink,
+                ),
               ),
               if (fee > 0) ...[
                 const SizedBox(height: 1),
@@ -159,7 +189,9 @@ class _SwipeRowState extends State<AnalyticsSwipeRow> {
 
     return Semantics(
       label:
-          '${tx.displayName}, ${formatKsh(tx.amountCents)}, ${sourceTypeName(tx.sourceType)}, $meta. '
+          '${tx.displayName}, ${formatKsh(tx.amountCents)}'
+          '${wd ? ', ${notCountedLabel(feeCents: fee)}' : (fee > 0 ? ', plus ${formatKsh(fee)} fee' : '')}'
+          ', ${sourceTypeName(tx.sourceType)}, $meta. '
           'Tap to edit. Press E to edit, Delete to delete',
       customSemanticsActions: {
         const CustomSemanticsAction(label: 'Edit'): widget.onEdit,
