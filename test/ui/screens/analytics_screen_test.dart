@@ -136,7 +136,7 @@ void main() {
       expect(_pillValue(tester), 'Sep 2026');
       expect(_total(tester), '6,990.00'); // everything in September
       expect(find.text('▲ 299% vs last month'), findsOneWidget); // vs August's 1,750
-      expect(_chartTitle(tester), 'BY MONTH');
+      expect(_chartTitle(tester), 'BY WEEK OF THE MONTH'); // S6b: one month by weeks, not the 6-month trend
       expect(
         find.byKey(const Key('analyticsFilterChipType')),
         findsNothing,
@@ -157,13 +157,13 @@ void main() {
       expect(find.text('MARY WANJIKU'), findsOneWidget);
     });
 
-    testWidgets('All time: no change pill, "since Aug 2026", bars by month since you started', (tester) async {
+    testWidgets('All time: no change pill, "since Aug 2026", five-year block of year bars', (tester) async {
       await _pump(tester);
       await _pickFromMenu(tester, const Key('analyticsGranularity'), 'All time');
       expect(_pillValue(tester), 'since Aug 2026');
       expect(_total(tester), '8,740.00');
       expect(find.byKey(const Key('analyticsChange')), findsNothing);
-      expect(_chartTitle(tester), 'BY MONTH SINCE YOU STARTED');
+      expect(_chartTitle(tester), 'BY YEAR, 2026 TO 2030'); // S6b: five-year blocks
     });
 
     testWidgets('Day: no avg fact; "vs day before"; 6 time-of-day bars', (tester) async {

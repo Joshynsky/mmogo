@@ -93,6 +93,16 @@ class AnalyticsChartCard extends StatelessWidget {
             onSwipe: (dir) => onStep(dir),
             onBucket: onBucket,
           ),
+          if (v.chart.legend.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                v.chart.legend,
+                key: const Key('analyticsChartLegend'),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 10.5, color: palette.mutedInk),
+              ),
+            ),
           ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 13),
             child: Text(

@@ -57,7 +57,9 @@ void main() {
   });
 
   testWidgets('the caption reads "vs last week" against the WHOLE week before (6,000 vs 4,000)', (t) async {
-    await _pump(t, rows: _rows(weekBefore: 400000));
+    // Saturday (day 6 of 7): from S6b the change shows from day 4; on the Wednesday
+    // of the other tests it is the cue "3/7". Only the first five rows (none in the future).
+    await _pump(t, rows: _rows(weekBefore: 400000).take(5).toList(), now: DateTime(2026, 10, 17, 12));
     expect(find.text('▲ 50% vs last week'), findsOneWidget);
     expect(find.textContaining('prior week'), findsNothing);
     expect(find.textContaining('last 7 days'), findsNothing);

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../domain/analytics/chart_blocks.dart' show MonthChartStyle, YearViewAmounts;
+
 /// Real defect found and fixed live, this dispatch (T9): a bare
 /// `SharedPreferences.getInstance()` call can hang indefinitely rather than
 /// throwing (observed running this project's widget tests on Windows,
@@ -71,6 +73,37 @@ class AppPrefs {
       return v is int && v >= 1 && v <= 7 ? v : defaultFirstDayOfWeek;
     } catch (_) {
       return defaultFirstDayOfWeek;
+    }
+  }
+
+  /// 0.1.2 S6b — how the Month chart is drawn: `weeks` (default) or `days`.
+  /// Same key the backup allowlist names (a string choice). The Settings
+  /// control is a later slice (S9); this is the typed reader only.
+  static const keyMonthChartStyle = 'month_chart_style';
+
+  /// What the Year chart shows under the months: `quarters` (default) or
+  /// `months`. Same key the backup allowlist names. Reader only until S9.
+  static const keyYearViewAmounts = 'year_view_amounts';
+
+  /// The Month chart style. Anything unset, of another type, not one of
+  /// 'weeks' / 'days', or unreadable gives [MonthChartStyle.weeks].
+  static Future<MonthChartStyle> readMonthChartStyle() async {
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      return prefs.get(keyMonthChartStyle) == 'days' ? MonthChartStyle.days : MonthChartStyle.weeks;
+    } catch (_) {
+      return MonthChartStyle.weeks;
+    }
+  }
+
+  /// The Year chart's amounts. Anything unset, of another type, not one of
+  /// 'quarters' / 'months', or unreadable gives [YearViewAmounts.quarters].
+  static Future<YearViewAmounts> readYearViewAmounts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      return prefs.get(keyYearViewAmounts) == 'months' ? YearViewAmounts.months : YearViewAmounts.quarters;
+    } catch (_) {
+      return YearViewAmounts.quarters;
     }
   }
 

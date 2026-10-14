@@ -20,9 +20,9 @@ void main() {
     expect(r.percent, 50);
   });
 
-  test('equal totals count as up (design: diff >= 0 is the up/red branch)', () {
+  test('equal totals are flat (0.1.2 S6b; before, they counted as up with 0%)', () {
     final r = HomeDiff.compute(thisTotalCents: 10000, priorTotalCents: 10000);
-    expect(r.kind, HomeDiffKind.up);
+    expect(r.kind, HomeDiffKind.flat);
     expect(r.percent, 0);
   });
 

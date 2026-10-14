@@ -135,13 +135,13 @@ void main() {
       expect(paidToPeriodNow(AnalyticsGranularity.all, today), AnalyticsPeriod.allTime(today));
     });
 
-    test('analyticsPeriodForPaidTo: same length and anchor; an old month lands on the chart window', () {
+    test('analyticsPeriodForPaidTo: same length and anchor (Month is one month since S6b, no chart window)', () {
       final may = analyticsPeriodForPaidTo(AnalyticsPeriod.month(DateTime(2026, 3, 1)), today);
       expect(may.granularity, AnalyticsGranularity.month);
       expect(may.range(today: today), DayRange(DateTime(2026, 3, 1), DateTime(2026, 3, 31)));
-      expect(may.monthWindowEnd, DateTime(2026, 5, 1));
+      expect(may, AnalyticsPeriod.month(DateTime(2026, 3, 1)));
       final sep = analyticsPeriodForPaidTo(AnalyticsPeriod.month(today), today);
-      expect(sep.monthWindowEnd, isNull);
+      expect(sep, AnalyticsPeriod.month(today));
       expect(
         analyticsPeriodForPaidTo(AnalyticsPeriod.year(2025, today: today), today),
         AnalyticsPeriod.year(2025, today: today),

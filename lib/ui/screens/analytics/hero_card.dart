@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../domain/analytics/analytics_period.dart';
 import '../../../domain/format/money.dart';
-import '../../../domain/home/home_diff.dart';
+import '../../../domain/analytics/analytics_change.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/period_pill.dart';
@@ -26,6 +26,7 @@ class AnalyticsHeroCard extends StatelessWidget {
     required this.onGranularity,
     required this.onValue,
     required this.onCustom,
+    this.crossNote,
   });
 
   final AppPalette palette;
@@ -36,6 +37,9 @@ class AnalyticsHeroCard extends StatelessWidget {
   final VoidCallback onGranularity;
   final VoidCallback onValue;
   final VoidCallback onCustom;
+
+  /// "Week crosses into August" after a tap-through from a Month segment.
+  final String? crossNote;
 
   @override
   Widget build(BuildContext context) {
@@ -49,21 +53,32 @@ class AnalyticsHeroCard extends StatelessWidget {
     if (v.party) {
       pill = _ChangePill.flat(palette, '$count payment${count == 1 ? '' : 's'}');
     } else if (v.priorCents != null) {
-      final diff = HomeDiff.compute(thisTotalCents: total, priorTotalCents: v.priorCents!);
-      pill = switch (diff.kind) {
-        HomeDiffKind.noPriorNoSpend => _ChangePill.flat(palette, 'no spending'),
-        HomeDiffKind.noPriorHasSpend => _ChangePill.flat(palette, 'nothing before to compare'),
-        HomeDiffKind.up => _ChangePill(
-          text: '▲ ${diff.percent}% ${words.vs}',
-          color: palette.diffUp,
-          background: palette.diffUp.withValues(alpha: 0.12),
-        ),
-        HomeDiffKind.down => _ChangePill(
-          text: '▼ ${diff.percent}% ${words.vs}',
-          color: palette.diffDown,
-          background: palette.diffDown.withValues(alpha: 0.12),
-        ),
-      };
+      // S6b: one rule (domain/analytics/analytics_change.dart): the progress
+      // cue early in a Week / Month / Year, else the change.
+      final c = analyticsChange(
+        granularity: v.period.granularity,
+        range: v.range,
+        today: v.today,
+        totalCents: total,
+        priorCents: v.priorCents,
+        vs: words.vs,
+      );
+      if (c != null) {
+        pill = switch (c.look) {
+          ChangeLook.cue => _ChangePill.flat(palette, c.text, label: c.label, tooltip: c.tooltip),
+          ChangeLook.flat => _ChangePill.flat(palette, c.text),
+          ChangeLook.up => _ChangePill(
+            text: c.text,
+            color: palette.diffUp,
+            background: palette.diffUp.withValues(alpha: 0.12),
+          ),
+          ChangeLook.down => _ChangePill(
+            text: c.text,
+            color: palette.diffDown,
+            background: palette.diffDown.withValues(alpha: 0.12),
+          ),
+        };
+      }
     }
 
     final factStyle = TextStyle(fontSize: 12, color: palette.mutedInk);
@@ -139,6 +154,8 @@ class AnalyticsHeroCard extends StatelessWidget {
             builder: (context, c) => Wrap(
               spacing: 10,
               runSpacing: 4,
+              // The pill (or the early cue) sits at the far right of the row.
+              alignment: WrapAlignment.spaceBetween,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 ConstrainedBox(
@@ -197,6 +214,21 @@ class AnalyticsHeroCard extends StatelessWidget {
               ]),
             ],
           ),
+          if (crossNote != null) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                key: const Key('analyticsCrossNote'),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(color: palette.tint, borderRadius: const BorderRadius.all(Radius.circular(8))),
+                child: Text(
+                  crossNote!,
+                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: palette.tintInk),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -204,18 +236,21 @@ class AnalyticsHeroCard extends StatelessWidget {
 }
 
 class _ChangePill extends StatelessWidget {
-  const _ChangePill({required this.text, required this.color, required this.background});
+  const _ChangePill({required this.text, required this.color, required this.background, this.label, this.tooltip});
 
-  factory _ChangePill.flat(AppPalette palette, String text) =>
-      _ChangePill(text: text, color: palette.mutedInk, background: palette.track);
+  /// [label] / [tooltip] are set for the progress cue only ("3/7").
+  factory _ChangePill.flat(AppPalette palette, String text, {String? label, String? tooltip}) =>
+      _ChangePill(text: text, color: palette.mutedInk, background: palette.track, label: label, tooltip: tooltip);
 
   final String text;
   final Color color;
   final Color background;
+  final String? label;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final pill = Container(
       key: const Key('analyticsChange'),
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(color: background, borderRadius: const BorderRadius.all(Radius.circular(999))),
@@ -224,6 +259,12 @@ class _ChangePill extends StatelessWidget {
         softWrap: false,
         style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: color),
       ),
+    );
+    if (label == null) return pill;
+    return Semantics(
+      label: label,
+      excludeSemantics: true,
+      child: Tooltip(message: tooltip ?? label, excludeFromSemantics: true, child: pill),
     );
   }
 }

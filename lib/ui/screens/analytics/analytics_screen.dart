@@ -75,6 +75,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
 
   /// The first day of the calendar week (1 = Monday), re-read on every load.
   int _firstDay = AppPrefs.defaultFirstDayOfWeek;
+
+  /// "Week crosses into August": set by the second tap on a part-week bar
+  /// of Month, cleared by any other period change.
+  String? _crossNote;
   String? _partyType;
   String? _partyKey;
   String? _partyName;
@@ -194,6 +198,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
           _typeFilter = null;
           _classFilter = null;
           _openRowId = null;
+          _crossNote = null;
         });
         await _bootstrap(r.highlightTransactionId);
       }
@@ -234,6 +239,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
   ///    (F6).
   void _applyPaidTo(AnalyticsResolvedArgs r) {
     final period = r.period ?? AnalyticsPeriod.allTime(dateOnly(_now()));
+    _crossNote = null;
     if (r.partyKey != null) {
       _enterParty(r.type!, r.partyKey!, r.partyName);
       _period = period;
@@ -312,6 +318,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     // CW1: the first day of the week is a preference; a change (from Settings,
     // a restore) re-anchors the period before it is read.
     final firstDay = await AppPrefs.readFirstDayOfWeek();
+    // S6b: the Month chart style and the Year amounts, read on every load.
+    final monthStyle = await AppPrefs.readMonthChartStyle();
+    final yearAmounts = await AppPrefs.readYearViewAmounts();
     if (!mounted || seq != _loadSeq) return;
     if (firstDay != _firstDay) {
       _firstDay = firstDay;
@@ -326,7 +335,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
 
     final range = period.range(today: today, first: first);
     final prior = party ? null : period.priorRange(today: today, first: first);
-    final chart = period.chart(now: now, first: first);
+    final chart = period.chart(now: now, first: first, monthStyle: monthStyle, yearAmounts: yearAmounts);
 
     // One fetch covers the period, its prior period and every chart bar.
     var (startMs, endMs) = range.bounds;
@@ -452,8 +461,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
       _typeFilter = null;
       _classFilter = null;
       _openRowId = null;
+      _crossNote = null;
     });
     _load();
+  }
+
+  /// A bar of the chart was opened. A part-week bar of Month opens the whole
+  /// calendar week and says which month it crosses into.
+  void _openBucket(ChartBucket b) {
+    _setPeriod(b.target!);
+    if (b.cross != null) setState(() => _crossNote = b.cross);
   }
 
   void _step(int dir) {
@@ -471,6 +488,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     final today = dateOnly(_now());
     setState(() {
       _period = _period.backToNow(today: today);
+      _crossNote = null;
       _typeFilter = null;
       _classFilter = null;
       _openRowId = null;
@@ -721,6 +739,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
         onGranularity: _openGranularityMenu,
         onValue: _openValueMenu,
         onCustom: _openCustomSheet,
+        crossNote: _period.granularity == AnalyticsGranularity.week ? _crossNote : null,
       ),
       KeyedSubtree(
         key: _chartTourKey,
@@ -731,7 +750,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
           canBack: _period.canStepBack(today: v.today, first: v.first),
           canForward: _period.canStepForward(today: v.today),
           onStep: _step,
-          onBucket: (b) => _setPeriod(b.target!),
+          onBucket: _openBucket,
         ),
       ),
       AnalyticsBreakdownSwitch(

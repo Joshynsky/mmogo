@@ -20,6 +20,7 @@ library;
 import 'dart:math' as math;
 
 import '../period_math.dart' as period_math;
+import 'chart_blocks.dart';
 
 enum AnalyticsGranularity { all, year, month, week, day, custom }
 
@@ -136,14 +137,19 @@ class ChartBucket {
     this.selected = true,
     this.future = false,
     this.target,
+    this.sub = '',
+    this.name,
+    this.part = false,
+    this.tipLines,
+    this.cross,
   });
 
   final String label;
   final int startMs;
   final int endMs;
 
-  /// `false` = drawn dimmed (the months around the chosen one on Month, the
-  /// months before the first transaction on All time).
+  /// `false` = drawn dimmed (the months before the first transaction on the
+  /// party view's by-month chart).
   final bool selected;
 
   /// Faded, never tappable (a future block/month, or before the start).
@@ -151,10 +157,33 @@ class ChartBucket {
 
   final AnalyticsPeriod? target;
 
+  /// A second small line under the label (a part week's "3 days", the date
+  /// under a Week day).
+  final String sub;
+
+  /// What a screen reader says for the bar; `null` = the label.
+  final String? name;
+
+  /// A part week (fewer than seven days): drawn with a striped fill.
+  final bool part;
+
+  /// Month: the first tap shows these three lines for the bar's total, the
+  /// second tap opens [target]. `null` = the bar opens at once.
+  final List<String> Function(int cents)? tipLines;
+
+  /// "Week crosses into August", shown on the week this bar opens.
+  final String? cross;
+
   bool get tappable => target != null && !future;
+
+  /// First tap = tooltip, second tap = open.
+  bool get hasTip => tipLines != null && !future;
 
   bool contains(int ms) => ms >= startMs && ms <= endMs;
 }
+
+/// What the Year chart draws under the twelve month labels.
+enum ChartUnder { none, quarters, months }
 
 class ChartSpec {
   const ChartSpec({
@@ -163,18 +192,30 @@ class ChartSpec {
     required this.hint,
     required this.showAverage,
     required this.labelSelected,
+    this.legend = '',
+    this.futureStubs = false,
+    this.under = ChartUnder.none,
   });
 
   final List<ChartBucket> buckets;
   final String title;
   final String hint;
 
-  /// The dashed daily-average line (Week and Custom only).
+  /// The dashed daily-average line (Week, Month by days and Custom).
   final bool showAverage;
 
-  /// Month: the chosen month's bar is labelled with its value and its axis
-  /// label is bold.
+  /// Bold axis label and a value above the bar of the selected bucket.
+  /// Unused since Month became one month (kept off everywhere).
   final bool labelSelected;
+
+  /// The line under the chart ("Striped bar = part week ..."), or ''.
+  final String legend;
+
+  /// Future buckets draw a faint stub where the bar would be.
+  final bool futureStubs;
+
+  /// The amount lines under the month labels (Year).
+  final ChartUnder under;
 }
 
 (int, int) _dayMs(DateTime d) => period_math.dayBounds(d);
@@ -186,10 +227,9 @@ class AnalyticsPeriod {
     required this.granularity,
     required DateTime anchor,
     this.custom,
-    DateTime? monthWindowEnd,
+    this.blockBack = 0,
     this.firstDay = 1,
-  }) : anchor = dateOnly(anchor),
-       monthWindowEnd = monthWindowEnd == null ? null : monthStart(monthWindowEnd);
+  }) : anchor = dateOnly(anchor);
 
   final AnalyticsGranularity granularity;
 
@@ -203,9 +243,9 @@ class AnalyticsPeriod {
   /// Custom only: the chosen days.
   final DayRange? custom;
 
-  /// Month only: the newest month of the chart's 6-month window (`null` =
-  /// the current month).
-  final DateTime? monthWindowEnd;
+  /// All time only: how many five-year blocks back from the one holding
+  /// today (0 = that block, never positive).
+  final int blockBack;
 
   /// The nav-bar default: the whole calendar week containing [today].
   factory AnalyticsPeriod.thisWeek(DateTime today, {int firstDay = 1}) =>
@@ -217,18 +257,10 @@ class AnalyticsPeriod {
   factory AnalyticsPeriod.month(DateTime anyDay) =>
       AnalyticsPeriod._(granularity: AnalyticsGranularity.month, anchor: monthStart(anyDay));
 
-  /// One month as the Month menu picks it: the chart's 6-month window is
-  /// moved so [anyDay]'s month is on it (the window ends 2 months later, or
-  /// at the current month). Used by the menu and by Paid to's hand-off (T22).
-  factory AnalyticsPeriod.monthShown(DateTime anyDay, {required DateTime today}) {
-    final m = monthStart(anyDay);
-    final windowEnd = addMonths(m, 2);
-    return AnalyticsPeriod._(
-      granularity: AnalyticsGranularity.month,
-      anchor: m,
-      monthWindowEnd: windowEnd.isAfter(monthStart(today)) ? null : windowEnd,
-    );
-  }
+  /// One month as the Month menu picks it. Used by the menu and by Paid to's
+  /// hand-off (T22). Since S6b the Month chart shows that one month only, so
+  /// [today] no longer matters; the parameter stays for the callers.
+  factory AnalyticsPeriod.monthShown(DateTime anyDay, {required DateTime today}) => AnalyticsPeriod.month(anyDay);
 
   factory AnalyticsPeriod.year(int year, {required DateTime today}) => AnalyticsPeriod._(
     granularity: AnalyticsGranularity.year,
@@ -250,22 +282,9 @@ class AnalyticsPeriod {
     return AnalyticsPeriod._(granularity: AnalyticsGranularity.custom, anchor: b, custom: DayRange(a, b));
   }
 
-  AnalyticsPeriod _copy({DateTime? anchor, DateTime? monthWindowEnd, bool clearWindow = false}) => AnalyticsPeriod._(
-    granularity: granularity,
-    anchor: anchor ?? this.anchor,
-    custom: custom,
-    monthWindowEnd: clearWindow ? null : (monthWindowEnd ?? this.monthWindowEnd),
-    firstDay: firstDay,
-  );
-
   /// The same period under another first day of the week (1..7).
-  AnalyticsPeriod withFirstDay(int day) => AnalyticsPeriod._(
-    granularity: granularity,
-    anchor: anchor,
-    custom: custom,
-    monthWindowEnd: monthWindowEnd,
-    firstDay: day,
-  );
+  AnalyticsPeriod withFirstDay(int day) =>
+      AnalyticsPeriod._(granularity: granularity, anchor: anchor, custom: custom, blockBack: blockBack, firstDay: day);
 
   /// The first day of the calendar week containing [d] under this period's
   /// first-day-of-week.
@@ -447,62 +466,62 @@ class AnalyticsPeriod {
     AnalyticsGranularity.day ||
     AnalyticsGranularity.week ||
     AnalyticsGranularity.month ||
-    AnalyticsGranularity.year => true,
+    AnalyticsGranularity.year ||
+    AnalyticsGranularity.all => true,
     _ => false,
   };
 
-  DateTime _windowEnd(DateTime today) => monthWindowEnd ?? monthStart(today);
+  /// The first year of the All-time block this period shows.
+  int allTimeBlockFirstYear(DateTime today) => allTimeBlockStartAt(today, blockBack);
 
+  /// Previous. Month stops a year before the first transaction; All time only
+  /// while a transaction exists before the shown block (nothing exists before
+  /// 2026, so the first block cannot step back).
   bool canStepBack({required DateTime today, DateTime? first}) {
     if (!_steppable) return false;
     if (granularity == AnalyticsGranularity.month) {
       final floor = monthStart(addMonths(first ?? today, -12));
-      return addMonths(_windowEnd(today), -5).isAfter(floor);
+      return monthStart(anchor).isAfter(floor);
+    }
+    if (granularity == AnalyticsGranularity.all) {
+      return first != null && first.year < allTimeBlockFirstYear(dateOnly(today));
     }
     return true;
   }
 
-  /// Next is disabled at the present.
+  /// Next is disabled at the present (All time: on the block holding today).
   bool canStepForward({required DateTime today}) {
     if (!_steppable) return false;
     final t = dateOnly(today);
-    if (granularity == AnalyticsGranularity.month) return !sameMonth(_windowEnd(t), t);
+    if (granularity == AnalyticsGranularity.month) return monthStart(anchor).isBefore(monthStart(t));
+    if (granularity == AnalyticsGranularity.all) return blockBack < 0;
     return range(today: t).end.isBefore(t);
   }
 
-  /// One step earlier (-1) or later (+1). Month pages the 6-month window;
-  /// the chosen month follows the window's edge if it would drop off. Never
-  /// steps past today.
+  /// One step earlier (-1) or later (+1): a day, a calendar week, a month, a
+  /// year, or (All time) a five-year block. Never steps past today.
   AnalyticsPeriod step(int dir, {required DateTime today}) {
     final t = dateOnly(today);
     var a = anchor;
-    DateTime? windowEnd = monthWindowEnd;
+    var back = blockBack;
     switch (granularity) {
       case AnalyticsGranularity.day:
         a = addDays(a, dir);
       case AnalyticsGranularity.week:
         a = addDays(a, 7 * dir);
       case AnalyticsGranularity.month:
-        final end = addMonths(_windowEnd(t), dir);
-        windowEnd = end.isAfter(monthStart(t)) ? monthStart(t) : end;
-        final start = addMonths(windowEnd, -5);
-        if (a.isBefore(start)) a = start;
-        if (a.isAfter(monthLastDay(windowEnd))) a = windowEnd;
+        a = addMonths(a, dir);
+        if (a.isAfter(monthStart(t))) a = monthStart(t);
       case AnalyticsGranularity.year:
         a = DateTime(a.year + dir, 1, 1);
       case AnalyticsGranularity.all:
+        back = math.min(0, back + dir);
       case AnalyticsGranularity.custom:
         return this;
     }
     if (granularity != AnalyticsGranularity.month && a.isAfter(t)) a = t;
     if (granularity == AnalyticsGranularity.year && a.year == t.year) a = t;
-    return AnalyticsPeriod._(
-      granularity: granularity,
-      anchor: a,
-      custom: custom,
-      monthWindowEnd: windowEnd,
-      firstDay: firstDay,
-    );
+    return AnalyticsPeriod._(granularity: granularity, anchor: a, custom: custom, blockBack: back, firstDay: firstDay);
   }
 
   /// Pull to refresh: the WHOLE current calendar period of the same length.
@@ -523,8 +542,16 @@ class AnalyticsPeriod {
 
   /// The chart's bars for this period. [now] is the current time (Day's
   /// future blocks); [party] = T21's Parties entry (always all time, by month,
-  /// no tap-through).
-  ChartSpec chart({required DateTime now, DateTime? first, bool party = false}) {
+  /// no tap-through). [monthStyle] and [yearAmounts] are the two S6b
+  /// preferences (Month by weeks or days; Year quarter totals or monthly
+  /// amounts).
+  ChartSpec chart({
+    required DateTime now,
+    DateTime? first,
+    bool party = false,
+    MonthChartStyle monthStyle = MonthChartStyle.weeks,
+    YearViewAmounts yearAmounts = YearViewAmounts.quarters,
+  }) {
     final t = dateOnly(now);
     final g = party ? AnalyticsGranularity.all : granularity;
     final out = <ChartBucket>[];
@@ -563,6 +590,7 @@ class AnalyticsPeriod {
         out.add(
           ChartBucket(
             label: weekdayShort(d).substring(0, 2),
+            sub: d.day == 1 ? monthShort(d) : '${d.day}',
             startMs: s,
             endMs: e,
             future: d.isAfter(t),
@@ -576,31 +604,66 @@ class AnalyticsPeriod {
         hint: 'Tap a day to open it · swipe for other weeks',
         showAverage: true,
         labelSelected: false,
+        futureStubs: true,
       );
     }
 
     if (g == AnalyticsGranularity.month) {
-      final end = _windowEnd(t);
-      for (var k = 5; k >= 0; k--) {
-        final m = addMonths(end, -k);
-        final (s, e) = _rangeMs(m, monthLastDay(m));
+      // One month only (M10): by calendar weeks cut at the month edges, or
+      // by days. Never the days of another month.
+      final ms = monthStart(a);
+      final me = monthLastDay(a);
+      if (monthStyle == MonthChartStyle.days) {
+        for (var k = 1; k <= me.day; k++) {
+          final d = DateTime(ms.year, ms.month, k);
+          final (s, e) = _dayMs(d);
+          out.add(
+            ChartBucket(
+              label: monthDayLabel(k, me.day),
+              startMs: s,
+              endMs: e,
+              future: d.isAfter(t),
+              name: '${weekdayShort(d)} ${fmtDayMonth(d)}',
+              target: AnalyticsPeriod.day(d),
+              tipLines: (cents) => dayTipLines(d, cents),
+            ),
+          );
+        }
+        return ChartSpec(
+          buckets: out,
+          title: 'By day',
+          hint: 'Tap a day for its amount, tap again to open it · swipe for other months',
+          showAverage: true,
+          labelSelected: false,
+          futureStubs: true,
+        );
+      }
+      final segments = monthWeekSegments(ms, firstDay: firstDay);
+      for (final seg in segments) {
+        final (s, e) = _rangeMs(seg.start, seg.end);
         out.add(
           ChartBucket(
-            label: monthShort(m),
+            label: seg.rangeLabel,
+            sub: seg.part ? seg.daysLabel : '',
             startMs: s,
             endMs: e,
-            selected: sameMonth(m, a),
-            future: m.isAfter(t),
-            target: _copy(anchor: m),
+            part: seg.part,
+            future: seg.start.isAfter(t),
+            name: weekSegmentName(seg),
+            target: AnalyticsPeriod._(granularity: AnalyticsGranularity.week, anchor: seg.start, firstDay: firstDay),
+            tipLines: (cents) => weekTipLines(seg, cents, t),
+            cross: seg.crossLine,
           ),
         );
       }
       return ChartSpec(
         buckets: out,
-        title: 'By month',
-        hint: 'Tap a month to pick it · swipe for earlier months',
+        title: 'By week of the month',
+        hint: 'Tap a segment for its total and daily average, tap again to open the week',
         showAverage: false,
-        labelSelected: true,
+        labelSelected: false,
+        futureStubs: true,
+        legend: segments.any((x) => x.part) ? 'Striped bar = part week (fewer than 7 days in this month)' : '',
       );
     }
 
@@ -614,6 +677,7 @@ class AnalyticsPeriod {
             startMs: s,
             endMs: e,
             future: d.isAfter(t),
+            name: _monthFull[m - 1],
             target: AnalyticsPeriod.month(d),
           ),
         );
@@ -624,58 +688,66 @@ class AnalyticsPeriod {
         hint: 'Tap a month to open it',
         showAverage: false,
         labelSelected: false,
+        under: yearAmounts == YearViewAmounts.months ? ChartUnder.months : ChartUnder.quarters,
+      );
+    }
+
+    if (g == AnalyticsGranularity.all && !party) {
+      // Five-year blocks that follow the digits (2021-2025, 2026-2030, ...):
+      // five year bars, data only, no comparison between blocks.
+      final s0 = allTimeBlockStartAt(t, blockBack);
+      final firstYear = (first ?? t).year;
+      for (var k = 0; k < 5; k++) {
+        final y = s0 + k;
+        final (s, e) = _rangeMs(DateTime(y, 1, 1), DateTime(y, 12, 31));
+        // Only years that can hold data (the first transaction's year up to
+        // this year) are tappable.
+        final empty = y < firstYear || y > t.year;
+        out.add(
+          ChartBucket(
+            label: '$y',
+            startMs: s,
+            endMs: e,
+            future: empty,
+            name: '$y',
+            target: AnalyticsPeriod.year(y, today: t),
+          ),
+        );
+      }
+      return ChartSpec(
+        buckets: out,
+        title: 'By year, $s0 to ${s0 + 4}',
+        hint: 'Tap a year with data to open it',
+        showAverage: false,
+        labelSelected: false,
+        futureStubs: true,
       );
     }
 
     if (g == AnalyticsGranularity.all) {
+      // The Paid to recipient view: all time, by month (by year past two
+      // years), no tap-through.
       final f = _minDay(first ?? t, t);
       final months = (t.year - f.year) * 12 + t.month - f.month + 1;
       if (months > 24) {
         for (var y = f.year; y <= t.year; y++) {
           final (s, e) = _rangeMs(DateTime(y, 1, 1), DateTime(y, 12, 31));
-          out.add(
-            ChartBucket(
-              label: "'${'$y'.substring(2)}",
-              startMs: s,
-              endMs: e,
-              target: party ? null : AnalyticsPeriod.year(y, today: t),
-            ),
-          );
+          out.add(ChartBucket(label: "'${'$y'.substring(2)}", startMs: s, endMs: e));
         }
-        return ChartSpec(
-          buckets: out,
-          title: 'By year',
-          hint: party ? '' : 'Tap a year to open it',
-          showAverage: false,
-          labelSelected: false,
-        );
+        return ChartSpec(buckets: out, title: 'By year', hint: '', showAverage: false, labelSelected: false);
       }
       final n = math.max(months, 6);
       for (var k = n - 1; k >= 0; k--) {
         final m = addMonths(monthStart(t), -k);
         final before = m.isBefore(monthStart(f));
         final (s, e) = _rangeMs(m, monthLastDay(m));
-        out.add(
-          ChartBucket(
-            label: monthShort(m),
-            startMs: s,
-            endMs: e,
-            selected: !before,
-            future: before,
-            target: party ? null : AnalyticsPeriod.month(m),
-          ),
-        );
+        out.add(ChartBucket(label: monthShort(m), startMs: s, endMs: e, selected: !before, future: before));
       }
-      return ChartSpec(
-        buckets: out,
-        title: party ? 'By month · all time' : 'By month since you started',
-        hint: party ? '' : 'Tap a month to open it',
-        showAverage: false,
-        labelSelected: false,
-      );
+      return ChartSpec(buckets: out, title: 'By month · all time', hint: '', showAverage: false, labelSelected: false);
     }
 
-    // Custom: per day up to 31 days, per 7-day block beyond.
+    // Custom: per day up to 31 days, per calendar-week block beyond (the
+    // first and last block clipped to the chosen dates).
     final r = range(today: t, first: first);
     final days = r.days;
     if (days <= 31) {
@@ -691,20 +763,30 @@ class AnalyticsPeriod {
           ),
         );
       }
-      return ChartSpec(
-        buckets: out,
-        title: 'By day',
-        hint: 'Tap a day to open it',
-        showAverage: true,
-        labelSelected: false,
+      return ChartSpec(buckets: out, title: 'By day', hint: 'Tap a day to open it', showAverage: true, labelSelected: false);
+    }
+    final blocks = customWeekBlocks(r.start, r.end, firstDay: firstDay);
+    for (final blk in blocks) {
+      final (s, e) = _rangeMs(blk.start, blk.end);
+      out.add(
+        ChartBucket(
+          label: '${blk.start.day}',
+          sub: blk.part ? '${blk.days}d' : '',
+          startMs: s,
+          endMs: e,
+          part: blk.part,
+          name: '${fmtDayMonth(blk.start)} to ${fmtDayMonth(blk.end)}',
+        ),
       );
     }
-    for (var d = r.start; !d.isAfter(r.end); d = addDays(d, 7)) {
-      final last = addDays(d, 6).isAfter(r.end) ? r.end : addDays(d, 6);
-      final (s, e) = _rangeMs(d, last);
-      out.add(ChartBucket(label: '${d.day}', startMs: s, endMs: e));
-    }
-    return ChartSpec(buckets: out, title: 'By week', hint: '', showAverage: true, labelSelected: false);
+    return ChartSpec(
+      buckets: out,
+      title: 'By week',
+      hint: '',
+      showAverage: true,
+      labelSelected: false,
+      legend: blocks.any((x) => x.part) ? 'Striped bar = part week (fewer than 7 days in this period)' : '',
+    );
   }
 
   @override
@@ -713,13 +795,13 @@ class AnalyticsPeriod {
       other.granularity == granularity &&
       other.anchor == anchor &&
       other.custom == custom &&
-      other.monthWindowEnd == monthWindowEnd;
+      other.blockBack == blockBack;
 
   @override
-  int get hashCode => Object.hash(granularity, anchor, custom, monthWindowEnd);
+  int get hashCode => Object.hash(granularity, anchor, custom, blockBack);
 
   @override
-  String toString() => 'AnalyticsPeriod($granularity, $anchor, custom: $custom, window: $monthWindowEnd)';
+  String toString() => 'AnalyticsPeriod($granularity, $anchor, custom: $custom, blockBack: $blockBack)';
 }
 
 // ---- chart value helpers ------------------------------------------------------

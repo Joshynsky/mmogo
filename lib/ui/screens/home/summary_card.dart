@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../domain/format/money.dart';
 import '../../../domain/home/home_diff.dart';
 import '../../../domain/home/home_period.dart';
+import '../../../domain/period_change.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/tabular.dart';
 import 'home_consts.dart';
@@ -23,7 +24,12 @@ class HomeSummaryCard extends StatelessWidget {
     this.periodTourKey,
     this.cashWithdrawnCents,
     this.withdrawalFeeCents = 0,
+    this.hiddenProgress,
   });
+
+  /// Early in a This week / This month: the progress cue ("3/7") shows in
+  /// place of the change. `null` = show the change.
+  final PeriodProgress? hiddenProgress;
 
   /// Cash withdrawn in the period, shown as a muted "not counted" line.
   /// `null` = no withdrawal in the period (no line). Never part of the total.
@@ -91,7 +97,7 @@ class HomeSummaryCard extends StatelessWidget {
             ),
             end: Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: _DiffLine(palette: palette, diff: diff, priorSuffix: period.priorSuffix),
+              child: _DiffLine(palette: palette, diff: diff, period: period, hiddenProgress: hiddenProgress),
             ),
           ),
           const SizedBox(height: 12),
@@ -240,11 +246,12 @@ class _PeriodButton extends StatelessWidget {
 }
 
 class _DiffLine extends StatelessWidget {
-  const _DiffLine({required this.palette, required this.diff, required this.priorSuffix});
+  const _DiffLine({required this.palette, required this.diff, required this.period, this.hiddenProgress});
 
   final AppPalette palette;
   final HomeDiffResult diff;
-  final String priorSuffix;
+  final HomePeriod period;
+  final PeriodProgress? hiddenProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -266,8 +273,21 @@ class _DiffLine extends StatelessWidget {
       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color),
     );
 
+    final priorSuffix = period.priorSuffix;
+    final cue = hiddenProgress;
+    if (cue != null) {
+      // The progress cue: muted flat text at the far right, with its words
+      // for a screen reader and the tooltip.
+      return Semantics(
+        label: cue.homeLabel,
+        excludeSemantics: true,
+        child: Tooltip(message: cue.homeLabel, excludeFromSemantics: true, child: muted(cue.cue)),
+      );
+    }
     return switch (diff.kind) {
       HomeDiffKind.noPriorNoSpend => muted('—'),
+      // Equal: Week says "—"; Today and Month say "= 0% vs ..." (signed mock).
+      HomeDiffKind.flat => muted(period == HomePeriod.week ? '—' : '= 0% $priorSuffix'),
       HomeDiffKind.noPriorHasSpend => muted('No spend in the prior period to compare'),
       HomeDiffKind.up => strong('▲ ${diff.percent}% $priorSuffix', palette.diffUp),
       HomeDiffKind.down => strong('▼ ${diff.percent}% $priorSuffix', palette.diffDown),

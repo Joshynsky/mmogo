@@ -173,9 +173,9 @@ void main() {
         'March 2026',
         'February 2026',
       ]);
-      // Picking an older month moves the chart window so it sits 2 from the right.
-      expect(o[5].period.monthWindowEnd, DateTime(2026, 6, 1));
-      expect(o[1].period.monthWindowEnd, isNull);
+      // S6b: Month is one month, so a picked month is just that month (no chart window).
+      expect(o[5].period, AnalyticsPeriod.month(DateTime(2026, 4, 1)));
+      expect(o[1].period, AnalyticsPeriod.month(DateTime(2026, 8, 1)));
     });
 
     test("Year lists this year back to the first transaction's year minus 1", () {
@@ -218,42 +218,35 @@ void main() {
       expect(back.canStepForward(today: today), isFalse);
     });
 
-    test('All time and Custom do not step', () {
+    test('Custom does not step; All time steps only by five-year blocks (S6b, see analytics_period_s6b_test)', () {
       final all = AnalyticsPeriod.allTime(today);
       expect(all.canStepBack(today: today), isFalse);
       expect(all.canStepForward(today: today), isFalse);
-      expect(all.step(-1, today: today), all);
       final c = AnalyticsPeriod.custom(DateTime(2026, 9, 1), today, today: today);
       expect(c.canStepBack(today: today), isFalse);
     });
   });
 
-  group('the Month window', () {
-    test('Month pages the 6-month window; the chosen month follows its edge', () {
+  group('the Month steps (S6b: one month at a time; the 6-month window is gone)', () {
+    test('Previous and Next move one month, Next stops at the current month', () {
       final m = AnalyticsPeriod.month(today);
       expect(m.canStepForward(today: today), isFalse);
-      var p = m.step(-1, today: today);
-      expect(p.monthWindowEnd, DateTime(2026, 8, 1));
-      // September dropped off the right edge: the chosen month follows (Aug).
+      final p = m.step(-1, today: today);
       expect(p.range(today: today).start, DateTime(2026, 8, 1));
       expect(p.canStepForward(today: today), isTrue);
-      p = AnalyticsPeriod.month(DateTime(2026, 4, 1)).step(-1, today: today);
-      // April is still inside Mar..Aug: it stays chosen.
-      expect(p.range(today: today).start, DateTime(2026, 4, 1));
-      // Forward is clamped to the current month.
-      expect(p.step(1, today: today).step(1, today: today).monthWindowEnd, DateTime(2026, 9, 1));
+      expect(p.step(1, today: today).step(1, today: today).anchor, DateTime(2026, 9, 1));
     });
 
-    test('Back stops once the window reaches a year before the first transaction', () {
+    test('Back stops once the month is a year before the first transaction', () {
       var p = AnalyticsPeriod.month(today);
       var steps = 0;
       while (p.canStepBack(today: today, first: first) && steps < 100) {
         p = p.step(-1, today: today);
         steps++;
       }
-      // The window's first month may not go below Aug 2025 (first - 12 months).
-      expect(addMonths(p.monthWindowEnd!, -5), DateTime(2025, 8, 1));
-      expect(steps, 8);
+      // The month may not go below Aug 2025 (first - 12 months).
+      expect(p.anchor, DateTime(2025, 8, 1));
+      expect(steps, 13);
     });
   });
 
@@ -263,7 +256,6 @@ void main() {
       expect(week(DateTime(2026, 8, 30)).backToNow(today: today), week());
       final month = AnalyticsPeriod.month(DateTime(2026, 3, 1)).step(-1, today: today).backToNow(today: today);
       expect(month.range(today: today), d(DateTime(2026, 9, 1), DateTime(2026, 9, 30)));
-      expect(month.monthWindowEnd, isNull);
       final year = AnalyticsPeriod.year(2024, today: today).backToNow(today: today);
       expect(year.range(today: today), d(DateTime(2026, 1, 1), DateTime(2026, 12, 31)));
     });
@@ -310,14 +302,13 @@ void main() {
       expect(s.showAverage, isTrue);
     });
 
-    test('Month: a 6-month window, newest on the right, the chosen month lit', () {
+    test('Month: one month by calendar weeks (S6b; the 6-month window is gone)', () {
       final s = AnalyticsPeriod.month(DateTime(2026, 7, 1)).chart(now: now);
-      expect(labels(s), ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']);
-      expect([for (final b in s.buckets) b.selected], [false, false, false, true, false, false]);
-      expect(s.labelSelected, isTrue);
-      expect(s.buckets[4].target!.range(today: today).start, DateTime(2026, 8, 1));
-      expect(s.buckets[4].target!.granularity, AnalyticsGranularity.month);
-      expect(s.hint, 'Tap a month to pick it · swipe for earlier months');
+      expect(labels(s), ['1-5', '6-12', '13-19', '20-26', '27-31']);
+      expect(s.buckets.every((b) => b.selected), isTrue);
+      expect(s.labelSelected, isFalse);
+      expect(s.buckets[1].target!.granularity, AnalyticsGranularity.week);
+      expect(s.title, 'By week of the month');
     });
 
     test('Year: its 12 months (J F M …), later ones future, each opening that Month', () {
@@ -329,26 +320,10 @@ void main() {
       expect(s.buckets[2].target, AnalyticsPeriod.month(DateTime(2026, 3, 1)));
     });
 
-    test('All time: one bar per month since the first transaction, at least 6', () {
+    test('All time: five year bars (S6b: blocks 2021-2025, 2026-2030, ...; see analytics_period_s6b_test)', () {
       final s = AnalyticsPeriod.allTime(today).chart(now: now, first: first);
-      expect(labels(s), ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']);
-      // Months before the first transaction are dimmed and not tappable.
-      expect([for (final b in s.buckets) b.tappable], [false, false, false, false, true, true]);
-      expect(s.title, 'By month since you started');
-
-      final long = AnalyticsPeriod.allTime(today).chart(now: now, first: DateTime(2025, 1, 10));
-      expect(long.buckets, hasLength(21));
-      expect(long.buckets.every((b) => b.tappable), isTrue);
-    });
-
-    test('All time switches from months to years past 24 months', () {
-      final at24 = AnalyticsPeriod.allTime(today).chart(now: now, first: DateTime(2024, 10, 1));
-      expect(at24.buckets, hasLength(24));
-      expect(at24.title, 'By month since you started');
-      final at25 = AnalyticsPeriod.allTime(today).chart(now: now, first: DateTime(2024, 9, 1));
-      expect(labels(at25), ["'24", "'25", "'26"]);
-      expect(at25.title, 'By year');
-      expect(at25.buckets.first.target, AnalyticsPeriod.year(2024, today: today));
+      expect(labels(s), ['2026', '2027', '2028', '2029', '2030']);
+      expect(s.title, 'By year, 2026 to 2030');
     });
 
     test('Parties (all time): "By month · all time", no tap-through', () {

@@ -11,8 +11,12 @@ enum HomeDiffKind {
   /// instead ("No spend in the prior period to compare").
   noPriorHasSpend,
 
-  /// This period's total is >= the prior period's (spending increase or
-  /// flat) — red up-arrow.
+  /// This period's total equals the prior period's (and it is not zero).
+  /// 0.1.2 S6b: no "▲ 0%"; Week shows "—", Month and Today show "= 0%".
+  flat,
+
+  /// This period's total is above the prior period's (spending increase)
+  /// — red up-arrow.
   up,
 
   /// This period's total is less than the prior period's (spending
@@ -44,7 +48,8 @@ class HomeDiff {
       );
     }
     final diff = thisTotalCents - priorTotalCents;
+    if (diff == 0) return const HomeDiffResult(HomeDiffKind.flat, 0);
     final percent = ((diff.abs() / priorTotalCents) * 100).round();
-    return HomeDiffResult(diff >= 0 ? HomeDiffKind.up : HomeDiffKind.down, percent);
+    return HomeDiffResult(diff > 0 ? HomeDiffKind.up : HomeDiffKind.down, percent);
   }
 }

@@ -196,7 +196,8 @@ void main() {
       fakeTx(id: 4, at: DateTime(2026, 10, 8, 9), type: 'AGENT_WITHDRAWAL', amountCents: 8000000, costCents: 2500),
     ];
     final db = FakeAnalyticsDb(rows);
-    await t.pumpWidget(MaterialApp(home: AnalyticsScreen(db: db, clock: () => _now)));
+    // Thursday, not Wednesday: from S6b the change shows from day 4 of the week (Wednesday shows the cue "3/7").
+    await t.pumpWidget(MaterialApp(home: AnalyticsScreen(db: db, clock: () => _now.add(const Duration(days: 1)))));
     await t.pumpAndSettle();
     expect(t.widget<Text>(find.byKey(const Key('analyticsTotal'))).data, '2,000.00');
     // 2,000 vs 1,000 = +100% (with the raw amounts it would be +26%).

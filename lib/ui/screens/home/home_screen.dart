@@ -15,6 +15,8 @@ import '../../../domain/home/home_greeting.dart';
 import '../../../domain/home/home_period.dart';
 import '../../../domain/home/recent_transaction.dart';
 import '../../../domain/money/spent_amount.dart';
+import '../../../domain/period_change.dart';
+import '../../../domain/period_math.dart' show calendarWeekStart, dayBounds;
 import '../../shell/primary_scaffold.dart';
 import '../../shell/primary_shell.dart';
 import '../../shell/routes.dart';
@@ -75,6 +77,9 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
 
   int _thisTotalCents = 0;
   int _priorTotalCents = 0;
+
+  /// The Week / Month progress rule for the period shown (null on Today).
+  PeriodProgress? _progress;
   Map<String, SourceTypeTotal> _bySource = const {};
   List<RecentTransaction> _recent = const [];
 
@@ -197,7 +202,17 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
     final now = _now();
     final firstDay = await AppPrefs.readFirstDayOfWeek();
     final (start, end) = _period.bounds(now, firstDay: firstDay);
-    final (priorStart, priorEnd) = _period.priorBounds(now, firstDay: firstDay);
+    var (priorStart, priorEnd) = _period.priorBounds(now, firstDay: firstDay);
+    // S6b: Week and Month share one rule with Analytics (domain/period_change.dart).
+    final progress = switch (_period) {
+      HomePeriod.today => null,
+      HomePeriod.week => periodProgress(ProgressKind.week, calendarWeekStart(now, firstDay: firstDay), now),
+      HomePeriod.month => periodProgress(ProgressKind.month, DateTime(now.year, now.month, 1), now),
+    };
+    if (progress != null) {
+      priorStart = dayBounds(progress.priorStart).$1;
+      priorEnd = dayBounds(progress.priorEnd).$2;
+    }
 
     final results = await Future.wait([
       HomeDashboardDao.sumAmountCents(db, startMs: start, endMs: end),
@@ -211,6 +226,7 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
     setState(() {
       _thisTotalCents = results[0] as int;
       _priorTotalCents = results[1] as int;
+      _progress = progress;
       _bySource = results[2] as Map<String, SourceTypeTotal>;
       _recent = results[3] as List<RecentTransaction>;
       _loading = false;
@@ -339,6 +355,7 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
                 cashWithdrawnCents: withdrawal != null && withdrawal.count > 0 ? withdrawal.withdrawnCents : null,
                 withdrawalFeeCents: withdrawal?.costCents ?? 0,
                 onPeriodTap: _cyclePeriod,
+                hiddenProgress: _progress != null && _progress!.hide ? _progress : null,
                 ),
               ),
             ),
