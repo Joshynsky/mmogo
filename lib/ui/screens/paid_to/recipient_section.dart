@@ -135,6 +135,7 @@ class PaidToListCard extends StatelessWidget {
     final metric = switch (sort) {
       PaidToSort.amount => (PaidToRecipient g) => g.totalCents,
       PaidToSort.timesPaid => (PaidToRecipient g) => g.count,
+      PaidToSort.fees => (PaidToRecipient g) => g.feeCents,
       PaidToSort.recent => null,
     };
     final max = metric == null ? 1 : shown.map(metric).fold<int>(1, math.max);

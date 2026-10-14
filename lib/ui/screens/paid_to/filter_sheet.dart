@@ -156,7 +156,7 @@ class _PaidToFilterSheetState extends State<PaidToFilterSheet> {
         ),
       ),
       Text('SORT BY', style: label),
-      Wrap(spacing: 6, runSpacing: 6, children: [for (final s in PaidToSort.values) sortChip(s)]),
+      Wrap(spacing: 6, runSpacing: 6, children: [for (final s in paidToSortsShown) sortChip(s)]),
       Row(
         children: [
           action(const Key('paidToReset'), 'Reset', p.track, p.ink, () {
