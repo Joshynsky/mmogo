@@ -14,6 +14,7 @@ import 'package:mmogo/data/prefs/app_prefs.dart';
 import 'package:mmogo/main.dart';
 import 'package:mmogo/ui/screens/welcome_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'support/fake_delete_data.dart';
 
 /// T16: the app now launches on the Welcome screen every time, then routes
 /// to Home only once onboarding is complete. These shell smoke tests are
@@ -37,6 +38,8 @@ Finder _navTab(String label) =>
     find.descendant(of: find.byKey(const Key('primaryBottomNav')), matching: find.text(label));
 
 void main() {
+  // S9b-2 (A1): nothing here may reach the real Delete data service.
+  setUp(() => useFakeDeleteData());
   // T17: Profile (pushed by the third test below) now reads the display
   // name from shared_preferences on open. Without a mock store, that
   // plugin call never completes in this environment and AppPrefs' bounded

@@ -21,6 +21,7 @@ import 'package:mmogo/ui/theme/app_palette_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/updates/fake_update_check_client.dart';
+import '../support/fake_delete_data.dart';
 
 void _useBuiltFrameAsPresented() {
   welcomeFirstFramePresented = waitForFrameBuilt;
@@ -30,6 +31,8 @@ void _useBuiltFrameAsPresented() {
 Notice _notice() => Notice(tag: 'v9.9.9', notes: 'Invented', receivedAt: DateTime(2026, 10, 1));
 
 void main() {
+  // S9b-2 (A1): nothing here may reach the real Delete data service.
+  setUp(() => useFakeDeleteData());
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     BackupPrefs.pausedNotifier.value = false;

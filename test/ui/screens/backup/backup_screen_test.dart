@@ -23,6 +23,7 @@ import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../support/fake_storage_bridge.dart';
+import '../../../support/fake_delete_data.dart';
 
 const _counts = BackupCounts(transactions: 120, userClassifications: 3, receivers: 8, deletedLeftOut: 5);
 const _emptyCounts = BackupCounts(transactions: 0, userClassifications: 0, receivers: 0, deletedLeftOut: 2);
@@ -108,6 +109,8 @@ Future<void> _backUpAndAcknowledge(WidgetTester t) async {
 }
 
 void main() {
+  // S9b-2 (A1): nothing here may reach the real Delete data service.
+  setUp(() => useFakeDeleteData());
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   testWidgets('normal: header card, counts line, not-included line, warning, enabled button', (t) async {

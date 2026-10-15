@@ -15,6 +15,7 @@ import 'ui/screens/welcome_screen.dart';
 import 'ui/shell/app_messenger.dart';
 import 'ui/shell/primary_shell.dart';
 import 'ui/shell/routes.dart';
+import 'ui/startup_notice.dart';
 import 'ui/theme/app_colors.dart';
 import 'ui/theme/app_palette_scope.dart';
 import 'ui/theme/app_theme.dart';
@@ -62,6 +63,8 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
   void initState() {
     super.initState();
     if (widget.controller == null) _paletteController.load();
+    // S9b-2 (A4): a start-up reset that did not finish gets one small notice.
+    WidgetsBinding.instance.addPostFrameCallback((_) => StartupNotice.maybeShow());
   }
 
   @override

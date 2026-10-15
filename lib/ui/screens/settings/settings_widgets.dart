@@ -81,6 +81,8 @@ class SettingsLink extends StatelessWidget {
     this.unreadDot = false,
     this.trailingIcon = Icons.chevron_right,
     this.value,
+    this.redTag,
+    this.focusNode,
   });
 
   final AppPalette palette;
@@ -97,6 +99,13 @@ class SettingsLink extends StatelessWidget {
   /// The current choice, shown before the chevron (First day of the week).
   final String? value;
 
+  /// A small red tag before the arrow ("Permanent", Delete data): the
+  /// destructive red with its own text colour, so it reads in dark.
+  final String? redTag;
+
+  /// Lets the caller return focus to this row (after a sheet closes).
+  final FocusNode? focusNode;
+
   /// A small amber dot before the chevron (auto-backup paused).
   final bool warningDot;
 
@@ -109,8 +118,10 @@ class SettingsLink extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        focusNode: focusNode,
         child: Container(
           decoration: BoxDecoration(border: first ? null : Border(top: BorderSide(color: palette.line))),
+          constraints: const BoxConstraints(minHeight: 44),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           child: Row(
             children: [
@@ -127,6 +138,17 @@ class SettingsLink extends StatelessWidget {
                   ],
                 ),
               ),
+              if (redTag != null)
+                Container(
+                  key: const Key('settingsRowRedTag'),
+                  margin: const EdgeInsets.only(left: 8, right: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(color: palette.diffUp, borderRadius: BorderRadius.circular(5)),
+                  child: Text(
+                    redTag!,
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.6, color: palette.onDelete),
+                  ),
+                ),
               if (value != null)
                 Padding(
                   padding: const EdgeInsets.only(left: 8, right: 4),

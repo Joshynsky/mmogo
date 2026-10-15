@@ -11,6 +11,7 @@ import 'package:mmogo/ui/theme/app_palette_scope.dart';
 import 'package:mmogo/ui/widgets/coach_tour.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import '../../support/fake_delete_data.dart';
 
 class _CountDb implements Database {
   @override
@@ -45,6 +46,8 @@ Future<void> _next(WidgetTester tester) async {
 Future<bool?> _seen(String id) async => (await SharedPreferences.getInstance()).getBool('tour_seen_$id');
 
 void main() {
+  // S9b-2 (A1): nothing here may reach the real Delete data service.
+  setUp(() => useFakeDeleteData());
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     CoachTour.autoStartDisabled = false;

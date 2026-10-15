@@ -23,6 +23,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../../support/fake_analytics_db.dart';
+import '../../../support/fake_delete_data.dart';
 
 class _CountDb implements Database {
   @override
@@ -68,6 +69,8 @@ Future<AppPaletteController> _pump(
 double _y(WidgetTester t, Finder f) => t.getTopLeft(f).dy;
 
 void main() {
+  // S9b-2 (A1): nothing here may reach the real Delete data service.
+  setUp(() => useFakeDeleteData());
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   group('ST1: sections and rows', () {
@@ -90,6 +93,7 @@ void main() {
         find.text('Backup and restore'),
         find.text('Recently deleted'),
         find.text('Export CSV'),
+        find.text('Delete data'), // S9b-2: the LAST row of Your data
         find.text('ABOUT'),
         find.text('Privacy and your data'),
         find.text('Updates'),
@@ -103,9 +107,8 @@ void main() {
       expect([...ys]..sort(), ys, reason: 'top to bottom in the mock order');
       expect(ys.toSet().length, ys.length);
       expect(find.text('${AppInfo.name} ${AppInfo.versionName} · your data stays on this phone'), findsOneWidget);
-      // The careful tag and the (not yet built) Delete data row.
+      // The careful tag.
       expect(find.byKey(const Key('settingsCarefulTag')), findsOneWidget);
-      expect(find.text('Delete data'), findsNothing, reason: 'S9b');
     });
 
     testWidgets('"Show tips again" is gone; "Manage classifications" is now "Manage categories"', (tester) async {

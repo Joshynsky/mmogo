@@ -9,6 +9,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../../../app_info.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/db/export_dao.dart';
+import '../../../data/maintenance/delete_data_service.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../../data/prefs/backup_prefs.dart';
 import '../../../domain/analytics/chart_blocks.dart' show MonthChartStyle, WhereItWentStyle, YearViewAmounts;
@@ -20,6 +21,7 @@ import '../../shell/secondary_scaffold.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_palette_scope.dart';
 import '../../widgets/coach_tour.dart';
+import '../backup/backup_export_flow.dart';
 import '../backup/backup_format.dart';
 import 'about_section.dart';
 import 'adding_section.dart';
@@ -41,9 +43,9 @@ const settingsTourId = 'settings';
 /// (careful), ABOUT; the Look rows write the Look prefs explicitly and refresh
 /// Home and Analytics through `PrimaryShell.active?.dataChanged()`; the
 /// Appearance icons drive the whole app's light/dark (`AppPaletteController`).
-/// The Delete data row is S9b (its place is marked in data_section.dart).
+/// S9b-2: the Delete data row is the last row of Your data (delete_data_row.dart).
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key, this.db, this.exportCsv});
+  const SettingsScreen({super.key, this.db, this.exportCsv, this.deleteData, this.restart, this.backupFlow});
 
   /// Test-only injection seam (defaults to `null` in real app usage, which
   /// resolves via `AppDatabase.instance.database` at bootstrap — same
@@ -64,6 +66,13 @@ class SettingsScreen extends StatefulWidget {
   /// separately, authoritatively proves the real CSV content/row-count
   /// against a genuine in-memory sqlite3 database.
   final Future<void> Function(String csvContent, int transactionCount)? exportCsv;
+
+  /// Delete data seams (S9b-2, A1/A2/A9). Null = the real service from the one
+  /// factory (`DeleteDataServices.create`), `RestartScope.restart` and the real
+  /// Back up now flow. Tests pass fakes (see `test/support/fake_delete_data.dart`).
+  final DeleteDataService? deleteData;
+  final Future<bool> Function(BuildContext)? restart;
+  final BackupExportFlow? backupFlow;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -351,6 +360,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             backupSubtitle: _backupSubtitle,
             onBackup: _openBackup,
             backupPaused: _backupPaused,
+            deleteData: widget.deleteData,
+            restart: widget.restart,
+            backupFlow: widget.backupFlow,
           ),
           const SizedBox(height: 14),
           AboutSection(palette: palette),

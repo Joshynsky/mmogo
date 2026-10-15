@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../data/maintenance/delete_data_service.dart';
 import '../../copy/settings_copy.dart';
 import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
+import '../backup/backup_export_flow.dart';
+import 'delete_data_row.dart';
 import 'settings_widgets.dart';
 
 /// Settings "Your data, careful" section (0.1.2 S9a, mock M9): Backup and
@@ -20,6 +23,9 @@ class DataSection extends StatelessWidget {
     this.backupSubtitle = 'Never backed up',
     this.onBackup,
     this.backupPaused = false,
+    this.deleteData,
+    this.restart,
+    this.backupFlow,
   });
 
   final AppPalette palette;
@@ -36,6 +42,12 @@ class DataSection extends StatelessWidget {
 
   /// Auto-backup is paused: the row shows a warning dot.
   final bool backupPaused;
+
+  /// Delete data seams (A1, A2, A9). Null = the real service (the one
+  /// factory), the real soft restart and the real Back up now flow.
+  final DeleteDataService? deleteData;
+  final Future<bool> Function(BuildContext)? restart;
+  final BackupExportFlow? backupFlow;
 
   @override
   Widget build(BuildContext context) {
@@ -72,8 +84,8 @@ class DataSection extends StatelessWidget {
                   subtitle: exportSubtitle,
                   onTap: exportEnabled ? onExport : null,
                 ),
-                // S9b: the "Delete data" row goes HERE (last in the careful
-                // card, red "Permanent" tag, sheet with two levels). Not built in S9a.
+                // S9b-2: the Delete data row is the LAST row of the card.
+                DeleteDataRow(palette: palette, deleteData: deleteData, restart: restart, backupFlow: backupFlow),
               ],
             ),
           ),

@@ -22,6 +22,7 @@ import 'package:mmogo/ui/screens/welcome_screen.dart';
 import 'package:mmogo/ui/shell/routes.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../support/fake_delete_data.dart';
 
 /// Stands in for "Welcome's first frame is on screen" in widget tests: the
 /// test binding has no rasteriser, so the real
@@ -76,6 +77,8 @@ class _FailingBundle extends CachingAssetBundle {
 final _noNameGreeting = find.textContaining(RegExp(r'^Good (morning|afternoon|evening)$'));
 
 void main() {
+  // S9b-2 (A1): nothing here may reach the real Delete data service.
+  setUp(() => useFakeDeleteData());
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     _useBuiltFrameAsPresented();

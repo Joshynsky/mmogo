@@ -13,6 +13,7 @@ import 'package:mmogo/ui/screens/welcome_screen.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../support/fake_delete_data.dart';
 
 void _setPhone(WidgetTester tester, Brightness brightness) {
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
@@ -32,6 +33,8 @@ Color? _buttonFg(WidgetTester tester, Key key) =>
     tester.widget<ButtonStyleButton>(find.byKey(key)).style!.foregroundColor!.resolve(<WidgetState>{});
 
 void main() {
+  // S9b-2 (A1): nothing here may reach the real Delete data service.
+  setUp(() => useFakeDeleteData());
   setUp(() => SharedPreferences.setMockInitialValues({}));
   // Welcome's timer waits for its first frame to be on screen; the
   // widget-test binding has no rasteriser, so treat "built" as "presented"

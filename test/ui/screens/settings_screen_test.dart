@@ -32,6 +32,7 @@ import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import '../../support/fake_delete_data.dart';
 
 class _FakeDb implements Database {
   _FakeDb({required this.transactions});
@@ -139,6 +140,8 @@ Future<void> _tapAutoRecognizeSwitch(WidgetTester tester) async {
 }
 
 void main() {
+  // S9b-2 (A1): nothing here may reach the real Delete data service.
+  setUp(() => useFakeDeleteData());
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {

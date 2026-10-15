@@ -21,6 +21,7 @@ import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import '../../support/fake_delete_data.dart';
 
 class _FakeDb implements Database {
   _FakeDb({required this.occurredAt});
@@ -81,6 +82,8 @@ Finder _navTab(String label) =>
 final _noNameGreeting = find.textContaining(RegExp(r'^Good (morning|afternoon|evening)$'));
 
 void main() {
+  // S9b-2 (A1): nothing here may reach the real Delete data service.
+  setUp(() => useFakeDeleteData());
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
