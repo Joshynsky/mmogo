@@ -205,7 +205,7 @@ void main() {
     await db.close();
   });
 
-  test('replace_refused_when_the_safety_copy_would_leave_rows_out', () async {
+  test('replace_refused_without_consent_when_the_safety_copy_would_leave_rows_out', () async {
     final db = await openTestDb();
     await populate(db);
     // A legacy row the exporter must skip (amount over the file cap).
@@ -216,7 +216,7 @@ void main() {
     await expectLater(
       svc(db, safety: FakeSafetyCopyStore(events)).restore(replacementFile(), RestoreMode.replace),
       throwsA(isA<RestoreFailed>()
-          .having((e) => e.reason, 'reason', RestoreFailReason.safetyCopyIncomplete)),
+          .having((e) => e.reason, 'reason', RestoreFailReason.skippedChanged)), // S10a (A2a): consent check; see replace_skips_test
     );
     expect(events, isEmpty);
     expect(await fullDump(db), before);

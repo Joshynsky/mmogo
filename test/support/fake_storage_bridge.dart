@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:mmogo/app_constants.dart';
@@ -16,6 +17,22 @@ class FakeStorageBridge implements StorageBridge {
   final Set<String> revoked = {};
   final Set<String> released = {};
   final List<String> openedUrls = [];
+
+  /// S10a: methods (`hasWriteGrant`, `listFiles`, `createFile`, `deleteFile`,
+  /// `releaseGrant`) whose call never completes (a hung provider).
+  final Set<String> hangOn = {};
+
+  /// S10a: doc URIs whose deleteFile throws [StorageErrorCode.io] (the file
+  /// stays in the folder).
+  final Set<String> failDeleteFor = {};
+
+  /// S10a: method names whose call throws [StorageErrorCode.io].
+  final Set<String> failOn = {};
+
+  Future<void> _gate(String method) async {
+    if (hangOn.contains(method)) await Completer<void>().future;
+    if (failOn.contains(method)) throw const StorageException(StorageErrorCode.io, 'injected');
+  }
 
   /// When true, createFile throws [StorageErrorCode.io] and stores nothing.
   bool failWrites = false;
@@ -74,18 +91,21 @@ class FakeStorageBridge implements StorageBridge {
   @override
   Future<bool> hasWriteGrant(String treeUri) async {
     calls.add('hasWriteGrant:$treeUri');
+    await _gate('hasWriteGrant');
     return folders.containsKey(treeUri) && !revoked.contains(treeUri) && !released.contains(treeUri);
   }
 
   @override
   Future<void> releaseGrant(String treeUri) async {
     calls.add('releaseGrant:$treeUri');
+    await _gate('releaseGrant');
     released.add(treeUri);
   }
 
   @override
   Future<String> createFile(String treeUri, String name, Uint8List bytes) async {
     calls.add('createFile:$name');
+    await _gate('createFile');
     _need(treeUri);
     if (failWrites) throw const StorageException(StorageErrorCode.io, 'write failed');
     final folder = folders[treeUri];
@@ -105,6 +125,7 @@ class FakeStorageBridge implements StorageBridge {
   @override
   Future<List<FolderFile>> listFiles(String treeUri) async {
     calls.add('listFiles:$treeUri');
+    await _gate('listFiles');
     _need(treeUri);
     return List.unmodifiable((folders[treeUri] ?? const {}).values);
   }
@@ -112,6 +133,8 @@ class FakeStorageBridge implements StorageBridge {
   @override
   Future<void> deleteFile(String docUri) async {
     calls.add('deleteFile:$docUri');
+    await _gate('deleteFile');
+    if (failDeleteFor.contains(docUri)) throw const StorageException(StorageErrorCode.io, 'injected');
     for (final entry in folders.entries) {
       if (entry.value.containsKey(docUri)) {
         _need(entry.key);

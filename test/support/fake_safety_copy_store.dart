@@ -9,7 +9,8 @@ import 'package:mmogo/data/backup/restore_writer.dart';
 import 'package:mmogo/data/backup/safety_copy_store.dart';
 
 class FakeSafetyCopyStore implements SafetyCopyStore {
-  FakeSafetyCopyStore(this.events, {this.failWrite = false, this.unreadable = false});
+  FakeSafetyCopyStore(this.events,
+      {this.failWrite = false, this.unreadable = false, this.failClearVerified = false});
 
   final List<String> events;
   bool failWrite;
@@ -17,6 +18,9 @@ class FakeSafetyCopyStore implements SafetyCopyStore {
   /// Simulates a copy that was written but reads back corrupt: the real
   /// store's read-back check would refuse it, so this fake throws too.
   bool unreadable;
+
+  /// S10a: clearVerified throws (the copy could not be removed), keeping bytes.
+  bool failClearVerified;
 
   Uint8List? bytes;
 
@@ -31,7 +35,9 @@ class FakeSafetyCopyStore implements SafetyCopyStore {
     final back = unreadable ? Uint8List.fromList(data.sublist(0, data.length ~/ 2)) : data;
     try {
       final v = BackupValidator.validate(back, enabledGroupCodes: enabledGroupCodes);
-      if (v.transactions.length != expect.transactions) {
+      if (v.transactions.length != expect.transactions ||
+          v.classifications.length != expect.classifications ||
+          v.counterpartyMap.length != expect.counterpartyMap) {
         throw const SafetyCopyError('counts differ');
       }
     } on RestoreRejected catch (e) {
@@ -62,6 +68,7 @@ class FakeSafetyCopyStore implements SafetyCopyStore {
   @override
   Future<void> clearVerified() async {
     events.add('safety.clearVerified');
+    if (failClearVerified) throw const SafetyCopyError('not cleared');
     bytes = null;
   }
 }

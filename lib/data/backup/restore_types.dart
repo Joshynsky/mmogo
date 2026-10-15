@@ -1,4 +1,5 @@
 import 'backup_settings.dart';
+import 'skipped_row_describer.dart';
 
 /// How a valid backup file is applied (architecture D5).
 enum RestoreMode {
@@ -110,6 +111,9 @@ class RestoreResult {
     required this.tally,
     required this.settings,
     this.safetyCopyKept = false,
+    this.lost = SkippedSummary.empty,
+    this.identity,
+    this.safetyCopyStillThere = false,
   });
 
   final RestoreMode mode;
@@ -122,6 +126,22 @@ class RestoreResult {
 
   /// Replace: a private safety copy of the old data exists (Undo is offered).
   final bool safetyCopyKept;
+
+  /// S10a (A2a, CB8): Replace only. The live rows that could NOT go into the
+  /// safety copy and were deleted for good (Undo cannot bring them back),
+  /// described without values, taken BEFORE the write. Phone-side wording is
+  /// "lost" / "not kept in the safety copy"; N = [lostCount] exactly.
+  final SkippedSummary lost;
+  int get lostCount => lost.count;
+
+  /// Replace only: included + skipped = live, per table, as it was just
+  /// before the write.
+  final ReplaceIdentity? identity;
+
+  /// Undo only: true when the safety copy could not be removed after the Undo
+  /// (Undo would be offered again, and a second Undo would put the old data
+  /// back over newer data). The UI must say so. False after Replace.
+  final bool safetyCopyStillThere;
 
   TableCounts get classifications => tally.classifications;
   TableCounts get transactions => tally.transactions;
@@ -160,6 +180,72 @@ enum RestoreFailReason {
   /// Another restore / undo / Delete data / Reset is running (`DataOpGate`
   /// was held). Nothing was touched.
   busy,
+
+  /// Replace: rows that cannot go into the safety copy now are more than the
+  /// user agreed to lose (`acceptedSkipped` was null or lower than the real
+  /// count). Nothing was touched; show the preview again.
+  skippedChanged,
+}
+
+/// The steps of a restore, in order (BP2 progress list). Merge has no
+/// [safetyCopy] step.
+enum RestoreStep { validating, safetyCopy, writing }
+
+/// What happened to a step.
+enum RestoreStepPhase {
+  started,
+  done,
+  failed,
+
+  /// The step is still running after [RestoreService.slowAfter] (10 s).
+  slow,
+}
+
+/// One progress event. Codes only.
+class RestoreStepEvent {
+  const RestoreStepEvent(this.step, this.phase);
+  final RestoreStep step;
+  final RestoreStepPhase phase;
+
+  @override
+  String toString() => 'RestoreStepEvent(${step.name}, ${phase.name})';
+}
+
+/// Read-only look at what a Replace would do to this phone (S10a, C/D). Counts
+/// and described rows only, no values.
+class ReplacePreview {
+  const ReplacePreview({
+    required this.identity,
+    required this.skipped,
+    required this.phoneTransactions,
+    required this.phoneUserClassifications,
+    required this.phoneCounterpartyMap,
+    required this.phoneRecentlyDeleted,
+    this.fileTransactions,
+    this.fileClassifications,
+    this.fileCounterpartyMap,
+  });
+
+  /// included / skipped / live per table.
+  final ReplaceIdentity identity;
+
+  /// The rows that would be lost (described before any write).
+  final SkippedSummary skipped;
+  int get skippedCount => skipped.count;
+
+  /// This phone now.
+  final int phoneTransactions;
+  final int phoneUserClassifications;
+  final int phoneCounterpartyMap;
+
+  /// Recently deleted entries a Replace also removes for good (the separate
+  /// "deletedLeftOut" sentence; not part of [skippedCount]).
+  final int phoneRecentlyDeleted;
+
+  /// The file's row counts, when bytes were given.
+  final int? fileTransactions;
+  final int? fileClassifications;
+  final int? fileCounterpartyMap;
 }
 
 /// Thrown by `RestoreService` when a restore could not be done. Carries no

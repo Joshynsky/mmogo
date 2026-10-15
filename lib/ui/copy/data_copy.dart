@@ -40,6 +40,15 @@ const kWhyRestoreAsks =
     'On a new phone both give the same result. '
     'On a phone that already has entries, only you know which you want.';
 
+/// §DATA.COPY.F3 — S10a F3 (orchestrator decision, PM to confirm): Replace and Undo do not
+/// touch the remembered recipients. PROSE ONLY (no key name: the guard test
+/// scans lib/data/backup). S10b puts it in the Replace confirmation and must
+/// reword "erases everything" (kWhyRestoreAsks, kReplaceOptionHelp), since
+/// CB6 bans "Erases" for deleting.
+const kRememberedRecipientsNotInBackup =
+    'Remembered recipients are a phone preference, not part of a backup. '
+    'Replace and Undo leave them alone. Delete data clears them.';
+
 /// XFER (amendment 8): the backup file is the only route to a new phone.
 const kPhoneTransferNotice =
     "Android's phone-to-phone transfer will not carry mmogo data. "

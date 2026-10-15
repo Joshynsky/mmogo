@@ -55,6 +55,7 @@ class FakeRestoreService implements RestoreService {
   RestorePreview preview;
   final List<String> calls = [];
   Uint8List? lastBytes;
+  int? lastAcceptedSkipped;
 
   Object? inspectError;
   Object? restoreError;
@@ -75,18 +76,35 @@ class FakeRestoreService implements RestoreService {
   }
 
   @override
-  Future<RestoreResult> restore(Uint8List bytes, RestoreMode mode) async {
+  Future<RestoreResult> restore(
+    Uint8List bytes,
+    RestoreMode mode, {
+    int? acceptedSkipped,
+    void Function(RestoreStepEvent event)? onStep,
+  }) async {
     calls.add('restore:${mode.name}');
+    lastAcceptedSkipped = acceptedSkipped;
     await restoreGate?.future;
     if (restoreError != null) throw restoreError!;
     return fakeResult(mode, settingsOk: settingsOk);
+  }
+
+  /// S10a: what the preview of a Replace returns (S10b widget tests set it).
+  ReplacePreview? replacePreview;
+
+  @override
+  Future<ReplacePreview> previewReplace([Uint8List? bytes]) async {
+    calls.add('previewReplace');
+    final p = replacePreview;
+    if (p == null) throw StateError('replacePreview not set');
+    return p;
   }
 
   @override
   Future<bool> canUndo() async => true;
 
   @override
-  Future<RestoreResult> undoLastReplace() async {
+  Future<RestoreResult> undoLastReplace({void Function(RestoreStepEvent event)? onStep}) async {
     calls.add('undo');
     if (undoError != null) throw undoError!;
     return fakeResult(RestoreMode.replace, keepCopy: false);

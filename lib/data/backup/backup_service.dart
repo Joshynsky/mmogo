@@ -6,6 +6,7 @@ import 'backup_codec.dart';
 import 'backup_limits.dart';
 import 'backup_repair.dart';
 import 'backup_settings.dart';
+import 'skipped_row_describer.dart';
 import 'backup_validator.dart';
 
 /// The export would not fit what the app can read back: a row cap, or the
@@ -43,6 +44,10 @@ class BackupExport {
     required this.excludedSoftDeleted,
     this.repairedCount = 0,
     this.skipped = const [],
+    this.skippedRows = const [],
+    this.liveClassifications,
+    this.liveTransactions,
+    this.liveCounterpartyMap,
   });
 
   final Uint8List bytes;
@@ -65,6 +70,70 @@ class BackupExport {
   /// field and rule only, never the value.
   final List<BackupSkippedRow> skipped;
   int get skippedCount => skipped.length;
+
+  /// §DATA.BACKUP.EXPORT_S10A — S10a (A2b, A3): [skipped] described without any value: kind, date and
+  /// type for an entry, a reason code. Same order, same length. Built in the
+  /// same read as the export (a Replace deletes these rows afterwards).
+  final List<SkippedRowInfo> skippedRows;
+
+  /// Capped view of [skippedRows] for the "Not included in this backup (N)"
+  /// list: N exactly, first 20, "and M more not shown".
+  SkippedSummary get notIncluded => SkippedSummary.of(skippedRows);
+
+  /// Rows the read found, before any skip: classifications, live
+  /// (not recently deleted) transactions, learned receivers. Null only for an
+  /// export built by hand in a test (then included + skipped is assumed).
+  final int? liveClassifications;
+  final int? liveTransactions;
+  final int? liveCounterpartyMap;
+
+  int _skippedIn(String table) => skipped.where((s) => s.table == table).length;
+
+  /// CB8: included + skipped = live, per table, as data.
+  ReplaceIdentity get identity => ReplaceIdentity(
+        transactions: TableIdentity(
+          included: transactions,
+          skipped: _skippedIn('transactions'),
+          live: liveTransactions ?? transactions + _skippedIn('transactions'),
+        ),
+        classifications: TableIdentity(
+          included: classifications,
+          skipped: _skippedIn('classifications'),
+          live: liveClassifications ?? classifications + _skippedIn('classifications'),
+        ),
+        counterpartyMap: TableIdentity(
+          included: counterpartyMap,
+          skipped: _skippedIn('counterparty_map'),
+          live: liveCounterpartyMap ?? counterpartyMap + _skippedIn('counterparty_map'),
+        ),
+      );
+
+  /// BP2: the counts for the "Backup shared" sheet.
+  BackupSharedCounts get sharedCounts => BackupSharedCounts(
+        transactions: transactions,
+        categories: classifications,
+        leftOutEntries: _skippedIn('transactions'),
+        skippedCount: skippedCount,
+      );
+}
+
+/// Counts for the "Backup shared" sheet (BP2). Numbers only.
+class BackupSharedCounts {
+  const BackupSharedCounts({
+    required this.transactions,
+    required this.categories,
+    required this.leftOutEntries,
+    required this.skippedCount,
+  });
+  final int transactions;
+  final int categories;
+
+  /// Entries (transactions) left out.
+  final int leftOutEntries;
+
+  /// Every row left out, including categories, saved receivers and rows that
+  /// went with a category.
+  final int skippedCount;
 }
 
 /// Builds a backup file from the live database.
@@ -159,6 +228,17 @@ class BackupService {
     _guardRows('transactions', txs.length, kBackupMaxTransactions);
     _guardRows('counterparty_map', map.length, kBackupMaxMapRows);
 
+    // Date and type of every entry, taken from the SAME read (A2b/D): the
+    // describer needs them after repair has dropped the row.
+    final facts = <int, EntryFacts>{
+      for (final r in txs)
+        if (r['id'] is int)
+          r['id']! as int: EntryFacts(
+            occurredAtMs: r['transaction_occurred_at'],
+            sourceType: r['source_type'],
+          ),
+    };
+
     // Repair what is safe on the COPY (never the database), skip the rest.
     final repair = BackupRepair(
       classifications: classes,
@@ -200,6 +280,10 @@ class BackupService {
       }
       return BackupExport(
         bytes: bytes,
+        skippedRows: List.unmodifiable(describeSkipped(repair.skipped, entryFacts: facts)),
+        liveClassifications: classes.length,
+        liveTransactions: txs.length,
+        liveCounterpartyMap: map.length,
         classifications: repair.classifications.length,
         transactions: repair.transactions.length,
         counterpartyMap: repair.counterpartyMap.length,

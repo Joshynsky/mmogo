@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:flutter/material.dart' show SnackBar, Text;
 
 import '../../platform/storage_bridge.dart';
@@ -8,7 +9,10 @@ import '../../ui/shell/app_messenger.dart';
 import '../db/app_database.dart';
 import '../prefs/backup_prefs.dart';
 import '../updates/updates_inbox.dart';
+import 'auto_backup_leftovers.dart';
 import 'backup_service.dart';
+
+export 'auto_backup_leftovers.dart';
 
 /// Automatic backup (architecture D6, WBS B20). After every N newly saved
 /// entries one NEW file `mmogo-auto-YYYYMMDD-HHMMSS.json` is created in the
@@ -25,6 +29,13 @@ import 'backup_service.dart';
 ///   cannot read a listed file, so the "app marker in the first 256 bytes"
 ///   check of the Lead ruling is replaced by this stricter list; a manual
 ///   `mmogo-backup-...` file or any other file is never touched.
+/// - Every bridge call goes through [_call] (30 s timeout), and a whole run
+///   has a deadline ([runDeadline]) with a generation token: a run that hangs
+///   is written off as a failed write, and when it wakes up later it writes
+///   nothing (S10a, A1a).
+/// - Leftover automatic files in a folder the user stops using are found by
+///   NAME PATTERN in a fresh listing and deleted only after the user said so
+///   (CB9, A4a). Nothing here logs or returns a file name or a URI.
 /// - A lost folder permission pauses auto-backup until the user picks a
 ///   folder again; two failed writes in a row pause it too.
 class AutoBackupService {
@@ -35,7 +46,9 @@ class AutoBackupService {
     void Function(String message)? notify,
     UpdatesInbox? inbox,
     Duration? bridgeTimeout,
-  })  : _bridge = bridge ?? (() => StorageBridge.instance),
+    Duration? runDeadline,
+  })  : _runDeadline = runDeadline ?? AutoBackupService.runDeadline,
+        _bridge = bridge ?? (() => StorageBridge.instance),
         _export = export ?? _defaultExport,
         _now = now ?? DateTime.now,
         _notify = notify ?? _snackbar,
@@ -56,6 +69,11 @@ class AutoBackupService {
   /// one that never returns cannot leave a run stuck.
   static const bridgeTimeout = Duration(seconds: 30);
 
+  /// A whole run (grant check, export, create, list, prune) that takes longer
+  /// is written off as a failed write. Below [quiesceBound] (35 s) on purpose,
+  /// so Delete data never waits for a hung run.
+  static const runDeadline = Duration(seconds: 32);
+
   /// Names this service writes (and the only names it may prune), with the
   /// optional ` (n)` a provider adds to avoid a clash.
   static final autoFileName = RegExp(r'^mmogo-auto-(\d{8})-(\d{6})(?: \((\d+)\))?\.json$');
@@ -66,9 +84,14 @@ class AutoBackupService {
   final void Function(String message) _notify;
   final UpdatesInbox _inbox;
   final Duration _timeout;
+  final Duration _runDeadline;
 
   bool _running = false;
   int _queued = 0;
+
+  /// Bumped for every run and when the watchdog writes a run off: a run whose
+  /// token is no longer current stops and writes nothing.
+  int _generation = 0;
 
   /// 0.1.2 S9b-1 (Delete data): true between [quiesce] and [resume]. While it
   /// is set [onEntrySaved] does nothing at all (no run, no count, no queue).
@@ -134,10 +157,19 @@ class AutoBackupService {
         return;
       }
       _running = true;
+      final gen = ++_generation;
       final idle = _idle = Completer<void>();
       try {
         try {
-          await _run();
+          await _run(gen).timeout(_runDeadline, onTimeout: () async {
+            // Watchdog: a run that hangs (a bridge that never answers) is a
+            // failed write; the run itself is made stale so it writes nothing
+            // if it ever wakes up.
+            if (gen != _generation) return;
+            _generation++;
+            _log('run deadline');
+            await _failed();
+          });
         } finally {
           _running = false;
         }
@@ -160,7 +192,22 @@ class AutoBackupService {
     await BackupPrefs.writeSinceCount(await BackupPrefs.readSinceCount() + q);
   }
 
-  Future<void> _run() async {
+  /// Throws [_StaleRun] when the watchdog wrote this run off.
+  void _alive(int gen) {
+    if (gen != _generation) throw const _StaleRun();
+  }
+
+  /// The ONE place a storage bridge call is made (guard test: no other
+  /// bridge access in this file). Every call has the timeout.
+  Future<T> _call<T>(Future<T> Function(StorageBridge b) f) async =>
+      await f(_bridge()).timeout(_timeout);
+
+  /// Debug builds only; codes and counts, never a name or a URI.
+  static void _log(String code) {
+    if (kDebugMode) debugPrint('[auto-backup] $code');
+  }
+
+  Future<void> _run(int gen) async {
     if (!await BackupPrefs.readEnabled()) return;
     final folder = await BackupPrefs.readFolderUri();
     if (folder == null) return; // switched on, no folder chosen yet
@@ -170,49 +217,57 @@ class AutoBackupService {
     await BackupPrefs.writeSinceCount(count);
     if (count < await BackupPrefs.readEveryN()) return;
 
-    final bridge = _bridge();
     try {
-      if (!await bridge.hasWriteGrant(folder).timeout(_timeout)) {
+      if (!await _call((b) => b.hasWriteGrant(folder))) {
+        _alive(gen);
         await _pause();
         return;
       }
+      _alive(gen);
       final startedAt = _now();
       final bytes = await _export().timeout(_timeout);
-      final created = await bridge.createFile(folder, fileNameFor(startedAt), bytes).timeout(_timeout);
-      final files = await _listOrNull(bridge, folder);
+      _alive(gen);
+      final created = await _call((b) => b.createFile(folder, fileNameFor(startedAt), bytes));
+      _alive(gen);
+      final files = await _listOrNull(folder);
       final mine = files?.where((f) => f.uri == created);
       if (mine != null && mine.isNotEmpty && mine.first.size != bytes.length) {
-        await _deleteQuietly(bridge, created);
+        await _deleteQuietly(created);
         throw const StorageException(StorageErrorCode.io, 'size mismatch');
       }
+      _alive(gen);
       final written = [...await BackupPrefs.readWrittenUris(), created];
       await BackupPrefs.writeSinceCount(0);
       await BackupPrefs.writeFailCount(0);
       await BackupPrefs.writeLastAt(startedAt);
       await BackupPrefs.writeWrittenUris(written);
-      if (files != null) await _prune(bridge, files, created, written);
+      if (files != null) await _prune(files, created, written, gen);
+    } on _StaleRun {
+      _log('stale run stopped');
     } on StorageException catch (e) {
+      if (gen != _generation) return;
       if (e.code == StorageErrorCode.grantLost) {
         await _pause();
       } else {
         await _failed();
       }
     } catch (_) {
+      if (gen != _generation) return;
       await _failed();
     }
   }
 
-  Future<List<FolderFile>?> _listOrNull(StorageBridge bridge, String folder) async {
+  Future<List<FolderFile>?> _listOrNull(String folder) async {
     try {
-      return await bridge.listFiles(folder).timeout(_timeout);
+      return await _call((b) => b.listFiles(folder));
     } catch (_) {
       return null;
     }
   }
 
-  Future<void> _deleteQuietly(StorageBridge bridge, String uri) async {
+  Future<void> _deleteQuietly(String uri) async {
     try {
-      await bridge.deleteFile(uri);
+      await _call((b) => b.deleteFile(uri));
     } catch (_) {}
   }
 
@@ -248,7 +303,7 @@ class AutoBackupService {
   /// Keeps the newest K of this app's own automatic files. [listing] already
   /// contains [justWritten], which is never deleted. Errors are ignored: an
   /// extra file is harmless.
-  Future<void> _prune(StorageBridge bridge, List<FolderFile> listing, String justWritten, List<String> written) async {
+  Future<void> _prune(List<FolderFile> listing, String justWritten, List<String> written, int gen) async {
     try {
       final keepK = await BackupPrefs.readKeepK();
       final mine = written.toSet();
@@ -257,17 +312,23 @@ class AutoBackupService {
       final gone = <String>{};
       for (final f in eligible.skip(keepK)) {
         if (f.uri == justWritten) continue;
+        _alive(gen);
         try {
-          await bridge.deleteFile(f.uri);
+          await _call((b) => b.deleteFile(f.uri));
           gone.add(f.uri);
+        } on _StaleRun {
+          rethrow;
         } catch (_) {}
       }
       // Forget files that are gone, whether we deleted them or the user did.
       final present = listing.map((f) => f.uri).toSet();
+      _alive(gen);
       await BackupPrefs.writeWrittenUris([
         for (final u in written)
           if (present.contains(u) && !gone.contains(u)) u,
       ]);
+    } on _StaleRun {
+      rethrow;
     } catch (_) {}
   }
 
@@ -281,35 +342,241 @@ class AutoBackupService {
   /// The user picked (and accepted) [folder]: starts or restarts auto-backup
   /// there. Clears paused, the counter, the failure count and the written
   /// list; releases the previous folder's permission if it was another one.
-  /// Returns false if a pref could not be written.
-  Future<bool> useFolder(PickedFolder folder) async {
-    final old = await BackupPrefs.readFolderUri();
-    var ok = await BackupPrefs.writeFolderUri(folder.uri);
-    ok = await BackupPrefs.writeFolderName(folder.name) && ok;
-    ok = await BackupPrefs.writeSinceCount(0) && ok;
-    ok = await BackupPrefs.writeFailCount(0) && ok;
-    ok = await BackupPrefs.writeWrittenUris(const []) && ok;
-    ok = await BackupPrefs.writePaused(false) && ok;
-    ok = await BackupPrefs.writeEnabled(true) && ok;
-    if (old != null && old != folder.uri) await _releaseQuietly(old);
-    await _clearNotice();
-    return ok;
+  /// Returns false if a pref could not be written (or the service was busy).
+  /// With [decide] this is [changeFolder]'s full flow.
+  Future<bool> useFolder(PickedFolder folder, {LeftoverDecider? decide}) async {
+    final r = await changeFolder(folder, decide: decide);
+    return r.ok && !r.busy;
   }
 
   /// Turns auto-backup off: releases the folder permission and clears the
   /// folder keys (enabled, paused, counter included). Files already written
-  /// stay where they are.
-  Future<bool> turnOff() async {
+  /// stay where they are unless [decide] answers delete.
+  Future<bool> turnOff({LeftoverDecider? decide}) async {
+    final r = await switchOff(decide: decide);
+    return r.ok && !r.busy;
+  }
+
+  /// CB9 order, Choose folder. FIRST read the old folder URI, the old grant and
+  /// the written list. Then, when [decide] is given and the old folder is
+  /// another one: list it (fresh); a failed listing skips the question and
+  /// keeps today's quiet release; otherwise ask ONCE (leftovers when there
+  /// are any, and always the permission). Only then, with the service quiet,
+  /// delete if asked to, write the new URI, clear the written list, set enabled
+  /// and release the old grant (only if the answer says release, or the
+  /// listing failed, or [decide] is null). Back, outside tap, null and a thrown
+  /// callback are [LeftoverDecision.cancel]: nothing is deleted or released and
+  /// the change goes on. The same URI as the old one asks nothing, deletes
+  /// nothing and releases nothing.
+  Future<FolderChangeResult> changeFolder(PickedFolder folder, {LeftoverDecider? decide}) async {
     final old = await BackupPrefs.readFolderUri();
-    final ok = await BackupPrefs.clearAutoBackup();
-    if (old != null) await _releaseQuietly(old);
-    await _clearNotice();
-    return ok;
+    final written = await BackupPrefs.readWrittenUris();
+    final other = old != null && old != folder.uri;
+
+    var asked = false;
+    var listingFailed = false;
+    var decision = LeftoverDecision.cancel;
+    LeftoverScan? scan;
+    if (other && decide != null) {
+      final grantHeld = await _hasGrantQuietly(old);
+      scan = grantHeld ? await findLeftovers(old, writtenCount: written.length) : null;
+      if (scan == null) {
+        listingFailed = true;
+      } else {
+        asked = true;
+        decision = await _ask(
+          decide,
+          LeftoverPrompt(leftovers: scan.count > 0 ? scan : null, askGrant: true, switchingOff: false),
+        );
+      }
+    }
+
+    if (!await _holdStill()) {
+      return FolderChangeResult(ok: false, busy: true, writtenCount: written.length);
+    }
+    try {
+      LeftoverDeleteResult? deleted;
+      if (asked && scan!.count > 0 && decision.leftover == LeftoverChoice.delete) {
+        deleted = await deleteLeftovers(old!, consented: true);
+      }
+      var ok = await BackupPrefs.writeFolderUri(folder.uri);
+      ok = await BackupPrefs.writeFolderName(folder.name) && ok;
+      ok = await BackupPrefs.writeSinceCount(0) && ok;
+      ok = await BackupPrefs.writeFailCount(0) && ok;
+      ok = await BackupPrefs.writeWrittenUris(const []) && ok;
+      ok = await BackupPrefs.writePaused(false) && ok;
+      ok = await BackupPrefs.writeEnabled(true) && ok;
+      var released = false;
+      if (other && (decide == null || listingFailed || decision.grant == GrantChoice.release)) {
+        await _releaseQuietly(old);
+        released = true;
+      }
+      await _clearNotice();
+      _log('changeFolder asked=$asked found=${scan?.count ?? 0} released=$released');
+      return FolderChangeResult(
+        ok: ok,
+        asked: asked,
+        decision: decision,
+        found: scan?.count ?? 0,
+        deleted: deleted,
+        grantReleased: released,
+        listingFailed: listingFailed,
+        writtenCount: written.length,
+      );
+    } finally {
+      resume();
+    }
+  }
+
+  /// CB9 order, switch-off. Reads the old URI and the written list first; asks
+  /// the leftover question ONLY (no permission field) and only when [decide] is
+  /// given and the old folder holds matching files (a failed listing or no
+  /// files: no question); then, with the service quiet, deletes if asked to,
+  /// clears the folder keys and releases the permission as today (also after a
+  /// cancel).
+  Future<FolderChangeResult> switchOff({LeftoverDecider? decide}) async {
+    final old = await BackupPrefs.readFolderUri();
+    final written = await BackupPrefs.readWrittenUris();
+
+    var asked = false;
+    var listingFailed = false;
+    var decision = LeftoverDecision.cancel;
+    LeftoverScan? scan;
+    if (old != null && decide != null) {
+      final grantHeld = await _hasGrantQuietly(old);
+      scan = grantHeld ? await findLeftovers(old, writtenCount: written.length) : null;
+      if (scan == null) {
+        listingFailed = true;
+      } else if (scan.count > 0) {
+        asked = true;
+        decision = await _ask(
+          decide,
+          LeftoverPrompt(leftovers: scan, askGrant: false, switchingOff: true),
+        );
+      }
+    }
+
+    if (!await _holdStill()) {
+      return FolderChangeResult(ok: false, busy: true, writtenCount: written.length);
+    }
+    try {
+      LeftoverDeleteResult? deleted;
+      if (asked && decision.leftover == LeftoverChoice.delete) {
+        deleted = await deleteLeftovers(old!, consented: true);
+      }
+      final ok = await BackupPrefs.clearAutoBackup();
+      if (old != null) await _releaseQuietly(old);
+      await _clearNotice();
+      _log('switchOff asked=$asked found=${scan?.count ?? 0}');
+      return FolderChangeResult(
+        ok: ok,
+        asked: asked,
+        decision: decision,
+        found: scan?.count ?? 0,
+        deleted: deleted,
+        grantReleased: old != null,
+        listingFailed: listingFailed,
+        writtenCount: written.length,
+      );
+    } finally {
+      resume();
+    }
+  }
+
+  /// Lists [folderUri] (fresh) and counts the files whose WHOLE name matches
+  /// [autoFileName]. A manual `mmogo-backup-...` name or any other name is
+  /// never counted; the written list is not an exclusion. Null = the folder
+  /// could not be listed (grant lost, provider error, timeout).
+  Future<LeftoverScan?> findLeftovers(String folderUri, {int writtenCount = 0}) async {
+    final files = await _listOrNull(folderUri);
+    if (files == null) return null;
+    final mine = _matching(files);
+    final dates = _dates(mine);
+    return LeftoverScan(
+      count: mine.length,
+      oldest: dates.$1,
+      newest: dates.$2,
+      writtenCount: writtenCount,
+    );
+  }
+
+  /// Deletes the leftovers of [folderUri] when [consented] is true, and does
+  /// NOTHING (no bridge call) when it is false. It lists the folder again at
+  /// delete time and deletes only the URIs of freshly listed files whose whole
+  /// name matches [autoFileName]. One file failing does not stop the rest.
+  Future<LeftoverDeleteResult> deleteLeftovers(String folderUri, {required bool consented}) async {
+    if (!consented) return LeftoverDeleteResult.none;
+    final files = await _listOrNull(folderUri);
+    if (files == null) return const LeftoverDeleteResult(listingFailed: true);
+    final mine = _matching(files);
+    var deleted = 0;
+    var failed = 0;
+    for (final f in mine) {
+      try {
+        await _call((b) => b.deleteFile(f.uri));
+        deleted++;
+      } catch (_) {
+        failed++;
+      }
+    }
+    final dates = _dates(mine);
+    _log('deleteLeftovers deleted=$deleted failed=$failed');
+    return LeftoverDeleteResult(deleted: deleted, failed: failed, oldest: dates.$1, newest: dates.$2);
+  }
+
+  List<FolderFile> _matching(List<FolderFile> files) =>
+      [for (final f in files) if (autoFileName.hasMatch(f.name)) f];
+
+  /// Oldest and newest date in the NAMES (local time).
+  (DateTime?, DateTime?) _dates(List<FolderFile> files) {
+    DateTime? oldest;
+    DateTime? newest;
+    for (final f in files) {
+      final m = autoFileName.firstMatch(f.name);
+      if (m == null) continue;
+      final d = m.group(1)!;
+      final t = m.group(2)!;
+      final at = DateTime(
+        int.parse(d.substring(0, 4)),
+        int.parse(d.substring(4, 6)),
+        int.parse(d.substring(6, 8)),
+        int.parse(t.substring(0, 2)),
+        int.parse(t.substring(2, 4)),
+        int.parse(t.substring(4, 6)),
+      );
+      if (oldest == null || at.isBefore(oldest)) oldest = at;
+      if (newest == null || at.isAfter(newest)) newest = at;
+    }
+    return (oldest, newest);
+  }
+
+  Future<LeftoverDecision> _ask(LeftoverDecider decide, LeftoverPrompt prompt) async {
+    try {
+      return await decide(prompt) ?? LeftoverDecision.cancel;
+    } catch (_) {
+      return LeftoverDecision.cancel;
+    }
+  }
+
+  Future<bool> _hasGrantQuietly(String uri) async {
+    try {
+      return await _call((b) => b.hasWriteGrant(uri));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Holds the service still for the final write and release steps only (not
+  /// across the user's dialog). False = another operation holds it or a run
+  /// outlasted the bound; nothing is changed then.
+  Future<bool> _holdStill() async {
+    if (_blocked) return false;
+    return quiesce();
   }
 
   Future<void> _releaseQuietly(String uri) async {
     try {
-      await _bridge().releaseGrant(uri);
+      await _call((b) => b.releaseGrant(uri));
     } catch (_) {}
   }
 
@@ -320,4 +587,9 @@ class AutoBackupService {
     if (await BackupPrefs.readFolderUri() == folder.uri) return;
     await _releaseQuietly(folder.uri);
   }
+}
+
+/// Thrown inside a run the watchdog already wrote off.
+class _StaleRun implements Exception {
+  const _StaleRun();
 }
