@@ -37,9 +37,10 @@ List<PaidToRecipient> _groups(List<PaidToPayment> ps, {String? type}) => paidToG
 
 void main() {
   group('types', () {
-    test('the domain knows five types in the mock order; the screen list stays three', () {
+    test('the domain (and the screen, S7b) know five types in the mock order, never Airtime or Cash', () {
       expect(paidToAllTypes, ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'POCHI_LA_BIASHARA', 'AGENT_WITHDRAWAL']);
-      expect(paidToTypes, ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS']);
+      expect(paidToAllTypes, isNot(contains('AIRTIME')));
+      expect(paidToAllTypes, isNot(contains('CASH')));
     });
   });
 
@@ -170,7 +171,7 @@ void main() {
 
     test('never grouped, in no count, no row', () {
       final gs = paidToGroups(pays);
-      expect(gs.where((g) => g.isUnnamed), isEmpty);
+      expect(gs.every((g) => g.label != null || g.detail.isNotEmpty), isTrue);
       expect(gs, hasLength(5));
       final c = paidToCounts(pays);
       expect(c.by, {sm: 1, pb: 1, bg: 1, po: 1, wd: 1});
@@ -293,7 +294,7 @@ void main() {
       _p(wd, 100, label: 'JOY AGENT', agent: '314159'),
       _p(sm, 100), // not recorded
     ];
-    List<String> find(String term) => [for (final g in paidToGroups(pays, term: term)) g.partyKey!]..sort();
+    List<String> find(String term) => [for (final g in paidToGroups(pays, term: term)) g.partyKey]..sort();
 
     test('by name (any of the names a merged recipient was written with)', () {
       expect(find('ann'), ['0722114455']);
@@ -363,7 +364,7 @@ void main() {
       expect(order(PaidToSort.amount, ps), ['C SHOP', 'A SHOP', 'B SHOP']); // 100 total, 2 payments, then 100 ties by name
       expect(order(PaidToSort.timesPaid, ps), ['C SHOP', 'A SHOP', 'B SHOP']);
       expect(order(PaidToSort.recent, ps), ['C SHOP', 'A SHOP', 'B SHOP']);
-      expect(paidToSortsShown, [PaidToSort.amount, PaidToSort.timesPaid, PaidToSort.recent]);
+      expect(PaidToSort.values, hasLength(4)); // S7b: the sheet draws all four
     });
   });
 
@@ -379,7 +380,7 @@ void main() {
 
     test('Paid out never includes withdrawn money; cost covers the same payments; Not recorded is in the totals', () {
       final h = paidToHero(pays);
-      expect(h.withdrawn, isFalse);
+      expect(h.agentView, isFalse);
       expect(h.totalCents, (1000 + 500 + 700 + 300) * 100);
       expect(h.costCents, (20 + 10 + 5 + 4) * 100);
       expect(h.payments, 4);
@@ -390,7 +391,7 @@ void main() {
 
     test('the W view reads Withdrawn: only withdrawals, agents counted, no separate withdrawal cost', () {
       final h = paidToHero(pays, withdrawn: true);
-      expect(h.withdrawn, isTrue);
+      expect(h.agentView, isTrue);
       expect(h.totalCents, 6000 * 100);
       expect(h.costCents, 90 * 100);
       expect(h.payments, 2);

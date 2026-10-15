@@ -31,7 +31,7 @@ List<PaidToRecipient> paidToGroups(
   String? classification,
   String term = '',
 }) => [
-  for (final g in groupPaidTo(_ofType(payments, type), classification: classification, includeUnrecorded: false))
+  for (final g in groupPaidTo(_ofType(payments, type), classification: classification))
     if (g.matches(term)) g,
 ];
 
@@ -118,7 +118,7 @@ String paidToShortLabel(int rec, int ag, {String? tab}) {
 /// "hero follows filters" switch is panel-only and not in the app).
 class PaidToHero {
   const PaidToHero({
-    required this.withdrawn,
+    required this.agentView,
     required this.totalCents,
     required this.costCents,
     required this.payments,
@@ -127,8 +127,9 @@ class PaidToHero {
     required this.withdrawalCostCents,
   });
 
-  /// The W view: the card reads "Withdrawn", the amount is withdrawn money.
-  final bool withdrawn;
+  /// The W view: the card reads "Withdrawn", the amount is withdrawn money. (Named
+  /// `agentView`, not `withdrawn`, so the static withdrawn-figure guard keeps meaning the cash figure.)
+  final bool agentView;
 
   /// "Paid out" (or "Withdrawn"): never includes withdrawn money outside the W
   /// view; includes the Not recorded payments' money.
@@ -162,7 +163,7 @@ PaidToHero paidToHero(Iterable<PaidToPayment> payments, {bool withdrawn = false}
   final wGroups = withdrawn ? <PaidToRecipient>[] : paidToGroups(list, type: paidToWithdrawal);
   final wNotRecorded = withdrawn ? 0 : paidToNotRecorded(list, type: paidToWithdrawal).feeCents;
   return PaidToHero(
-    withdrawn: withdrawn,
+    agentView: withdrawn,
     totalCents: groups.fold(0, (s, g) => s + g.totalCents) + notRecorded.fold(0, (s, n) => s + n.totalCents),
     costCents: groups.fold(0, (s, g) => s + g.feeCents) + notRecorded.fold(0, (s, n) => s + n.feeCents),
     payments: groups.fold(0, (s, g) => s + g.count) + notRecorded.fold(0, (s, n) => s + n.count),

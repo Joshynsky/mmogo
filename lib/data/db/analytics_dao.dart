@@ -3,6 +3,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../../domain/counterparty/counterparty_key.dart';
 import '../../domain/format/source_types.dart';
 import '../../domain/money/spent_amount.dart';
+import '../../domain/paid_to/paid_to.dart' show paidToPartyKeyOf, paidToPochi, paidToWithdrawal;
 import '../../domain/parsing/parsed_sms_fields.dart';
 
 /// One itemized row for Analytics' dated transaction list — the minimal
@@ -159,8 +160,9 @@ class AnalyticsDao {
         'SEND_MONEY' => SmsSourceType.sendMoney,
         'PAYBILL' => SmsSourceType.payBill,
         'BUY_GOODS' => SmsSourceType.buyGoods,
-        // Pochi, Withdrawal and Airtime never learn a receiver (no map key),
-        // and CASH has no counterparty identity at all: no party match.
+        // Pochi and Withdrawal have no map key: [_matchesParty] matches them
+        // through Paid to's own key (S7b). Airtime has no receiver and CASH no
+        // counterparty identity at all: no party match.
         _ => null,
       };
 
@@ -169,10 +171,24 @@ class AnalyticsDao {
     required String? rowLabel,
     required String? rowPhone,
     required String? rowAccount,
+    required String? rowAgentNumber,
     required String partyType,
     required String partyKey,
   }) {
     if (rowSourceType != partyType) return false;
+    // S7b (PT1): Pochi (`tel|<phone key>` else `name|<LABEL>`) and Withdrawal
+    // (`no|<agent number>` else `name|<LABEL>`) use the SAME key Paid to groups
+    // by, so the recipient view holds exactly the rows of the Paid to row.
+    if (rowSourceType == paidToPochi || rowSourceType == paidToWithdrawal) {
+      return paidToPartyKeyOf(
+            sourceType: rowSourceType,
+            label: rowLabel,
+            phone: rowPhone,
+            account: rowAccount,
+            agentNumber: rowAgentNumber,
+          ) ==
+          partyKey;
+    }
     final sms = _smsSourceTypeOf(rowSourceType);
     if (sms == null) return false;
     final key = deriveCounterpartyKey(
@@ -278,6 +294,7 @@ class AnalyticsDao {
               rowLabel: r.counterpartyLabel,
               rowPhone: r.counterpartyPhone,
               rowAccount: r.paybillAccountNumber,
+              rowAgentNumber: r.agentNumber,
               partyType: partyType,
               partyKey: partyKey,
             ),

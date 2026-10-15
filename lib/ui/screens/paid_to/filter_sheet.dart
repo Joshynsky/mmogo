@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../../domain/format/source_types.dart';
 import '../../../domain/paid_to/paid_to.dart';
+import '../../../domain/paid_to/paid_to_counts.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/bottom_sheet_shell.dart';
 
 /// §PAIDTO.FILTER_SHEET — the Filter & sort sheet (mock `#pSheet`): category (scoped to the type,
-/// each with its payment count), sort, Reset, and "Show N recipients". A
-/// draft until Show; pops `(category, sort)`.
+/// each with its payment count), all four sorts (Amount, Times paid, Most recent, Transaction
+/// cost), Reset, and "Show N" (the short wording, "14 + 3 agents" in All, the count in a type
+/// view, counted from the SAME groups the list draws with the draft category and the typed
+/// search). A draft until Show; pops `(category, sort)`.
 class PaidToFilterSheet extends StatefulWidget {
   const PaidToFilterSheet({
     super.key,
@@ -16,6 +19,7 @@ class PaidToFilterSheet extends StatefulWidget {
     required this.type,
     required this.cls,
     required this.sort,
+    this.term = '',
   });
 
   final AppPalette palette;
@@ -23,6 +27,9 @@ class PaidToFilterSheet extends StatefulWidget {
   final String? type;
   final String? cls;
   final PaidToSort sort;
+
+  /// The typed search (the button counts what the list would show with it).
+  final String term;
 
   @override
   State<PaidToFilterSheet> createState() => _PaidToFilterSheetState();
@@ -37,7 +44,9 @@ class _PaidToFilterSheetState extends State<PaidToFilterSheet> {
     final p = widget.palette;
     final cats = paidToCategories(widget.payments, type: widget.type);
     final all = cats.fold<int>(0, (s, c) => s + c.$2);
-    final n = countPaidToRecipients(widget.payments, type: widget.type, classification: _cls);
+    final shown = paidToGroups(widget.payments, type: widget.type, classification: _cls, term: widget.term);
+    final ag = shown.where((g) => g.sourceType == paidToWithdrawal).length;
+    final showN = paidToShortLabel(shown.length - ag, ag, tab: widget.type);
     final label = TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.66, color: p.mutedInk);
 
     Widget catRow(String? cls, String name, int count, bool first) {
@@ -156,7 +165,7 @@ class _PaidToFilterSheetState extends State<PaidToFilterSheet> {
         ),
       ),
       Text('SORT BY', style: label),
-      Wrap(spacing: 6, runSpacing: 6, children: [for (final s in paidToSortsShown) sortChip(s)]),
+      Wrap(spacing: 6, runSpacing: 6, children: [for (final s in PaidToSort.values) sortChip(s)]),
       Row(
         children: [
           action(const Key('paidToReset'), 'Reset', p.track, p.ink, () {
@@ -168,7 +177,7 @@ class _PaidToFilterSheetState extends State<PaidToFilterSheet> {
           const SizedBox(width: 8),
           action(
             const Key('paidToShow'),
-            'Show $n recipient${n == 1 ? '' : 's'}',
+            'Show $showN',
             p.primary,
             p.onPrimary,
             () => Navigator.of(context).pop((_cls, _sort)),

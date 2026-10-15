@@ -10,7 +10,9 @@ import '../../widgets/app_card.dart';
 import '../../widgets/tabular.dart';
 import 'recipient_row.dart';
 
-/// §PAIDTO.SECTION — one type's section: the header (name, total, counts, "See all N ›") and the ranked recipient card.
+/// §PAIDTO.SECTION — one type's section (mock `buildList`): the header (name, total, "N people ·
+/// M payments · Transaction cost X", "See all N ›") and the card of ranked recipient rows. The
+/// Withdrawal header reads "Withdrawal · by agent" and counts withdrawals.
 class PaidToSectionHeader extends StatelessWidget {
   const PaidToSectionHeader({
     super.key,
@@ -48,7 +50,7 @@ class PaidToSectionHeader extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  sourceTypeName(s.type).toUpperCase(),
+                  (s.type == paidToWithdrawal ? 'Withdrawal · by agent' : sourceTypeName(s.type)).toUpperCase(),
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w800,
@@ -73,8 +75,8 @@ class PaidToSectionHeader extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
-                '$n ${paidToNoun(s.type, n)} · ${s.payments} payment${s.payments == 1 ? '' : 's'}'
-                ' · fees ${kshTrim(s.feeCents)}',
+                '$n ${paidToNoun(s.type, n)} · ${s.payments} ${paidToPayWord(s.type, s.payments)}'
+                ' · Transaction cost ${kshTrim(s.feeCents)}',
                 key: Key('paidToSectionSub-${s.type}'),
                 style: subStyle,
               ),
@@ -128,7 +130,7 @@ class PaidToListCard extends StatelessWidget {
   final bool ranked;
   final PaidToSort sort;
   final DateTime today;
-  final void Function(PaidToRecipient recipient) onOpen;
+  final void Function(PaidToRecipient recipient, FocusNode row) onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +158,7 @@ class PaidToListCard extends StatelessWidget {
                 share: metric == null ? null : metric(g) / max,
                 sort: sort,
                 today: today,
-                onTap: () => onOpen(g),
+                onTap: (row) => onOpen(g, row),
               ),
             ),
           ],

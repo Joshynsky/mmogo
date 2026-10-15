@@ -4,26 +4,23 @@
 /// `PT_API`), kept out of the screen so it can be unit tested. Cash is never a
 /// recipient and never reaches this code.
 ///
-/// 0.1.2 S7a (PT1): Pochi and Withdrawal join the domain; "Not recorded"
+/// 0.1.2 S7a/S7b (PT1): Pochi and Withdrawal join the domain; "Not recorded"
 /// replaces "Unnamed" (counts, the Not recorded summary, the hero and the
 /// wording helpers are in `paid_to_counts.dart`): a payment with no captured
 /// receiver is never a recipient, only a per-type summary whose money stays in
-/// the totals. The old unnamed-row path (`groupPaidTo` with the default
-/// `includeUnrecorded: true`) stays only for the screen until S7b.
+/// the totals. The old unnamed-row path (S7a kept it for the screen) is gone.
 library;
 
 import '../analytics/analytics_period.dart';
 import '../counterparty/counterparty_key.dart';
 import '../parsing/parsed_sms_fields.dart';
 
-/// The recipient types the SCREEN loads (S7a: still the three; S7b widens it).
-const paidToTypes = ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS'];
-
 /// DB strings (`SmsSourceTypeDb`) of the two types added in 0.1.2.
 const paidToPochi = 'POCHI_LA_BIASHARA';
 const paidToWithdrawal = 'AGENT_WITHDRAWAL';
 
-/// All five types the domain knows, in section / pill order (mock `CODES`).
+/// The five types Paid to loads and draws, in section / pill order (mock
+/// `CODES`). Airtime and Cash never reach Paid to.
 const paidToAllTypes = ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS', paidToPochi, paidToWithdrawal];
 
 enum PaidToSort { amount, timesPaid, recent, fees }
@@ -34,9 +31,6 @@ const paidToSortLabels = {
   PaidToSort.recent: 'Most recent',
   PaidToSort.fees: 'Transaction cost',
 };
-
-/// The sorts the Filter sheet draws in S7a (no look change); S7b adds [PaidToSort.fees].
-const paidToSortsShown = [PaidToSort.amount, PaidToSort.timesPaid, PaidToSort.recent];
 
 /// One payment, as Paid to needs it.
 class PaidToPayment {
@@ -87,68 +81,77 @@ bool hasCapturedIdentity(String sourceType, String? label, String? phone, String
 String _phoneKey(String? phone) => deriveCounterpartyKey(sourceType: SmsSourceType.sendMoney, counterpartyPhone: phone);
 String _labelKey(String? label) => deriveCounterpartyKey(sourceType: SmsSourceType.buyGoods, counterpartyLabel: label);
 
-/// The grouping key of one payment's recipient. Send Money, Paybill, Buy Goods:
-/// `deriveCounterpartyKey`. Pochi: the phone key (`tel|`), else the name
+/// The part of the grouping key after the type (what Analytics' party view
+/// takes), or `null` when no receiver was captured. Send Money, Paybill, Buy
+/// Goods: `deriveCounterpartyKey`. Pochi: the phone key (`tel|`), else the name
 /// (`name|`). Withdrawal: the agent number (`no|`), else the name (`name|`).
-/// Not captured: `anon|type|classification` (the S7a functions never show it
-/// as a recipient).
-String paidToRecipientKey(PaidToPayment p) {
-  if (!hasCapturedIdentity(p.sourceType, p.label, p.phone, p.account, agentNumber: p.agentNumber)) {
-    return 'anon|${p.sourceType}|${p.classificationName}';
-  }
-  final inner = switch (p.sourceType) {
-    paidToPochi => _filled(p.phone) ? 'tel|${_phoneKey(p.phone)}' : 'name|${_labelKey(p.label)}',
-    paidToWithdrawal => _filled(p.agentNumber) ? 'no|${p.agentNumber!.trim()}' : 'name|${_labelKey(p.label)}',
-    'SEND_MONEY' => _phoneKey(p.phone),
+String? paidToPartyKeyOf({
+  required String sourceType,
+  String? label,
+  String? phone,
+  String? account,
+  String? agentNumber,
+}) {
+  if (!hasCapturedIdentity(sourceType, label, phone, account, agentNumber: agentNumber)) return null;
+  return switch (sourceType) {
+    paidToPochi => _filled(phone) ? 'tel|${_phoneKey(phone)}' : 'name|${_labelKey(label)}',
+    paidToWithdrawal => _filled(agentNumber) ? 'no|${agentNumber!.trim()}' : 'name|${_labelKey(label)}',
+    'SEND_MONEY' => _phoneKey(phone),
     'PAYBILL' => deriveCounterpartyKey(
       sourceType: SmsSourceType.payBill,
-      counterpartyLabel: p.label,
-      paybillAccountNumber: p.account,
+      counterpartyLabel: label,
+      paybillAccountNumber: account,
     ),
-    _ => _labelKey(p.label),
+    _ => _labelKey(label),
   };
-  return '${p.sourceType}|$inner';
 }
 
-/// One row on Paid to: a named recipient (or, on the old path, an unnamed
-/// classification group).
+/// The grouping key of one payment's recipient: the type, then
+/// [paidToPartyKeyOf]. Not captured: `anon|type|classification` (never shown
+/// as a recipient; see `paidToNotRecorded`).
+String paidToRecipientKey(PaidToPayment p) {
+  final inner = paidToPartyKeyOf(
+    sourceType: p.sourceType,
+    label: p.label,
+    phone: p.phone,
+    account: p.account,
+    agentNumber: p.agentNumber,
+  );
+  return inner == null ? 'anon|${p.sourceType}|${p.classificationName}' : '${p.sourceType}|$inner';
+}
+
+/// One row on Paid to: a named recipient.
 class PaidToRecipient {
   PaidToRecipient._({
     required this.key,
     required this.sourceType,
-    required this.isUnnamed,
-    required this.classificationName,
     required this.partyKey,
     required this.label,
     required this.detail,
     required this.lastAt,
+    required this.payments,
   });
 
   final String key;
   final String sourceType;
 
-  /// No receiver captured (old T15 path only): grouped by [classificationName].
-  final bool isUnnamed;
+  /// The key after the type: what Analytics' party view takes (Pochi
+  /// `tel|...` / `name|...`, Withdrawal `no|...` / `name|...`, S7b).
+  final String partyKey;
 
-  /// The unnamed group's classification (for a named recipient: the first
-  /// payment's, unused).
-  final String classificationName;
-
-  /// The key after the type (named only). Send Money, Paybill, Buy Goods: what
-  /// Analytics' party view takes. Pochi (`tel|...` / `name|...`) and Withdrawal
-  /// (`no|...` / `name|...`): not yet understood by the party filter (S7b).
-  final String? partyKey;
-
-  /// The receiver's name as captured (named only).
+  /// The receiver's name as captured.
   final String? label;
 
   /// The LOCAL phone (Send Money), "Acc (number)" (Paybill), "Merchant" (Buy
   /// Goods), the local phone or "Pochi", "Agent (number)" or "Agent number not
-  /// recorded"; "Receiver not recorded" when unnamed.
+  /// recorded".
   final String detail;
 
   /// Every name written for this recipient (lower case) and every phone form as
   /// stored (more than one phone form = a merge); both feed search.
+  /// The payments grouped into this recipient (feeds the recipient sheet).
+  final List<PaidToPayment> payments;
+
   final Set<String> labels = {};
   final Set<String> phones = {};
 
@@ -157,8 +160,8 @@ class PaidToRecipient {
   int feeCents = 0;
   DateTime lastAt;
 
-  /// The row's title (mock: "Unnamed · (classification)" on the old path).
-  String get name => isUnnamed ? 'Unnamed · $classificationName' : (label?.trim().isNotEmpty ?? false) ? label! : detail;
+  /// The row's title: the name as captured, else the detail (phone, account, ...).
+  String get name => (label?.trim().isNotEmpty ?? false) ? label! : detail;
 
   /// What search matches on: name, detail (local phone, account, agent number),
   /// every name written and every phone form as stored.
@@ -185,34 +188,27 @@ String _detailOf(PaidToPayment p) => switch (p.sourceType) {
 };
 
 /// Groups [payments] into recipients, optionally only those in
-/// [classification]. Unsorted (see [sortPaidTo]). [includeUnrecorded] true (the
-/// 0.1.0 T15 path, kept for the screen until S7b) also makes one "Unnamed" row
-/// per type + classification; false (0.1.2) leaves payments with no captured
-/// receiver out: they are not recipients (see `paidToNotRecorded`).
-List<PaidToRecipient> groupPaidTo(
-  Iterable<PaidToPayment> payments, {
-  String? classification,
-  bool includeUnrecorded = true,
-}) {
+/// [classification]. Unsorted (see [sortPaidTo]). Payments with no captured
+/// receiver are left out: they are not recipients (see `paidToNotRecorded`).
+List<PaidToRecipient> groupPaidTo(Iterable<PaidToPayment> payments, {String? classification}) {
   final map = <String, PaidToRecipient>{};
   for (final p in payments) {
     if (classification != null && p.classificationName != classification) continue;
     final key = paidToRecipientKey(p);
-    final named = !key.startsWith('anon|');
-    if (!named && !includeUnrecorded) continue;
+    if (key.startsWith('anon|')) continue;
     final g = map.putIfAbsent(
       key,
       () => PaidToRecipient._(
         key: key,
         sourceType: p.sourceType,
-        isUnnamed: !named,
-        classificationName: p.classificationName,
-        partyKey: named ? key.substring(p.sourceType.length + 1) : null,
-        label: named ? p.label : null,
-        detail: named ? _detailOf(p) : 'Receiver not recorded',
+        partyKey: key.substring(p.sourceType.length + 1),
+        label: p.label,
+        detail: _detailOf(p),
         lastAt: p.occurredAt,
+        payments: [],
       ),
     );
+    g.payments.add(p);
     g.totalCents += p.amountCents;
     g.count += 1;
     g.feeCents += p.feeCents;
@@ -239,15 +235,6 @@ void sortPaidTo(List<PaidToRecipient> list, PaidToSort sort) {
 }
 
 int _chain(List<int> cmps) => cmps.firstWhere((c) => c != 0, orElse: () => 0);
-
-/// Distinct recipients among [payments], optionally of one [type] and one
-/// [classification]. The 0.1.0 count (an unnamed group counts as one); kept for
-/// the screen until S7b, which calls `paidToCounts` instead.
-int countPaidToRecipients(Iterable<PaidToPayment> payments, {String? type, String? classification}) => {
-  for (final p in payments)
-    if ((type == null || p.sourceType == type) && (classification == null || p.classificationName == classification))
-      paidToRecipientKey(p),
-}.length;
 
 /// The Filter sheet's categories for [type] (`null` = all types): each
 /// classification with its payment count, most payments first (ties by

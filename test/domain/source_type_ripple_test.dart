@@ -44,11 +44,10 @@ void main() {
     expect(deriveCounterpartyKey(sourceType: SmsSourceType.buyGoods, counterpartyLabel: ' a  b '), 'A B');
   });
 
-  test('paidToTypes (the screen list) keeps Withdrawal, Airtime and Pochi out; the domain list has five (S7a)', () {
-    expect(paidToTypes, ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS']);
-    expect(paidToTypes, isNot(contains('AGENT_WITHDRAWAL')));
-    expect(paidToTypes, isNot(contains('AIRTIME')));
+  test('paidToAllTypes (what the screen loads, S7b) has the five types and never Airtime or Cash', () {
+    expect(paidToAllTypes, ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'POCHI_LA_BIASHARA', 'AGENT_WITHDRAWAL']);
     expect(paidToAllTypes, isNot(contains('AIRTIME')));
+    expect(paidToAllTypes, isNot(contains('CASH')));
     // S7a: Withdrawal now has a captured identity (agent number or name); with neither it has none.
     expect(hasCapturedIdentity('AGENT_WITHDRAWAL', 'x', '07', 'y'), isTrue);
     expect(hasCapturedIdentity('AGENT_WITHDRAWAL', null, '07', 'y'), isFalse);

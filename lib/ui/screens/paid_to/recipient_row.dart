@@ -6,12 +6,16 @@ import '../../../domain/paid_to/paid_to.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/tabular.dart';
 import '../../widgets/type_icon.dart';
-import 'format.dart';
 
-/// §PAIDTO.ROW — one recipient row (mock `.prow`): rank, type tile, name + "Last (date) ·
-/// phone/acc", amount + "n× · fees X", and a share bar under it. Unnamed
-/// rows (T15): italic muted name, a muted tile with a person icon.
-class PaidToRecipientRow extends StatelessWidget {
+/// §PAIDTO.ROW — one recipient row (mock `rowHtml`): rank (unless sorted by Most recent), type
+/// tile, name + "Last (date) · phone/acc/agent", amount + a second line by the sort, and a share
+/// bar. A tap opens the recipient sheet and hands over the row's [FocusNode], so focus returns to
+/// the row when the sheet closes.
+///
+///  - Amount / Most recent: total, then "n× · + Ksh X fee" (no fee note when the cost is 0);
+///  - Times paid: "n×", then "total · + Ksh X fee";
+///  - Transaction cost: the fee, then "n× · total paid" ("withdrawn" for an agent).
+class PaidToRecipientRow extends StatefulWidget {
   const PaidToRecipientRow({
     super.key,
     required this.palette,
@@ -29,80 +33,96 @@ class PaidToRecipientRow extends StatelessWidget {
   final double? share;
   final PaidToSort sort;
   final DateTime today;
-  final VoidCallback onTap;
+  final void Function(FocusNode row) onTap;
+
+  @override
+  State<PaidToRecipientRow> createState() => _PaidToRecipientRowState();
+}
+
+class _PaidToRecipientRowState extends State<PaidToRecipientRow> {
+  final _focus = FocusNode(debugLabel: 'paidToRow');
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
 
   String _last(DateTime at) {
     final d = dateOnly(at);
-    if (d == today) return 'today';
-    if (d == addDays(today, -1)) return 'yesterday';
+    if (d == widget.today) return 'today';
+    if (d == addDays(widget.today, -1)) return 'yesterday';
     return fmtDayMonth(d);
   }
 
   @override
   Widget build(BuildContext context) {
-    final g = recipient;
+    final palette = widget.palette;
+    final g = widget.recipient;
+    final share = widget.share;
+    final rank = widget.rank;
     final color = palette.typeColor(g.sourceType);
-    final fees = 'fees ${paidToPlain(g.feeCents)}';
-    final byCount = sort == PaidToSort.timesPaid;
-    final main = byCount ? '${g.count}×' : formatKsh(g.totalCents);
-    final second = byCount ? '${kshTrim(g.totalCents)} · $fees' : '${g.count}× · $fees';
+    final feeNote = g.feeCents > 0 ? '+ ${kshTrim(g.feeCents)} fee' : '';
+    final (main, second) = switch (widget.sort) {
+      PaidToSort.timesPaid => ('${g.count}×', '${kshTrim(g.totalCents)}${feeNote.isEmpty ? '' : ' · $feeNote'}'),
+      PaidToSort.fees => (
+        formatKsh(g.feeCents),
+        '${g.count}× · ${kshTrim(g.totalCents)} ${g.sourceType == paidToWithdrawal ? 'withdrawn' : 'paid'}',
+      ),
+      _ => (formatKsh(g.totalCents), '${g.count}×${feeNote.isEmpty ? '' : ' · $feeNote'}'),
+    };
     final last = _last(g.lastAt);
     final sub = 'Last $last${g.detail.isNotEmpty ? ' · ${g.detail}' : ''}';
     final small = TextStyle(fontSize: 11, color: palette.mutedInk, fontFeatures: tabularFigures);
 
-    final top = Row(
-      children: [
-        if (g.isUnnamed)
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(color: palette.track, borderRadius: const BorderRadius.all(Radius.circular(11))),
-            child: Icon(Icons.person_outline_rounded, size: 18, color: palette.mutedInk),
-          )
-        else
+    final top = LayoutBuilder(
+      builder: (context, box) => Row(
+        children: [
           TypeIconTile(code: g.sourceType, color: color),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                g.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: g.isUnnamed ? FontWeight.w600 : FontWeight.w700,
-                  fontStyle: g.isUnnamed ? FontStyle.italic : FontStyle.normal,
-                  color: g.isUnnamed ? palette.softInk : palette.ink,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  g.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: palette.ink),
                 ),
-              ),
-              const SizedBox(height: 1),
-              Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: small),
-            ],
-          ),
-        ),
-        const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              main,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                fontFeatures: tabularFigures,
-                color: palette.ink,
-              ),
+                const SizedBox(height: 1),
+                Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: small),
+              ],
             ),
-            const SizedBox(height: 1),
-            Text(second, style: small),
-          ],
-        ),
-      ],
+          ),
+          const SizedBox(width: 10),
+          // The amount column keeps its natural width but never takes more than ~60% of the row
+          // (a very long second line ends in an ellipsis instead of pushing the name out).
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: box.maxWidth * 0.6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  main,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    fontFeatures: tabularFigures,
+                    color: palette.ink,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(second, maxLines: 1, overflow: TextOverflow.ellipsis, style: small),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
 
     final body = Column(
@@ -118,7 +138,7 @@ class PaidToRecipientRow extends StatelessWidget {
               color: palette.track,
               alignment: Alignment.centerLeft,
               child: FractionallySizedBox(
-                widthFactor: share!.clamp(0.0, 1.0),
+                widthFactor: share.clamp(0.0, 1.0),
                 heightFactor: 1,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
@@ -136,13 +156,14 @@ class PaidToRecipientRow extends StatelessWidget {
     return Semantics(
       button: true,
       label:
-          '${g.name}, ${formatKsh(g.totalCents)}, ${g.count} payment${g.count == 1 ? '' : 's'}, '
-          'fees ${formatKsh(g.feeCents)}, last $last. Show every payment',
+          '${g.name}, ${formatKsh(g.totalCents)}, ${g.count} ${paidToPayWord(g.sourceType, g.count)}, '
+          'Transaction cost ${formatKsh(g.feeCents)}, last $last. Show details',
       excludeSemantics: true,
       child: Material(
         color: palette.card,
         child: InkWell(
-          onTap: onTap,
+          focusNode: _focus,
+          onTap: () => widget.onTap(_focus),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(14, 11, 14, 10),
             child: rank == null

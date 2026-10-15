@@ -5,6 +5,8 @@ import '../../../data/db/analytics_dao.dart';
 import '../../../data/db/app_database.dart';
 import '../../../domain/analytics/analytics_period.dart';
 import '../../../domain/paid_to/paid_to.dart';
+import '../../../domain/paid_to/paid_to_counts.dart';
+import '../../../domain/paid_to/paid_to_sheet.dart';
 import '../../shell/primary_scaffold.dart';
 import '../../shell/primary_shell.dart';
 import '../../shell/routes.dart';
@@ -15,35 +17,35 @@ import '../../widgets/period_pill.dart';
 import '../analytics_screen.dart' show AnalyticsRouteArgs;
 import 'filter_sheet.dart';
 import 'hero_card.dart';
+import 'not_recorded_line.dart';
 import 'recipient_section.dart';
+import 'recipient_sheet.dart';
 import 'search_row.dart';
 import 'type_pills.dart';
 
 /// Paid to's coach-tour page id (the seen flag is `tour_seen_paid_to`).
 const paidToTourId = 'paid_to';
 
-/// Primary destination 4 of 5 (nav slot 3) — T22's "Paid to" (formerly
-/// Parties, T15), built to the PM-locked prototype v12
-/// (the approved onboarding mock's Paid to screen):
-/// "who is my money going to?", grouped by recipient, never by category.
-///  - a "Paid out" card with the All time / Year / Month pill (default this
-///    month): the period total, "to N recipients", "M payments" — always the
-///    whole period, never narrowed by the type pill or the filter;
-///  - Search + Filter (badge = active filters) → the Filter & sort sheet
-///    (category scoped to the type, with counts; Amount / Times paid / Most
-///    recent; Reset; "Show N recipients", applied on Show), with the active
-///    filters as removable chips;
-///  - type pills All | Send Money | Paybill | Buy Goods with recipient counts;
-///  - a section per type (All = the top 3 + "See all N ›"), ranked rows with
-///    a share bar (none for Most recent);
-///  - unnamed payments (no receiver captured) grouped by classification, in
-///    italics with a muted tile — the T15 rule: never excluded;
-///  - no Cash; a tap opens the Analytics recipient view on this period.
+/// Primary destination 4 of 5 (nav slot 3) — "Paid to" (T22), rebuilt in 0.1.2 S7b (PT1) to the
+/// signed mock `paidto.html`: "who is my money going to?", grouped by recipient, never by category.
+///  - a "Paid out" card with the All time / Year / Month pill (default this month): the total, the
+///    Transaction cost, "to N recipients", "N payments", "+ M agents (cash out, not counted)" —
+///    always the whole period; with the W pill open it reads "Withdrawn";
+///  - Search (name, phone in any written form, account, agent number) + Filter (badge = active
+///    filters) → the Filter & sort sheet (category scoped to the type; Amount, Times paid, Most
+///    recent, Transaction cost; Reset; "Show N", applied on Show), with the active filters as chips;
+///  - expand/collapse type pills All | SM | PB | BG | P | W with counts that follow the search and
+///    the category;
+///  - a section per type that has recipients (All = the top 3 + "See all N ›"), ranked rows with a
+///    share bar (none for Most recent), and ONE muted "Not recorded" line per type for payments
+///    with no captured receiver (not a recipient: no tap, in no count);
+///  - a row tap opens the recipient sheet INSIDE Paid to; its "See these payments in Analytics"
+///    button hands off to the Analytics recipient view on this period (all five types);
+///  - no Cash, no Airtime.
 /// Follows the phone's light/dark setting; pull to refresh = back to now.
 ///
-/// Real data: `AnalyticsDao` (first transaction day, the period's itemized
-/// Send Money / Paybill / Buy Goods rows); grouping in
-/// `domain/paid_to/paid_to.dart`.
+/// Real data: `AnalyticsDao` (first transaction day, the period's itemized Send Money, Paybill,
+/// Buy Goods, Pochi and Withdrawal rows); grouping and counts in `domain/paid_to/`.
 class PaidToScreen extends StatefulWidget {
   const PaidToScreen({super.key, this.db, this.clock});
 
@@ -126,7 +128,7 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
       db,
       startMs: startMs,
       endMs: endMs,
-      types: paidToTypes.toSet(),
+      types: paidToAllTypes.toSet(),
     );
     if (!mounted || seq != _loadSeq) return;
     setState(() {
@@ -143,6 +145,7 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
             label: r.counterpartyLabel,
             phone: r.counterpartyPhone,
             account: r.paybillAccountNumber,
+            agentNumber: r.agentNumber,
           ),
       ];
     });
@@ -227,8 +230,14 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black.withValues(alpha: 0.35),
-      builder: (_) =>
-          PaidToFilterSheet(palette: palette, payments: _payments ?? const [], type: _tab, cls: _cls, sort: _sort),
+      builder: (_) => PaidToFilterSheet(
+        palette: palette,
+        payments: _payments ?? const [],
+        type: _tab,
+        cls: _cls,
+        sort: _sort,
+        term: _search.text.trim(),
+      ),
     );
     if (result == null || !mounted) return;
     setState(() {
@@ -237,18 +246,45 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
     });
   }
 
-  void _openRecipient(PaidToRecipient r) {
+  /// A row tap: the recipient sheet inside Paid to (figures = the row's: the shown period and the
+  /// row's category filter). Back, the scrim, Close and the X close it and focus returns to [row];
+  /// "See these payments in Analytics" hands off after it closes.
+  Future<void> _openRecipient(PaidToRecipient r, FocusNode row) async {
+    final today = dateOnly(_now());
+    final shown = _shown ?? _period;
+    final data = paidToSheetData(
+      r,
+      range: shown.range(today: today, first: _first),
+      month: shown.granularity == AnalyticsGranularity.month,
+    );
+    final goAnalytics = await showPaidToRecipientSheet(
+      context,
+      palette: AppPalette.of(context),
+      recipient: r,
+      data: data,
+      periodWords: shown.words(today: today, first: _first).value,
+    );
+    if (!mounted) return;
+    if (goAnalytics == true) {
+      _openAnalytics(r);
+    } else if (row.context != null) {
+      row.requestFocus();
+    }
+  }
+
+  /// The 0.1.1 hand-off (kept): the Analytics recipient view on this period's length and anchor,
+  /// with the active category as its filter. Works for all five types (S7b: Pochi by phone key
+  /// else name, Withdrawal by agent number else name).
+  void _openAnalytics(PaidToRecipient r) {
     final today = dateOnly(_now());
     final period = analyticsPeriodForPaidTo(_shown ?? _period, today);
-    final args = r.isUnnamed
-        ? AnalyticsRouteArgs(type: r.sourceType, period: period, classification: r.classificationName)
-        : AnalyticsRouteArgs(
-            type: r.sourceType,
-            partyKey: r.partyKey,
-            partyName: r.name,
-            period: period,
-            classification: _cls,
-          );
+    final args = AnalyticsRouteArgs(
+      type: r.sourceType,
+      partyKey: r.partyKey,
+      partyName: r.name,
+      period: period,
+      classification: _cls,
+    );
     final shell = primaryShell;
     if (shell != null) {
       shell.openAnalytics(args);
@@ -264,17 +300,14 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
   List<CoachStep> _tourSteps() {
     final recipient = _tourRecipient;
     return [
-      CoachStep(
-        target: _searchTourKey,
-        text: 'Find someone, or use Filter & sort: amount, times paid or most recent.',
-      ),
+      CoachStep(target: _searchTourKey, text: 'Find someone, or use Filter & sort: amount, times paid or most recent.'),
       if (recipient != null && _firstRowTourKey.currentContext != null)
         CoachStep(
           target: _firstRowTourKey,
-          text: 'Tap a name to see every payment to them in Analytics.',
+          text: 'Tap a name to see what you paid them, with a way on to every payment in Analytics.',
           onEnter: () => scrollIntoView(_firstRowTourKey),
           actionLabel: 'Take me there',
-          onAction: () => _openRecipient(recipient),
+          onAction: () => _openAnalytics(recipient),
         ),
       if (_seeAllTourKey.currentContext != null)
         CoachStep(
@@ -320,7 +353,7 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
       pad(
         PaidToHeroCard(
           palette: palette,
-          payments: payments,
+          hero: paidToHero(payments, withdrawn: _tab == paidToWithdrawal),
           shown: shown,
           first: _first,
           today: dateOnly(_now()),
@@ -342,7 +375,12 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
           ),
         ),
       ),
-      PaidToTypePills(palette: palette, payments: payments, selected: _tab, onSelect: _selectTab),
+      PaidToTypePills(
+        palette: palette,
+        counts: paidToCounts(payments, classification: _cls, term: _search.text.trim()),
+        selected: _tab,
+        onSelect: _selectTab,
+      ),
       if (_cls != null || _sort != PaidToSort.amount)
         pad(
           PaidToActiveChips(
@@ -358,7 +396,11 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (var i = 0; i < sections.length; i++) ...[if (i > 0) const SizedBox(height: 11), sections[i]],
+        for (var i = 0; i < sections.length; i++) ...[
+          // mock: the Not recorded line sits close under its card (margin-top -4 on an 11 px gap).
+          if (i > 0) SizedBox(height: _isNotRecorded(sections[i]) ? 7 : 11),
+          sections[i],
+        ],
       ],
     );
   }
@@ -368,20 +410,21 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
   // §PAIDTO.SHELL.LIST ---- the list (filters/sorts with shell state; a List<Widget> the body spaces) ----
 
   List<Widget> _list(List<PaidToPayment> payments, AppPalette palette) {
-    final term = _search.text.trim().toLowerCase();
-    final list = groupPaidTo(
-      payments,
-      classification: _cls,
-    ).where((g) => (_tab == null || g.sourceType == _tab) && (term.isEmpty || g.searchText.contains(term))).toList();
+    final term = _search.text.trim();
+    final list = paidToGroups(payments, type: _tab, classification: _cls, term: term);
     sortPaidTo(list, _sort);
-    if (list.isEmpty) {
+    // Not recorded: one summary per type (hidden while searching; only for the open type pill).
+    PaidToNotRecorded nrOf(String type) => _tab == null || _tab == type
+        ? paidToNotRecorded(payments, type: type, classification: _cls, term: term)
+        : const PaidToNotRecorded(0, 0, 0);
+    if (list.isEmpty && !paidToAllTypes.any((t) => nrOf(t).count > 0)) {
       return [
         AppCard(
           palette: palette,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
             child: Text(
-              term.isNotEmpty ? 'No one matches “${_search.text.trim()}”.' : 'No payments in this period.',
+              term.isNotEmpty ? 'No one matches “$term”.' : 'No payments in this period.',
               key: const Key('paidToEmpty'),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12.5, color: palette.mutedInk),
@@ -393,15 +436,40 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
     final overview = _tab == null;
     final ranked = _sort != PaidToSort.recent;
     final out = <Widget>[];
+    // Placeholder wording (mock): shown when one recipient holds more than one stored phone form.
+    if (list.any((g) => g.phones.length > 1)) {
+      out.add(
+        Padding(
+          key: const Key('paidToMergeNote'),
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Text(
+            'Some recipients were combined because their numbers match',
+            style: TextStyle(fontSize: 11.5, height: 1.4, color: palette.mutedInk),
+          ),
+        ),
+      );
+    }
     var seeAllTagged = false; // only the first "See all" carries the tour key
-    for (final type in paidToTypes) {
+    var firstSection = true;
+    for (final type in paidToAllTypes) {
       final part = list.where((g) => g.sourceType == type).toList();
-      if (part.isEmpty) continue;
+      final nr = nrOf(type);
+      Widget nrLine({required bool withType}) => PaidToNotRecordedLine(
+        key: Key('paidToNotRecorded-$type'),
+        palette: palette,
+        type: type,
+        summary: nr,
+        withType: withType,
+      );
+      if (part.isEmpty) {
+        // mock: a type without recipients still shows its Not recorded line, with the type name.
+        if (nr.count > 0) out.add(nrLine(withType: true));
+        continue;
+      }
       final section = PaidToSection(type, part);
       final shown = overview ? part.take(3).toList() : part;
-      final first = out.isEmpty;
       final hasSeeAll = overview && part.length > 3;
-      if (first) _tourRecipient = shown.first;
+      if (firstSection) _tourRecipient = shown.first;
       out.add(
         PaidToSectionHeader(
           palette: palette,
@@ -420,10 +488,15 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
           sort: _sort,
           today: dateOnly(_now()),
           onOpen: _openRecipient,
-          firstRowTourKey: first ? _firstRowTourKey : null,
+          firstRowTourKey: firstSection ? _firstRowTourKey : null,
         ),
       );
+      firstSection = false;
+      if (nr.count > 0) out.add(nrLine(withType: false));
     }
     return out;
   }
+
+  /// A body item is a Not recorded line (it sits closer under its card).
+  static bool _isNotRecorded(Widget w) => w is Padding && w.child is PaidToNotRecordedLine;
 }

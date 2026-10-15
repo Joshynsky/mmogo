@@ -1,10 +1,11 @@
 // T22 — the pure Paid to logic (lib/domain/paid_to/paid_to.dart): grouping
-// (named by the authoritative counterparty key, unnamed by type +
-// classification — the T15 rule), counts, categories, sorting and the
+// (named by the authoritative counterparty key; payments with no captured
+// receiver are NOT recipients since S7b), counts, categories, sorting and the
 // period hand-off.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/domain/analytics/analytics_period.dart';
 import 'package:mmogo/domain/paid_to/paid_to.dart';
+import 'package:mmogo/domain/paid_to/paid_to_counts.dart';
 
 PaidToPayment _p(
   String type,
@@ -30,7 +31,7 @@ void main() {
   final pays = [
     _p('SEND_MONEY', 1500, label: 'JOHN KAMAU', phone: '0798630424', cls: 'Family', fee: 22, at: DateTime(2026, 9, 24)),
     _p('SEND_MONEY', 500, label: 'JOHN  KAMAU', phone: '0798630424', cls: 'Family', fee: 7, at: DateTime(2026, 9, 2)),
-    _p('SEND_MONEY', 2000, label: 'MARY', phone: '0712345678', fee: 25, at: DateTime(2026, 9, 15)),
+    _p('SEND_MONEY', 2000, label: 'ABEL', phone: '0712345678', fee: 25, at: DateTime(2026, 9, 15)),
     _p('SEND_MONEY', 300, cls: 'Family', at: DateTime(2026, 9, 20)), // unnamed
     _p('SEND_MONEY', 200, cls: 'Family', at: DateTime(2026, 9, 21)), // unnamed
     _p('SEND_MONEY', 100, cls: 'Rent', at: DateTime(2026, 9, 1)), // unnamed, other class
@@ -50,9 +51,10 @@ void main() {
   });
 
   group('groupPaidTo', () {
-    test('named by counterparty key; unnamed by type + classification; nothing dropped', () {
+    test('named by counterparty key; payments with no captured receiver are not recipients (S7b)', () {
       final gs = groupPaidTo(pays);
-      expect(gs.fold<int>(0, (s, g) => s + g.count), pays.length);
+      expect(gs, hasLength(4));
+      expect(gs.fold<int>(0, (s, g) => s + g.count), 5); // 9 payments, 4 with no captured receiver
       final john = gs.singleWhere((g) => g.name == 'JOHN KAMAU');
       expect(john.count, 2);
       expect(john.totalCents, 200000);
@@ -60,33 +62,23 @@ void main() {
       expect(john.lastAt, DateTime(2026, 9, 24));
       expect(john.detail, '0798630424');
       expect(john.partyKey, '0798630424');
-      final unnamedFamily = gs.singleWhere((g) => g.name == 'Unnamed · Family');
-      expect(unnamedFamily.isUnnamed, isTrue);
-      expect(unnamedFamily.count, 2);
-      expect(unnamedFamily.totalCents, 50000);
-      expect(unnamedFamily.detail, 'Receiver not recorded');
-      expect(unnamedFamily.partyKey, isNull);
-      expect(gs.where((g) => g.isUnnamed).map((g) => '${g.sourceType} ${g.classificationName}').toSet(), {
-        'SEND_MONEY Family',
-        'SEND_MONEY Rent',
-        'PAYBILL Shopping',
-      });
+      expect(gs.where((g) => g.name.startsWith('Unnamed')), isEmpty);
       expect(gs.singleWhere((g) => g.name == 'DSTV').detail, 'Acc 5566');
       expect(gs.singleWhere((g) => g.name == 'NAIVAS').detail, 'Merchant');
     });
 
     test('a classification narrows the payments first', () {
       final gs = groupPaidTo(pays, classification: 'Shopping');
-      expect(gs.map((g) => g.name).toSet(), {'DSTV', 'Unnamed · Shopping', 'NAIVAS'});
+      expect(gs.map((g) => g.name).toSet(), {'DSTV', 'NAIVAS'});
     });
   });
 
-  test('countPaidToRecipients: all, per type, per type + classification', () {
-    expect(countPaidToRecipients(pays), 7);
-    expect(countPaidToRecipients(pays, type: 'SEND_MONEY'), 4);
-    expect(countPaidToRecipients(pays, type: 'PAYBILL'), 2);
-    expect(countPaidToRecipients(pays, classification: 'Family'), 2);
-    expect(countPaidToRecipients(pays, type: 'BUY_GOODS', classification: 'Rent'), 0);
+  test('paidToRecipientCount: all, per type, per type + classification (named recipients only)', () {
+    expect(paidToRecipientCount(pays), 4);
+    expect(paidToRecipientCount(pays, type: 'SEND_MONEY'), 2);
+    expect(paidToRecipientCount(pays, type: 'PAYBILL'), 1);
+    expect(paidToRecipientCount(pays, classification: 'Family'), 1);
+    expect(paidToRecipientCount(pays, type: 'BUY_GOODS', classification: 'Rent'), 0);
   });
 
   test('paidToCategories: scoped to a type, most payments first, ties by name', () {
@@ -103,22 +95,22 @@ void main() {
     }
 
     test('Amount: total, then times paid', () {
-      expect(names(PaidToSort.amount), ['JOHN KAMAU', 'MARY', 'Unnamed · Family', 'Unnamed · Rent']);
+      expect(names(PaidToSort.amount), ['JOHN KAMAU', 'ABEL']); // 2000 each, JOHN paid twice
     });
 
     test('Times paid: count, then total', () {
-      expect(names(PaidToSort.timesPaid), ['JOHN KAMAU', 'Unnamed · Family', 'MARY', 'Unnamed · Rent']);
+      expect(names(PaidToSort.timesPaid), ['JOHN KAMAU', 'ABEL']);
     });
 
     test('Most recent: the last payment', () {
-      expect(names(PaidToSort.recent), ['JOHN KAMAU', 'Unnamed · Family', 'MARY', 'Unnamed · Rent']);
+      expect(names(PaidToSort.recent), ['JOHN KAMAU', 'ABEL']);
     });
   });
 
   test('section summary and nouns', () {
     final s = PaidToSection('SEND_MONEY', groupPaidTo(pays.where((p) => p.sourceType == 'SEND_MONEY')));
-    expect(s.totalCents, 460000);
-    expect(s.payments, 6);
+    expect(s.totalCents, 400000);
+    expect(s.payments, 3);
     expect(s.feeCents, 5400);
     expect(paidToNoun('SEND_MONEY', 1), 'person');
     expect(paidToNoun('SEND_MONEY', 2), 'people');
