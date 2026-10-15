@@ -1,0 +1,142 @@
+# NOTE SMS SCENARIOS (invented; every name, number, agent, account and code is made up).
+# NOTE
+# NOTE FORMAT: scenarios are blocks separated by ONE blank line. The first line of a block is
+# NOTE   # <domain> | <short note> | expect: <result> key=value key="value with spaces" ...
+# NOTE the lines after it are the message exactly as pasted (keep double spaces, glued words
+# NOTE like Confirmed.on or AMWithdraw, lowercase letters). An empty message is a header only.
+# NOTE result: sendMoney payBill buyGoods agentWithdrawal airtime needsType notParsed tooLong
+# NOTE keys (only the ones you list are checked; value none means "must be empty"):
+# NOTE   amount=1200.50  fee=7.00  label="JANE DOE"  phone=0712345678  account=998877
+# NOTE   agent=1234567  labellen=200 (label length, for very long agent text)
+# NOTE helpers inside a message: <<REPEAT:ab:50>> = "ab" 50 times; <<PAD:2000>> = filler "x"
+# NOTE   so the whole message is exactly 2000 characters long.
+# NOTE a header with NO "expect:" part is REPORT MODE: nothing is asserted, the run only prints
+# NOTE   one line per block (index, domain note, verdict type), never the message itself.
+# NOTE
+# NOTE TO ADD ONE: copy a block, change the header and the message, save. TO RUN:
+# NOTE   flutter test test/domain/parsing/sms_scenarios_test.dart
+# NOTE   MMOGO_SMS_SCENARIOS=<path to another file in this format> flutter test test/domain/parsing/sms_scenarios_test.dart
+# NOTE (PowerShell: $env:MMOGO_SMS_SCENARIOS="<path>"; flutter test test/domain/parsing/sms_scenarios_test.dart)
+# NOTE lines starting with "# NOTE" are ignored anywhere in the file.
+
+# SendMoney | phone 07xx, fee > 0 | expect: sendMoney amount=500.00 fee=7.00 label="JANE DOE" phone=0712345678
+QWE1R2T3Y4 Confirmed. Ksh500.00 sent to JANE DOE 0712345678 on 8/10/26 at 9:15 AM. New M-PESA balance is Ksh1,000.00. Transaction cost, Ksh7.00. Amount you can transact within the day is 499,000.00. Download My OneApp
+
+# SendMoney | phone 01xx, fee 0 | expect: sendMoney amount=250.00 fee=0.00 label="PETER KAMAU" phone=0112345678
+RT5Y6U7I8O Confirmed. Ksh250.00 sent to PETER KAMAU 0112345678 on 9/10/26 at 10:02 AM. New M-PESA balance is Ksh3,400.00. Transaction cost, Ksh0.00.
+
+# SendMoney | phone +254 form | expect: sendMoney amount=1500.00 fee=22.00 label="GRACE ACHIENG" phone=+254712345678
+AS2D3F4G5H Confirmed. Ksh1,500.00 sent to GRACE ACHIENG +254712345678 on 9/10/26 at 3:40 PM. New M-PESA balance is Ksh8,000.00. Transaction cost, Ksh22.00.
+
+# SendMoney | phone 254 form | expect: sendMoney amount=75.00 fee=0.00 label="SAMUEL OTIENO" phone=254722334455
+ZX9C8V7B6N Confirmed. Ksh75.00 sent to SAMUEL OTIENO 254722334455 on 9/10/26 at 7:20 PM. New M-PESA balance is Ksh120.00. Transaction cost, Ksh0.00.
+
+# SendMoney | phone 00254 form | expect: sendMoney amount=300.00 fee=7.00 label="FAITH NJERI" phone=00254733445566
+MN1B2V3C4X Confirmed. Ksh300.00 sent to FAITH NJERI 00254733445566 on 10/10/26 at 8:05 AM. New M-PESA balance is Ksh2,000.00. Transaction cost, Ksh7.00.
+
+# SendMoney | lowercase name with a double space | expect: sendMoney amount=100.00 fee=0.00 label="jane doe" phone=0712345678
+LK3J4H5G6F Confirmed. Ksh100.00 sent to jane  doe 0712345678 on 10/10/26 at 11:11 AM. New M-PESA balance is Ksh900.00. Transaction cost, Ksh0.00.
+
+# SendMoney | apostrophe in name | expect: sendMoney amount=640.00 fee=13.00 label="JOHN O'NEIL" phone=0722000111
+PO4I5U6Y7T Confirmed. Ksh640.00 sent to JOHN O'NEIL 0722000111 on 10/10/26 at 1:30 PM. New M-PESA balance is Ksh5,000.00. Transaction cost, Ksh13.00.
+
+# SendMoney | hyphen in name | expect: sendMoney amount=410.00 fee=7.00 label="MARY-ANNE WAMBUI" phone=0733000222
+QA1Z2X3C4V Confirmed. Ksh410.00 sent to MARY-ANNE WAMBUI 0733000222 on 10/10/26 at 4:50 PM. New M-PESA balance is Ksh1,200.00. Transaction cost, Ksh7.00.
+
+# SendMoney | thousands comma amount | expect: sendMoney amount=12500.00 fee=28.00 label="DAVID MUTUA" phone=0744111222
+WS5E6D7R8F Confirmed. Ksh12,500.00 sent to DAVID MUTUA 0744111222 on 11/10/26 at 2:15 PM. New M-PESA balance is Ksh30,000.00. Transaction cost, Ksh28.00.
+
+# SendMoney | 12:xx AM (just after midnight) | expect: sendMoney amount=60.00 fee=0.00 label="ALICE WANJIKU" phone=0755333444
+GT6H7Y8U9J Confirmed. Ksh60.00 sent to ALICE WANJIKU 0755333444 on 11/10/26 at 12:05 AM. New M-PESA balance is Ksh400.00. Transaction cost, Ksh0.00.
+
+# SendMoney | 12:xx PM (just after noon) | expect: sendMoney amount=80.00 fee=0.00 label="BRIAN KIPTOO" phone=0766555666
+KI7O8L9P0A Confirmed. Ksh80.00 sent to BRIAN KIPTOO 0766555666 on 11/10/26 at 12:40 PM. New M-PESA balance is Ksh320.00. Transaction cost, Ksh0.00.
+
+# SendMoney | name with a dot | expect: sendMoney amount=95.00 fee=0.00 label="J. MWANGI" phone=0777666777
+ZA8S9D0F1G Confirmed. Ksh95.00 sent to J. MWANGI 0777666777 on 11/10/26 at 6:00 PM. New M-PESA balance is Ksh225.00. Transaction cost, Ksh0.00.
+
+# Paybill | numeric account, fee > 0 | expect: payBill amount=1200.00 fee=5.00 label="SAMPLE POWER CO" account=998877
+ZXC1V2B3N4 Confirmed. Ksh1,200.00 sent to SAMPLE POWER CO for account 998877 on 8/10/26 at 6:30 PM. New M-PESA balance is Ksh900.00. Transaction cost, Ksh5.00. Amount you can transact within the day is 1.00.
+
+# Paybill | all-letter account, fee 0 | expect: payBill amount=850.00 fee=0.00 label="EXAMPLE WATER LTD" account=MAJI
+BN2M3L4K5J Confirmed. Ksh850.00 sent to EXAMPLE WATER LTD for account MAJI on 9/10/26 at 8:45 AM. New M-PESA balance is Ksh2,150.00. Transaction cost, Ksh0.00.
+
+# Paybill | long business name | expect: payBill amount=3000.00 fee=11.00 label="THE EXAMPLE COUNTY HOUSING AND DEVELOPMENT COOPERATIVE SOCIETY LIMITED" account=40123
+HG3F4D5S6A Confirmed. Ksh3,000.00 sent to THE EXAMPLE COUNTY HOUSING AND DEVELOPMENT COOPERATIVE SOCIETY LIMITED for account 40123 on 9/10/26 at 5:10 PM. New M-PESA balance is Ksh6,000.00. Transaction cost, Ksh11.00.
+
+# Paybill | account with a space (letters and digits) | expect: payBill amount=500.00 fee=5.00 label="DEMO SCHOOL FEES" account="ADM 4521"
+YU4T5R6E7W Confirmed. Ksh500.00 sent to DEMO SCHOOL FEES for account ADM 4521 on 10/10/26 at 9:00 AM. New M-PESA balance is Ksh1,500.00. Transaction cost, Ksh5.00.
+
+# BuyGoods | normal, trailing dot, fee 0 | expect: buyGoods amount=350.00 fee=0.00 label="SAMPLE SHOP"
+ASD1F2G3H4 Confirmed. Ksh350.00 paid to SAMPLE SHOP. on 8/10/26 at 1:05 PM. New M-PESA balance is Ksh900.00. Transaction cost, Ksh0.00.
+
+# BuyGoods | glued PM.New | expect: buyGoods amount=350.00 fee=0.00 label="SAMPLE SHOP"
+ASD1F2G3H4 Confirmed. Ksh350.00 paid to SAMPLE SHOP. on 8/10/26 at 1:05 PM.New M-PESA balance is Ksh900.00. Transaction cost, Ksh0.00.
+
+# BuyGoods | fee > 0, thousands comma | expect: buyGoods amount=2400.00 fee=6.00 label="DEMO SUPERMARKET LTD"
+CV5B6N7M8L Confirmed. Ksh2,400.00 paid to DEMO SUPERMARKET LTD. on 12/10/26 at 4:20 PM. New M-PESA balance is Ksh7,600.00. Transaction cost, Ksh6.00.
+
+# BuyGoods | NO trailing dot after the merchant | expect: notParsed
+JK9L8K7J6H Confirmed. Ksh120.00 paid to SAMPLE KIOSK on 12/10/26 at 10:10 AM. New M-PESA balance is Ksh500.00. Transaction cost, Ksh0.00.
+
+# NameOnly | Pochi style, name only | expect: needsType amount=150.00 fee=0.00 label="Sample Person"
+POI1U2Y3T4 Confirmed. Ksh150.00 sent to Sample Person on 8/10/26 at 4:45 PM. New M-PESA balance is Ksh800.00. Transaction cost, Ksh0.00.
+
+# NameOnly | upper case name, fee > 0 | expect: needsType amount=700.00 fee=7.00 label="DEMO TAILORING"
+TR2E3W4Q5A Confirmed. Ksh700.00 sent to DEMO TAILORING on 12/10/26 at 2:30 PM. New M-PESA balance is Ksh1,300.00. Transaction cost, Ksh7.00.
+
+# NameOnly | name with a digit | expect: notParsed
+FD3S4A5Z6X Confirmed. Ksh90.00 sent to SAMPLE SHOP 2 on 12/10/26 at 3:00 PM. New M-PESA balance is Ksh410.00. Transaction cost, Ksh0.00.
+
+# Withdrawal | glued Confirmed.on and AMWithdraw | expect: agentWithdrawal amount=2000.00 fee=29.00 label="SAMPLE AGENT NAME" agent=1234567
+ABC1D2E3F4 Confirmed.on 8/10/26 at 9:15 AMWithdraw Ksh2,000.00 from 1234567 - SAMPLE AGENT NAME  New M-PESA balance is Ksh4,100.00. Transaction cost, Ksh29.00. Amount you can transact within the day is 498,000.00. Download My OneApp
+
+# Withdrawal | normal spacing | expect: agentWithdrawal amount=1000.00 fee=29.00 label="DEMO AGENT SHOP" agent=765432
+BC2D3E4F5G Confirmed. on 9/10/26 at 11:30 AM Withdraw Ksh1,000.00 from 765432 - DEMO AGENT SHOP New M-PESA balance is Ksh2,000.00. Transaction cost, Ksh29.00.
+
+# Withdrawal | fee 0 | expect: agentWithdrawal amount=500.00 fee=0.00 label="TEST AGENT" agent=555111
+CD3E4F5G6H Confirmed.on 9/10/26 at 5:55 PMWithdraw Ksh500.00 from 555111 - TEST AGENT  New M-PESA balance is Ksh100.00. Transaction cost, Ksh0.00.
+
+# Withdrawal | agent text over 200 characters is cut to 200 | expect: agentWithdrawal amount=300.00 fee=18.00 agent=987654 labellen=200
+DE4F5G6H7J Confirmed.on 10/10/26 at 6:10 PMWithdraw Ksh300.00 from 987654 - <<REPEAT:LONGNAME :40>> New M-PESA balance is Ksh700.00. Transaction cost, Ksh18.00.
+
+# Withdrawal | fee line missing | expect: notParsed
+EF5G6H7J8K Confirmed.on 10/10/26 at 6:10 PMWithdraw Ksh300.00 from 987654 - DEMO AGENT  New M-PESA balance is Ksh700.00.
+
+# Withdrawal | agent number present (long digits) | expect: agentWithdrawal amount=200.00 fee=11.00 label="FIVE AGENT" agent=12345678901234
+FG6H7J8K9L Confirmed.on 11/10/26 at 8:00 AMWithdraw Ksh200.00 from 12345678901234 - FIVE AGENT  New M-PESA balance is Ksh60.00. Transaction cost, Ksh11.00.
+
+# Withdrawal | agent number missing (name only after from) | expect: notParsed
+GH7J8K9L0M Confirmed.on 11/10/26 at 8:00 AMWithdraw Ksh200.00 from NO NUMBER AGENT  New M-PESA balance is Ksh60.00. Transaction cost, Ksh11.00.
+
+# Airtime | own number, fee line | expect: airtime amount=200.00 fee=0.00 label=none
+PT8N4W7Q2K confirmed.You bought Ksh200.00 of airtime on 31/10/25 at 2:01 PM.New M-PESA balance is Ksh77,777.77. Transaction cost, Ksh0.00.
+
+# Airtime | own number, no fee line (fee counts as 0) | expect: airtime amount=100.00 fee=0.00
+HJ8K9L0M1N Confirmed. You bought Ksh100.00 of airtime on 12/10/26 at 7:45 AM. New M-PESA balance is Ksh650.00.
+
+# Airtime | for another number | expect: airtime amount=104.00 fee=0.00
+TEJ4VG53X1 Confirmed. You bought Ksh104.00 of airtime on 21/5/24 at 5:57 AM for 254712345678. New M-PESA balance is Ksh166,373.00.
+
+# Airtime | unreadable fee line | expect: notParsed
+JK9L0M1N2P Confirmed. You bought Ksh50.00 of airtime on 12/10/26 at 7:45 AM. New M-PESA balance is Ksh150.00. Transaction cost, Ksh abc.
+
+# Edge | empty message | expect: notParsed
+
+# Edge | garbage text | expect: notParsed
+hello this is not an mpesa message at all 12345
+
+# Edge | truncated message (cut before the date) | expect: notParsed
+QWE1R2T3Y4 Confirmed. Ksh500.00 sent to JANE DOE 0712345678 on 8/1
+
+# Edge | impossible date 31/2/26 | expect: notParsed
+QWE1R2T3Y4 Confirmed. Ksh500.00 sent to JANE DOE 0712345678 on 31/2/26 at 9:15 AM. New M-PESA balance is Ksh1,000.00. Transaction cost, Ksh7.00.
+
+# Edge | 2001 characters | expect: tooLong
+QWE1R2T3Y4 Confirmed. Ksh500.00 sent to JANE DOE 0712345678 on 8/10/26 at 9:15 AM. New M-PESA balance is Ksh1,000.00. Transaction cost, Ksh7.00. <<PAD:2001>>
+
+# Edge | exactly 2000 characters (still read) | expect: sendMoney amount=500.00 fee=7.00 label="JANE DOE" phone=0712345678
+QWE1R2T3Y4 Confirmed. Ksh500.00 sent to JANE DOE 0712345678 on 8/10/26 at 9:15 AM. New M-PESA balance is Ksh1,000.00. Transaction cost, Ksh7.00. <<PAD:2000>>
+
+# Edge | zero amount | expect: notParsed
+QWE1R2T3Y4 Confirmed. Ksh0.00 sent to JANE DOE 0712345678 on 8/10/26 at 9:15 AM. New M-PESA balance is Ksh1,000.00. Transaction cost, Ksh7.00.
