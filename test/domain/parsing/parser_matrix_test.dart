@@ -184,6 +184,7 @@ void main() {
           .split(RegExp(r'\r?\n\s*\r?\n'))
           .map((b) => b.trim())
           .where((b) => b.isNotEmpty)
+          .map(_dropLeadingNonMessageLines)
           .toList();
       final counts = <String, int>{};
       for (final b in blocks) {
@@ -199,9 +200,24 @@ void main() {
       // ignore: avoid_print
       print('corpus: ${blocks.length} messages -> $counts');
       expect(counts.values.fold<int>(0, (a, b) => a + b), blocks.length);
+      // The real notes parse completely: nothing is 'not recognised' or too long.
+      expect(counts['notParsed'] ?? 0, 0);
+      expect(counts['tooLong'] ?? 0, 0);
     },
         skip: missing
             ? 'MMOGO_SMS_CORPUS not set: private corpus not available here'
             : false);
   });
+}
+
+// The notes file puts a day header ("Date: 3") on the line before the first
+// message of a day. Drop leading lines until one starts with a receipt code.
+String _dropLeadingNonMessageLines(String block) {
+  final lines = block.split(RegExp(r'\r?\n'));
+  var i = 0;
+  while (i < lines.length - 1 &&
+      !RegExp(r'^[A-Z0-9]{10} ').hasMatch(lines[i])) {
+    i++;
+  }
+  return lines.sublist(i).join('\n');
 }
