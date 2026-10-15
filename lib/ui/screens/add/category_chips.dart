@@ -5,6 +5,7 @@ import '../../../data/db/classification_dao.dart';
 import '../../../data/db/counterparty_dao.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/error_notes.dart';
 
 /// §ADD.CATEGORY — category as inline chips: the type's classifications (or Cash's flat list), plus
 /// "+ New" (creates one inline through the existing [ClassificationDao] —
@@ -281,9 +282,9 @@ class _CategoryChipsState extends State<CategoryChips> {
             ],
           ),
           if (_createError != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(_createError!, key: const Key('addCategoryNewError'), style: TextStyle(fontSize: 12, color: palette.error)),
+            KeyedSubtree(
+              key: const Key('addCategoryNewError'),
+              child: FieldError(_createError!, padding: const EdgeInsets.only(top: 6, left: 2)),
             ),
         ],
       ),

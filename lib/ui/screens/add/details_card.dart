@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../theme/app_colors.dart';
+import '../../widgets/error_notes.dart';
 import '../../widgets/ksh_input_formatter.dart';
 import 'form_row.dart';
 
 /// §ADD.DETAILS — Code (D1: 10 characters, uppercase, D5's "already
 /// recorded" duplicate check), When (the existing date & time picker via
-/// "Change", D7's low-key text) and Fee.
+/// "Change", D7's low-key text) and Fee. Airtime shows no Fee row but the muted
+/// line "No fee for airtime." (0.1.2 S8c-1); [feeError] is the inline Fee error
+/// (Withdrawal's empty Fee once touched, or a bad value).
 class DetailsCard extends StatelessWidget {
   const DetailsCard({
     super.key,
@@ -19,6 +22,9 @@ class DetailsCard extends StatelessWidget {
     required this.onCodeChanged,
     required this.onFeeChanged,
     required this.onWhenChangeTap,
+    this.noFee = false,
+    this.feeError,
+    this.feeFocus,
   });
 
   final TextEditingController code;
@@ -29,6 +35,15 @@ class DetailsCard extends StatelessWidget {
   final ValueChanged<String> onCodeChanged;
   final ValueChanged<String> onFeeChanged;
   final VoidCallback onWhenChangeTap;
+
+  /// Airtime: no Fee row, the muted line instead.
+  final bool noFee;
+
+  /// Inline error under the Fee row (pattern A), or null.
+  final String? feeError;
+
+  /// Lets the screen see when the Fee field was left (error timing).
+  final FocusNode? feeFocus;
 
   @override
   Widget build(BuildContext context) {
@@ -83,26 +98,39 @@ class DetailsCard extends StatelessWidget {
             ),
           ),
           Divider(height: 1, color: palette.line),
-          _row(
-            context,
-            palette,
-            label: 'Fee',
-            child: TextField(
-              key: const Key('addFeeField'),
-              controller: fee,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: const [KshInputFormatter()],
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: palette.ink),
-              cursorColor: palette.primary,
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: 'Ksh 0.00',
-                hintStyle: TextStyle(color: palette.mutedInk),
+          if (noFee)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Text(
+                'No fee for airtime.',
+                key: const Key('addNoFeeLine'),
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: palette.mutedInk),
               ),
-              onChanged: onFeeChanged,
+            )
+          else ...[
+            _row(
+              context,
+              palette,
+              label: 'Fee',
+              child: TextField(
+                key: const Key('addFeeField'),
+                controller: fee,
+                focusNode: feeFocus,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: const [KshInputFormatter()],
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: palette.ink),
+                cursorColor: palette.primary,
+                decoration: InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  hintText: 'Ksh 0.00',
+                  hintStyle: TextStyle(color: palette.mutedInk),
+                ),
+                onChanged: onFeeChanged,
+              ),
             ),
-          ),
+            if (feeError != null) KeyedSubtree(key: const Key('addFeeError'), child: FieldError(feeError!)),
+          ],
         ],
       ),
     );

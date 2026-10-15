@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../theme/app_colors.dart';
+import '../../widgets/error_notes.dart';
 import 'form_row.dart';
 
 /// B3: longest receiver / label text the Add form accepts (typing is cut here;
 /// longer values already saved are loaded as they are).
 const receiverFieldMaxLength = 200;
 
+/// The longest agent number the database accepts (`agent_number` CHECK).
+const agentNumberMaxLength = 20;
+
 /// §ADD.RECEIVER — receiver capture (T15/T6-D3), opt-in: the per-type label
-/// and fields (Name + Phone / Business + Account / Shop), plus the subline
+/// and fields (Name + Phone / Business + Account / Shop / Pochi name /
+/// Agent name + Agent number, S8c-1), plus the subline
 /// "So you can see them on Paid to. Leave it off to keep it private."
 class ReceiverCard extends StatelessWidget {
   const ReceiverCard({
@@ -19,6 +25,7 @@ class ReceiverCard extends StatelessWidget {
     required this.sub,
     required this.onCheckedChanged,
     required this.onFieldChanged,
+    this.subError,
   });
 
   /// One of `'SEND_MONEY'`, `'PAYBILL'`, `'BUY_GOODS'`.
@@ -31,9 +38,16 @@ class ReceiverCard extends StatelessWidget {
   final ValueChanged<bool> onCheckedChanged;
   final VoidCallback onFieldChanged;
 
+  /// Inline error under the second field (the agent number), or null.
+  final String? subError;
+
+  bool get _isAgent => type == 'AGENT_WITHDRAWAL';
+
   (String, String, String?) get _labels => switch (type) {
         'SEND_MONEY' => ('Also record the receiver’s name & phone', 'Name', 'Phone'),
         'PAYBILL' => ('Also record the business & account', 'Business', 'Account'),
+        'POCHI_LA_BIASHARA' => ('Also record the receiver’s name', 'Name', null),
+        'AGENT_WITHDRAWAL' => ('Also record the agent’s name & number', 'Agent name', 'Agent number'),
         _ => ('Also record the shop’s name', 'Shop', null),
       };
 
@@ -81,7 +95,14 @@ class ReceiverCard extends StatelessWidget {
           ),
           if (checked) ...[
             Divider(height: 1, color: palette.line),
-            _field(context, palette, key: const Key('addReceiverNameField'), label: nameLabel, controller: name),
+            _field(
+              context,
+              palette,
+              key: const Key('addReceiverNameField'),
+              label: nameLabel,
+              controller: name,
+              labelWidth: _isAgent ? 100 : 70,
+            ),
             if (subLabel != null) ...[
               Divider(height: 1, color: palette.line),
               _field(
@@ -90,8 +111,14 @@ class ReceiverCard extends StatelessWidget {
                 key: const Key('addReceiverSubField'),
                 label: subLabel,
                 controller: sub,
-                keyboardType: type == 'SEND_MONEY' ? TextInputType.phone : TextInputType.text,
+                keyboardType: type == 'SEND_MONEY'
+                    ? TextInputType.phone
+                    : (_isAgent ? TextInputType.number : TextInputType.text),
+                maxLength: _isAgent ? agentNumberMaxLength : receiverFieldMaxLength,
+                inputFormatters: _isAgent ? [FilteringTextInputFormatter.digitsOnly] : null,
+                labelWidth: _isAgent ? 100 : 70,
               ),
+              if (subError != null) KeyedSubtree(key: const Key('addReceiverSubError'), child: FieldError(subError!)),
             ],
           ],
         ],
@@ -106,17 +133,21 @@ class ReceiverCard extends StatelessWidget {
     required String label,
     required TextEditingController controller,
     TextInputType? keyboardType,
+    int maxLength = receiverFieldMaxLength,
+    List<TextInputFormatter>? inputFormatters,
+    double labelWidth = 70,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       child: AddFormRow(
         label: label,
         labelStyle: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: palette.mutedInk),
-        labelWidth: 70,
+        labelWidth: labelWidth,
         child: TextField(
           key: key,
           controller: controller,
-          maxLength: receiverFieldMaxLength,
+          maxLength: maxLength,
+          inputFormatters: inputFormatters,
           buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
           keyboardType: keyboardType,
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: palette.ink),

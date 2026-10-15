@@ -24,6 +24,9 @@ class FakeAddDb implements Database {
     {'id': 2, 'code': 'PAYBILL', 'display_name': 'Paybill', 'enabled': 1},
     {'id': 3, 'code': 'BUY_GOODS', 'display_name': 'Buy Goods', 'enabled': 1},
     {'id': 4, 'code': 'POCHI_LA_BIASHARA', 'display_name': 'Pochi La Biashara', 'enabled': 0},
+    // 0.1.2 S8c-1: the two locked groups (enabled, as on a v3 database).
+    {'id': 5, 'code': 'AGENT_WITHDRAWAL', 'display_name': 'Withdrawal', 'enabled': 1},
+    {'id': 6, 'code': 'AIRTIME', 'display_name': 'Airtime', 'enabled': 1},
   ];
 
   final classifications = <Map<String, Object?>>[
@@ -31,6 +34,9 @@ class FakeAddDb implements Database {
     {'id': 102, 'group_id': 1, 'name': 'Rent', 'active': 1},
     {'id': 105, 'group_id': 2, 'name': 'Utilities', 'active': 1},
     {'id': 109, 'group_id': 3, 'name': 'Shopping', 'active': 1},
+    {'id': 110, 'group_id': 4, 'name': 'Church', 'active': 1},
+    {'id': 120, 'group_id': 5, 'name': 'Withdrawal', 'active': 1, 'seed_key': 'AGENT_WITHDRAWAL:cash_withdrawal'},
+    {'id': 121, 'group_id': 6, 'name': 'Airtime', 'active': 1, 'seed_key': 'AIRTIME:airtime'},
   ];
 
   /// `counterparty_classification_map` rows.
@@ -61,6 +67,11 @@ class FakeAddDb implements Database {
     if (table == 'classification_groups') {
       return [...groups]..sort((a, b) => (a['id'] as int).compareTo(b['id'] as int));
     }
+    if (table == 'classifications' && (where ?? '').contains('seed_key')) {
+      // ClassificationDao.fetchActiveBySeedKey.
+      final seed = whereArgs![0] as String;
+      return classifications.where((c) => c['seed_key'] == seed && c['active'] == 1).toList();
+    }
     if (table == 'classifications') {
       final groupId = whereArgs![0] as int;
       return classifications.where((c) => c['group_id'] == groupId && c['active'] == 1).toList()
@@ -83,7 +94,10 @@ class FakeAddDb implements Database {
   Future<List<Map<String, Object?>>> rawQuery(String sql, [List<Object?>? arguments]) async {
     final args = arguments ?? const [];
     if (sql.contains('FROM classifications c')) {
-      final enabledGroupIds = groups.where((g) => g['enabled'] == 1).map((g) => g['id']).toSet();
+      // Mirrors the real query's whitelist: only the three M-Pesa groups feed Cash.
+      const cashGroups = {'SEND_MONEY', 'PAYBILL', 'BUY_GOODS'};
+      final enabledGroupIds =
+          groups.where((g) => g['enabled'] == 1 && cashGroups.contains(g['code'])).map((g) => g['id']).toSet();
       return classifications.where((c) => c['active'] == 1 && enabledGroupIds.contains(c['group_id'])).toList()
         ..sort((a, b) => (a['id'] as int).compareTo(b['id'] as int));
     }

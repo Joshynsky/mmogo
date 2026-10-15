@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/ksh_input_formatter.dart';
 
-/// §ADD.AMOUNT — the big, centred amount field.
+/// §ADD.AMOUNT — the big, centred amount field (shows thousands separators as
+/// you type, 0.1.2 S8c-1).
 /// Shared by both M-Pesa and Cash. [errorText] is a plain inline message
 /// shown under the field when what was typed is not an acceptable amount.
 class AmountField extends StatelessWidget {
@@ -33,7 +34,7 @@ class AmountField extends StatelessWidget {
               controller: controller,
               textAlign: TextAlign.center,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: const [KshInputFormatter()],
+              inputFormatters: const [KshGroupedInputFormatter()],
               style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: palette.ink),
               cursorColor: palette.primary,
               decoration: InputDecoration(

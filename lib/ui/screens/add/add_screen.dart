@@ -3,19 +3,21 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../../data/backup/auto_backup_service.dart';
 import '../../../data/db/app_database.dart';
+import '../../../data/db/classification_dao.dart';
 import '../../../data/db/counterparty_dao.dart';
 import '../../../data/db/transaction_dao.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../../domain/cash/cash_code.dart';
-import '../../../domain/counterparty/counterparty_key.dart';
 import '../../../domain/format/ksh_amount.dart';
 import '../../../domain/parsing/parsed_sms_fields.dart';
 import '../../shell/app_messenger.dart';
 import '../../shell/chrome_widgets.dart';
 import '../../shell/primary_shell.dart';
-import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/coach_tour.dart';
+import '../../widgets/ksh_input_formatter.dart';
+import 'add_draft.dart';
+import 'add_tour.dart';
 import 'amount_field.dart';
 import 'category_chips.dart';
 import 'details_card.dart';
@@ -23,7 +25,10 @@ import 'paste_card.dart';
 import 'receiver_card.dart';
 import 'review_bar.dart';
 import 'review_sheet.dart';
+import 'src_segment.dart';
 import 'type_pills.dart';
+
+export 'add_tour.dart' show addTourId;
 
 /// T27 — Add rework (v0.1.0), locked to prototype v14
 /// (the approved onboarding mock's Add screen):
@@ -31,9 +36,6 @@ import 'type_pills.dart';
 /// suggestion pill), and a "Check before saving" review sheet (replacing
 /// the earlier separate confirmation page).
 ///
-/// Add's coach-tour page id (the seen flag is `tour_seen_add`).
-const addTourId = 'add';
-
 /// Reached from the primary FAB (`Routes.add`) — a pushed page, never a
 /// bottom-nav tab (Add is the FAB, never a
 /// tab). Follows [AppPalette.of] (T27, superseding T26's one carve-out)
@@ -60,15 +62,25 @@ class _AddScreenState extends State<AddScreen> {
   /// `'MPESA'` or `'CASH'` — the top segmented switch.
   String _src = 'MPESA';
 
-  /// One of `'SEND_MONEY'`, `'PAYBILL'`, `'BUY_GOODS'` — meaningless while
-  /// [_src] is `'CASH'`.
+  /// One of the six M-Pesa `source_type` values (`'SEND_MONEY'`, `'PAYBILL'`,
+  /// `'BUY_GOODS'`, `'POCHI_LA_BIASHARA'`, `'AGENT_WITHDRAWAL'`, `'AIRTIME'`) —
+  /// meaningless while [_src] is `'CASH'`.
   String _type = 'SEND_MONEY';
 
-  /// True once a paste has successfully filled the form (D2's old "Type
-  /// lock", carried forward as "the paste card/type pills stop being
-  /// shown/built at all" — see `paste_card.dart`/`type_pills.dart`'s own
-  /// doc comments).
+  /// True once a paste has successfully filled the form (D2's "Type lock"):
+  /// the six pills stay visible but locked (the parsed one open) until Start
+  /// over, and the "or enter it yourself" divider goes.
   bool _filled = false;
+
+  /// Withdrawal: the Fee field was edited or left, so its empty-error may show.
+  bool _feeTouched = false;
+
+  /// A parsed agent number that was not 1..20 digits: the field stays empty and
+  /// shows an inline error (it must never reach the database check).
+  bool _agentNumberRejected = false;
+
+  final _feeFocus = FocusNode();
+  final _scroll = ScrollController();
 
   /// D4 — `'SMS_PARSE'` or `'MANUAL'`: how the CURRENT entry began. Later
   /// edits never change it.
@@ -106,56 +118,31 @@ class _AddScreenState extends State<AddScreen> {
   final _receiverTourKey = GlobalKey();
   final _categoryTourKey = GlobalKey();
 
-  /// Sends the user to the Paid to tab (Add is pushed over the shell).
-  void _goToPaidTo() {
-    final shell = PrimaryShell.active;
-    if (shell != null) {
-      Navigator.of(context).popUntil((route) => route == shell.route);
-      shell.select(3);
-    } else {
-      Navigator.of(context).pushNamedAndRemoveUntil(Routes.paidTo, (route) => false);
-    }
-  }
-
-  List<CoachStep> _tourSteps() {
-    final categoryStep = CoachStep(
-      target: _categoryTourKey,
-      text: 'Pick a category. Tick Always use to remember it for this receiver.',
-      onEnter: () => scrollIntoView(_categoryTourKey),
-    );
-    if (_src == 'CASH') {
-      return [
-        CoachStep(target: _segTourKey, text: 'Switch back to M-Pesa to paste a message.'),
-        categoryStep,
-      ];
-    }
-    return [
-      CoachStep(
-        target: _pasteTourKey,
-        text: 'Paste an M-Pesa message and we fill the form in. You check it before saving.',
-      ),
-      CoachStep(target: _segTourKey, text: 'Paid in cash? Switch to Cash.'),
-      CoachStep(
-        target: _receiverTourKey,
-        text: 'Record the receiver’s name and phone to see this person on Paid to.',
-        actionLabel: 'Take me there',
-        onAction: _goToPaidTo,
-        onEnter: () => scrollIntoView(_receiverTourKey),
-      ),
-      categoryStep,
-    ];
-  }
+  List<CoachStep> _tourSteps() => addTourSteps(
+        cash: _src == 'CASH',
+        pasteKey: _pasteTourKey,
+        segKey: _segTourKey,
+        receiverKey: _receiverTourKey,
+        categoryKey: _categoryTourKey,
+        onGoToPaidTo: () => goToPaidToFromAdd(context),
+        hasReceiver: !_draft.isAirtime,
+      );
 
   void _replayTour() => CoachTour.start(context, pageId: addTourId, steps: _tourSteps());
 
   @override
   void initState() {
     super.initState();
+    _feeFocus.addListener(() {
+      if (!_feeFocus.hasFocus && !_feeTouched && mounted) setState(() => _feeTouched = true);
+    });
     _bootstrap();
   }
 
   @override
   void dispose() {
+    _feeFocus.dispose();
+    _scroll.dispose();
     _amountController.dispose();
     _codeController.dispose();
     _feeController.dispose();
@@ -181,16 +168,23 @@ class _AddScreenState extends State<AddScreen> {
   // §ADD.SHELL.PARSE — paste-first M-Pesa entry (build step 3).
 
   void _onParsed(ParsedSmsFields fields) {
+    final agent = fields.agentNumber;
+    final agentOk = agent == null || AddDraft.agentNumberOk(agent);
     setState(() {
+      _src = 'MPESA';
       _type = fields.sourceType.dbValue;
       _filled = true;
       _rawParseSource = 'SMS_PARSE';
+      _feeTouched = false;
       _codeController.text = fields.code;
-      _amountController.text = (fields.amountCents / 100).toStringAsFixed(2);
+      _amountController.text = groupKshText((fields.amountCents / 100).toStringAsFixed(2));
+      // Airtime has no Fee field: its parsed fee is kept here, silently.
       _feeController.text = (fields.transactionCostCents / 100).toStringAsFixed(2);
       _occurredAt = DateTime.fromMillisecondsSinceEpoch(fields.transactionOccurredAt);
       _nameController.text = fields.counterpartyLabel ?? '';
-      _subController.text = fields.counterpartyPhone ?? fields.paybillAccountNumber ?? '';
+      _subController.text =
+          fields.counterpartyPhone ?? fields.paybillAccountNumber ?? (agentOk ? (agent ?? '') : '');
+      _agentNumberRejected = !agentOk;
       // A classification chosen for a previous (possibly different) Type's
       // group can't carry over — category_chips.dart re-offers a suggestion
       // if this counterparty is already known.
@@ -199,12 +193,22 @@ class _AddScreenState extends State<AddScreen> {
       _autoApplyKey = null;
     });
     _checkCodeDuplicate();
+    _ensureFixedCategory();
+    // The mock scrolls the page back to the top after a parse.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scroll.hasClients) _scroll.jumpTo(0);
+    });
   }
 
+  /// Start over: clears the fields, unlocks the pills and puts the type back on
+  /// Send Money (the mock's `A = {...blank(), src: A.src}`).
   void _startOver() {
     setState(() {
       _filled = false;
+      _type = 'SEND_MONEY';
       _rawParseSource = 'MANUAL';
+      _feeTouched = false;
+      _agentNumberRejected = false;
       _codeController.clear();
       _amountController.clear();
       _feeController.clear();
@@ -229,10 +233,11 @@ class _AddScreenState extends State<AddScreen> {
       _classificationName = null;
       _autoApplyKey = null;
     });
+    _ensureFixedCategory();
   }
 
   void _onTypeChanged(String next) {
-    if (next == _type) return;
+    if (next == _type || _filled) return;
     setState(() {
       _type = next;
       // A classification chosen under the previous Type's group would
@@ -241,8 +246,29 @@ class _AddScreenState extends State<AddScreen> {
       _classificationId = null;
       _classificationName = null;
       _autoApplyKey = null;
+      // The receiver fields (and so an agent number) never carry to another type.
       _nameController.clear();
       _subController.clear();
+      _feeTouched = false;
+      _agentNumberRejected = false;
+      // Airtime has no Fee field: nothing typed for another type is kept.
+      if (next == 'AIRTIME') _feeController.clear();
+    });
+    _ensureFixedCategory();
+  }
+
+  /// Withdrawal and Airtime use their built-in category, found by `seed_key`
+  /// and pre-selected; the user cannot change it.
+  Future<void> _ensureFixedCategory() async {
+    final db = _db;
+    final type = _type;
+    final seed = AddDraft.fixedSeedKey(type);
+    if (db == null || seed == null || _src == 'CASH') return;
+    final item = await ClassificationDao.fetchActiveBySeedKey(db, seedKey: seed);
+    if (!mounted || item == null || _type != type || _src == 'CASH') return;
+    setState(() {
+      _classificationId = item.id;
+      _classificationName = item.name;
     });
   }
 
@@ -253,15 +279,11 @@ class _AddScreenState extends State<AddScreen> {
 
   // §ADD.SHELL.CODE — D1/D5 Code field validity + duplicate check.
 
-  static final RegExp _codeShapeRe = RegExp(r'^[A-Z0-9]{10}$');
-
-  bool get _codeValidShape => _codeShapeRe.hasMatch(_codeController.text.trim());
-
   Future<void> _checkCodeDuplicate() async {
     final db = _db;
     if (db == null) return;
     final code = _codeController.text.trim();
-    if (!_codeShapeRe.hasMatch(code)) {
+    if (!AddDraft.codeShapeOk(code)) {
       if (_codeDuplicate) setState(() => _codeDuplicate = false);
       return;
     }
@@ -288,122 +310,25 @@ class _AddScreenState extends State<AddScreen> {
     setState(() => _occurredAt = DateTime(date.year, date.month, date.day, time.hour, time.minute));
   }
 
-  // §ADD.SHELL.DERIVED — amounts, the counterparty key, gating.
+  // §ADD.SHELL.DERIVED — the rules live in add_draft.dart (§ADD.DRAFT).
 
-  int? _parsedAmountCents() => parseKshCents(_amountController.text);
+  AddDraft get _draft => AddDraft(
+        src: _src,
+        type: _type,
+        captureIdentity: _captureIdentity,
+        amountText: _amountController.text,
+        feeText: _feeController.text,
+        codeText: _codeController.text,
+        nameText: _nameController.text,
+        subText: _subController.text,
+        codeDuplicate: _codeDuplicate,
+        classificationId: _classificationId,
+      );
 
-  /// An empty Fee is `0`, not invalid (2026-09-19 PM decision, carried
-  /// forward from `mpesa_tab_body.dart`'s identical rule).
-  int? _parsedFeeCents() {
-    final text = _feeController.text.trim();
-    if (text.isEmpty) return 0;
-    return parseKshCents(text, allowZero: true);
-  }
-
-  String? get _effectiveLabel {
-    if (!_captureIdentity) return null;
-    final t = _nameController.text.trim();
-    return t.isEmpty ? null : t;
-  }
-
-  String? get _effectivePhone {
-    if (_type != 'SEND_MONEY' || !_captureIdentity) return null;
-    final t = _subController.text.trim();
-    return t.isEmpty ? null : t;
-  }
-
-  String? get _effectiveAccount {
-    if (_type != 'PAYBILL' || !_captureIdentity) return null;
-    final t = _subController.text.trim();
-    return t.isEmpty ? null : t;
-  }
-
-  SmsSourceType get _currentSmsSourceType => switch (_type) {
-        'SEND_MONEY' => SmsSourceType.sendMoney,
-        'PAYBILL' => SmsSourceType.payBill,
-        'BUY_GOODS' => SmsSourceType.buyGoods,
-        'POCHI_LA_BIASHARA' => SmsSourceType.pochi,
-        'AGENT_WITHDRAWAL' => SmsSourceType.agentWithdrawal,
-        'AIRTIME' => SmsSourceType.airtime,
-        _ => throw StateError('AddScreen._type must be a non-cash source type, got "$_type"'),
-      };
-
-  /// The single derivation call site shared by the read path (fed to
-  /// `category_chips.dart`) and the write path (`_save`'s
-  /// `CounterpartyDao.upsertOnConfirm` call) — same discipline
-  /// `mpesa_tab_body.dart` established, carried forward unchanged.
-  String _currentCounterpartyKey() {
-    if (_src == 'CASH') return '';
-    switch (_currentSmsSourceType) {
-      case SmsSourceType.sendMoney:
-        final phone = _effectivePhone;
-        if (phone == null || phone.isEmpty) return '';
-        return deriveCounterpartyKey(sourceType: SmsSourceType.sendMoney, counterpartyPhone: phone);
-      case SmsSourceType.payBill:
-        final label = _effectiveLabel;
-        final account = _effectiveAccount;
-        if (label == null || label.isEmpty || account == null || account.isEmpty) return '';
-        return deriveCounterpartyKey(sourceType: SmsSourceType.payBill, counterpartyLabel: label, paybillAccountNumber: account);
-      case SmsSourceType.buyGoods:
-        final label = _effectiveLabel;
-        if (label == null || label.isEmpty) return '';
-        return deriveCounterpartyKey(sourceType: SmsSourceType.buyGoods, counterpartyLabel: label);
-      case SmsSourceType.pochi:
-      case SmsSourceType.agentWithdrawal:
-      case SmsSourceType.airtime:
-        return ''; // these types never learn a receiver
-    }
-  }
-
-  bool get _identityPairComplete {
-    if (_src == 'CASH') return true; // Cash has no receiver fields (`_type` is only the M-Pesa side's)
-    if (_type == 'SEND_MONEY' && _captureIdentity) {
-      return _nameController.text.trim().isNotEmpty && _subController.text.trim().isNotEmpty;
-    }
-    if (_type == 'PAYBILL' && _captureIdentity) {
-      return _nameController.text.trim().isNotEmpty && _subController.text.trim().isNotEmpty;
-    }
-    return true;
-  }
-
-  /// Build step 7: "disabled until there is an amount, a valid code
-  /// (M-Pesa) and a category."
-  List<String> get _missing {
-    final miss = <String>[];
-    if (_parsedAmountCents() == null) miss.add('an amount');
-    if (_src == 'MPESA' && !_codeValidShape) miss.add('the 10-character code');
-    if (_classificationId == null) miss.add('a category');
-    return miss;
-  }
-
-  bool get _canReview =>
-      _missing.isEmpty && !(_src == 'MPESA' && _codeDuplicate) && _identityPairComplete && _parsedFeeCents() != null;
-
-  /// What "Also record the receiver's name & phone" still needs (Send Money:
-  /// name + phone; Paybill: business + account). Empty when the box is off,
-  /// for Buy Goods and for Cash, or when both are filled.
-  List<String> get _missingIdentity {
-    if (_identityPairComplete) return const [];
-    final (first, second) = _type == 'PAYBILL'
-        ? ('the business name', 'the account number')
-        : ('the receiver’s name', 'the receiver’s phone');
-    final noName = _nameController.text.trim().isEmpty;
-    final noSub = _subController.text.trim().isEmpty;
-    if (noName && noSub) {
-      return [_type == 'PAYBILL' ? 'the business name and account number' : 'the receiver’s name and phone'];
-    }
-    return [if (noName) first, if (noSub) second];
-  }
-
-  String get _reviewHint {
-    if (_src == 'MPESA' && _codeDuplicate) return 'That code is already recorded.';
-    final identity = _missingIdentity;
-    final miss = [..._missing, ...identity, if (_parsedFeeCents() == null) 'a valid fee'];
-    if (miss.isEmpty) return '';
-    final list = miss.length == 1 ? miss.first : '${miss.sublist(0, miss.length - 1).join(', ')} and ${miss.last}';
-    // The box is what asks for them, so say how to skip it too.
-    return identity.isEmpty ? 'Add $list.' : 'Add $list, or untick “Also record the receiver’s name & phone”.';
-  }
+  int? _parsedAmountCents() => _draft.amountCents;
+  int? _parsedFeeCents() => _draft.feeCents;
+  String _currentCounterpartyKey() => _draft.counterpartyKey;
+  bool get _canReview => _draft.canReview;
 
   // §ADD.SHELL.SAVE — the sticky "Review & save" bar + "Check before
   // saving" sheet (build step 7). Nothing is written to `transactions`
@@ -417,13 +342,13 @@ class _AddScreenState extends State<AddScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => ReviewSheet(
         isCash: _src == 'CASH',
-        typeLabel: _typeLabel,
+        typeLabel: _draft.typeLabel,
         amountCents: _parsedAmountCents()!,
-        counterpartyRowLabel: _reviewCounterpartyRowLabel(),
-        counterpartyRowValue: _reviewCounterpartyRowValue(),
+        counterpartyRowLabel: _draft.reviewCounterpartyRowLabel,
+        counterpartyRowValue: _draft.reviewCounterpartyRowValue,
         whenText: formatLowKeyDateTime(_occurredAt),
         code: _codeController.text.trim(),
-        feeCents: _src == 'MPESA' ? _parsedFeeCents() : null,
+        feeCents: _src == 'MPESA' && !_draft.isAirtime ? _parsedFeeCents() : null,
         categoryName: _classificationName!,
         alwaysForThem: _autoApplyKey != null && _autoApplyKey == _currentCounterpartyKey(),
         onConfirm: _save,
@@ -436,40 +361,6 @@ class _AddScreenState extends State<AddScreen> {
     }
   }
 
-  String get _typeLabel => switch (_src == 'CASH' ? 'CASH' : _type) {
-        'SEND_MONEY' => 'Send Money',
-        'PAYBILL' => 'Paybill',
-        'BUY_GOODS' => 'Buy Goods',
-        'POCHI_LA_BIASHARA' => 'Pochi',
-        'AGENT_WITHDRAWAL' => 'Withdrawal',
-        'AIRTIME' => 'Airtime',
-        _ => 'Cash',
-      };
-
-  String get _counterpartyFieldLabel => switch (_type) {
-        'PAYBILL' => 'Business',
-        'BUY_GOODS' => 'Shop',
-        _ => 'To',
-      };
-
-  /// Mock's `aReview.onclick`: `if (m && !A.who) rows.push(['Receiver', 'Not
-  /// recorded (private)'])` — a distinct, generic label from the per-type
-  /// one used when a name WAS captured.
-  String? _reviewCounterpartyRowLabel() {
-    if (_src == 'CASH') return null;
-    if (!_captureIdentity) return 'Receiver';
-    return _nameController.text.trim().isEmpty ? null : _counterpartyFieldLabel;
-  }
-
-  String? _reviewCounterpartyRowValue() {
-    if (_src == 'CASH') return null;
-    if (!_captureIdentity) return 'Not recorded (private)';
-    final name = _nameController.text.trim();
-    if (name.isEmpty) return null;
-    final sub = _subController.text.trim();
-    return sub.isEmpty ? name.toUpperCase() : '${name.toUpperCase()} · $sub';
-  }
-
   /// The real save — the same DAO writes as today (`TransactionDao.insert`,
   /// then `CounterpartyDao.upsertOnConfirm`/`setAutoApply` if applicable).
   /// Returns `null` on success, an error message on failure — `review_sheet
@@ -478,18 +369,12 @@ class _AddScreenState extends State<AddScreen> {
     final db = _db;
     if (db == null) return 'Not ready yet — try again.';
     final cash = _src == 'CASH';
+    final draft = _draft;
     try {
-      final input = NewTransactionInput(
-        displayCode: cash ? generateCashDisplayCode(_occurredAt.millisecondsSinceEpoch) : _codeController.text.trim(),
-        sourceType: cash ? 'CASH' : _type,
-        amountCents: _parsedAmountCents()!,
-        transactionCostCents: cash ? null : _parsedFeeCents(),
-        counterpartyLabel: cash ? null : _effectiveLabel,
-        counterpartyPhone: cash ? null : _effectivePhone,
-        paybillAccountNumber: cash ? null : _effectiveAccount,
-        classificationId: _classificationId!,
-        rawParseSource: cash ? 'MANUAL' : _rawParseSource,
-        transactionOccurredAt: _occurredAt.millisecondsSinceEpoch,
+      final input = draft.toInput(
+        cashCode: generateCashDisplayCode(_occurredAt.millisecondsSinceEpoch),
+        rawParseSource: _rawParseSource,
+        occurredAtMillis: _occurredAt.millisecondsSinceEpoch,
       );
       await TransactionDao.insert(db, input);
     } catch (_) {
@@ -587,11 +472,12 @@ class _AddScreenState extends State<AddScreen> {
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: KeyedSubtree(
             key: _segTourKey,
-            child: _SrcSegment(src: _src, onChanged: _onSrcChanged),
+            child: SrcSegment(src: _src, onChanged: _onSrcChanged),
           ),
         ),
         Expanded(
           child: SingleChildScrollView(
+            controller: _scroll,
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -603,12 +489,14 @@ class _AddScreenState extends State<AddScreen> {
                     onStartOver: _startOver,
                     tourKey: _pasteTourKey,
                   ),
+                  // After a parse the six pills stay (the parsed one open, the rest
+                  // dimmed and locked); only the divider goes.
                   if (!_filled) ...[
                     const SizedBox(height: 14),
                     TypePills.orDivider(palette),
-                    const SizedBox(height: 10),
-                    TypePills(type: _type, onChanged: _onTypeChanged),
                   ],
+                  const SizedBox(height: 10),
+                  TypePills(type: _type, locked: _filled, onChanged: _onTypeChanged),
                 ],
                 AmountField(
                   controller: _amountController,
@@ -619,16 +507,19 @@ class _AddScreenState extends State<AddScreen> {
                   DetailsCard(
                     code: _codeController,
                     fee: _feeController,
-                    codeShapeInvalid: _codeController.text.trim().isNotEmpty && !_codeValidShape,
-                    codeDuplicate: _codeValidShape && _codeDuplicate,
+                    codeShapeInvalid: _codeController.text.trim().isNotEmpty && !_draft.codeValidShape,
+                    codeDuplicate: _draft.codeValidShape && _codeDuplicate,
                     whenText: formatLowKeyDateTime(_occurredAt),
                     onCodeChanged: _onCodeChanged,
-                    onFeeChanged: (_) => setState(() {}),
+                    onFeeChanged: (_) => setState(() => _feeTouched = true),
                     onWhenChangeTap: _pickDateTime,
+                    noFee: _draft.isAirtime,
+                    feeError: _draft.feeError(touched: _feeTouched),
+                    feeFocus: _feeFocus,
                   )
                 else
                   CashWhenRow(whenText: formatLowKeyDateTime(_occurredAt), onWhenChangeTap: _pickDateTime),
-                if (_src == 'MPESA')
+                if (_src == 'MPESA' && !_draft.isAirtime)
                   KeyedSubtree(
                     key: _receiverTourKey,
                     child: ReceiverCard(
@@ -637,18 +528,33 @@ class _AddScreenState extends State<AddScreen> {
                       name: _nameController,
                       sub: _subController,
                       onCheckedChanged: _setCaptureIdentity,
-                      onFieldChanged: () => setState(() {}),
+                      onFieldChanged: () => setState(() => _agentNumberRejected = false),
+                      subError: _agentNumberRejected && _type == 'AGENT_WITHDRAWAL'
+                          ? 'Agent number: digits only, up to 20. Enter it yourself.'
+                          : null,
                     ),
                   ),
                 const SizedBox(height: 6),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Category', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: palette.ink)),
-                ),
-                const SizedBox(height: 8),
+                if (!_draft.hasFixedCategory) ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Category', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: palette.ink)),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 KeyedSubtree(
                   key: _categoryTourKey,
-                  child: CategoryChips(
+                  child: _draft.hasFixedCategory
+                      // Withdrawal and Airtime: one muted line, no chips, no create, no choice.
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                          child: Text(
+                            'Category: ${_classificationName ?? _draft.typeLabel}',
+                            key: const Key('addFixedCategory'),
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: palette.mutedInk),
+                          ),
+                        )
+                      : CategoryChips(
                     db: db,
                     sourceType: _src == 'CASH' ? 'CASH' : _type,
                     counterpartyKey: counterpartyKey,
@@ -668,54 +574,8 @@ class _AddScreenState extends State<AddScreen> {
             ),
           ),
         ),
-        ReviewBar(enabled: _canReview, hint: _reviewHint, onTap: _openReview),
+        ReviewBar(enabled: _canReview, hint: _draft.reviewHint, onTap: _openReview),
       ],
     );
   }
 }
-
-class _SrcSegment extends StatelessWidget {
-  const _SrcSegment({required this.src, required this.onChanged});
-
-  final String src;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AppPalette.of(context);
-    // In the dark palettes `track` and `surface` equal the page colour, so the
-    // toggle would be invisible: use the card colour for the track there.
-    final dark = palette.brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: dark ? palette.card : palette.track, borderRadius: BorderRadius.circular(12)),
-      child: Row(
-        children: [
-          Expanded(child: _segment(context, palette, 'M-Pesa', 'MPESA')),
-          Expanded(child: _segment(context, palette, 'Cash', 'CASH')),
-        ],
-      ),
-    );
-  }
-
-  Widget _segment(BuildContext context, AppPalette palette, String label, String value) {
-    final active = src == value;
-    return GestureDetector(
-      key: Key('addSrcSeg_$value'),
-      onTap: () => onChanged(value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        decoration: BoxDecoration(
-          color: active ? (palette.brightness == Brightness.dark ? palette.line : palette.surface) : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: active ? palette.ink : palette.mutedInk),
-        ),
-      ),
-    );
-  }
-}
-

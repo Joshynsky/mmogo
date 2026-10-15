@@ -89,6 +89,22 @@ class ClassificationDao {
         .toList();
   }
 
+  /// The ACTIVE built-in classification with this `seed_key`, or null. Add
+  /// uses it to pre-select the locked categories of Withdrawal
+  /// (`AGENT_WITHDRAWAL:cash_withdrawal`) and Airtime (`AIRTIME:airtime`)
+  /// (0.1.2 S8c-1); read only.
+  static Future<ClassificationItem?> fetchActiveBySeedKey(Database db, {required String seedKey}) async {
+    final rows = await db.query(
+      'classifications',
+      where: 'seed_key = ? AND active = 1',
+      whereArgs: [seedKey],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    final row = rows.first;
+    return ClassificationItem(id: row['id'] as int, groupId: row['group_id'] as int, name: row['name'] as String);
+  }
+
   /// Inserts a new classification scoped to [groupId]. Deliberately does
   /// NOT pre-check name uniqueness in Dart first — this dispatch's own
   /// instruction is to surface the real SQLite constraint violation

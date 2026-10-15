@@ -5,6 +5,7 @@ import '../../../domain/parsing/parsed_sms_fields.dart';
 import '../../../domain/parsing/sms_parser.dart';
 import '../../copy/privacy_copy.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/error_notes.dart';
 
 /// §ADD.PASTE — the paste-first card: a "Paste M-Pesa SMS" card that leads the M-Pesa form, a bottom sheet
 /// with a paste box and "Fill it in" (using the EXISTING [SmsParser] — no
@@ -143,12 +144,20 @@ class _PasteSheetState extends State<_PasteSheet> {
       case ParseSuccess(:final fields):
         Navigator.of(context).pop(fields);
       case ParseError(:final reason):
+        // Covers ParseTooLong too (a ParseError subtype): both stay in the
+        // sheet, as a light-red box, and fill nothing.
         setState(() => _error = reason);
       case ParseNeedsType():
-        // S8a: a name-only message has no type yet. Until S8c's Add flow asks
-        // for it, the paste screen shows the not-recognised text (no save).
-        setState(() => _error = SmsParser.kSmsNoMatchReason);
+        _onNameOnlyNeedsType(result);
     }
+  }
+
+  /// S8C2-HOOK (name-only ask). S8c-2 replaces the body of this method with the
+  /// "Is NAME on Pochi or Send Money?" sheet (NO4). Until then a name-only
+  /// message shows the NOMATCH text, fills nothing and saves nothing (known
+  /// gap, brief addendum H).
+  void _onNameOnlyNeedsType(ParseNeedsType result) {
+    setState(() => _error = SmsParser.kSmsNoMatchReason);
   }
 
   @override
@@ -196,12 +205,8 @@ class _PasteSheetState extends State<_PasteSheet> {
               ),
               if (_error != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    _error!,
-                    key: const Key('addPasteError'),
-                    style: TextStyle(fontSize: 12, color: palette.error),
-                  ),
+                  padding: const EdgeInsets.only(top: 10),
+                  child: KeyedSubtree(key: const Key('addPasteError'), child: ErrorBox(_error!)),
                 ),
               const SizedBox(height: 12),
               Row(

@@ -77,7 +77,8 @@ void main() {
       await tester.enterText(find.byKey(const Key('addAmountField')), '1500.50');
       await tester.enterText(find.byKey(const Key('addFeeField')), '22.505');
       await tester.pump();
-      expect(_text(tester, 'addAmountField'), '1500.50');
+      // S8c-1: the field shows thousands separators as you type (signed 08-10).
+      expect(_text(tester, 'addAmountField'), '1,500.50');
       expect(_text(tester, 'addFeeField'), '', reason: 'a 3-decimal fee is refused');
       expect(find.text('Enter an amount from 0.01 to 10,000,000.00'), findsNothing);
     });

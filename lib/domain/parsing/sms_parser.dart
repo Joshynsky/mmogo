@@ -77,9 +77,10 @@ class SmsParser {
     return const ParseResult.error(kSmsNoMatchReason);
   }
 
-  /// Placeholder wording for five types is S8c WD9.
+  /// The signed WD9 wording (mock `NOMATCH`, copied character for character,
+  /// including the curly apostrophes).
   static const String kSmsNoMatchReason =
-      "Couldn't recognize this message. It doesn't match a Send Money, "
-      'Buy Goods, or Paybill confirmation. Check the pasted text, or '
-      'switch to the Cash tab to enter it manually.';
+      'Couldn’t recognize this message. It doesn’t match a Send Money, Paybill, '
+      'Buy Goods, Pochi, Withdrawal or Airtime confirmation. Check the pasted '
+      'text, or choose the type and enter it yourself.';
 }

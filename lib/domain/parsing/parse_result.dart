@@ -22,14 +22,14 @@ sealed class ParseResult {
 
 /// The paste is longer than `kSmsMaxChars`. A [ParseError] subtype so every
 /// existing `case ParseError` keeps working; the UI tells it apart with
-/// `result is ParseTooLong`. The wording is a placeholder until S8c WD9.
+/// `result is ParseTooLong`. The wording is the signed WD9 text.
 class ParseTooLong extends ParseError {
   const ParseTooLong() : super(kSmsTooLongReason);
 }
 
+/// The signed WD9 wording (mock `TOOLONG`).
 const String kSmsTooLongReason =
-    'This message is too long to be one M-Pesa message. Paste just the one '
-    'message you want to add.';
+    'This is too long to be an M-Pesa message (over 2,000 characters).';
 
 /// A name-only message: carries the fields but NO source type, so it is never
 /// saved by itself. The Add flow (S8c) asks the user for the type; until then

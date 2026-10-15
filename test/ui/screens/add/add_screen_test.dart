@@ -340,7 +340,7 @@ void main() {
   });
 
   group('paste-first parse', () {
-    testWidgets('a successful parse fills the form and hides the paste card + Type pills; Start over reverts', (tester) async {
+    testWidgets('a successful parse fills the form, hides the paste card and keeps the Type pills (locked); Start over reverts', (tester) async {
       final db = FakeAddDb();
       await _pumpAdd(tester, db, captureReceiver: true);
 
@@ -354,9 +354,12 @@ void main() {
 
       expect(find.byKey(const Key('addFilledStrip')), findsOneWidget);
       expect(find.byKey(const Key('addPasteButton')), findsNothing);
-      expect(find.byKey(const Key('addTypePill_SEND_MONEY')), findsNothing);
+      // S8c-1 (addendum C): the six pills now STAY after a parse (locked), so the
+      // old "pill gone" assertion changed to "pill still there".
+      expect(find.byKey(const Key('addTypePill_SEND_MONEY')), findsOneWidget);
       expect(tester.widget<TextField>(find.byKey(const Key('addCodeField'))).controller!.text, 'THA7K2P9QX');
-      expect(tester.widget<TextField>(find.byKey(const Key('addAmountField'))).controller!.text, '1500.00');
+      // S8c-1 (signed 08-10): the amount shows thousands separators.
+      expect(tester.widget<TextField>(find.byKey(const Key('addAmountField'))).controller!.text, '1,500.00');
       expect(tester.widget<TextField>(find.byKey(const Key('addReceiverNameField'))).controller!.text, 'JOHN KAMAU');
 
       await tester.tap(find.byKey(const Key('addStartOverButton')));
