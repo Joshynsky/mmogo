@@ -8,7 +8,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/updates/updates_inbox.dart';
-import 'package:mmogo/ui/screens/settings/updates_section.dart';
+import 'package:mmogo/ui/screens/settings/about_section.dart';
 import 'package:mmogo/ui/screens/updates/updates_screen.dart';
 import 'package:mmogo/ui/shell/routes.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
@@ -38,7 +38,7 @@ Future<UpdatesInbox> _pump(
   await tester.pumpWidget(
     MaterialApp(
       routes: {Routes.updates: (_) => UpdatesScreen(inbox: inbox)},
-      home: Scaffold(body: UpdatesSection(palette: AppPalette.light, inbox: inbox)),
+      home: Scaffold(body: AboutSection(palette: AppPalette.light, inbox: inbox)),
     ),
   );
   await tester.pumpAndSettle();
@@ -48,7 +48,7 @@ Future<UpdatesInbox> _pump(
 void main() {
   testWidgets('there is one Updates row and no switch or Check button in Settings', (tester) async {
     await _pump(tester);
-    expect(find.text('UPDATES AND FEEDBACK'), findsOneWidget);
+    expect(find.text('ABOUT'), findsOneWidget);
     expect(find.text('Updates'), findsOneWidget);
     expect(find.byType(Switch), findsNothing);
     expect(find.text('Check for updates now'), findsNothing);

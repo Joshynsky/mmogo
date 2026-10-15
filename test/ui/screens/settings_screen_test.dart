@@ -98,6 +98,11 @@ Map<String, Object?> _tx({
     };
 
 Future<void> _settle(WidgetTester tester) async {
+  // S9a: the page is longer (Look has seven rows), and a ListView builds only
+  // what fits, so every test here uses one tall surface.
+  tester.view.physicalSize = const Size(400, 4400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   await tester.pump();
   await tester.pump();
 }
@@ -113,42 +118,24 @@ Widget _wrap(SettingsScreen screen, {AppPaletteController? controller}) {
 InkWell _rowInkWell(WidgetTester tester, String label) =>
     tester.widget<InkWell>(find.ancestor(of: find.text(label), matching: find.byType(InkWell)).first);
 
-/// The Preferences card (and its Switch) sits below the fold at the default
-/// test surface size and is the LAST card on the page, so this scrolls the
-/// `ListView` all the way to its end (a single oversized drag, clamped at
-/// `maxScrollExtent` — safe to call repeatedly / already-at-the-end) rather
-/// than stopping as soon as the switch is merely "visible"
-/// (`dragUntilVisible`'s own stopping rule): "just visible" can still land
-/// right at the viewport's bottom edge, inside the primary bottom nav's FAB
-/// overhang hit box (`_OverhangHitBox`, `primary_scaffold.dart`), which then
-/// silently swallows the tap instead of the switch — and exactly how far
-/// "just visible" is shifts with any copy change above it on the page (T26:
-/// the palette card's subline). Scrolling flush to the end is independent
-/// of that.
+/// S9a: the page now has TWO switches (Show withdrawals in the chart, and
+/// Auto-recognize), so the Auto-recognize one is found through its row key.
+Finder get _autoSwitchFinder =>
+    find.descendant(of: find.byKey(const Key('settingsAutoRecognize')), matching: find.byType(Switch));
+
 Future<void> _scrollToAutoRecognizeSwitch(WidgetTester tester) async {
-  // B32/B33 added two groups below Preferences, so it is no longer the last
-  // card: scroll the switch to the middle of the viewport instead.
-  final switchFinder = find.byType(Switch);
-  await tester.scrollUntilVisible(
-    switchFinder,
-    200,
-    scrollable: find.descendant(of: find.byKey(const Key('settingsScroll')), matching: find.byType(Scrollable)),
-  );
-  await Scrollable.ensureVisible(tester.element(switchFinder), alignment: 0.5);
+  await Scrollable.ensureVisible(tester.element(_autoSwitchFinder), alignment: 0.5);
   await tester.pump();
 }
 
 Future<Switch> _autoRecognizeSwitch(WidgetTester tester) async {
   await _scrollToAutoRecognizeSwitch(tester);
-  return tester.widget<Switch>(find.byType(Switch));
+  return tester.widget<Switch>(_autoSwitchFinder);
 }
 
-/// Scrolls the switch into view immediately before tapping it (see
-/// [_scrollToAutoRecognizeSwitch]) rather than reusing wherever an earlier
-/// scroll happened to land.
 Future<void> _tapAutoRecognizeSwitch(WidgetTester tester) async {
   await _scrollToAutoRecognizeSwitch(tester);
-  await tester.tap(find.byType(Switch));
+  await tester.tap(_autoSwitchFinder);
 }
 
 void main() {
@@ -366,22 +353,25 @@ void main() {
       expect(find.byTooltip('Profile'), findsNothing);
     });
 
-    testWidgets(
-      'groups: Appearance, Your data, Preferences, Privacy and security, Updates and feedback (in that order)',
-      (tester) async {
-        await pumpWithRoutes(tester);
-        final ys = [
-          for (final g in ['APPEARANCE', 'YOUR DATA', 'PREFERENCES', 'PRIVACY AND SECURITY', 'UPDATES AND FEEDBACK'])
-            tester.getTopLeft(find.text(g)).dy,
-        ];
-        expect([...ys]..sort(), ys);
-        expect(ys.toSet().length, 5);
-      },
-    );
-
-    testWidgets('rows: tips, Backup, Privacy and your data, Send feedback; no stray Check now', (tester) async {
+    // S9a (ST1, signed mock M9): the old five groups (Appearance, Your data,
+    // Preferences, Privacy and security, Updates and feedback) became four:
+    // Look, Adding entries, Your data (careful), About.
+    testWidgets('groups: Look, Adding entries, Your data, About (in that order)', (tester) async {
       await pumpWithRoutes(tester);
-      expect(find.text('Show tips again'), findsOneWidget);
+      final ys = [
+        for (final g in ['LOOK', 'ADDING ENTRIES', 'YOUR DATA', 'ABOUT']) tester.getTopLeft(find.text(g)).dy,
+      ];
+      expect([...ys]..sort(), ys);
+      expect(ys.toSet().length, 4);
+      for (final old in ['APPEARANCE', 'PREFERENCES', 'PRIVACY AND SECURITY', 'UPDATES AND FEEDBACK']) {
+        expect(find.text(old), findsNothing, reason: old);
+      }
+    });
+
+    testWidgets('rows: Backup, Privacy and your data, Send feedback; no stray Check now; no Show tips again', (tester) async {
+      await pumpWithRoutes(tester);
+      // S9a: "Show tips again" left Settings (Help and tips on Profile stays).
+      expect(find.text('Show tips again'), findsNothing);
       // B14 added the Backup and restore row (subtitle: never backed up in this fixture).
       expect(find.text('Backup and restore'), findsOneWidget);
       expect(find.text('Never backed up'), findsOneWidget);

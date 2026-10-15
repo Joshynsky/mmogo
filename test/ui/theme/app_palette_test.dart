@@ -236,40 +236,60 @@ void main() {
     });
   });
 
-  group('Other screens stay light on a dark phone', () {
-    Future<ThemeData> homeTheme(WidgetTester tester, Brightness brightness) async {
-      SharedPreferences.setMockInitialValues({AppPrefs.keyOnboardingComplete: true});
-      tester.platformDispatcher.platformBrightnessTestValue = brightness;
-      await tester.pumpWidget(const MpesaTrackerApp());
+  // S9a (AP1): this group used to pin every other screen to a LIGHT ThemeData
+  // on a dark phone (main.dart had themeMode: light and no darkTheme). The
+  // whole app now follows the Appearance choice, so the old assertion
+  // ("same light ThemeData on a dark phone") is replaced by: System follows the
+  // phone (dark phone -> dark ThemeData), and an explicit Light keeps the
+  // light ThemeData on a dark phone.
+  group('The real app follows the Appearance choice (S9a)', () {
+    Future<ThemeData> homeTheme(WidgetTester tester, Brightness phone, {String? appearance}) async {
+      SharedPreferences.setMockInitialValues({
+        AppPrefs.keyOnboardingComplete: true,
+        'appearance_mode': ?appearance,
+      });
+      tester.platformDispatcher.platformBrightnessTestValue = phone;
+      final shown = switch (appearance) {
+        'light' => Brightness.light,
+        'dark' => Brightness.dark,
+        _ => phone,
+      };
+      final controller = AppPaletteController();
+      await controller.load(); // what main() does before the first frame
+      await tester.pumpWidget(MpesaTrackerApp(controller: controller));
       await tester.pump();
-      // Welcome in the real app follows the phone.
-      expect(
-        tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
-        AppPalette.forBrightness(brightness).surface,
-      );
+      expect(tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor, AppPalette.forBrightness(shown).surface);
       await tester.pump(welcomeDuration);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       final parties = find.text('Paid to');
       expect(parties, findsOneWidget, reason: 'on Home');
       final context = tester.element(parties);
-      expect(MediaQuery.platformBrightnessOf(context), brightness);
+      expect(MediaQuery.platformBrightnessOf(context), phone);
       final theme = Theme.of(context);
       await tester.pumpWidget(const SizedBox());
       return theme;
     }
 
-    testWidgets('Home in the real app gets the same light ThemeData on a dark phone', (tester) async {
+    testWidgets('System: Home gets the light ThemeData on a light phone and the dark one on a dark phone', (tester) async {
       addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
       final light = await homeTheme(tester, Brightness.light);
       final dark = await homeTheme(tester, Brightness.dark);
-      expect(dark.brightness, Brightness.light);
-      expect(dark.colorScheme.brightness, Brightness.light);
-      expect(dark.scaffoldBackgroundColor, AppColors.bg);
-      expect(dark.colorScheme, light.colorScheme);
-      expect(dark.scaffoldBackgroundColor, light.scaffoldBackgroundColor);
-      expect(dark.appBarTheme, light.appBarTheme);
-      expect(dark.textTheme, light.textTheme);
+      expect(light.brightness, Brightness.light);
+      expect(light.scaffoldBackgroundColor, AppPalette.light.background);
+      expect(dark.brightness, Brightness.dark);
+      expect(dark.colorScheme.brightness, Brightness.dark);
+      expect(dark.scaffoldBackgroundColor, AppPalette.dark.background);
+    });
+
+    testWidgets('Light keeps the light ThemeData on a dark phone; Dark gives the dark one on a light phone', (tester) async {
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      final lightOnDarkPhone = await homeTheme(tester, Brightness.dark, appearance: 'light');
+      expect(lightOnDarkPhone.brightness, Brightness.light);
+      expect(lightOnDarkPhone.scaffoldBackgroundColor, AppPalette.light.background);
+      final darkOnLightPhone = await homeTheme(tester, Brightness.light, appearance: 'dark');
+      expect(darkOnLightPhone.brightness, Brightness.dark);
+      expect(darkOnLightPhone.scaffoldBackgroundColor, AppPalette.dark.background);
     });
   });
 }

@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../../copy/settings_copy.dart';
 import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
 import 'settings_widgets.dart';
 
-/// Settings "Your data" section: Manage classifications, Recently deleted,
-/// Export CSV, Backup and restore (B14). State (export subtitle/enabled, handler) is owned by the
+/// Settings "Your data, careful" section (0.1.2 S9a, mock M9): Backup and
+/// restore, Recently deleted, Export CSV (Manage categories moved to Adding
+/// entries). ST1. State (export subtitle/enabled, handler) is owned by the
 /// Settings shell; [tourKey] is its coach-tour anchor.
 class DataSection extends StatelessWidget {
   const DataSection({
     super.key,
     required this.palette,
-    required this.tourKey,
+    this.tourKey,
     required this.exportSubtitle,
     required this.exportEnabled,
     required this.onExport,
@@ -21,7 +23,7 @@ class DataSection extends StatelessWidget {
   });
 
   final AppPalette palette;
-  final GlobalKey tourKey;
+  final GlobalKey? tourKey;
   final String exportSubtitle;
   final bool exportEnabled;
   final VoidCallback onExport;
@@ -40,7 +42,7 @@ class DataSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SettingsSectionLabel('Your data', palette: palette),
+        SettingsSectionLabel(kSettingsDataGroup, palette: palette, tag: kSettingsCarefulTag),
         KeyedSubtree(
           key: tourKey,
           child: SettingsCard(
@@ -49,11 +51,12 @@ class DataSection extends StatelessWidget {
               children: [
                 SettingsLink(
                   palette: palette,
-                  icon: Icons.category_outlined,
-                  label: 'Manage classifications',
-                  subtitle: 'Create, rename, delete and restore',
+                  icon: Icons.backup_outlined,
+                  label: 'Backup and restore',
+                  subtitle: backupSubtitle,
                   first: true,
-                  onTap: () => Navigator.of(context).pushNamed(Routes.manageClassifications),
+                  warningDot: backupPaused,
+                  onTap: onBackup ?? () => Navigator.of(context).pushNamed(Routes.backup),
                 ),
                 SettingsLink(
                   palette: palette,
@@ -69,14 +72,8 @@ class DataSection extends StatelessWidget {
                   subtitle: exportSubtitle,
                   onTap: exportEnabled ? onExport : null,
                 ),
-                SettingsLink(
-                  palette: palette,
-                  icon: Icons.backup_outlined,
-                  label: 'Backup and restore',
-                  subtitle: backupSubtitle,
-                  warningDot: backupPaused,
-                  onTap: onBackup ?? () => Navigator.of(context).pushNamed(Routes.backup),
-                ),
+                // S9b: the "Delete data" row goes HERE (last in the careful
+                // card, red "Permanent" tag, sheet with two levels). Not built in S9a.
               ],
             ),
           ),

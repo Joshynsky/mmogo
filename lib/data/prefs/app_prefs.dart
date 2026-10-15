@@ -388,6 +388,59 @@ class AppPrefs {
     }
   }
 
+  // ---- 0.1.2 S9a: the Look writers (Settings) ----------------------------
+  // Each writes the value EXPLICITLY, also at the default, so a backup of the
+  // phone always carries the user's choice. Same defensive shape as the other
+  // writers: bounded, never throws; the result says whether it was stored.
+
+  static Future<bool> _writeLook(Future<bool> Function(SharedPreferences p) write) async {
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      return await write(prefs).timeout(_prefsTimeout);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// The first day of the week, 1 (Monday) .. 7 (Sunday). Out of range is refused.
+  static Future<bool> writeFirstDayOfWeek(int day) async {
+    if (day < 1 || day > 7) return false;
+    return _writeLook((p) => p.setInt(keyFirstDayOfWeek, day));
+  }
+
+  static Future<bool> writeMonthChartStyle(MonthChartStyle style) =>
+      _writeLook((p) => p.setString(keyMonthChartStyle, style == MonthChartStyle.days ? 'days' : 'weeks'));
+
+  static Future<bool> writeYearViewAmounts(YearViewAmounts amounts) =>
+      _writeLook((p) => p.setString(keyYearViewAmounts, amounts == YearViewAmounts.months ? 'months' : 'quarters'));
+
+  static Future<bool> writeShowWithdrawalsInChart(bool show) =>
+      _writeLook((p) => p.setBool(keyShowWithdrawalsInChart, show));
+
+  static Future<bool> writeWhereItWentStyle(WhereItWentStyle style) =>
+      _writeLook((p) => p.setString(keyWhereItWentStyle, style == WhereItWentStyle.strip ? 'strip' : 'button'));
+
+  /// The whole-app light/dark choice: `system` (default) | `light` | `dark`.
+  /// DEVICE-ONLY: never in a backup (not in the allowlist).
+  static const keyAppearanceMode = 'appearance_mode';
+  static const _validAppearance = {'system', 'light', 'dark'};
+
+  /// Anything unset, of another type, unknown or unreadable gives `system`.
+  static Future<String> readAppearanceMode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(_prefsTimeout);
+      final v = prefs.get(keyAppearanceMode);
+      return v is String && _validAppearance.contains(v) ? v : 'system';
+    } catch (_) {
+      return 'system';
+    }
+  }
+
+  static Future<bool> writeAppearanceMode(String mode) async {
+    if (!_validAppearance.contains(mode)) return false;
+    return _writeLook((p) => p.setString(keyAppearanceMode, mode));
+  }
+
   /// T23 — the chosen colour palette (`ocean` | `leaf` | `indigo`;
   /// `AppPalettes`), read once at startup by `AppPaletteController.load`
   /// and written on every tap of a Settings palette tile. Kept as a plain

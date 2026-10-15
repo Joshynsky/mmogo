@@ -6,20 +6,28 @@ import 'ui/screens/manage_classifications_screen.dart';
 import 'ui/screens/onboarding_screen.dart';
 import 'ui/screens/privacy/privacy_screen.dart';
 import 'ui/screens/recently_deleted_screen.dart';
+import 'ui/screens/remembered/remembered_screen.dart';
 import 'ui/screens/settings_screen.dart';
 import 'ui/screens/updates/updates_screen.dart';
 import 'ui/screens/welcome_screen.dart';
 import 'ui/shell/app_messenger.dart';
 import 'ui/shell/primary_shell.dart';
 import 'ui/shell/routes.dart';
+import 'ui/theme/app_colors.dart';
 import 'ui/theme/app_palette_scope.dart';
 import 'ui/theme/app_theme.dart';
 
-void main() {
-  runApp(const MpesaTrackerApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // S9a (AP1): read the palette and the Appearance BEFORE the first frame, so
+  // a dark choice never flashes light. A failed or stuck read gives the
+  // defaults (ocean, system) after the prefs' own short timeout.
+  final controller = AppPaletteController();
+  await controller.load();
+  runApp(MpesaTrackerApp(controller: controller));
 }
 
-/// The app root: the light [AppTheme] and the named-route table.
+/// The app root: the palette-driven light and dark [AppTheme] and the named-route table.
 ///
 /// Every launch starts on Welcome (T16), which continues to Onboarding
 /// while the onboarding-complete flag is unset, otherwise to Home. Home,
@@ -30,7 +38,10 @@ void main() {
 /// back-arrow + mini-FAB chrome; Welcome and Onboarding are full-screen,
 /// with no app chrome. Route names live in [Routes].
 class MpesaTrackerApp extends StatefulWidget {
-  const MpesaTrackerApp({super.key});
+  const MpesaTrackerApp({super.key, this.controller});
+
+  /// Test seam: a controller already loaded. Null = a fresh one, loaded here.
+  final AppPaletteController? controller;
 
   @override
   State<MpesaTrackerApp> createState() => _MpesaTrackerAppState();
@@ -40,17 +51,17 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
   // T23: the app-wide chosen palette (ocean | leaf | indigo), loaded from
   // AppPrefs once here and published down via AppPaletteScope. Starts at
   // ocean (AppPaletteController's own default) while the read is in flight.
-  final _paletteController = AppPaletteController();
+  late final AppPaletteController _paletteController = widget.controller ?? AppPaletteController();
 
   @override
   void initState() {
     super.initState();
-    _paletteController.load();
+    if (widget.controller == null) _paletteController.load();
   }
 
   @override
   void dispose() {
-    _paletteController.dispose();
+    if (widget.controller == null) _paletteController.dispose();
     super.dispose();
   }
 
@@ -58,41 +69,52 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
   Widget build(BuildContext context) {
     return AppPaletteScope(
       controller: _paletteController,
-      child: MaterialApp(
-        title: 'mmogo',
-        theme: AppTheme.theme,
-        // Pinned to light: a dark phone must not half-darken screens that
-        // haven't been reworked yet. The chosen palette now applies
-        // app-wide (T26 "i think it should recolor the entire app",
-        // superseding T23's "only reworked pages" rule): every reworked
-        // page, including Welcome, onboarding and now Add (T27), follows it
-        // via AppPalette.of. The page-by-page rework adds a darkTheme +
-        // ThemeMode.system later.
-        themeMode: ThemeMode.light,
-        debugShowCheckedModeBanner: false,
-        // T27 — see app_messenger.dart's own doc comment.
-        scaffoldMessengerKey: appMessengerKey,
-        // T16: every launch starts on Welcome, which routes on to onboarding
-        // (flag unset) or Home (flag set). Home's T13 purge/bootstrap still
-        // runs in its own initState, i.e. before Home renders any data.
-        initialRoute: Routes.welcome,
-        routes: {
-          Routes.welcome: (_) => const WelcomeScreen(),
-          Routes.onboarding: (_) => const OnboardingScreen(),
-          // F5: the four tab pages live together in one PrimaryShell route.
-          Routes.home: (_) => const PrimaryShell(initialIndex: 0),
-          Routes.analytics: (_) => const PrimaryShell(initialIndex: 1),
-          Routes.add: (_) => const AddScreen(),
-          Routes.paidTo: (_) => const PrimaryShell(initialIndex: 3),
-          Routes.profile: (_) => const PrimaryShell(initialIndex: 4),
-          Routes.settings: (_) => const SettingsScreen(),
-          Routes.manageClassifications: (_) => const ManageClassificationsScreen(),
-          Routes.recentlyDeleted: (_) => const RecentlyDeletedScreen(),
-          Routes.backup: (_) => const BackupScreen(),
-          Routes.updates: (_) => const UpdatesScreen(),
-          Routes.privacy: (_) => const PrivacyScreen(),
-        },
+      child: ListenableBuilder(
+        listenable: _paletteController,
+        builder: (context, _) => _app(),
       ),
+    );
+  }
+
+  Widget _app() {
+    final set = AppPalettes.byId(_paletteController.value);
+    return MaterialApp(
+      title: 'mmogo',
+      // S9a (AP1): a light and a dark Material theme from the chosen
+      // palette; the Appearance (System | Light | Dark) picks between them
+      // (System follows the phone). Pages read the same choice through
+      // AppPalette.of.
+      theme: AppTheme.forPalette(set.light),
+      darkTheme: AppTheme.forPalette(set.dark),
+      themeMode: switch (_paletteController.appearance) {
+        'light' => ThemeMode.light,
+        'dark' => ThemeMode.dark,
+        _ => ThemeMode.system,
+      },
+      debugShowCheckedModeBanner: false,
+      // T27 — see app_messenger.dart's own doc comment.
+      scaffoldMessengerKey: appMessengerKey,
+      // T16: every launch starts on Welcome, which routes on to onboarding
+      // (flag unset) or Home (flag set). Home's T13 purge/bootstrap still
+      // runs in its own initState, i.e. before Home renders any data.
+      initialRoute: Routes.welcome,
+      routes: {
+        Routes.welcome: (_) => const WelcomeScreen(),
+        Routes.onboarding: (_) => const OnboardingScreen(),
+        // F5: the four tab pages live together in one PrimaryShell route.
+        Routes.home: (_) => const PrimaryShell(initialIndex: 0),
+        Routes.analytics: (_) => const PrimaryShell(initialIndex: 1),
+        Routes.add: (_) => const AddScreen(),
+        Routes.paidTo: (_) => const PrimaryShell(initialIndex: 3),
+        Routes.profile: (_) => const PrimaryShell(initialIndex: 4),
+        Routes.settings: (_) => const SettingsScreen(),
+        Routes.manageClassifications: (_) => const ManageClassificationsScreen(),
+        Routes.recentlyDeleted: (_) => const RecentlyDeletedScreen(),
+        Routes.backup: (_) => const BackupScreen(),
+        Routes.updates: (_) => const UpdatesScreen(),
+        Routes.privacy: (_) => const PrivacyScreen(),
+        Routes.rememberedRecipients: (_) => const RememberedScreen(),
+      },
     );
   }
 }

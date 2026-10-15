@@ -47,10 +47,10 @@ class AppColors {
 /// decision, 2026-09-24; values are the approved mock v3's own tokens
 /// for the light and dark phone).
 ///
-/// Resolve it with [AppPalette.of], which follows the PHONE's light/dark
-/// setting (`MediaQuery.platformBrightnessOf`), not the app's [ThemeData]:
-/// the app's ThemeData stays pinned to light so screens that haven't been
-/// reworked yet never half-darken. Welcome, onboarding and Home (T20) call
+/// Resolve it with [AppPalette.of], which follows the chosen appearance (the
+/// PHONE's light/dark setting when it is `system`, else Light or Dark; S9a).
+/// Since S9a the app also has a matching dark [ThemeData] (`AppTheme`), so
+/// dialogs, pickers and snackbars follow too. Welcome, onboarding and Home (T20) call
 /// [AppPalette.of]; each page adopts it as the page-by-page rework reaches
 /// it. The primary chrome uses [AppPalette.light] on the pinned-light pages
 /// (see `PrimaryScaffold.followPhoneTheme`).
@@ -532,8 +532,13 @@ class AppPalette {
   /// Applies app-wide (T26 "i think it should recolor the entire app",
   /// superseding T23's "only reworked pages" rule): every reworked page,
   /// including Welcome, onboarding and now Add (T27), calls this.
-  static AppPalette of(BuildContext context) =>
-      forId(AppPaletteScope.of(context).value, MediaQuery.platformBrightnessOf(context));
+  ///
+  /// 0.1.2 S9a (AP1): the light/dark side is the chosen appearance —
+  /// `system` follows the phone, `light` and `dark` override it.
+  static AppPalette of(BuildContext context) {
+    final scope = AppPaletteScope.of(context);
+    return forId(scope.value, scope.brightnessFor(MediaQuery.platformBrightnessOf(context)));
+  }
 
   /// The system bars for the primary pages (T21, backlog "System bars
   /// break the seamless top"): a transparent status bar with no contrast

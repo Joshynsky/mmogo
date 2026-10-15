@@ -1,43 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../copy/settings_copy.dart';
 import '../../theme/app_colors.dart';
-import '../../theme/app_palette_scope.dart';
-import 'settings_widgets.dart';
 
-/// Settings "Appearance" section: the colour-palette card. [tourKey] is the
-/// coach-tour anchor owned by the Settings shell.
-class AppearanceSection extends StatelessWidget {
-  const AppearanceSection({super.key, required this.palette, required this.tourKey});
-
-  final AppPalette palette;
-  final GlobalKey tourKey;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SettingsSectionLabel('Appearance', palette: palette),
-        KeyedSubtree(
-          key: tourKey,
-          child: SettingsCard(
-            palette: palette,
-            child: _PaletteGroup(
-              currentPaletteId: AppPaletteScope.of(context).value,
-              palette: palette,
-              onSelect: (id) => AppPaletteScope.of(context).select(id),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// The "Colour palette" head + the 3-tile radio group (mock `.shead` +
+/// (S9a: the Look section in look_section.dart owns the card; this file is
+/// the palette group only.) The "Colour palette" head + the 3-tile radio group (mock `.shead` +
 /// `.palgrid`).
-class _PaletteGroup extends StatelessWidget {
-  const _PaletteGroup({required this.currentPaletteId, required this.palette, required this.onSelect});
+class PaletteGroup extends StatelessWidget {
+  const PaletteGroup({super.key, required this.currentPaletteId, required this.palette, required this.onSelect});
 
   final String currentPaletteId;
   final AppPalette palette;
@@ -53,10 +23,10 @@ class _PaletteGroup extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Colour palette', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: palette.ink)),
+              Text(kPaletteTitle, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: palette.ink)),
               const SizedBox(height: 3),
               Text(
-                'Recolours the whole app. Light or dark follows your phone.',
+                kPaletteSubtitle,
                 style: TextStyle(fontSize: 12, height: 1.4, color: palette.mutedInk),
               ),
             ],

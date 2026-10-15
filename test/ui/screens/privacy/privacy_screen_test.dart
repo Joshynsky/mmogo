@@ -11,9 +11,8 @@ import 'package:mmogo/ui/copy/privacy_copy.dart';
 import 'package:mmogo/ui/screens/backup/backup_screen.dart';
 import 'package:mmogo/ui/screens/backup/backup_widgets.dart';
 import 'package:mmogo/ui/screens/privacy/privacy_screen.dart';
-import 'package:mmogo/ui/screens/settings/privacy_section.dart';
 import 'package:mmogo/ui/screens/settings/settings_widgets.dart';
-import 'package:mmogo/ui/screens/settings/updates_section.dart';
+import 'package:mmogo/ui/screens/settings/about_section.dart';
 import 'package:mmogo/ui/shell/routes.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -167,10 +166,13 @@ void main() {
     });
   });
 
-  group('Settings: Privacy and security group', () {
-    testWidgets('one row, "Privacy and your data", that opens the page', (tester) async {
-      await _pumpPage(tester, const Scaffold(body: PrivacySection(palette: AppPalette.light)));
-      expect(find.text(kSettingsPrivacyGroup.toUpperCase()), findsOneWidget);
+  // S9a (ST1): the "Privacy and security" group is gone; the Privacy row is the
+  // first row of the ABOUT card (Privacy, Updates, Send feedback).
+  group('Settings: Privacy row in the ABOUT card', () {
+    testWidgets('the row "Privacy and your data" opens the page', (tester) async {
+      await _pumpPage(tester, const Scaffold(body: AboutSection(palette: AppPalette.light)));
+      expect(find.text('ABOUT'), findsOneWidget);
+      expect(find.text(kSettingsPrivacyGroup.toUpperCase()), findsNothing);
       expect(find.text(kPrivacyTitle), findsOneWidget);
       expect(find.text(kSettingsPrivacySubtitle), findsOneWidget);
       await tester.tap(find.text(kPrivacyTitle));
@@ -198,7 +200,7 @@ void main() {
 
   group('Settings: Send feedback row (B33)', () {
     Future<void> pumpUpdates(WidgetTester tester) =>
-        _pumpPage(tester, const Scaffold(body: UpdatesSection(palette: AppPalette.light)));
+        _pumpPage(tester, const Scaffold(body: AboutSection(palette: AppPalette.light)));
 
     testWidgets('shows the label and the full hint under it', (tester) async {
       await pumpUpdates(tester);

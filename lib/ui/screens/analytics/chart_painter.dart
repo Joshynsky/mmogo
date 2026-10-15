@@ -161,6 +161,77 @@ class AnalyticsChartPainter extends CustomPainter {
     }
   }
 
+  // ---- S9a: the avg label stays off the hatched segments ----
+
+  List<double> get _totals => [for (final v in bucketCents) v.fold<int>(0, (s, c) => s + c) / 100.0];
+
+  double _hatchAt(int i) => i < hatchCents.length ? hatchCents[i] / 100.0 : 0.0;
+
+  double get _nice {
+    final totals = _totals;
+    final max = [for (var i = 0; i < spec.buckets.length; i++) totals[i] + _hatchAt(i)].fold<double>(1, math.max);
+    return niceAxisMax(max);
+  }
+
+  /// The daily average over the days so far (0 when there is none).
+  double get _average {
+    final totals = _totals;
+    var sum = 0.0;
+    var live = 0;
+    for (var i = 0; i < spec.buckets.length; i++) {
+      if (spec.buckets[i].future) continue;
+      sum += totals[i];
+      live++;
+    }
+    return live == 0 ? 0.0 : sum / live;
+  }
+
+  String _avgText(double avg) => 'avg ${kshShort(avg.roundToDouble())}';
+
+  /// The hatched segment of every bucket, in chart units.
+  List<Rect> hatchRects() {
+    final n = spec.buckets.length;
+    final totals = _totals;
+    final nice = _nice;
+    const hh = b - t;
+    final slot = (r - l) / n;
+    final bw = math.max(math.min(slot * (n > 20 && n < 32 ? 0.72 : 0.56), 28.0), 3.0);
+    return [
+      for (var i = 0; i < n; i++)
+        if (_hatchAt(i) > 0)
+          Rect.fromLTWH(
+            l + slot * i + (slot - bw) / 2,
+            b - (totals[i] + _hatchAt(i)) / nice * hh,
+            bw,
+            _hatchAt(i) / nice * hh,
+          ),
+    ];
+  }
+
+  /// Where the "avg" label goes (chart units): at the left end, slid right
+  /// until it clears every hatched segment; null (label hidden) when there is
+  /// no free spot, or no average to show.
+  Rect? avgLabelRect() {
+    if (!spec.showAverage || empty) return null;
+    final avg = _average;
+    if (avg <= 0) return null;
+    final tp = TextPainter(
+      text: TextSpan(text: _avgText(avg), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
+      textDirection: TextDirection.ltr,
+      textScaler: TextScaler.noScaling,
+    )..layout();
+    final width = tp.width;
+    tp.dispose();
+    final yAvg = b - avg / _nice * (b - t);
+    final hatches = hatchRects();
+    for (var x = l + 3; x + width <= r; x += 2) {
+      // 9 above the baseline (y - 4), 3 below, 2 of halo each side.
+      final box = Rect.fromLTWH(x - 2, yAvg - 4 - 11, width + 4, 16);
+      if (hatches.every((h) => !h.overlaps(box))) return Rect.fromLTWH(x, box.top, width, box.height);
+    }
+    return null;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
@@ -284,15 +355,19 @@ class AnalyticsChartPainter extends CustomPainter {
           ..color = palette.ink.withValues(alpha: 0.55)
           ..strokeWidth = 1.2;
         _dashed(canvas, y(avg), p, 5, 4);
-        _text(
-          canvas,
-          'avg ${kshShort(avg.roundToDouble())}',
-          Offset(l + 3, y(avg) - 4),
-          size: 9,
-          weight: FontWeight.w700,
-          color: palette.softInk,
-          halo: true,
-        );
+        // S9a: the label never sits on a hatched segment; hidden when no spot is free.
+        final box = avgLabelRect();
+        if (box != null) {
+          _text(
+            canvas,
+            _avgText(avg),
+            Offset(box.left, y(avg) - 4),
+            size: 9,
+            weight: FontWeight.w700,
+            color: palette.softInk,
+            halo: true,
+          );
+        }
       }
     }
 

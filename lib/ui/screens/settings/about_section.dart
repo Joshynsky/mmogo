@@ -6,19 +6,22 @@ import '../../../app_constants.dart';
 import '../../../platform/storage_bridge.dart';
 import '../../copy/data_copy.dart';
 import '../../copy/privacy_copy.dart';
+import '../../copy/settings_copy.dart';
 import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
 import '../backup/backup_format.dart';
 import 'settings_widgets.dart';
 
-/// Settings "Updates and feedback" group. One "Updates" row opens the Updates
+/// Settings ABOUT card (0.1.2 S9a, mock M9: Privacy and your data, Updates, Send
+/// feedback, in one card; was the "Privacy and security" group and the
+/// "Updates and feedback" group). One "Updates" row opens the Updates
 /// page, where the switch, "Check for updates now" and "Last checked" live
 /// (PM, B28 redefined). The row's subtitle says whether checking is on and
 /// when it last worked, or that a new version is out; a red dot shows while
 /// any notice is unread. It re-reads when the Updates page is closed.
 /// "Send feedback" (B33) opens the GitHub issues page in the browser.
-class UpdatesSection extends StatefulWidget {
-  const UpdatesSection({super.key, required this.palette, this.inbox});
+class AboutSection extends StatefulWidget {
+  const AboutSection({super.key, required this.palette, this.inbox});
 
   final AppPalette palette;
 
@@ -26,10 +29,10 @@ class UpdatesSection extends StatefulWidget {
   final UpdatesInbox? inbox;
 
   @override
-  State<UpdatesSection> createState() => _UpdatesSectionState();
+  State<AboutSection> createState() => _AboutSectionState();
 }
 
-class _UpdatesSectionState extends State<UpdatesSection> {
+class _AboutSectionState extends State<AboutSection> {
   late final UpdatesInbox _inbox = widget.inbox ?? UpdatesInbox.instance;
   bool _enabled = UpdatePrefs.defaultEnabled;
   DateTime? _lastChecked;
@@ -93,17 +96,24 @@ class _UpdatesSectionState extends State<UpdatesSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SettingsSectionLabel('Updates and feedback', palette: palette),
+        SettingsSectionLabel(kSettingsAboutGroup, palette: palette),
         SettingsCard(
           palette: palette,
           child: Column(
             children: [
               SettingsLink(
                 palette: palette,
+                icon: Icons.shield_outlined,
+                label: kPrivacyTitle,
+                subtitle: kSettingsPrivacySubtitle,
+                first: true,
+                onTap: () => Navigator.of(context).pushNamed(Routes.privacy),
+              ),
+              SettingsLink(
+                palette: palette,
                 icon: Icons.notifications_none_rounded,
                 label: kUpdatesTitle,
                 subtitle: _subtitle,
-                first: true,
                 unreadDot: _inbox.unreadCount.value > 0,
                 onTap: _open,
               ),

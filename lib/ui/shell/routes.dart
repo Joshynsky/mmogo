@@ -51,4 +51,7 @@ class Routes {
   /// B32 — the static Privacy and your data page: opened from Settings >
   /// Privacy and security and from a link row on the Backup page.
   static const privacy = '/privacy';
+
+  /// 0.1.2 S9a: opened from Settings > Adding entries > Remembered recipients.
+  static const rememberedRecipients = '/remembered-recipients';
 }

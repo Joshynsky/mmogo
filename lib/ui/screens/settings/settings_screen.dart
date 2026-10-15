@@ -11,17 +11,20 @@ import '../../../data/db/app_database.dart';
 import '../../../data/db/export_dao.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../../data/prefs/backup_prefs.dart';
+import '../../../domain/analytics/chart_blocks.dart' show MonthChartStyle, WhereItWentStyle, YearViewAmounts;
 import '../../copy/data_copy.dart';
+import '../../copy/settings_copy.dart';
+import '../../shell/primary_shell.dart';
 import '../../shell/routes.dart';
 import '../../shell/secondary_scaffold.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_palette_scope.dart';
 import '../../widgets/coach_tour.dart';
-import 'appearance_section.dart';
 import '../backup/backup_format.dart';
+import 'about_section.dart';
+import 'adding_section.dart';
 import 'data_section.dart';
-import 'preferences_section.dart';
-import 'privacy_section.dart';
-import 'updates_section.dart';
+import 'look_section.dart';
 
 /// Settings' coach-tour page id (the seen flag is `tour_seen_settings`).
 const settingsTourId = 'settings';
@@ -32,11 +35,13 @@ const settingsTourId = 'settings';
 /// Recently Deleted) and back. T8 wired the "Manage Classifications" link to
 /// its real page. T10 wired "Export CSV" to the real `ExportDao` query +
 /// `share_plus` share sheet (CSV export has no table of its own). T18 wired the "Auto-recognize classifications" toggle to
-/// `AppPrefs`' real read/write pair. T23 (this dispatch) reworks the page
-/// to the T23 draft mock: seamless top bar, followPhoneTheme, cards
-/// regrouped under Appearance/Your data/Preferences, and a working colour
-/// palette switch (`AppPaletteScope`) at the top — palette tokens only, no
-/// `AppColors.muted`/`text` on this page.
+/// `AppPrefs`' real read/write pair. T23 reworked the page to the T23 draft
+/// mock (seamless top bar, palette tokens only, a working colour palette).
+/// 0.1.2 S9a (ST1, signed mock M9): sections LOOK, ADDING ENTRIES, YOUR DATA
+/// (careful), ABOUT; the Look rows write the Look prefs explicitly and refresh
+/// Home and Analytics through `PrimaryShell.active?.dataChanged()`; the
+/// Appearance icons drive the whole app's light/dark (`AppPaletteController`).
+/// The Delete data row is S9b (its place is marked in data_section.dart).
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, this.db, this.exportCsv});
 
@@ -73,13 +78,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // documented default (ON) so the switch doesn't visibly flip from
   // off->on once the real read resolves in the common case.
   bool _autoRecognize = true;
+  // The Look values, read in _bootstrap (the prefs' own defaults until then).
+  int _firstDay = AppPrefs.defaultFirstDayOfWeek;
+  MonthChartStyle _monthStyle = MonthChartStyle.weeks;
+  YearViewAmounts _yearAmounts = YearViewAmounts.quarters;
+  bool _showWithdrawals = false;
+  WhereItWentStyle _whereStyle = WhereItWentStyle.button;
   String _backupSubtitle = 'Never backed up';
   bool _backupPaused = false;
 
   // Coach-tour anchors.
   final _paletteTourKey = GlobalKey();
   final _dataTourKey = GlobalKey();
-  final _prefsTourKey = GlobalKey();
+  final _addingTourKey = GlobalKey();
   bool _tourOffered = false;
 
   @override
@@ -108,6 +119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final count = await ExportDao.activeTransactionCount(db);
     final autoRecognize = await AppPrefs.readAutoRecognizeClassifications();
     final backupSubtitle = await _readBackupSubtitle();
+    await _readLook();
     if (!mounted) return;
     setState(() {
       _db = db;
@@ -120,6 +132,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _tourOffered = true;
       _offerTour();
     }
+  }
+
+  /// Reads the five Look values (also after Backup closes: a restore may have
+  /// changed them). Does not call setState; the caller does.
+  Future<void> _readLook() async {
+    _firstDay = await AppPrefs.readFirstDayOfWeek();
+    _monthStyle = await AppPrefs.readMonthChartStyle();
+    _yearAmounts = await AppPrefs.readYearViewAmounts();
+    _showWithdrawals = await AppPrefs.readShowWithdrawalsInChart();
+    _whereStyle = await AppPrefs.readWhereItWentStyle();
+  }
+
+  /// After a Look write: Home and Analytics re-read their prefs at once (the
+  /// same notifier Add and a restore use). Settings is pushed over the shell.
+  void _lookChanged() => PrimaryShell.active?.dataChanged();
+
+  void _setAppearance(String mode) {
+    // Applies at once (the whole app), persists in the background. Device-only.
+    AppPaletteScope.of(context).selectAppearance(mode);
+  }
+
+  Future<void> _pickFirstDay() async {
+    final day = await showFirstDayDialog(context, current: _firstDay);
+    if (day == null || !mounted) return; // Cancel, a tap outside or Back: nothing changes
+    setState(() => _firstDay = day);
+    await AppPrefs.writeFirstDayOfWeek(day);
+    _lookChanged();
+  }
+
+  Future<void> _setMonthStyle(MonthChartStyle v) async {
+    setState(() => _monthStyle = v);
+    await AppPrefs.writeMonthChartStyle(v);
+    _lookChanged();
+  }
+
+  Future<void> _setYearAmounts(YearViewAmounts v) async {
+    setState(() => _yearAmounts = v);
+    await AppPrefs.writeYearViewAmounts(v);
+    _lookChanged();
+  }
+
+  Future<void> _setShowWithdrawals(bool v) async {
+    setState(() => _showWithdrawals = v);
+    await AppPrefs.writeShowWithdrawalsInChart(v);
+    _lookChanged();
+  }
+
+  Future<void> _setWhereStyle(WhereItWentStyle v) async {
+    setState(() => _whereStyle = v);
+    await AppPrefs.writeWhereItWentStyle(v);
+    _lookChanged();
   }
 
   /// The newer of the manual and automatic backup times, or `Never backed up`;
@@ -151,6 +214,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final count = db == null ? _activeCount : await ExportDao.activeTransactionCount(db);
     final autoRecognize = await AppPrefs.readAutoRecognizeClassifications();
     final subtitle = await _readBackupSubtitle();
+    await _readLook();
     if (!mounted) return;
     setState(() {
       _activeCount = count;
@@ -207,27 +271,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  /// Clears every page's "tour seen" flag. Pages already open in this session
-  /// offer their tour again next launch (Add: next time it is opened); their
-  /// header "?" replays one straight away.
-  Future<void> _showTipsAgain() async {
-    await AppPrefs.resetAllTours();
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Tips reset. The guides will show again.')));
-  }
-
   List<CoachStep> _tourSteps() => [
-    CoachStep(target: _paletteTourKey, text: 'Pick a colour palette. It follows your phone’s light or dark mode.'),
     CoachStep(
-      target: _dataTourKey,
-      text: 'Manage your categories, restore deleted transactions, or share everything as a CSV.',
-      onEnter: () => scrollIntoView(_dataTourKey),
-      actionLabel: 'Open Manage classifications',
+      target: _paletteTourKey,
+      text: 'Pick a colour palette, and choose light or dark under Appearance. The other choices here set how Home and Analytics look.',
+    ),
+    CoachStep(
+      target: _addingTourKey,
+      text: 'Suggest categories for repeat receivers, manage your categories, or review the names mmogo remembers.',
+      onEnter: () => scrollIntoView(_addingTourKey),
+      actionLabel: 'Open Manage categories',
       onAction: () async {
-        // The tour pauses here; when Manage classifications is closed, pick
-        // it up at the next step.
+        // The tour pauses here; when Manage categories is closed, pick it up
+        // at the next step.
         await Navigator.of(context).pushNamed(Routes.manageClassifications);
         if (mounted) {
           CoachTour.maybeStart(context, pageId: settingsTourId, steps: _tourSteps());
@@ -235,9 +291,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       },
     ),
     CoachStep(
-      target: _prefsTourKey,
-      text: 'Suggest categories for repeat receivers. “Show tips again” replays these guides.',
-      onEnter: () => scrollIntoView(_prefsTourKey),
+      target: _dataTourKey,
+      text: 'Back up and restore, bring back deleted transactions, or share everything as a CSV.',
+      onEnter: () => scrollIntoView(_dataTourKey),
     ),
   ];
 
@@ -254,7 +310,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final exportEnabled = !_loading && _activeCount > 0 && !_exporting;
     // B48: a secondary page opened from Profile (back button, no bottom bar).
     return SecondaryScaffold(
-      title: 'Settings',
+      title: kSettingsTitle,
       followPalette: true,
       // No pull-to-refresh on Settings (PM direct decision, T23 draft):
       // nothing here changes from elapsed time the way Home/Analytics do.
@@ -262,7 +318,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
         key: const Key('settingsScroll'),
         padding: const EdgeInsets.fromLTRB(14, 6, 14, 32),
         children: [
-          AppearanceSection(palette: palette, tourKey: _paletteTourKey),
+          LookSection(
+            palette: palette,
+            tourKey: _paletteTourKey,
+            appearance: AppPaletteScope.of(context).appearance,
+            onAppearance: _setAppearance,
+            firstDay: _firstDay,
+            onFirstDay: _pickFirstDay,
+            monthStyle: _monthStyle,
+            onMonthStyle: _setMonthStyle,
+            yearAmounts: _yearAmounts,
+            onYearAmounts: _setYearAmounts,
+            showWithdrawals: _showWithdrawals,
+            onShowWithdrawals: _setShowWithdrawals,
+            whereStyle: _whereStyle,
+            onWhereStyle: _setWhereStyle,
+          ),
+          const SizedBox(height: 14),
+          AddingSection(
+            palette: palette,
+            tourKey: _addingTourKey,
+            autoRecognize: _autoRecognize,
+            onAutoRecognizeChanged: _loading ? null : _handleAutoRecognizeChanged,
+          ),
           const SizedBox(height: 14),
           DataSection(
             palette: palette,
@@ -275,17 +353,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             backupPaused: _backupPaused,
           ),
           const SizedBox(height: 14),
-          PreferencesSection(
-            palette: palette,
-            tourKey: _prefsTourKey,
-            autoRecognize: _autoRecognize,
-            onAutoRecognizeChanged: _loading ? null : _handleAutoRecognizeChanged,
-            onShowTipsAgain: _showTipsAgain,
-          ),
-          const SizedBox(height: 14),
-          PrivacySection(palette: palette),
-          const SizedBox(height: 14),
-          UpdatesSection(palette: palette),
+          AboutSection(palette: palette),
           const SizedBox(height: 14),
           Text(
             '${AppInfo.name} ${AppInfo.versionName} · your data stays on this phone',

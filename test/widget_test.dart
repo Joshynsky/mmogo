@@ -112,7 +112,8 @@ void main() {
     await tester.pumpAndSettle();
     // Secondary chrome: back arrow, title Settings, no bottom bar.
     expect(find.byTooltip('Back'), findsOneWidget);
-    expect(find.text('Appearance'.toUpperCase()), findsOneWidget);
+    // S9a (ST1): the first Settings group is now LOOK (was APPEARANCE).
+    expect(find.text('LOOK'), findsOneWidget);
     expect(find.byKey(const Key('primaryBottomNav')), findsNothing);
 
     await tester.tap(find.byTooltip('Back'));

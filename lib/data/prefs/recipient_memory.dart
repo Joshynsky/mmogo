@@ -161,6 +161,24 @@ class RecipientMemory {
     });
   }
 
+  /// S9a (the Remembered recipients page, "Change to ..."): changes the type
+  /// of an EXISTING entry. Keeps its `at` and its place in the list, needs no
+  /// receiver-details switch, and never goes through [remember] (an override
+  /// there moves the name to newest). True when the entry exists, the type is
+  /// Send Money or Pochi, and the stored text holds the new type; false
+  /// otherwise (nothing written). No name in the result, never logged.
+  Future<bool> retype(String key, SmsSourceType type) {
+    if (!_rememberable(type)) return Future.value(false);
+    return _serial(() async {
+      final m = await _read();
+      final old = m[key];
+      if (old == null) return false;
+      if (old.type == type) return true;
+      m[key] = RecipientRule(type: type, at: old.at); // same key: same place
+      return _write(m);
+    });
+  }
+
   /// Forgets one name. True when something was removed and the write held.
   Future<bool> forget(String key) => _serial(() async {
         final m = await _read();

@@ -193,6 +193,35 @@ void main() {
     expect((await mem.lookup(deriveRecipientNameKey('MARY WANJIKU')))!.type, SmsSourceType.sendMoney);
   });
 
+  group('retype (S9a)', () {
+    test('changes the type, keeps at and the place in the list, never moves it to newest', () async {
+      await mem.remember('A', SmsSourceType.pochi, recordDetailsOn: true); // at 1000
+      await mem.remember('B', SmsSourceType.pochi, recordDetailsOn: true); // 1001
+      await mem.remember('C', SmsSourceType.pochi, recordDetailsOn: true); // 1002
+      expect(await mem.retype('B', SmsSourceType.sendMoney), isTrue);
+      final b = (await mem.lookup('B'))!;
+      expect(b.type, SmsSourceType.sendMoney);
+      expect(b.at, 1001, reason: 'at is kept');
+      expect((await mem.list()).map((e) => e.key), ['C', 'B', 'A'], reason: 'the middle row stays in the middle');
+      expect(clock, 1003, reason: 'retype did not read the clock for a new at');
+    });
+
+    test('needs no receiver-details switch; refuses an unknown name and a non-rememberable type; writes nothing then', () async {
+      await mem.remember('A', SmsSourceType.pochi, recordDetailsOn: true);
+      final before = await raw();
+      expect(await mem.retype('NOBODY', SmsSourceType.sendMoney), isFalse);
+      expect(await mem.retype('A', SmsSourceType.payBill), isFalse);
+      expect(await raw(), before);
+      expect(await mem.retype('A', SmsSourceType.pochi), isTrue, reason: 'same type: nothing to do, no error');
+      expect(await raw(), before);
+    });
+
+    test('a failed write gives false, no name anywhere', () async {
+      final bad = RecipientMemory(prefs: () async => _ThrowingPrefs());
+      expect(await bad.retype('MARY WANJIKU', SmsSourceType.pochi), isFalse);
+    });
+  });
+
   group('grep guards', () {
     String codeOf(String path) => File(path)
         .readAsStringSync()
