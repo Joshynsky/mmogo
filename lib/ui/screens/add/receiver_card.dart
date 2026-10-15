@@ -26,6 +26,8 @@ class ReceiverCard extends StatelessWidget {
     required this.onCheckedChanged,
     required this.onFieldChanged,
     this.subError,
+    this.onNameChanged,
+    this.belowName,
   });
 
   /// One of `'SEND_MONEY'`, `'PAYBILL'`, `'BUY_GOODS'`.
@@ -40,6 +42,11 @@ class ReceiverCard extends StatelessWidget {
 
   /// Inline error under the second field (the agent number), or null.
   final String? subError;
+
+  /// 0.1.2 S8c-2: fired when the user types in the Name field (the remembered
+  /// recipients chooser listens), and the widget shown right under that field.
+  final VoidCallback? onNameChanged;
+  final Widget? belowName;
 
   bool get _isAgent => type == 'AGENT_WITHDRAWAL';
 
@@ -102,7 +109,9 @@ class ReceiverCard extends StatelessWidget {
               label: nameLabel,
               controller: name,
               labelWidth: _isAgent ? 100 : 70,
+              onChanged: onNameChanged,
             ),
+            ?belowName,
             if (subLabel != null) ...[
               Divider(height: 1, color: palette.line),
               _field(
@@ -136,6 +145,7 @@ class ReceiverCard extends StatelessWidget {
     int maxLength = receiverFieldMaxLength,
     List<TextInputFormatter>? inputFormatters,
     double labelWidth = 70,
+    VoidCallback? onChanged,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
@@ -153,7 +163,10 @@ class ReceiverCard extends StatelessWidget {
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: palette.ink),
           cursorColor: palette.primary,
           decoration: const InputDecoration(isDense: true, border: InputBorder.none),
-          onChanged: (_) => onFieldChanged(),
+          onChanged: (_) {
+            onFieldChanged();
+            onChanged?.call();
+          },
         ),
       ),
     );

@@ -7,8 +7,11 @@ import '../../../data/db/classification_dao.dart';
 import '../../../data/db/counterparty_dao.dart';
 import '../../../data/db/transaction_dao.dart';
 import '../../../data/prefs/app_prefs.dart';
+import '../../../data/prefs/recipient_memory.dart';
 import '../../../domain/cash/cash_code.dart';
 import '../../../domain/format/ksh_amount.dart';
+import '../../../domain/parsing/name_only_fields.dart';
+import '../../../domain/parsing/name_only_resolver.dart';
 import '../../../domain/parsing/parsed_sms_fields.dart';
 import '../../shell/app_messenger.dart';
 import '../../shell/chrome_widgets.dart';
@@ -19,10 +22,14 @@ import '../../widgets/ksh_input_formatter.dart';
 import 'add_draft.dart';
 import 'add_tour.dart';
 import 'amount_field.dart';
-import 'category_chips.dart';
+import 'category_section.dart';
 import 'details_card.dart';
+import 'fee_hint.dart';
+import 'name_only_ask.dart';
+import 'name_only_state.dart';
 import 'paste_card.dart';
 import 'receiver_card.dart';
+import 'recipient_chooser.dart';
 import 'review_bar.dart';
 import 'review_sheet.dart';
 import 'src_segment.dart';
@@ -41,12 +48,17 @@ export 'add_tour.dart' show addTourId;
 /// tab). Follows [AppPalette.of] (T27, superseding T26's one carve-out)
 /// with a seamless top bar, the title "Add" and a round close.
 class AddScreen extends StatefulWidget {
-  const AddScreen({super.key, this.db});
+  const AddScreen({super.key, this.db, this.memory});
 
   /// Test-only injection seam, threaded down to every DAO call this screen
   /// makes directly and to `category_chips.dart`/`review_sheet.dart`. `null`
   /// (the real route table) resolves the genuine on-device database.
   final Database? db;
+
+  /// Test-only injection seam for the remembered Pochi / Send Money answers
+  /// (0.1.2 S8c-2). `null` uses the real device-only store; the screen holds ONE
+  /// instance for its whole life.
+  final RecipientMemory? memory;
 
   @override
   State<AddScreen> createState() => _AddScreenState();
@@ -78,6 +90,22 @@ class _AddScreenState extends State<AddScreen> {
   /// A parsed agent number that was not 1..20 digits: the field stays empty and
   /// shows an inline error (it must never reach the database check).
   bool _agentNumberRejected = false;
+
+  /// 0.1.2 S8c-2 (NO4): the name-only message state (pending type, tick, how,
+  /// the SMS name and its key), the one memory instance, and a counter that
+  /// makes a late lookup result of an older parse harmless.
+  final _ask = NameOnlyState();
+  late final RecipientMemory _memory = widget.memory ?? RecipientMemory();
+  int _parseGen = 0;
+
+  /// Remembered recipients chooser: the whole list, loaded once when typing
+  /// starts, and the plain "Type changed to X" status line.
+  List<RecipientEntry>? _memoryList;
+  bool _memoryLoading = false;
+  String _swNote = '';
+
+  /// Set by `_save` when remembering the answer pushed the oldest name out.
+  bool _droppedOldest = false;
 
   final _feeFocus = FocusNode();
   final _scroll = ScrollController();
@@ -170,7 +198,10 @@ class _AddScreenState extends State<AddScreen> {
   void _onParsed(ParsedSmsFields fields) {
     final agent = fields.agentNumber;
     final agentOk = agent == null || AddDraft.agentNumberOk(agent);
+    _parseGen++;
     setState(() {
+      _ask.reset();
+      _swNote = '';
       _src = 'MPESA';
       _type = fields.sourceType.dbValue;
       _filled = true;
@@ -203,7 +234,10 @@ class _AddScreenState extends State<AddScreen> {
   /// Start over: clears the fields, unlocks the pills and puts the type back on
   /// Send Money (the mock's `A = {...blank(), src: A.src}`).
   void _startOver() {
+    _parseGen++;
     setState(() {
+      _ask.reset();
+      _swNote = '';
       _filled = false;
       _type = 'SEND_MONEY';
       _rawParseSource = 'MANUAL';
@@ -219,6 +253,164 @@ class _AddScreenState extends State<AddScreen> {
       _classificationName = null;
       _autoApplyKey = null;
       _codeDuplicate = false;
+    });
+  }
+
+  // §ADD.SHELL.NAMEONLY — 0.1.2 S8c-2 (NO4): a name-only message, the ask, the
+  // remembered answer and the remembered recipients chooser.
+
+  /// A name-only message fills everything that does not depend on the type
+  /// (code, amount, fee, When) at once, with the type still UNDECIDED
+  /// ([_ask].pending); then memory is asked, and on a miss the ask opens. This
+  /// runs after the paste sheet has closed.
+  void _onNameOnly(NameOnlyFields f) {
+    final gen = ++_parseGen;
+    setState(() {
+      _ask.start(name: f.name, key: deriveRecipientNameKey(f.name));
+      _swNote = '';
+      _src = 'MPESA';
+      _type = 'SEND_MONEY'; // a neutral value while undecided; the pills show none selected
+      _filled = true;
+      _rawParseSource = 'SMS_PARSE';
+      _feeTouched = false;
+      _agentNumberRejected = false;
+      _codeController.text = f.code;
+      _amountController.text = groupKshText((f.amountCents / 100).toStringAsFixed(2));
+      _feeController.text = (f.transactionCostCents / 100).toStringAsFixed(2);
+      _occurredAt = DateTime.fromMillisecondsSinceEpoch(f.transactionOccurredAt);
+      _nameController.clear();
+      _subController.clear();
+      _classificationId = null;
+      _classificationName = null;
+      _autoApplyKey = null;
+    });
+    _checkCodeDuplicate();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scroll.hasClients) _scroll.jumpTo(0);
+    });
+    _resolveNameOnly(f, gen);
+  }
+
+  Future<void> _resolveNameOnly(NameOnlyFields f, int gen) async {
+    RecipientRule? rule;
+    try {
+      // Looked up whatever the receiver-details switch says (F2 is decided in S9);
+      // an error or a timeout counts as a miss, so the ask opens.
+      rule = await _memory.lookup(_ask.key).timeout(const Duration(seconds: 3));
+    } catch (_) {
+      rule = null;
+    }
+    if (!mounted || gen != _parseGen) return;
+    switch (resolveNameOnly(f, rule)) {
+      case Resolved(:final fields):
+        _applyAnswer(fields.sourceType, how: 'memory', rule: rule);
+      case NeedsType():
+        await _openAsk();
+    }
+  }
+
+  Future<void> _openAsk({bool change = false}) async {
+    if (!_ask.active) return;
+    final gen = _parseGen;
+    if (change) _ask.tick = false; // the mock: Change reopens the ask with the tick OFF
+    final current = _ask.pending ? null : _draft.smsSourceType;
+    final picked = await showNameOnlyAsk(
+      context,
+      name: _ask.name,
+      current: current,
+      showTick: _captureIdentity,
+      change: current != null,
+      tick: _ask.tick,
+      onTick: (v) => _ask.tick = v,
+    );
+    // Closed without a choice (Back, scrim, Esc, swipe) or the same type: nothing changes.
+    if (!mounted || gen != _parseGen || picked == null || picked == current) return;
+    _applyAnswer(picked, how: 'chosen');
+  }
+
+  void _applyAnswer(SmsSourceType type, {required String how, RecipientRule? rule}) {
+    setState(() {
+      _ask.pending = false;
+      _ask.how = how;
+      if (how == 'memory') {
+        _ask.remembered = rule;
+        _ask.tick = false; // "Remember this change" starts OFF
+      }
+      _type = type.dbValue;
+      _classificationId = null;
+      _classificationName = null;
+      _autoApplyKey = null;
+      _nameController.text = _ask.name; // the SMS name, for Pochi's label / Send Money's note
+      _subController.clear();
+      _feeTouched = false;
+    });
+  }
+
+  /// Written only AFTER the transaction is saved, and only when the live
+  /// switch, the tick and the rules in [NameOnlyState.shouldRemember] all say so.
+  /// Never throws; returns true when the oldest remembered name was dropped.
+  Future<bool> _rememberAnswer() async {
+    final type = _draft.smsSourceType;
+    if (!_ask.shouldRemember(captureOn: _captureIdentity, type: type)) return false;
+    try {
+      final r = await _memory
+          .remember(_ask.key, type, recordDetailsOn: _captureIdentity)
+          .timeout(const Duration(seconds: 4));
+      return r == RememberResult.savedDroppedOldest;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool get _chooserOn =>
+      _src == 'MPESA' && !_filled && _captureIdentity && (_type == 'SEND_MONEY' || _type == 'POCHI_LA_BIASHARA');
+
+  void _onNameTyped() {
+    setState(() => _swNote = '');
+    if (_memoryList == null && !_memoryLoading && _chooserOn && _nameController.text.trim().isNotEmpty) {
+      _memoryLoading = true;
+      _loadMemoryList();
+    }
+  }
+
+  Future<void> _loadMemoryList() async {
+    List<RecipientEntry> list;
+    try {
+      list = await _memory.list().timeout(const Duration(seconds: 3));
+    } catch (_) {
+      list = const [];
+    }
+    if (!mounted) return;
+    setState(() {
+      _memoryList = list;
+      _memoryLoading = false;
+    });
+  }
+
+  /// A chooser tap: set the type FIRST (changing it clears the Name), then the
+  /// Name. Never writes to memory.
+  void _pickRecipient(RecipientEntry e) {
+    final switchType = e.rule.type.dbValue != _type;
+    _onTypeChanged(e.rule.type.dbValue);
+    setState(() {
+      _nameController.text = e.key;
+      _swNote = switchType ? recipientTypeChangedText(e.key, e.rule.type) : '';
+    });
+  }
+
+  Widget? _chooserBelowName() {
+    final list = _memoryList;
+    final entries = _chooserOn && list != null
+        ? recipientChooserEntries(list, typed: _nameController.text, currentType: _draft.smsSourceType)
+        : const <RecipientEntry>[];
+    if (entries.isEmpty && _swNote.isEmpty) return null;
+    return RecipientChooser(entries: entries, onPick: _pickRecipient, note: _swNote);
+  }
+
+  void _useUsualFee(int usualCents) {
+    setState(() {
+      _feeController.text = feeHintFieldText(usualCents);
+      _feeTouched = true;
     });
   }
 
@@ -239,6 +431,7 @@ class _AddScreenState extends State<AddScreen> {
   void _onTypeChanged(String next) {
     if (next == _type || _filled) return;
     setState(() {
+      _swNote = '';
       _type = next;
       // A classification chosen under the previous Type's group would
       // violate the group-scope guard trigger for the new Type — must be
@@ -328,7 +521,7 @@ class _AddScreenState extends State<AddScreen> {
   int? _parsedAmountCents() => _draft.amountCents;
   int? _parsedFeeCents() => _draft.feeCents;
   String _currentCounterpartyKey() => _draft.counterpartyKey;
-  bool get _canReview => _draft.canReview;
+  bool get _canReview => !_ask.pending && _draft.canReview;
 
   // §ADD.SHELL.SAVE — the sticky "Review & save" bar + "Check before
   // saving" sheet (build step 7). Nothing is written to `transactions`
@@ -357,7 +550,9 @@ class _AddScreenState extends State<AddScreen> {
     if (saved == true && mounted) {
       PrimaryShell.active?.dataChanged(); // Home / Analytics / Paid to re-query
       Navigator.of(context).pop();
-      appMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('Saved')));
+      // S8c-2: a suffix on "Saved" (one snackbar), never a name.
+      final note = _droppedOldest ? 'Saved. The oldest remembered name was removed to make room.' : 'Saved';
+      appMessengerKey.currentState?.showSnackBar(SnackBar(content: Text(note)));
     }
   }
 
@@ -399,6 +594,9 @@ class _AddScreenState extends State<AddScreen> {
         }
       }
     }
+    // S8c-2 (NO4): the transaction is committed; only now is the answer
+    // remembered (never on cancel or a failed insert; not for Cash).
+    _droppedOldest = !cash && await _rememberAnswer();
     // B20: the entry is saved. Count it for auto-backup (inert when it is
     // off; never throws; never awaited, so a slow or failing backup cannot
     // hold up or fail this save).
@@ -486,9 +684,22 @@ class _AddScreenState extends State<AddScreen> {
                   PasteCard(
                     filled: _filled,
                     onParsed: _onParsed,
+                    onNameOnly: _onNameOnly,
                     onStartOver: _startOver,
                     tourKey: _pasteTourKey,
                   ),
+                  if (_ask.active && _filled) ...[
+                    const SizedBox(height: 10),
+                    if (_ask.pending)
+                      NameOnlyAwaitRow(onChoose: _openAsk)
+                    else
+                      NameOnlyMarker(
+                        remembered: _ask.how == 'memory',
+                        typeName: _draft.typeLabel,
+                        sendMoney: _type == 'SEND_MONEY',
+                        onChange: () => _openAsk(change: true),
+                      ),
+                  ],
                   // After a parse the six pills stay (the parsed one open, the rest
                   // dimmed and locked); only the divider goes.
                   if (!_filled) ...[
@@ -496,7 +707,7 @@ class _AddScreenState extends State<AddScreen> {
                     TypePills.orDivider(palette),
                   ],
                   const SizedBox(height: 10),
-                  TypePills(type: _type, locked: _filled, onChanged: _onTypeChanged),
+                  TypePills(type: _ask.pending ? null : _type, locked: _filled, onChanged: _onTypeChanged),
                 ],
                 AmountField(
                   controller: _amountController,
@@ -516,10 +727,13 @@ class _AddScreenState extends State<AddScreen> {
                     noFee: _draft.isAirtime,
                     feeError: _draft.feeError(touched: _feeTouched),
                     feeFocus: _feeFocus,
+                    underFee: _draft.isWithdrawal && !_ask.pending
+                        ? FeeHint(amountCents: _parsedAmountCents(), feeText: _feeController.text, onUse: _useUsualFee)
+                        : null,
                   )
                 else
                   CashWhenRow(whenText: formatLowKeyDateTime(_occurredAt), onWhenChangeTap: _pickDateTime),
-                if (_src == 'MPESA' && !_draft.isAirtime)
+                if (_src == 'MPESA' && !_draft.isAirtime && !_ask.pending)
                   KeyedSubtree(
                     key: _receiverTourKey,
                     child: ReceiverCard(
@@ -529,33 +743,18 @@ class _AddScreenState extends State<AddScreen> {
                       sub: _subController,
                       onCheckedChanged: _setCaptureIdentity,
                       onFieldChanged: () => setState(() => _agentNumberRejected = false),
+                      onNameChanged: _onNameTyped,
+                      belowName: _chooserBelowName(),
                       subError: _agentNumberRejected && _type == 'AGENT_WITHDRAWAL'
                           ? 'Agent number: digits only, up to 20. Enter it yourself.'
                           : null,
                     ),
                   ),
-                const SizedBox(height: 6),
-                if (!_draft.hasFixedCategory) ...[
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('Category', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: palette.ink)),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                KeyedSubtree(
-                  key: _categoryTourKey,
-                  child: _draft.hasFixedCategory
-                      // Withdrawal and Airtime: one muted line, no chips, no create, no choice.
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-                          child: Text(
-                            'Category: ${_classificationName ?? _draft.typeLabel}',
-                            key: const Key('addFixedCategory'),
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: palette.mutedInk),
-                          ),
-                        )
-                      : CategoryChips(
+                if (!_ask.pending)
+                  CategorySection(
                     db: db,
+                    fixed: _draft.hasFixedCategory,
+                    fixedLabel: _draft.typeLabel,
                     sourceType: _src == 'CASH' ? 'CASH' : _type,
                     counterpartyKey: counterpartyKey,
                     counterpartyDisplayName: _nameController.text.trim(),
@@ -567,14 +766,18 @@ class _AddScreenState extends State<AddScreen> {
                     }),
                     autoApplyChecked: _autoApplyKey != null && _autoApplyKey == counterpartyKey,
                     onAutoApplyChanged: (checked) => setState(() => _autoApplyKey = checked ? counterpartyKey : null),
+                    tourKey: _categoryTourKey,
                   ),
-                ),
                 const SizedBox(height: 80),
               ],
             ),
           ),
         ),
-        ReviewBar(enabled: _canReview, hint: _draft.reviewHint, onTap: _openReview),
+        ReviewBar(
+          enabled: _canReview,
+          hint: _ask.pending ? kNameOnlyChooseLine : _draft.reviewHint,
+          onTap: _openReview,
+        ),
       ],
     );
   }

@@ -120,9 +120,11 @@ void main() {
       expect(kPrivacyStoredReceiverDetails, contains('names and phone numbers'));
     });
 
-    test('COPY AHEAD OF FEATURE: these sentences are true only after S3 (agent number) and S8 (remembered answers)', () {
-      // QA gate: do not release 0.1.2 unless slices S3 and S8 shipped, or these two are removed.
-      expect(kPrivacyCopyAheadOfFeature, [kPrivacyStoredAgentNumber, kPrivacyStoredRememberedAnswers]);
+    test('COPY AHEAD OF FEATURE: only the S3 agent-number sentence is left; the S8 remembered-answers sentence went live in S8c-2', () {
+      // S8c-2 (F4): the remembered answers ship now, so that sentence left the list (it still shows on the page).
+      // QA gate: do not release 0.1.2 unless slice S3 shipped, or this one is removed.
+      expect(kPrivacyCopyAheadOfFeature, [kPrivacyStoredAgentNumber]);
+      expect(kPrivacyCopyAheadOfFeature, isNot(contains(kPrivacyStoredRememberedAnswers)));
       expect(kPrivacyStoredAgentNumber, contains('agent number'));
     });
 

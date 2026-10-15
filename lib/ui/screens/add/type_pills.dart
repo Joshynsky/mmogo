@@ -15,8 +15,9 @@ import 'form_row.dart';
 class TypePills extends StatefulWidget {
   const TypePills({super.key, required this.type, required this.onChanged, this.locked = false});
 
-  /// A `transactions.source_type` of the six M-Pesa types.
-  final String type;
+  /// A `transactions.source_type` of the six M-Pesa types, or null while a
+  /// name-only message has no type yet (0.1.2 S8c-2: all six show their code).
+  final String? type;
   final ValueChanged<String> onChanged;
 
   /// True after a parse: taps are ignored until Start over.
@@ -78,7 +79,7 @@ class _TypePillsState extends State<TypePills> {
   /// when the row scrolls, at a large text scale).
   void _scrollSelectedIntoView() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = _keys[widget.type]?.currentContext;
+      final ctx = widget.type == null ? null : _keys[widget.type]?.currentContext;
       if (!mounted || ctx == null) return;
       Scrollable.ensureVisible(ctx, alignment: 0.5, duration: Duration.zero);
     });

@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/prefs/app_prefs.dart';
+import 'package:mmogo/data/prefs/recipient_memory.dart';
 import 'package:mmogo/ui/screens/add/add_screen.dart';
 import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,7 +14,12 @@ import 'fake_add_db.dart';
 /// [captureReceiver] mirrors the remembered "Also record the receiver..." box.
 /// Its real default is ON, so tests that are not about receiver capture start
 /// with it OFF. The first-run tour is marked seen.
-Future<void> pumpAdd(WidgetTester tester, FakeAddDb db, {bool captureReceiver = false}) async {
+Future<void> pumpAdd(
+  WidgetTester tester,
+  FakeAddDb db, {
+  bool captureReceiver = false,
+  RecipientMemory? memory,
+}) async {
   SharedPreferences.setMockInitialValues({
     'tour_seen_$addTourId': true,
     if (!captureReceiver) AppPrefs.keyCaptureIdentityPreference: false,
@@ -27,7 +33,7 @@ Future<void> pumpAdd(WidgetTester tester, FakeAddDb db, {bool captureReceiver = 
       builder: (context) => Scaffold(
         body: Center(
           child: ElevatedButton(
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AddScreen(db: db))),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AddScreen(db: db, memory: memory))),
             child: const Text('root'),
           ),
         ),

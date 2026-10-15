@@ -25,6 +25,7 @@ class DetailsCard extends StatelessWidget {
     this.noFee = false,
     this.feeError,
     this.feeFocus,
+    this.underFee,
   });
 
   final TextEditingController code;
@@ -44,6 +45,10 @@ class DetailsCard extends StatelessWidget {
 
   /// Lets the screen see when the Fee field was left (error timing).
   final FocusNode? feeFocus;
+
+  /// 0.1.2 S8c-2: the Withdrawal fee hint / soft note (`fee_hint.dart`), directly
+  /// under the Fee field and its error line.
+  final Widget? underFee;
 
   @override
   Widget build(BuildContext context) {
@@ -130,6 +135,7 @@ class DetailsCard extends StatelessWidget {
               ),
             ),
             if (feeError != null) KeyedSubtree(key: const Key('addFeeError'), child: FieldError(feeError!)),
+            ?underFee,
           ],
         ],
       ),

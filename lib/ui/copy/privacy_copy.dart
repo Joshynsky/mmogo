@@ -34,14 +34,14 @@ const kPrivacyStoredReceiverDetails =
 /// C-B12, COPY AHEAD OF FEATURE: the agent number exists from slice S3 (AG1).
 const kPrivacyStoredAgentNumber = "An agent number is kept beside the receiver's phone number.";
 
-/// C-B12, COPY AHEAD OF FEATURE: remembered answers exist from slice S8.
+/// C-B12: remembered answers ship with 0.1.2 S8c-2 (no longer copy ahead of the feature).
 const kPrivacyStoredRememberedAnswers =
     'The Send Money or Pochi answer mmogo remembers is kept only when the tick is on. '
     'It is not in backups and not shared.';
 
 /// The sentences that are true only once a later slice ships (see
 /// `_pipeline/v0.1.2/baseline/s1-deviations.md`); a test lists them.
-const kPrivacyCopyAheadOfFeature = [kPrivacyStoredAgentNumber, kPrivacyStoredRememberedAnswers];
+const kPrivacyCopyAheadOfFeature = [kPrivacyStoredAgentNumber];
 
 /// Canonical privacy line (Judge P5-8, E8 STANDARD build): exact, one constant.
 const kPrivacySentenceStandard = 'No permissions except internet, used only to check for updates (switchable off).';

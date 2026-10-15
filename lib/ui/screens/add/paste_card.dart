@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../domain/parsing/name_only_fields.dart';
 import '../../../domain/parsing/parse_result.dart';
 import '../../../domain/parsing/parsed_sms_fields.dart';
 import '../../../domain/parsing/sms_parser.dart';
@@ -21,6 +22,7 @@ class PasteCard extends StatelessWidget {
     super.key,
     required this.filled,
     required this.onParsed,
+    required this.onNameOnly,
     required this.onStartOver,
     this.tourKey,
   });
@@ -32,6 +34,11 @@ class PasteCard extends StatelessWidget {
   /// screen's own rules) and sets `filled = true`.
   final ValueChanged<ParsedSmsFields> onParsed;
 
+  /// 0.1.2 S8c-2: fired once a NAME-ONLY message is parsed (no type yet). The
+  /// paste sheet has already closed; the screen fills the type-independent
+  /// fields, looks the name up and opens the ask.
+  final ValueChanged<NameOnlyFields> onNameOnly;
+
   /// D2 — clears the whole form back to manual entry with the Type pills
   /// selectable again.
   final VoidCallback onStartOver;
@@ -40,13 +47,17 @@ class PasteCard extends StatelessWidget {
   final GlobalKey? tourKey;
 
   Future<void> _openSheet(BuildContext context) async {
-    final fields = await showModalBottomSheet<ParsedSmsFields>(
+    final result = await showModalBottomSheet<Object>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => const _PasteSheet(),
     );
-    if (fields != null) onParsed(fields);
+    if (result is ParsedSmsFields) {
+      onParsed(result);
+    } else if (result is NameOnlyFields) {
+      onNameOnly(result);
+    }
   }
 
   @override
@@ -147,17 +158,11 @@ class _PasteSheetState extends State<_PasteSheet> {
         // Covers ParseTooLong too (a ParseError subtype): both stay in the
         // sheet, as a light-red box, and fill nothing.
         setState(() => _error = reason);
-      case ParseNeedsType():
-        _onNameOnlyNeedsType(result);
+      case ParseNeedsType(:final fields):
+        // S8c-2 (NO4): the paste sheet closes for a name-only message; the
+        // screen then fills the form and opens the ask AFTER this sheet is gone.
+        Navigator.of(context).pop(fields);
     }
-  }
-
-  /// S8C2-HOOK (name-only ask). S8c-2 replaces the body of this method with the
-  /// "Is NAME on Pochi or Send Money?" sheet (NO4). Until then a name-only
-  /// message shows the NOMATCH text, fills nothing and saves nothing (known
-  /// gap, brief addendum H).
-  void _onNameOnlyNeedsType(ParseNeedsType result) {
-    setState(() => _error = SmsParser.kSmsNoMatchReason);
   }
 
   @override

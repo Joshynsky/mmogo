@@ -603,13 +603,14 @@ void main() {
       expect(_text(tester, 'addCodeField'), 'QWE1R2T3Y4');
     });
 
-    testWidgets('ParseNeedsType (a name-only message) shows the NOMATCH text for now: the known S8c-2 gap', (tester) async {
+    testWidgets('ParseNeedsType (a name-only message) closes the paste sheet and opens the S8c-2 ask; no NOMATCH box', (tester) async {
       await pumpAdd(tester, FakeAddDb());
       await _openPasteSheet(tester);
       await _submitPaste(tester, _nameOnlySms);
-      expect(find.text(SmsParser.kSmsNoMatchReason), findsOneWidget);
-      expect(find.byKey(const Key('addFilledStrip')), findsNothing);
-      expect(_text(tester, 'addAmountField'), isEmpty);
+      expect(find.text(SmsParser.kSmsNoMatchReason), findsNothing);
+      expect(find.byKey(const Key('addAskSheet')), findsOneWidget);
+      expect(find.byKey(const Key('addFilledStrip')), findsOneWidget);
+      expect(_text(tester, 'addAmountField'), '100.00');
     });
   });
 
