@@ -130,6 +130,22 @@ void main() {
       await db.close();
     });
 
+    test('P6-13T: a restore file (Merge and Replace) carrying recipient_types_v1 leaves prefs unchanged', () async {
+      const planted = '{"PLANTED NAME":{"t":"POCHI_LA_BIASHARA","at":1}}';
+      for (final mine in <String?>[null, '{"MINE":{"t":"SEND_MONEY","at":2}}']) {
+        for (final mode in RestoreMode.values) {
+          SharedPreferences.setMockInitialValues({'recipient_types_v1': ?mine});
+          final db = await openTestDb();
+          final json = validBackupJson()..['prefs'] = {'recipient_types_v1': planted};
+          await svc(db).restore(bytesOf(json), mode);
+          final p = await SharedPreferences.getInstance();
+          expect(p.getString('recipient_types_v1'), mine, reason: '${mode.name} mine=$mine');
+          expect(p.getKeys(), mine == null ? isEmpty : {'recipient_types_v1'}, reason: mode.name);
+          await db.close();
+        }
+      }
+    });
+
     test('NEGATIVE CONTROL: the same restore DOES write an allowlisted key (the test can see a write)', () async {
       final db = await openTestDb();
       await svc(db).restore(bytesOf(validBackupJson()..['prefs'] = {'first_day_of_week': 3}), RestoreMode.merge);
