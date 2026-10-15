@@ -40,6 +40,9 @@ class _FakeDb implements Database {
   /// When set, a restore (`SET deleted_at = NULL`) throws this.
   Object? restoreError;
 
+  /// S9b-1: a restore changes 0 rows (the entry is gone).
+  bool restoreAffectsNothing = false;
+
   @override
   Future<List<Map<String, Object?>>> rawQuery(String sql, [List<Object?>? arguments]) async {
     if (sql.contains('WHERE t.deleted_at IS NOT NULL')) {
@@ -73,6 +76,7 @@ class _FakeDb implements Database {
   }) async {
     if (table == 'transactions') {
       if (restoreError != null && values['deleted_at'] == null) throw restoreError!;
+      if (restoreAffectsNothing && values['deleted_at'] == null) return 0;
       final id = whereArgs![0] as int;
       final tx = transactions.firstWhere((t) => t['id'] == id);
       tx.addAll(values);
@@ -180,6 +184,19 @@ void main() {
     expect(find.text('Nothing here right now.'), findsOneWidget);
     final row = db.transactions.firstWhere((t) => t['id'] == 1);
     expect(row['deleted_at'], isNull);
+  });
+
+  testWidgets('S9b-1: Restore of an entry that is no longer there says so, never "Transaction restored"', (tester) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final db = _FakeDb(transactions: [_deletedTx(id: 1, deletedAt: now - 60000)])..restoreAffectsNothing = true;
+    await tester.pumpWidget(_harness(db));
+    await _settle(tester);
+
+    await tester.tap(find.byKey(const Key('deletedRowRestoreButton_1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('That entry is no longer there'), findsOneWidget);
+    expect(find.text('Transaction restored'), findsNothing);
   });
 
   testWidgets('Restore of a row whose code was re-recorded shows a plain message and leaves the row deleted', (tester) async {

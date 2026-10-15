@@ -118,6 +118,16 @@ class UpdatesInbox {
   /// or unreadable one). B49 shows the welcome notice only when it is false.
   bool get hadStoredValue => _hadStoredValue;
 
+  /// Reset app (0.1.2 S9b-1): forgets the cached notices and the "loaded"
+  /// state so the next [ensureLoaded] reads the (now wiped) storage again.
+  /// Writes nothing.
+  void resetForRestart() {
+    _notices = const [];
+    _loading = null;
+    _hadStoredValue = false;
+    unreadCount.value = 0;
+  }
+
   /// Loads once; later calls share the first load. [add] and [markAllRead]
   /// call it, so a write can never replace a list that was not read yet.
   Future<void> ensureLoaded() => _loading ??= load();

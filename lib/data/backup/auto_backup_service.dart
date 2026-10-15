@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart' show SnackBar, Text;
@@ -69,6 +70,44 @@ class AutoBackupService {
   bool _running = false;
   int _queued = 0;
 
+  /// 0.1.2 S9b-1 (Delete data): true between [quiesce] and [resume]. While it
+  /// is set [onEntrySaved] does nothing at all (no run, no count, no queue).
+  bool _blocked = false;
+
+  /// Completed when the run in progress (and the counting of the entries
+  /// queued behind it) is over; null when idle.
+  Completer<void>? _idle;
+
+  /// Longest [quiesce] waits for a run in progress.
+  static const quiesceBound = Duration(seconds: 35);
+
+  /// True while Delete data holds this service still.
+  bool get isBlocked => _blocked;
+
+  /// Stops new runs and waits (at most [bound]) for the one in progress.
+  /// True = quiet: nothing is running and nothing will start until [resume].
+  /// False = the run outlasted the bound: the caller must touch nothing, call
+  /// [resume] and report "busy" (or "not finished" at step database).
+  Future<bool> quiesce({Duration bound = quiesceBound}) async {
+    _blocked = true;
+    final idle = _idle;
+    if (idle == null) return true;
+    try {
+      await idle.future.timeout(bound);
+      return true;
+    } catch (_) {
+      _blocked = false;
+      return false;
+    }
+  }
+
+  /// Lets [onEntrySaved] work again and forgets entries counted as queued
+  /// (they belong to a state that was just deleted or reset).
+  void resume() {
+    _blocked = false;
+    _queued = 0;
+  }
+
   static Future<Uint8List> _defaultExport() =>
       BackupService(db: () => AppDatabase.instance.database).exportToBytes();
 
@@ -89,17 +128,24 @@ class AutoBackupService {
   /// callers should not await it on the save path.
   Future<void> onEntrySaved() async {
     try {
+      if (_blocked) return; // Delete data holds the service still
       if (_running) {
         _queued++;
         return;
       }
       _running = true;
+      final idle = _idle = Completer<void>();
       try {
-        await _run();
+        try {
+          await _run();
+        } finally {
+          _running = false;
+        }
+        await _countQueued();
       } finally {
-        _running = false;
+        _idle = null;
+        idle.complete();
       }
-      await _countQueued();
     } catch (_) {
       // Failure never blocks saving an entry.
     }

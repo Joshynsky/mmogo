@@ -156,6 +156,10 @@ enum RestoreFailReason {
 
   /// Any database error inside the transaction (constraint, trigger, I/O).
   databaseError,
+
+  /// Another restore / undo / Delete data / Reset is running (`DataOpGate`
+  /// was held). Nothing was touched.
+  busy,
 }
 
 /// Thrown by `RestoreService` when a restore could not be done. Carries no

@@ -58,6 +58,12 @@ class FakeSafetyCopyStore implements SafetyCopyStore {
     events.add('safety.clear');
     bytes = null;
   }
+
+  @override
+  Future<void> clearVerified() async {
+    events.add('safety.clearVerified');
+    bytes = null;
+  }
 }
 
 /// BackupSettings that records when it is called (and, through [probe], what

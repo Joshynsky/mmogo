@@ -104,6 +104,37 @@ class SafetyCopyStore {
   /// Removes every safety copy (after a successful Undo).
   Future<void> clear() => _deleteAllExcept(null);
 
+  /// Removes every safety copy AND every `.json.partial`, and PROVES it
+  /// (0.1.2 S9b-1, Delete data): unlike [clear] a file that cannot be deleted
+  /// is a failure, an unreadable folder is a failure, and afterwards no copy
+  /// and no partial may be left. Throws [SafetyCopyError] ('not cleared').
+  /// An absent folder is a clean state (nothing is created).
+  Future<void> clearVerified() async {
+    try {
+      final dir = Directory(p.join((await _baseDir()).path, folderName));
+      if (!await dir.exists()) return;
+      for (final e in dir.listSync()) {
+        if (e is! File) continue;
+        final name = p.basename(e.path);
+        if (namePattern.hasMatch(name) || name.endsWith('.json.partial')) {
+          await e.delete();
+        }
+      }
+      for (final e in dir.listSync()) {
+        if (e is! File) continue;
+        final name = p.basename(e.path);
+        if (namePattern.hasMatch(name) || name.endsWith('.json.partial')) {
+          throw const SafetyCopyError('not cleared');
+        }
+      }
+      // exists() throwing is a failure here (canUndo() would swallow it).
+      if (await exists()) throw const SafetyCopyError('not cleared');
+    } catch (e) {
+      if (e is SafetyCopyError) rethrow;
+      throw SafetyCopyError('not cleared', e);
+    }
+  }
+
   Future<List<File>> _copies() async {
     final dir = await _dir();
     final files = <File>[

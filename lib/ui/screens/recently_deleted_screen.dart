@@ -7,6 +7,7 @@ import '../../data/db/app_database.dart';
 import '../../data/db/recently_deleted_dao.dart';
 import '../../data/db/transaction_dao.dart';
 import '../../domain/format/money.dart';
+import '../copy/delete_data_copy.dart';
 import '../shell/secondary_scaffold.dart';
 import '../theme/app_colors.dart';
 
@@ -126,8 +127,9 @@ class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
   Future<void> _restore(DeletedTransactionRow row) async {
     final db = _db;
     if (db == null) return;
+    final int changed;
     try {
-      await TransactionDao.restore(db, id: row.id);
+      changed = await TransactionDao.restore(db, id: row.id);
     } on DatabaseException {
       // Its M-Pesa code was recorded again while it was deleted (the unique
       // index); the row stays here.
@@ -136,8 +138,9 @@ class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
       return;
     }
     if (!mounted) return;
+    // S9b-1: 0 rows = a stale restore (the entry is gone): never "restored".
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Transaction restored')),
+      SnackBar(content: Text(changed == 0 ? kEntryNoLongerThere : 'Transaction restored')),
     );
     await _load();
   }

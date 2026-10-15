@@ -107,6 +107,10 @@ class PrimaryShell extends StatefulWidget {
     return a != null && (a.route?.isActive ?? false) ? a : null;
   }
 
+  /// Reset app (0.1.2 S9b-1): forgets the live shell (the whole app is about
+  /// to be rebuilt under a new key, so the old controller is stale).
+  static void resetForRestart() => _active = null;
+
   @override
   State<PrimaryShell> createState() => _PrimaryShellState();
 }

@@ -160,6 +160,27 @@ void main() {
     });
   });
 
+  group('S9b-1: a stale Undo', () {
+    testWidgets('Undo with 0 rows affected shows "That entry is no longer there", no highlight, no "restored"', (tester) async {
+      final db = await _pump(tester);
+      await tester.tap(find.text('DSTV KENYA'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('editDeleteButton')));
+      await tester.pumpAndSettle();
+      expect(find.text('DSTV KENYA moved to Recently Deleted'), findsOneWidget);
+
+      db.restoreAffectsNothing = true; // Delete data removed the entry meanwhile
+      await tester.tap(find.byKey(const Key('analyticsUndo')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('That entry is no longer there'), findsOneWidget);
+      expect(find.textContaining('restored'), findsNothing);
+      expect(find.text('DSTV KENYA'), findsNothing);
+      expect(db.byId(3)['deleted_at'], isNotNull);
+      await _drain(tester);
+    });
+  });
+
   group('swipe', () {
     testWidgets('swipe left past the threshold reveals Delete; tapping it deletes at once (no confirm), '
         'the row leaves every total, and Undo brings it back', (tester) async {

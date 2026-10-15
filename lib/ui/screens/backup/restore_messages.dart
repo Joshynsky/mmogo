@@ -6,6 +6,7 @@ import '../../../data/backup/backup_limits.dart';
 import '../../../data/backup/restore_types.dart';
 import '../../../data/backup/restore_service.dart' show RestoreRejected, RestoreRejectReason;
 import '../../copy/data_copy.dart';
+import '../../copy/delete_data_copy.dart';
 import 'backup_format.dart';
 
 /// The reason line the rejection dialog shows for [e].
@@ -73,5 +74,8 @@ String restoreFileDate(int epochMs) => formatBackupTime(DateTime.fromMillisecond
 
 /// The user-visible text of a [RestoreFailed]. Replace refused for an
 /// incomplete safety copy is the only case that differs from the one message.
-String restoreFailedText(RestoreFailed e) =>
-    e.reason == RestoreFailReason.safetyCopyIncomplete ? kReplaceNeedsCompleteCopy : kRestoreFailedMessage;
+String restoreFailedText(RestoreFailed e) => switch (e.reason) {
+      RestoreFailReason.safetyCopyIncomplete => kReplaceNeedsCompleteCopy,
+      RestoreFailReason.busy => kDataOpBusy,
+      _ => kRestoreFailedMessage,
+    };

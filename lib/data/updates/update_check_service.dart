@@ -41,7 +41,7 @@ class UpdateCheckService {
         _inbox = inbox ?? UpdatesInbox.instance,
         _installedVersion = installedVersion ?? (() => AppInfo.versionName);
 
-  static final UpdateCheckService instance = UpdateCheckService();
+  static UpdateCheckService instance = UpdateCheckService();
 
   static const interval = Duration(days: 7);
 
@@ -54,6 +54,13 @@ class UpdateCheckService {
   /// True while a call is deciding or running; closes the window where two
   /// calls could both pass the checks before either sets the launch flag.
   bool _busy = false;
+
+  /// Reset app (0.1.2 S9b-1): the app starts over as a fresh launch, so the
+  /// once-per-launch flag and the busy flag are cleared.
+  void resetForRestart() {
+    _attemptedThisLaunch = false;
+    _busy = false;
+  }
 
   /// Call once on app start and do not await it on the startup path.
   /// Returns true only when a check completed successfully.

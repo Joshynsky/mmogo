@@ -9,6 +9,7 @@ import '../../../data/db/transaction_dao.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../../domain/analytics/analytics_period.dart';
 import '../../../domain/analytics/chart_blocks.dart' show WhereItWentStyle;
+import '../../copy/delete_data_copy.dart';
 import '../../shell/primary_scaffold.dart';
 import '../../shell/primary_shell.dart';
 import '../../theme/app_colors.dart';
@@ -616,8 +617,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     final id = _undoId;
     _hideToast();
     if (id == null) return;
+    final int changed;
     try {
-      await TransactionDao.restore(await _db(), id: id);
+      changed = await TransactionDao.restore(await _db(), id: id);
     } on DatabaseException {
       // Its M-Pesa code was recorded again while it was deleted (the unique
       // index); the row stays in Recently Deleted.
@@ -626,6 +628,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
       return;
     }
     if (!mounted) return;
+    if (changed == 0) {
+      // S9b-1: a stale Undo (the entry was purged or Delete data removed it).
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(kEntryNoLongerThere)));
+      await _load();
+      return;
+    }
     _pendingHighlightId = id;
     await _load();
   }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'app_startup.dart';
+import 'ui/restart_scope.dart';
 import 'ui/screens/add/add_screen.dart';
 import 'ui/screens/backup/backup_screen.dart';
 import 'ui/screens/manage_classifications_screen.dart';
@@ -19,12 +21,15 @@ import 'ui/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // S9a (AP1): read the palette and the Appearance BEFORE the first frame, so
-  // a dark choice never flashes light. A failed or stuck read gives the
-  // defaults (ocean, system) after the prefs' own short timeout.
-  final controller = AppPaletteController();
-  await controller.load();
-  runApp(MpesaTrackerApp(controller: controller));
+  // S9b-1: a "Reset app" that was cut short is finished FIRST (before the
+  // palette load and before anything opens the database), then S9a (AP1):
+  // the palette and the Appearance are read BEFORE the first frame, so a dark
+  // choice never flashes light. See bootstrapApp for the pinned order.
+  final controller = await bootstrapApp();
+  runApp(RestartScope(
+    controller: controller,
+    builder: (c) => MpesaTrackerApp(controller: c),
+  ));
 }
 
 /// The app root: the palette-driven light and dark [AppTheme] and the named-route table.

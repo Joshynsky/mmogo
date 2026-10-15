@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../maintenance/data_op_gate.dart';
 import 'backup_service.dart';
 import 'backup_settings.dart';
 import 'backup_validator.dart';
@@ -39,7 +40,9 @@ class RestoreService {
     BackupSettings? settings,
     RestoreWriter writer = const RestoreWriter(),
     bool validateInIsolate = true,
-  })  : _db = db,
+    DataOpGate? gate,
+  })  : _gate = gate ?? DataOpGate.instance,
+        _db = db,
         _backup = backup,
         _safety = safety ?? SafetyCopyStore(),
         _settings = settings ?? BackupSettings(),
@@ -52,6 +55,7 @@ class RestoreService {
   final BackupSettings _settings;
   final RestoreWriter _writer;
   final bool _isolate;
+  final DataOpGate _gate;
 
   /// Full validation and a read-only preview of what a merge would add.
   /// Writes nothing. Throws [RestoreRejected] for a bad file.
@@ -90,6 +94,16 @@ class RestoreService {
   /// comment for the order. Throws [RestoreRejected] (bad file) or
   /// [RestoreFailed] (nothing was changed).
   Future<RestoreResult> restore(Uint8List bytes, RestoreMode mode) async {
+    // S9b-1 (A7): one data operation at a time. Busy touches nothing.
+    if (!_gate.tryAcquire()) throw const RestoreFailed(RestoreFailReason.busy);
+    try {
+      return await _restore(bytes, mode);
+    } finally {
+      _gate.release();
+    }
+  }
+
+  Future<RestoreResult> _restore(Uint8List bytes, RestoreMode mode) async {
     final db = await _db();
     await _guardSchema(db);
     final groups = await _enabledGroups(db);
@@ -122,6 +136,15 @@ class RestoreService {
   /// copy is removed (so Undo is no longer offered). Entries added after the
   /// replace are lost; the UI must say so.
   Future<RestoreResult> undoLastReplace() async {
+    if (!_gate.tryAcquire()) throw const RestoreFailed(RestoreFailReason.busy);
+    try {
+      return await _undoLastReplace();
+    } finally {
+      _gate.release();
+    }
+  }
+
+  Future<RestoreResult> _undoLastReplace() async {
     Uint8List? bytes;
     try {
       bytes = await _safety.readLatest();

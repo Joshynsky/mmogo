@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
@@ -22,27 +23,49 @@ import 'db_open.dart';
 /// initializes it for Windows/Linux so a desktop launch gets a real,
 /// working database, not just Android/iOS.
 class AppDatabase {
-  AppDatabase._internal();
+  AppDatabase._internal()
+      : _pathOverride = null,
+        _factoryOverride = null;
+
+  /// Test seam: a database at [path] (a temp path) opened through [factory].
+  /// The real app never uses this; tests use it so no test can reach the
+  /// real database file.
+  AppDatabase.forPath(Future<String> Function() path, {DatabaseFactory? factory})
+      : _pathOverride = path,
+        _factoryOverride = factory;
 
   static final AppDatabase instance = AppDatabase._internal();
 
+  final Future<String> Function()? _pathOverride;
+  final DatabaseFactory? _factoryOverride;
+
+  /// How long [close] may take before it gives up (a timeout is a failure of
+  /// the reset at step "database").
+  Duration closeTimeout = const Duration(seconds: 10);
+
+  /// Set by "Reset app" BEFORE the handle is closed, cleared only when the
+  /// reset flag is removed or the reset stops with a failure. While it is set
+  /// the [database] getter refuses to open (or create) the file, so a query
+  /// from a screen cannot bring `mmogo.db` back in the middle of a reset.
+  static bool resetInProgress = false;
+
   Database? _db;
 
+  bool get isOpen => _db != null;
+
   Future<Database> get database async {
+    if (resetInProgress) {
+      throw StateError('A data operation is in progress');
+    }
     if (_db != null) return _db!;
     _db = await _open();
     return _db!;
   }
 
-  Future<Database> _open() async {
-    // Desktop targets (Windows/Linux) have no first-party sqflite plugin —
-    // route through sqflite_common_ffi's sqlite3-backed factory instead.
-    // Mobile (Android/iOS) keeps the default plugin-backed factory.
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-    }
-
+  /// The full path of the database file (without opening it).
+  Future<String> databasePath() async {
+    final override = _pathOverride;
+    if (override != null) return override();
     final String dbDirPath;
     if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
       // getDatabasesPath() is unsupported by databaseFactoryFfi on some
@@ -52,17 +75,31 @@ class AppDatabase {
     } else {
       dbDirPath = await getDatabasesPath();
     }
-    final dbPath = p.join(dbDirPath, 'mmogo.db');
+    return p.join(dbDirPath, 'mmogo.db');
+  }
+
+  Future<Database> _open() async {
+    // Desktop targets (Windows/Linux) have no first-party sqflite plugin —
+    // route through sqflite_common_ffi's sqlite3-backed factory instead.
+    // Mobile (Android/iOS) keeps the default plugin-backed factory.
+    if (_factoryOverride == null && !kIsWeb && (Platform.isWindows || Platform.isLinux)) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+
+    final dbPath = await databasePath();
     debugPrint('AppDatabase: opening $dbPath');
 
     // DB1: the one shared open function (foreign-key rule lives there).
-    return openMmogoDatabase(databaseFactory, dbPath);
+    return openMmogoDatabase(_factoryOverride ?? databaseFactory, dbPath);
   }
 
-  /// Test/dev-only: closes and clears the cached instance so a fresh
-  /// database can be opened (e.g. an in-memory DB per test case).
+  /// Closes and clears the cached instance. Bounded by [closeTimeout]: a
+  /// handle that will not close throws a [TimeoutException] and stays cached.
   Future<void> close() async {
-    await _db?.close();
+    final db = _db;
+    if (db == null) return;
+    await db.close().timeout(closeTimeout);
     _db = null;
   }
 }

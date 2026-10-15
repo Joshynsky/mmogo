@@ -264,11 +264,16 @@ class TransactionDao {
   /// T13 — Recently Deleted's Restore action. `SET deleted_at = NULL` —
   /// returns the row to normal Analytics/Home visibility, as
   /// long as it is still within the restore window.
-  static Future<void> restore(Database db, {required int id}) async {
-    await db.update(
+  ///
+  /// 0.1.2 S9b-1: returns the number of rows changed. Only a row that is
+  /// STILL soft-deleted counts, so a stale Undo (the row was purged, or
+  /// Delete data removed it) changes nothing and returns 0; AUTOINCREMENT
+  /// ids are never reused, so a stale id cannot hit a newer row.
+  static Future<int> restore(Database db, {required int id}) {
+    return db.update(
       'transactions',
       {'deleted_at': null},
-      where: 'id = ?',
+      where: 'id = ? AND deleted_at IS NOT NULL',
       whereArgs: [id],
     );
   }
