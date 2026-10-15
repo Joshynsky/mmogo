@@ -1,5 +1,5 @@
 // 0.1.2 S7c: (1) the recipient sheet's Analytics and Close buttons share one row, at 360 dp wide and
-// text scale 1.3; (2) Analytics' recipient view of a Withdrawal agent reads "Withdrawn from them" with the
+// text scale 1.3; (2) Analytics' recipient view of a Withdrawal agent reads the Withdrawn label (fit-aware since S8c-3) with the
 // cash taken out, while a Send Money and a Pochi recipient view still read "Paid to them" with the
 // spending total. Invented data only. "Now" is Thu 24 Sep 2026.
 import 'package:flutter/material.dart';
@@ -124,7 +124,9 @@ void main() {
       tester,
     ) async {
       await _openAnalytics(tester, _wd, 'no|314159', 'JOY AGENT');
-      expect(_t(tester, 'analyticsSpentLabel'), 'Withdrawn from them');
+      // S8c-3: the label is fit-aware. At 400 dp in the test font the pill leaves no room for the long
+      // form, so it reads "Withdrawn" (both forms: analytics_s8c3_test.dart).
+      expect(_t(tester, 'analyticsSpentLabel'), 'Withdrawn');
       expect(_t(tester, 'analyticsTotal'), '5,000.00');
       expect(find.text('2 payments'), findsOneWidget);
       expect(find.byKey(const Key('analyticsFactFees')), findsOneWidget);

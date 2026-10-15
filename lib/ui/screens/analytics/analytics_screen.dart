@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -8,7 +7,6 @@ import '../../../data/db/analytics_dao.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/db/transaction_dao.dart';
 import '../../../data/prefs/app_prefs.dart';
-import '../../../domain/period_math.dart' show dayBounds;
 import '../../../domain/analytics/analytics_period.dart';
 import '../../../domain/analytics/chart_blocks.dart' show WhereItWentStyle;
 import '../../shell/primary_scaffold.dart';
@@ -17,6 +15,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/coach_tour.dart';
 import '../../widgets/period_pill.dart';
 import 'analytics_filters.dart';
+import 'analytics_loader.dart';
 import 'analytics_view.dart';
 import 'categories_sheet.dart';
 import 'chart_card.dart';
@@ -324,78 +323,29 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     }
     final firstAt = await AnalyticsDao.firstOccurredAt(db);
     final first = firstAt == null ? null : dateOnly(firstAt);
-    final party = _isParty;
     // T22: the recipient view keeps its own period (Paid to's, then stepped
     // like any other); only the vs-prior comparison is left out.
     final period = _period;
 
-    final range = period.range(today: today, first: first);
-    final prior = party ? null : period.priorRange(today: today, first: first);
-    final chart = period.chart(now: now, first: first, monthStyle: monthStyle, yearAmounts: yearAmounts);
-
-    // One fetch covers the period, its prior period and every chart bar.
-    var (startMs, endMs) = range.bounds;
-    if (prior != null) {
-      startMs = math.min(startMs, prior.bounds.$1);
-      endMs = math.max(endMs, prior.bounds.$2);
-    }
-    for (final b in chart.buckets) {
-      startMs = math.min(startMs, b.startMs);
-      endMs = math.max(endMs, b.endMs);
-    }
-    // The week shows all seven days, but its data stops at the end of today.
-    if (period.granularity == AnalyticsGranularity.week) endMs = math.min(endMs, dayBounds(today).$2);
-    final rows = await AnalyticsDao.itemizedTransactions(
+    final view = await loadAnalyticsView(
       db,
-      startMs: startMs,
-      endMs: endMs,
-      types: AnalyticsDao.allTypes,
+      period: period,
+      now: now,
+      today: today,
+      first: first,
+      monthStyle: monthStyle,
+      yearAmounts: yearAmounts,
+      showHatch: showHatch,
       partyType: _partyType,
       partyKey: _partyKey,
+      partyName: _partyName,
     );
     if (!mounted || seq != _loadSeq) return;
-
-    final (rs, re) = range.bounds;
-    final inc = [
-      for (final r in rows)
-        if (r.occurredAt.millisecondsSinceEpoch >= rs && r.occurredAt.millisecondsSinceEpoch <= re) r,
-    ];
-    int? priorCents;
-    if (prior != null) {
-      final (ps, pe) = prior.bounds;
-      priorCents = rows
-          .where((r) => r.occurredAt.millisecondsSinceEpoch >= ps && r.occurredAt.millisecondsSinceEpoch <= pe)
-          .fold<int>(0, (s, r) => s + r.spent);
-    }
-    final bucketCents = [
-      for (final b in chart.buckets)
-        [
-          for (final (code, _) in analyticsTypeOrder)
-            rows
-                .where((r) => r.sourceType == code && b.contains(r.occurredAt.millisecondsSinceEpoch))
-                .fold<int>(0, (s, r) => s + r.spent),
-        ],
-    ];
 
     final scrollTo = _pendingScroll;
     _pendingScroll = null;
     setState(() {
-      _view = AnalyticsView(
-        period: period,
-        party: party,
-        partyType: party ? _partyType : null,
-        now: now,
-        first: first,
-        range: range,
-        inc: inc,
-        priorCents: priorCents,
-        chart: chart,
-        bucketCents: bucketCents,
-        partyName: party ? (_partyName ?? (rows.isEmpty ? null : rows.first.displayName)) : null,
-        hatchCents: withdrawnPerWindow([for (final b in chart.buckets) (b.startMs, b.endMs)], rows),
-        showHatch: showHatch,
-        cashOutCents: cashOutTotal(inc),
-      );
+      _view = view;
       _whereStyle = whereStyle;
     });
     if (scrollTo != null) {

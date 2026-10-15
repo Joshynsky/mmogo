@@ -49,7 +49,7 @@ class AnalyticsHeroCard extends StatelessWidget {
     // spending total at 0); every other view, and every other total, is the spending total.
     final cashOut = v.party && v.partyType == paidToWithdrawal;
     final total = cashOut ? v.cashOutCents : v.totalCents;
-    final heroLabel = cashOut ? 'Withdrawn from them' : (v.party ? 'Paid to them' : 'Spent');
+    final heroLabel = cashOut ? withdrawnHeroLong : (v.party ? 'Paid to them' : 'Spent');
     final count = v.inc.length;
     final fees = v.inc.fold<int>(0, (s, r) => s + (r.transactionCostCents ?? 0));
     final elapsed = v.period.elapsedDays(today: v.today, first: v.first);
@@ -105,18 +105,30 @@ class AnalyticsHeroCard extends StatelessWidget {
           LayoutBuilder(
             builder: (context, rc) {
               final rowWidth = rc.maxWidth;
+              // S8c-3: a Withdrawal agent's label always keeps room for its short form, so it
+              // never ellipsizes; the pill scales down instead (as it always could).
+              final reserve = cashOut ? math.max(40.0, withdrawnTextWidth(context, withdrawnHeroShort, _heroLabelStyle) + 2) : 40.0;
               return Row(
                 children: [
                   Expanded(
-                    child: Tooltip(
-                      message: cashOut ? heroLabel : (v.party ? 'Paid to them' : words.spent),
-                      child: Text(
-                        heroLabel,
-                        key: const Key('analyticsSpentLabel'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: palette.softInk),
-                      ),
+                    child: LayoutBuilder(
+                      builder: (context, lc) {
+                        const labelStyle = _heroLabelStyle;
+                        // S8c-3: a Withdrawal agent's label is the long form only when it
+                        // fits on one line beside the pill, else "Withdrawn" (no ellipsis).
+                        final shown = cashOut ? withdrawnHeroLabel(context, lc.maxWidth, labelStyle) : heroLabel;
+                        return Tooltip(
+                          message: cashOut ? heroLabel : (v.party ? 'Paid to them' : words.spent),
+                          child: Text(
+                            shown,
+                            key: const Key('analyticsSpentLabel'),
+                            maxLines: 1,
+                            softWrap: !cashOut,
+                            overflow: cashOut ? TextOverflow.clip : TextOverflow.ellipsis,
+                            style: labelStyle.copyWith(color: palette.softInk),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -124,7 +136,8 @@ class AnalyticsHeroCard extends StatelessWidget {
                   // for "Spent"; at very large text it scales down instead of
                   // overflowing.
                   ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: math.max(0.0, rowWidth - 30 - 12 - 40)),
+                    // The calendar button's tap area is 44 wide (its face is 30).
+                    constraints: BoxConstraints(maxWidth: math.max(0.0, rowWidth - (cashOut ? 44 : 30) - 12 - reserve)),
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerRight,
@@ -239,6 +252,29 @@ class AnalyticsHeroCard extends StatelessWidget {
     );
   }
 }
+
+/// Long form of the Withdrawal agent's hero label (S7c) and its short form (S8c-3).
+const String withdrawnHeroLong = 'Withdrawn from them';
+const String withdrawnHeroShort = 'Withdrawn';
+
+const TextStyle _heroLabelStyle = TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700);
+
+/// One-line width of [text] in [style] at the current text scale.
+double withdrawnTextWidth(BuildContext context, String text, TextStyle style) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  final w = painter.width;
+  painter.dispose();
+  return w;
+}
+
+/// The long form when it fits on ONE line in [maxWidth] at the current text scale, else the short form.
+String withdrawnHeroLabel(BuildContext context, double maxWidth, TextStyle style) =>
+    withdrawnTextWidth(context, withdrawnHeroLong, style) <= maxWidth ? withdrawnHeroLong : withdrawnHeroShort;
 
 class _ChangePill extends StatelessWidget {
   const _ChangePill({required this.text, required this.color, required this.background, this.label, this.tooltip});

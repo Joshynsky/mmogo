@@ -57,7 +57,9 @@ class _FakeDatabase implements Database {
           {'id': 1, 'code': 'SEND_MONEY', 'display_name': 'Send Money', 'enabled': 1},
           {'id': 2, 'code': 'PAYBILL', 'display_name': 'Paybill', 'enabled': 1},
           {'id': 3, 'code': 'BUY_GOODS', 'display_name': 'Buy Goods', 'enabled': 1},
-          {'id': 4, 'code': 'POCHI_LA_BIASHARA', 'display_name': 'Pochi La Biashara', 'enabled': 0},
+          {'id': 4, 'code': 'POCHI_LA_BIASHARA', 'display_name': 'Pochi', 'enabled': 1},
+          {'id': 5, 'code': 'AGENT_WITHDRAWAL', 'display_name': 'Withdrawal', 'enabled': 1},
+          {'id': 6, 'code': 'AIRTIME', 'display_name': 'Airtime', 'enabled': 1},
         ],
         classifications = [
           {'id': 101, 'group_id': 1, 'name': 'Family/Friends', 'active': 1},
@@ -67,6 +69,9 @@ class _FakeDatabase implements Database {
           {'id': 199, 'group_id': 1, 'name': 'Old Rent', 'active': 0},
           {'id': 105, 'group_id': 2, 'name': 'Rent Payment', 'active': 1},
           {'id': 106, 'group_id': 2, 'name': 'Shopping', 'active': 1},
+          {'id': 107, 'group_id': 4, 'name': 'Fares', 'active': 1},
+          {'id': 108, 'group_id': 5, 'name': 'Cash withdrawal', 'active': 1},
+          {'id': 109, 'group_id': 6, 'name': 'Top up', 'active': 1},
         ],
         transactionCountByClassification = {102: 3};
 
@@ -225,15 +230,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-    'renders 4 group tabs, defaults to Send Money, lists active + inactive classifications',
+    'renders six group tabs (none dimmed), defaults to Send Money, lists active + inactive categories',
     (tester) async {
       await tester.pumpWidget(_harness(_FakeDatabase()));
       await _settle(tester);
 
-      expect(find.text('Send Money'), findsOneWidget);
-      expect(find.text('Paybill'), findsOneWidget);
-      expect(find.text('Buy Goods'), findsOneWidget);
-      expect(find.text('Pochi La Biashara (n/a)'), findsOneWidget);
+      for (final t in ['Send Money', 'Paybill', 'Buy Goods', 'Pochi', 'Withdrawal', 'Airtime']) {
+        expect(find.text(t), findsOneWidget, reason: 'tab $t');
+      }
+      expect(find.textContaining('(n/a)'), findsNothing);
+      expect(find.text('Manage categories'), findsOneWidget);
 
       // Active list (Send Money).
       expect(find.text('Family/Friends'), findsOneWidget);
@@ -241,23 +247,24 @@ void main() {
       expect(find.text('Transport'), findsOneWidget);
       expect(find.text('Groceries'), findsOneWidget);
 
-      // Inactive list — the soft-deleted "Old Rent" row, distinct from
-      // the active list.
+      // Inactive list: the soft-deleted "Old Rent" row, distinct from the active list.
       expect(find.text('Old Rent'), findsOneWidget);
       expect(find.text('Restore'), findsOneWidget);
     },
   );
 
   testWidgets(
-    'tapping the disabled Pochi tab is a structural no-op',
+    'the Pochi tab is enabled: tapping it shows its own categories and the create row',
     (tester) async {
       await tester.pumpWidget(_harness(_FakeDatabase()));
       await _settle(tester);
 
-      await tester.tap(find.text('Pochi La Biashara (n/a)'));
+      await tester.tap(find.byKey(const Key('manageTab-POCHI_LA_BIASHARA')));
       await _settle(tester);
 
-      expect(find.text('Family/Friends'), findsOneWidget);
+      expect(find.text('Fares'), findsOneWidget);
+      expect(find.text('Family/Friends'), findsNothing);
+      expect(find.byKey(const Key('manageCreateRow')), findsOneWidget);
     },
   );
 
@@ -276,9 +283,9 @@ void main() {
       // ...and Send Money's rows must not leak into Paybill's view.
       expect(find.text('Family/Friends'), findsNothing);
       expect(find.text('Old Rent'), findsNothing);
-      expect(find.text('No active classifications in this group.'), findsNothing);
+      expect(find.text('No active categories in this group.'), findsNothing);
       // Paybill has no seeded inactive rows in this fake.
-      expect(find.text('No inactive classifications in this group.'), findsOneWidget);
+      expect(find.text('No inactive categories in this group.'), findsOneWidget);
     },
   );
 
@@ -294,7 +301,7 @@ void main() {
 
       expect(find.text('Old Rent'), findsOneWidget); // now in the active list
       expect(find.text('Restore'), findsNothing); // inactive list now empty
-      expect(find.text('No inactive classifications in this group.'), findsOneWidget);
+      expect(find.text('No inactive categories in this group.'), findsOneWidget);
     },
   );
 
@@ -313,7 +320,7 @@ void main() {
       await tester.tap(deleteButtons.at(2)); // Rent
       await _settle(tester);
 
-      expect(find.text('Delete classification?'), findsOneWidget);
+      expect(find.text('Delete category?'), findsOneWidget);
       expect(
         find.text('3 transactions use "Rent". It will be hidden, not deleted, and can be restored later.'),
         findsOneWidget,
@@ -378,5 +385,115 @@ void main() {
     );
     expect((selectedTab.decoration! as BoxDecoration).color, AppPalette.leafLight.primary);
     expect((selectedTab.decoration! as BoxDecoration).color, isNot(AppColors.primary));
+  });
+
+  group('MC1: locked built-ins, create row per group, duplicate error', () {
+    Future<void> openTab(WidgetTester tester, _FakeDatabase db, String code) async {
+      await tester.pumpWidget(_harness(db));
+      await _settle(tester);
+      await tester.tap(find.byKey(Key('manageTab-$code')));
+      await _settle(tester);
+    }
+
+    for (final (code, name, row) in [
+      ('AGENT_WITHDRAWAL', 'Withdrawal', 'Cash withdrawal'),
+      ('AIRTIME', 'Airtime', 'Top up'),
+    ]) {
+      testWidgets('$name: built-in is locked (tag, no Rename or Delete) and there is no create row', (tester) async {
+        await openTab(tester, _FakeDatabase(), code);
+        expect(find.text(row), findsOneWidget);
+        expect(find.byKey(Key('manageBuiltIn-$row')), findsOneWidget);
+        expect(find.text('Built in'), findsOneWidget);
+        expect(find.byIcon(Icons.edit_outlined), findsNothing);
+        expect(find.byIcon(Icons.delete_outline), findsNothing);
+        expect(find.byKey(const Key('manageCreateRow')), findsNothing);
+        expect(find.byKey(const Key('manageCreateField')), findsNothing);
+        expect(find.text('$name entries always use this category.'), findsOneWidget);
+      });
+    }
+
+    for (final code in ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'POCHI_LA_BIASHARA']) {
+      testWidgets('$code has the create row and no Built in tag', (tester) async {
+        await openTab(tester, _FakeDatabase(), code);
+        expect(find.byKey(const Key('manageCreateRow')), findsOneWidget);
+        expect(find.byKey(const Key('manageLockedLine')), findsNothing);
+        expect(find.text('Built in'), findsNothing);
+      });
+    }
+
+    testWidgets('a duplicate name shows the red inline error with the warning icon, and typing clears it', (tester) async {
+      final db = _FakeDatabase();
+      await tester.pumpWidget(_harness(db));
+      await _settle(tester);
+
+      await tester.enterText(find.byKey(const Key('manageCreateField')), 'Rent');
+      await tester.tap(find.byKey(const Key('manageCreateAdd')));
+      await _settle(tester);
+
+      final err = find.byKey(const Key('manageCreateError'));
+      expect(err, findsOneWidget);
+      expect(find.text('A category named "Rent" already exists in Send Money.'), findsOneWidget);
+      expect(find.descendant(of: err, matching: find.byIcon(Icons.warning_amber_rounded)), findsOneWidget);
+      final text = tester.widget<Text>(find.text('A category named "Rent" already exists in Send Money.'));
+      expect(text.style!.color, AppPalette.light.error);
+      expect(find.byType(SnackBar), findsNothing);
+
+      await tester.enterText(find.byKey(const Key('manageCreateField')), 'Ren');
+      await tester.pump();
+      expect(err, findsNothing);
+    });
+
+    testWidgets('a new Pochi category is created and listed (the same table Add reads)', (tester) async {
+      final db = _FakeDatabase();
+      await openTab(tester, db, 'POCHI_LA_BIASHARA');
+      await tester.enterText(find.byKey(const Key('manageCreateField')), 'Airtime top-ups');
+      await tester.tap(find.byKey(const Key('manageCreateAdd')));
+      await _settle(tester);
+      expect(find.text('Airtime top-ups'), findsOneWidget);
+      expect(db.classifications.any((c) => c['group_id'] == 4 && c['name'] == 'Airtime top-ups' && c['active'] == 1), isTrue);
+    });
+
+    testWidgets('a blocked restore shows the inline error beside the list, not a snackbar', (tester) async {
+      final db = _FakeDatabase();
+      db.classifications.add({'id': 200, 'group_id': 1, 'name': 'Old Rent', 'active': 1});
+      await tester.pumpWidget(_harness(db));
+      await _settle(tester);
+      await tester.tap(find.text('Restore'));
+      await _settle(tester);
+      expect(find.byKey(const Key('manageRestoreError')), findsOneWidget);
+      expect(find.textContaining('a category named "Old Rent" already exists in Send Money.'), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('Rename keeps the dialog open with the inline error on a duplicate', (tester) async {
+      await tester.pumpWidget(_harness(_FakeDatabase()));
+      await _settle(tester);
+      await tester.tap(find.byTooltip('Rename Groceries'));
+      await _settle(tester);
+      await tester.enterText(find.byKey(const Key('manageRenameField')), 'Rent');
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await _settle(tester);
+      expect(find.byKey(const Key('manageRenameError')), findsOneWidget);
+      expect(find.text('A category named "Rent" already exists in Send Money.'), findsOneWidget);
+      expect(find.text('Rename category'), findsOneWidget);
+    });
+
+    for (final dark in [false, true]) {
+      testWidgets('360 dp, text scale 1.3, ${dark ? 'dark' : 'light'}: no overflow, the Airtime tab can be reached', (tester) async {
+        tester.view.physicalSize = const Size(360, 800);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+        tester.platformDispatcher.platformBrightnessTestValue = dark ? Brightness.dark : Brightness.light;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearAllTestValues);
+        await tester.pumpWidget(_harness(_FakeDatabase()));
+        await _settle(tester);
+        await tester.ensureVisible(find.byKey(const Key('manageTab-AIRTIME')));
+        await tester.tap(find.byKey(const Key('manageTab-AIRTIME')));
+        await _settle(tester);
+        expect(find.text('Built in'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
   });
 }
