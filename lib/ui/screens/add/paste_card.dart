@@ -144,6 +144,10 @@ class _PasteSheetState extends State<_PasteSheet> {
         Navigator.of(context).pop(fields);
       case ParseError(:final reason):
         setState(() => _error = reason);
+      case ParseNeedsType():
+        // S8a: a name-only message has no type yet. Until S8c's Add flow asks
+        // for it, the paste screen shows the not-recognised text (no save).
+        setState(() => _error = SmsParser.kSmsNoMatchReason);
     }
   }
 

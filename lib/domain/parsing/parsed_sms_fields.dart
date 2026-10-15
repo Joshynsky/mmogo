@@ -5,7 +5,8 @@
 // cash transaction (the `transactions.source_type` CHECK and
 // `classification_groups` reflect this: CASH has no matching group/parser).
 // 0.1.2: pochi, agentWithdrawal and airtime exist as stored types; the parser
-// still produces only the first three.
+// produces agentWithdrawal and airtime since S8a; pochi is never parsed (a
+// name-only message is a NameOnlyFields, typed by the user).
 enum SmsSourceType { sendMoney, payBill, buyGoods, pochi, agentWithdrawal, airtime }
 
 /// Maps each [SmsSourceType] to the exact string stored in
@@ -51,6 +52,11 @@ class ParsedSmsFields {
   final String? counterpartyLabel;
   final String? counterpartyPhone;
   final String? paybillAccountNumber;
+
+  /// Agent withdrawal only (0.1.2 S8a): the agent's till digits, 1 to 20,
+  /// for `transactions.agent_number`. Null for every other rule. Not wired to
+  /// the database yet (S8c).
+  final String? agentNumber;
   final int transactionOccurredAt;
 
   const ParsedSmsFields({
@@ -61,6 +67,7 @@ class ParsedSmsFields {
     required this.counterpartyLabel,
     required this.counterpartyPhone,
     required this.paybillAccountNumber,
+    this.agentNumber,
     required this.transactionOccurredAt,
   });
 
@@ -69,7 +76,7 @@ class ParsedSmsFields {
       'ParsedSmsFields(code: $code, sourceType: $sourceType, '
       'amountCents: $amountCents, transactionCostCents: $transactionCostCents, '
       'counterpartyLabel: $counterpartyLabel, counterpartyPhone: $counterpartyPhone, '
-      'paybillAccountNumber: $paybillAccountNumber, '
+      'paybillAccountNumber: $paybillAccountNumber, agentNumber: $agentNumber, '
       'transactionOccurredAt: $transactionOccurredAt)';
 
   @override
@@ -82,6 +89,7 @@ class ParsedSmsFields {
       other.counterpartyLabel == counterpartyLabel &&
       other.counterpartyPhone == counterpartyPhone &&
       other.paybillAccountNumber == paybillAccountNumber &&
+      other.agentNumber == agentNumber &&
       other.transactionOccurredAt == transactionOccurredAt;
 
   @override
@@ -93,6 +101,7 @@ class ParsedSmsFields {
         counterpartyLabel,
         counterpartyPhone,
         paybillAccountNumber,
+        agentNumber,
         transactionOccurredAt,
       );
 }
