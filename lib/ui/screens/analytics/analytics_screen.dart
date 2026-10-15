@@ -394,6 +394,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
         partyName: party ? (_partyName ?? (rows.isEmpty ? null : rows.first.displayName)) : null,
         hatchCents: withdrawnPerWindow([for (final b in chart.buckets) (b.startMs, b.endMs)], rows),
         showHatch: showHatch,
+        cashOutCents: cashOutTotal(inc),
       );
       _whereStyle = whereStyle;
     });

@@ -21,6 +21,7 @@ class AnalyticsView {
     required this.partyName,
     this.hatchCents = const [],
     this.showHatch = false,
+    this.cashOutCents = 0,
   });
 
   final AnalyticsPeriod period;
@@ -51,6 +52,10 @@ class AnalyticsView {
   /// of [bucketCents] or any total; it only feeds the hatched chart segment
   /// and the legend. Empty = none.
   final List<int> hatchCents;
+
+  /// The cash taken out at agents inside [inc], in cents (0.1.2 S7c). Read by the hero of a
+  /// Withdrawal agent's recipient view only; never a spending total.
+  final int cashOutCents;
 
   /// The "Show withdrawals in the chart" preference: draw [hatchCents] as a
   /// hatched segment on top of each bar.

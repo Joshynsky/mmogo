@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../domain/analytics/analytics_period.dart';
 import '../../../domain/format/money.dart';
 import '../../../domain/analytics/analytics_change.dart';
+import '../../../domain/paid_to/paid_to.dart' show paidToWithdrawal;
 import '../../theme/app_colors.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/period_pill.dart';
@@ -44,7 +45,11 @@ class AnalyticsHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final v = view;
-    final total = v.totalCents;
+    // S7c: a Withdrawal agent's recipient view reads the cash taken out (the spend rule keeps its
+    // spending total at 0); every other view, and every other total, is the spending total.
+    final cashOut = v.party && v.partyType == paidToWithdrawal;
+    final total = cashOut ? v.cashOutCents : v.totalCents;
+    final heroLabel = cashOut ? 'Withdrawn from them' : (v.party ? 'Paid to them' : 'Spent');
     final count = v.inc.length;
     final fees = v.inc.fold<int>(0, (s, r) => s + (r.transactionCostCents ?? 0));
     final elapsed = v.period.elapsedDays(today: v.today, first: v.first);
@@ -104,9 +109,9 @@ class AnalyticsHeroCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Tooltip(
-                      message: v.party ? 'Paid to them' : words.spent,
+                      message: cashOut ? heroLabel : (v.party ? 'Paid to them' : words.spent),
                       child: Text(
-                        v.party ? 'Paid to them' : 'Spent',
+                        heroLabel,
                         key: const Key('analyticsSpentLabel'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

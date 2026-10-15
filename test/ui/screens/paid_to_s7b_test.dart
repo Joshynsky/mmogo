@@ -501,7 +501,7 @@ void main() {
         findsOneWidget,
       );
       expect(_text(tester, const Key('paidToSheetCat-Rent')), 'Rent | 2× · Ksh 1,500');
-      expect(find.text('See these payments in Analytics'), findsOneWidget);
+      expect(find.text('See in Analytics'), findsOneWidget); // S7c: shorter label, side by side with Close
     });
 
     testWidgets('Year: one bar per month; the figures grow by the August payment and still equal the row', (

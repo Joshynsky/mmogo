@@ -96,6 +96,10 @@ List<int> withdrawnPerWindow(List<(int, int)> windows, Iterable<AnalyticsTransac
   return out;
 }
 
+/// 0.1.2 S7c: the cash taken out at agents across [rows], in cents (the same figure the Paid to
+/// row and recipient sheet show for a Withdrawal agent). Never a spent total.
+int cashOutTotal(Iterable<AnalyticsTransactionRow> rows) => rows.fold(0, (s, r) => s + r.withdrawn);
+
 /// Analytics' query layer — follows the same raw-SQL-against-`AppDatabase`
 /// idiom `home_dashboard_dao.dart` (T4) and `classification_dao.dart` (T3)
 /// already established for this project (no repository/ORM abstraction).

@@ -16,7 +16,7 @@ import '../../widgets/type_icon.dart';
 /// "Type · detail", close X), the combined-numbers note when more than one stored phone form, a 2x2
 /// grid (Total paid / Total withdrawn for an agent, Payments / Withdrawals, Average, Transaction
 /// cost), First and Last payment, a bar chart (PER WEEK for Month, PER MONTH for Year and All time)
-/// and BY CATEGORY rows, then "See these payments in Analytics" and Close. Figures are the row's own
+/// and BY CATEGORY rows, then the Analytics ("See in Analytics") and Close buttons side by side. Figures are the row's own
 /// (shown period, the row's category filter). Closed by Close, the X, a scrim tap or Back.
 /// Pops `true` when "See these payments in Analytics" was chosen, else `null`.
 Future<bool?> showPaidToRecipientSheet(
@@ -136,18 +136,29 @@ class PaidToRecipientSheet extends StatelessWidget {
       ),
     );
 
-    Widget action(Key key, String text, Color bg, Color fg, VoidCallback onTap) => SizedBox(
-      height: 42,
-      child: FilledButton(
-        key: key,
-        onPressed: onTap,
-        style: FilledButton.styleFrom(
-          backgroundColor: bg,
-          foregroundColor: fg,
-          shape: const StadiumBorder(),
-          textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+    // S7c: the two buttons share one row (equal widths, 8 px apart, each at least 44 px high). The
+    // label may wrap to two lines at large text; the screen-reader label keeps the full sentence.
+    Widget action(Key key, String text, Color bg, Color fg, VoidCallback onTap, {String? semantics}) => Expanded(
+      child: Semantics(
+        label: semantics,
+        button: semantics != null ? true : null,
+        excludeSemantics: semantics != null,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: FilledButton(
+            key: key,
+            onPressed: onTap,
+            style: FilledButton.styleFrom(
+              backgroundColor: bg,
+              foregroundColor: fg,
+              minimumSize: const Size(0, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              shape: const StadiumBorder(),
+              textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, height: 1.2),
+            ),
+            child: Text(text, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis),
+          ),
         ),
-        child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
     );
 
@@ -219,10 +230,10 @@ class PaidToRecipientSheet extends StatelessWidget {
           ],
         ),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            date('First payment', _date(data.first), CrossAxisAlignment.start),
-            date('Last payment', _date(data.last), CrossAxisAlignment.end),
+            Expanded(child: date('First payment', _date(data.first), CrossAxisAlignment.start)),
+            const SizedBox(width: 8),
+            Expanded(child: date('Last payment', _date(data.last), CrossAxisAlignment.end)),
           ],
         ),
         Text.rich(
@@ -244,7 +255,8 @@ class PaidToRecipientSheet extends StatelessWidget {
           excludeSemantics: true,
           child: SizedBox(
             key: const Key('paidToSheetChart'),
-            height: 96,
+            // Grows with the text size so the value labels never overflow the bars' column.
+            height: 96 * math.max(1.0, MediaQuery.textScalerOf(context).scale(1)),
             child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [for (final b in data.bars) bar(b)]),
           ),
         ),
@@ -277,14 +289,23 @@ class PaidToRecipientSheet extends StatelessWidget {
               ),
           ],
         ),
-        action(
-          const Key('paidToSheetAnalytics'),
-          'See these payments in Analytics',
-          p.primary,
-          p.onPrimary,
-          () => Navigator.of(context).pop(true),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              action(
+                const Key('paidToSheetAnalytics'),
+                'See in Analytics',
+                p.primary,
+                p.onPrimary,
+                () => Navigator.of(context).pop(true),
+                semantics: 'See these payments in Analytics',
+              ),
+              const SizedBox(width: 8),
+              action(const Key('paidToSheetClose'), 'Close', p.track, p.ink, () => Navigator.of(context).pop()),
+            ],
+          ),
         ),
-        action(const Key('paidToSheetClose'), 'Close', p.track, p.ink, () => Navigator.of(context).pop()),
       ],
     );
   }

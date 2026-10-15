@@ -127,6 +127,14 @@ void main() {
   });
 
   group('notices', () {
+    testWidgets('S7c: an unread card has no left stripe (no border at all); the New pill marks unread', (tester) async {
+      await _pump(tester, stored: [_notice('v0.1.2', 'Notes.')]);
+      expect(find.byKey(const Key('noticeNewPill')), findsOneWidget);
+      final card = tester.widget<Container>(find.byKey(const Key('notice-v0.1.2')));
+      final deco = card.decoration! as BoxDecoration;
+      expect(deco.border, isNull);
+    });
+
     testWidgets('welcome: its title and wording, New pill, no "See what\'s new"', (tester) async {
       await _pump(tester, stored: [_notice('Welcome', '', welcome: true)]);
       expect(find.text(kWelcomeNoticeTitle), findsOneWidget);

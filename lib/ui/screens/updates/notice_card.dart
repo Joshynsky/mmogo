@@ -55,7 +55,6 @@ class _NoticeCardState extends State<NoticeCard> {
       decoration: BoxDecoration(
         color: palette.card,
         borderRadius: const BorderRadius.all(Radius.circular(18)),
-        border: n.read ? null : Border(left: BorderSide(color: palette.primary, width: 4)),
         boxShadow: palette.brightness == Brightness.dark
             ? null
             : [BoxShadow(color: palette.deep.withValues(alpha: 0.06), blurRadius: 6, offset: const Offset(0, 1))],
