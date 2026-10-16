@@ -4,19 +4,18 @@
 // setup sheet (W1) BEFORE the picker, the cloud notice (W2) right after a pick
 // and only then, choose another folder, cancel, picker error, steppers and
 // their bounds, turning off, the last-backup line, live pause.
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/backup/auto_backup_service.dart';
 import 'package:mmogo/data/backup/backup_counts.dart';
 import 'package:mmogo/data/prefs/backup_prefs.dart';
-import 'package:mmogo/data/updates/updates_inbox.dart';
 import 'package:mmogo/platform/storage_bridge.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
 import 'package:mmogo/ui/screens/backup/backup_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../support/fake_backup_ui.dart';
 import '../../../support/fake_storage_bridge.dart';
 
 const _counts = BackupCounts(transactions: 12, userClassifications: 1, receivers: 2, deletedLeftOut: 0);
@@ -25,9 +24,7 @@ const _folder = PickedFolder(uri: _uri, name: 'Documents / mmogo-backups');
 const _other = PickedFolder(uri: 'content://tree/other', name: 'Other folder');
 
 late FakeStorageBridge _bridge;
-late StorageBridge _oldBridge;
-late AutoBackupService _oldService;
-final _notices = <String>[];
+late List<String> _notices;
 
 Future<void> _pump(WidgetTester t, {Map<String, Object> prefs = const {}}) async {
   SharedPreferences.setMockInitialValues(prefs);
@@ -62,22 +59,13 @@ Future<void> _toCloudDialog(WidgetTester t, PickedFolder pick) async {
 }
 
 void main() {
+  // S10b (A12): the guard, the fake bridge and the auto-backup service built on it.
   setUp(() {
-    _bridge = FakeStorageBridge();
-    _oldBridge = StorageBridge.instance;
-    _oldService = AutoBackupService.instance;
-    StorageBridge.instance = _bridge;
-    _notices.clear();
-    AutoBackupService.instance = AutoBackupService(
-      bridge: () => _bridge,
-      export: () async => Uint8List.fromList([123, 125]),
-      notify: _notices.add,
-      inbox: UpdatesInbox(installedVersion: () => '0.1.1'),
-    );
+    final ui = useFakeBackupUi();
+    _bridge = ui.bridge;
+    _notices = ui.notices;
   });
   tearDown(() {
-    StorageBridge.instance = _oldBridge;
-    AutoBackupService.instance = _oldService;
     BackupPrefs.pausedNotifier.value = false;
   });
 
@@ -202,6 +190,10 @@ void main() {
       await _toCloudDialog(t, _other);
       await t.tap(find.byKey(const Key('cloudUseFolder')));
       await t.pumpAndSettle();
+      // S10b: the old-folder question (A4b) now comes before the change; the
+      // default "Stop using it" is what the old assertions assumed.
+      await t.tap(find.byKey(const Key('leftoverContinue')));
+      await t.pumpAndSettle();
       expect(await BackupPrefs.readFolderUri(), _other.uri);
       expect(_bridge.calls, contains('releaseGrant:$_uri'));
       expect(await BackupPrefs.readSinceCount(), 0);
@@ -250,10 +242,10 @@ void main() {
       expect(t.widget<Text>(find.byKey(const Key('backupLastLine'))).data, 'Never backed up');
     });
 
-    testWidgets('last attempt failed (not paused): banner, steppers still on', (t) async {
+    testWidgets('last attempt failed (not paused): the stuck line, steppers still on', (t) async {
       await _pump(t, prefs: {..._working(), 'auto_backup_fail_count': 1});
       expect(find.byKey(const Key('autoBackupFailedBanner')), findsOneWidget);
-      expect(find.text(kAutoBackupFailedBanner), findsOneWidget);
+      expect(find.text(kAutoBackupStuckLine), findsOneWidget);
       expect(t.widget<IconButton>(find.byKey(const Key('autoEveryNMore'))).onPressed, isNotNull);
     });
 

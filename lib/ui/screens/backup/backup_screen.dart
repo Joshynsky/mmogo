@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../../data/backup/backup_counts.dart';
+import '../../../data/backup/backup_service.dart';
 import '../../../data/backup/restore_service.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../../data/prefs/backup_prefs.dart';
+import '../../copy/backup_copy.dart';
 import '../../copy/privacy_copy.dart';
 import '../../shell/primary_shell.dart';
 import '../../shell/routes.dart';
@@ -20,6 +22,7 @@ import 'auto_backup_state.dart';
 import 'backup_export_flow.dart';
 import 'backup_format.dart';
 import 'backup_section.dart';
+import 'backup_shared_sheet.dart';
 import 'restore_flow.dart';
 
 /// Settings > Your data > Backup and restore (Lead ruling F2: a dedicated
@@ -66,7 +69,11 @@ class _BackupScreenState extends State<BackupScreen> {
   bool _countsFailed = false;
   DateTime? _lastManual;
   bool _busy = false;
-  String? _result;
+  String? _notShared;
+
+  /// The last shared backup when rows were left out of it (A3): its note and
+  /// "Show which" stay on the Back up now card until the next Back up now.
+  BackupExport? _leftOut;
   bool _restoring = false;
   AutoBackupState _auto = const AutoBackupState();
   late final AutoBackupFlow _autoFlow = widget.autoFlow ?? AutoBackupFlow(onChanged: _reloadAuto);
@@ -90,7 +97,6 @@ class _BackupScreenState extends State<BackupScreen> {
     if (_restoring || _busy) return;
     setState(() {
       _restoring = true;
-      _result = null;
     });
     try {
       await _restoreFlow.run(context);
@@ -150,7 +156,8 @@ class _BackupScreenState extends State<BackupScreen> {
     if (!mounted) return;
     setState(() {
       _busy = true;
-      _result = null;
+      _notShared = null;
+      _leftOut = null;
     });
     final outcome = await _flow.execute();
     if (!mounted) return;
@@ -159,13 +166,16 @@ class _BackupScreenState extends State<BackupScreen> {
         setState(() {
           _busy = false;
           _lastManual = at;
-          _result = backupResultMessage(export);
+          _leftOut = export.skippedCount > 0 ? export : null;
         });
         _refreshCounts();
+        // Closing the share sheet is a different outcome; this sheet appears
+        // only once the file was handed to a share target (BP2).
+        await showBackupSharedSheet(context, export);
       case BackupNotShared():
         setState(() {
           _busy = false;
-          _result = 'The share sheet was closed. No backup was saved.';
+          _notShared = kBackupNotSharedLine;
         });
       case BackupFailed():
         setState(() => _busy = false);
@@ -205,28 +215,33 @@ class _BackupScreenState extends State<BackupScreen> {
         key: const Key('backupScroll'),
         padding: const EdgeInsets.fromLTRB(14, 6, 14, 32),
         children: [
-          BackupSection(
+          BackupHeaderCard(palette: palette, lastManual: _lastManual, lastAuto: _auto.lastForLine),
+          const SizedBox(height: 14),
+          BackUpNowCard(
             palette: palette,
             counts: _counts,
             countsFailed: _countsFailed,
-            lastManual: _lastManual,
             busy: _busy,
-            resultText: _result,
+            notSharedText: _notShared,
+            leftOut: _leftOut,
             onBackUp: _backUp,
             onRetry: _load,
-            onRestore: _restore,
-            restoring: _restoring,
-            lastAuto: _auto.lastForLine,
           ),
           const SizedBox(height: 14),
-          AutoBackupCard(
-            palette: palette,
-            state: _auto,
-            onToggle: (on) => _autoFlow.toggle(context, on, hasFolder: _auto.hasFolder),
-            onChooseFolder: () => _autoFlow.chooseFolder(context),
-            onEveryN: _autoFlow.stepEveryN,
-            onKeepK: _autoFlow.stepKeepK,
+          ValueListenableBuilder<bool>(
+            valueListenable: _autoFlow.busy,
+            builder: (context, working, _) => AutoBackupCard(
+              palette: palette,
+              state: _auto,
+              onToggle: (on) => _autoFlow.toggle(context, on, hasFolder: _auto.hasFolder),
+              onChooseFolder: () => _autoFlow.chooseFolder(context),
+              onEveryN: _autoFlow.stepEveryN,
+              onKeepK: _autoFlow.stepKeepK,
+              busy: working,
+            ),
           ),
+          const SizedBox(height: 14),
+          RestoreCard(palette: palette, busy: _busy, restoring: _restoring, onRestore: _restore),
           const SizedBox(height: 14),
           SettingsCard(
             palette: palette,

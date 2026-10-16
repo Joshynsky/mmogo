@@ -12,6 +12,7 @@ class BackupWarning extends StatelessWidget {
     this.bottomGap = 12,
     this.title,
     this.action,
+    this.stripe = true,
   });
 
   final AppPalette palette;
@@ -24,6 +25,11 @@ class BackupWarning extends StatelessWidget {
   /// A small button under the text (for example "Choose folder").
   final Widget? action;
 
+  /// The amber left stripe (S10b A5). On only for the banners that ask the
+  /// user to act (paused, no folder) and for the Privacy page; the W1 box and
+  /// the stuck line are flat.
+  final bool stripe;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -32,7 +38,7 @@ class BackupWarning extends StatelessWidget {
       decoration: BoxDecoration(
         color: palette.highlight,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
-        border: Border(left: BorderSide(color: palette.sun, width: 4)),
+        border: stripe ? Border(left: BorderSide(color: palette.sun, width: 4)) : null,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

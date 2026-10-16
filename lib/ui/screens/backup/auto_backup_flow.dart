@@ -6,6 +6,7 @@ import '../../../platform/storage_bridge.dart';
 import '../../copy/data_copy.dart';
 import '../../theme/app_colors.dart';
 import 'backup_widgets.dart';
+import 'leftover_dialog.dart';
 import '../../widgets/palette_alert_dialog.dart';
 
 /// What the user does on the Auto-backup card: switch it on or off, choose a
@@ -23,16 +24,32 @@ class AutoBackupFlow {
   /// Called after any change so the page re-reads the prefs.
   final VoidCallback onChanged;
 
+  /// True while a folder change or switch-off runs (A11): the card and the
+  /// switch ignore taps and the Working sheet shows.
+  final ValueNotifier<bool> busy = ValueNotifier<bool>(false);
+
   AutoBackupService get _svc => service ?? AutoBackupService.instance;
   StorageBridge get _bridge => (bridge ?? () => StorageBridge.instance)();
 
   /// Switch on: the switch turns on at once ("On. Choose a folder to start.")
-  /// and the setup sheet opens when no folder is stored yet. Switch off:
-  /// releases the folder permission and clears the folder keys.
+  /// and the setup sheet opens when no folder is stored yet. Switch off: asks
+  /// what to do with the automatic backup files left in the folder (only when
+  /// there are some; no old-folder question), then releases the folder
+  /// permission and clears the folder keys.
   Future<void> toggle(BuildContext context, bool on, {required bool hasFolder}) async {
+    if (busy.value) return;
     if (!on) {
-      await _svc.turnOff();
+      busy.value = true;
+      final working = FolderWorking(context)..show();
+      FolderChangeResult? r;
+      try {
+        r = await _svc.switchOff(decide: (prompt) => _decide(context, working, prompt));
+      } finally {
+        working.hide();
+        busy.value = false;
+      }
       onChanged();
+      if (context.mounted) _toastFor(context, r);
       return;
     }
     await BackupPrefs.writeEnabled(true);
@@ -40,8 +57,26 @@ class AutoBackupFlow {
     if (!hasFolder && context.mounted) await chooseFolder(context);
   }
 
+  /// The question sheet between two stretches of work: the Working sheet steps
+  /// aside while the user decides. Any problem is a cancel (keep everything).
+  Future<LeftoverDecision?> _decide(BuildContext context, FolderWorking working, LeftoverPrompt prompt) async {
+    working.hide();
+    if (!context.mounted) return LeftoverDecision.cancel;
+    final d = await showLeftoverSheet(context, prompt);
+    if (context.mounted) working.show();
+    return d;
+  }
+
+  /// The toast after a folder change or switch-off (A11), if any.
+  void _toastFor(BuildContext context, FolderChangeResult? r) {
+    if (r == null) return;
+    final text = folderChangeToast(r);
+    if (text != null) _say(context, text);
+  }
+
   /// Setup sheet (W1) -> OS folder picker -> cloud notice (W2) -> use it.
   Future<void> chooseFolder(BuildContext context) async {
+    if (busy.value) return;
     final n = await BackupPrefs.readEveryN();
     final k = await BackupPrefs.readKeepK();
     if (!context.mounted) return;
@@ -94,12 +129,25 @@ class AutoBackupFlow {
           ],
         ),
       );
+      if (!context.mounted) {
+        await _svc.releaseUnused(pick); // the page went away: give the permission back
+        return;
+      }
       if (use == true) {
-        final ok = await _svc.useFolder(pick);
-        onChanged();
-        if (context.mounted) {
-          _say(context, ok ? autoBackupIsOnToast(n) : 'Could not save the folder choice. Try again.');
+        busy.value = true;
+        final working = FolderWorking(context)..show();
+        FolderChangeResult r;
+        try {
+          r = await _svc.changeFolder(pick, decide: (prompt) => _decide(context, working, prompt));
+        } finally {
+          working.hide();
+          busy.value = false;
         }
+        onChanged();
+        if (!context.mounted) return;
+        _toastFor(context, r);
+        if (r.busy) return;
+        _say(context, r.ok ? autoBackupIsOnToast(n) : 'Could not save the folder choice. Try again.');
         return;
       }
       await _svc.releaseUnused(pick); // declined: give the permission back
@@ -150,7 +198,7 @@ class _SetupSheet extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             BackupPara(autoBackupSetupIntro(everyN, keepK), palette: palette),
-            BackupWarning(palette: palette, text: kBackupFileWarning, key: const Key('setupWarning')),
+            BackupWarning(palette: palette, text: kBackupFileWarning, key: const Key('setupWarning'), stripe: false),
             BackupPara(kAutoBackupFolderHint, palette: palette, bottom: 14),
             Row(
               children: [

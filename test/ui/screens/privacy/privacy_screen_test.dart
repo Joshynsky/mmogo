@@ -17,6 +17,7 @@ import 'package:mmogo/ui/shell/routes.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../support/fake_backup_ui.dart';
 import '../../../support/fake_storage_bridge.dart';
 
 late FakeStorageBridge _bridge;
@@ -48,6 +49,7 @@ Future<void> _pumpPage(WidgetTester tester, Widget home, {Size size = const Size
 
 void main() {
   setUp(() {
+    useFakeBackupUi(); // S10b (A12): this file opens the Backup page
     _bridge = FakeStorageBridge();
     StorageBridge.instance = _bridge;
   });

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../data/prefs/backup_prefs.dart';
 import '../../copy/data_copy.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/tap_target.dart';
 import '../settings/settings_widgets.dart';
 import 'auto_backup_state.dart';
 import 'backup_format.dart';
@@ -25,7 +26,12 @@ class AutoBackupCard extends StatelessWidget {
     required this.onChooseFolder,
     required this.onEveryN,
     required this.onKeepK,
+    this.busy = false,
   });
+
+  /// A folder change or switch-off is running (S10b A11): the switch and the
+  /// folder buttons ignore taps.
+  final bool busy;
 
   final AppPalette palette;
   final AutoBackupState state;
@@ -69,7 +75,7 @@ class AutoBackupCard extends StatelessWidget {
         subtitle: _subtitle,
         value: on,
         first: true,
-        onChanged: onToggle,
+        onChanged: busy ? (_) {} : onToggle,
       ),
     ];
     if (on) {
@@ -95,7 +101,12 @@ class AutoBackupCard extends StatelessWidget {
       }
       if (state.lastFailed) {
         children.add(_banner(
-          BackupWarning(key: const Key('autoBackupFailedBanner'), palette: palette, text: kAutoBackupFailedBanner),
+          BackupWarning(
+            key: const Key('autoBackupFailedBanner'),
+            palette: palette,
+            text: kAutoBackupStuckLine,
+            stripe: false,
+          ),
         ));
       }
       children.add(SettingsLink(
@@ -106,7 +117,7 @@ class AutoBackupCard extends StatelessWidget {
         subtitle: state.hasFolder
             ? '${state.folderName ?? 'Chosen folder'}${state.paused ? ' (not available)' : ''}'
             : 'Not chosen yet',
-        onTap: onChooseFolder,
+        onTap: busy ? () {} : onChooseFolder,
       ));
       children.add(Padding(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
@@ -151,7 +162,7 @@ class AutoBackupCard extends StatelessWidget {
       }
       children.add(Padding(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-        child: BackupWarning(palette: palette, text: kBackupFileWarning, bottomGap: 0),
+        child: BackupWarning(palette: palette, text: kBackupFileWarning, bottomGap: 0, stripe: false),
       ));
     }
     return SettingsCard(
@@ -164,11 +175,11 @@ class AutoBackupCard extends StatelessWidget {
 
   Widget _chooseButton() => FilledButton(
         key: const Key('autoBackupChooseFolder'),
-        onPressed: onChooseFolder,
+        onPressed: busy ? null : onChooseFolder,
         style: FilledButton.styleFrom(
           backgroundColor: palette.primary,
           foregroundColor: palette.onPrimary,
-          visualDensity: VisualDensity.compact,
+          minimumSize: const Size(kMinTapTarget, kMinTapTarget),
           shape: const StadiumBorder(),
         ),
         child: const Text('Choose folder'),

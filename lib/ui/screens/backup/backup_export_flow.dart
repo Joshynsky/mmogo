@@ -12,6 +12,7 @@ import '../../../data/db/app_database.dart';
 import '../../../data/prefs/backup_prefs.dart';
 import '../../copy/data_copy.dart';
 import '../../theme/app_colors.dart';
+import 'backup_ui_seams.dart';
 import 'backup_widgets.dart';
 import '../../widgets/palette_alert_dialog.dart';
 
@@ -38,6 +39,7 @@ class DeviceTempFiles implements BackupTempFiles {
 
   @override
   Future<String> write(String name, Uint8List bytes) async {
+    BackupUiSeams.ensureReal('temp files');
     final dir = await getTemporaryDirectory();
     final file = File(p.join(dir.path, name));
     await file.writeAsBytes(bytes, flush: true);
@@ -46,6 +48,7 @@ class DeviceTempFiles implements BackupTempFiles {
 
   @override
   Future<void> delete(String path) async {
+    BackupUiSeams.ensureReal('temp files');
     try {
       final f = File(path);
       if (await f.exists()) await f.delete();
@@ -106,11 +109,13 @@ class BackupExportFlow {
   final Future<bool> Function(DateTime when) _record;
 
   static Future<BackupExport> _defaultExport() async {
+    BackupUiSeams.ensureReal('backup export');
     final db = await AppDatabase.instance.database;
     return BackupService(db: () async => db).export();
   }
 
   static Future<bool> _defaultShare(String path, String fileName) async {
+    BackupUiSeams.ensureReal('share sheet');
     final result = await SharePlus.instance.share(
       ShareParams(
         files: [XFile(path, mimeType: 'application/json', name: fileName)],
@@ -132,7 +137,7 @@ class BackupExportFlow {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              BackupWarning(palette: palette, text: kBackupFileWarning, bottomGap: 10),
+              BackupWarning(palette: palette, text: kBackupFileWarning, bottomGap: 10, stripe: false),
               const Text("The next screen is Android's share sheet. Pick where the file goes."),
             ],
           ),

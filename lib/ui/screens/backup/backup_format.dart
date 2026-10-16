@@ -2,8 +2,6 @@
 /// ever go into these strings, only counts and dates.
 library;
 
-import '../../../data/backup/backup_service.dart';
-
 const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /// `25 Sep 2026, 09:14` from the local fields of [when].
@@ -29,32 +27,6 @@ String lastBackupLine(DateTime? manual, {DateTime? auto}) {
 /// The Settings row subtitle: `Never backed up` or `Last backup 25 Sep 2026`.
 String backupRowSubtitle(DateTime? lastBackup) =>
     lastBackup == null ? 'Never backed up' : 'Last backup ${formatBackupDay(lastBackup)}';
-
-String _n(int n, String one, String many) => '$n ${n == 1 ? one : many}';
-
-/// What the user is told after a backup was handed to the share sheet. Reports
-/// repaired and skipped counts only when they are not zero.
-String backupResultMessage(BackupExport e) {
-  final parts = <String>[
-    'Backup ready: ${_n(e.transactions, 'transaction', 'transactions')}, '
-        '${_n(e.classifications, 'classification', 'classifications')} and '
-        '${_n(e.counterpartyMap, 'saved receiver', 'saved receivers')} '
-        'went to the share sheet. Check that you saved it where you meant to.',
-  ];
-  if (e.repairedCount > 0) {
-    parts.add(
-      '${_n(e.repairedCount, 'entry was', 'entries were')} tidied in the backup copy '
-      '(stray characters, extra spaces or very long text). Your data on this phone was not changed.',
-    );
-  }
-  if (e.skippedCount > 0) {
-    parts.add(
-      '${_n(e.skippedCount, 'entry', 'entries')} could not be made valid and '
-      '${e.skippedCount == 1 ? 'was' : 'were'} left out of the backup. Your data on this phone was not changed.',
-    );
-  }
-  return parts.join(' ');
-}
 
 const kBackupFailedMessage = 'Could not create the backup. Nothing was shared.';
 

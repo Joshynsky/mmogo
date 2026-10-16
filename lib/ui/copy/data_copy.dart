@@ -35,16 +35,14 @@ const kFeedbackHint = 'Do not paste M-Pesa messages, names or phone numbers into
 /// W4 (a and b): the merge-or-replace dialog's explanation of why Restore asks.
 const kWhyRestoreAsks =
     'Merge adds what is missing and skips entries already on this phone (matched by M-Pesa code). '
-    "Replace erases everything on this phone first and puts the file's data in. "
+    "Replace removes this phone's transactions, categories you made and saved receivers, then puts the file's data in. "
     'Use Merge unless you want this phone to match the file exactly. '
     'On a new phone both give the same result. '
     'On a phone that already has entries, only you know which you want.';
 
 /// §DATA.COPY.F3 — S10a F3 (orchestrator decision, PM to confirm): Replace and Undo do not
 /// touch the remembered recipients. PROSE ONLY (no key name: the guard test
-/// scans lib/data/backup). S10b puts it in the Replace confirmation and must
-/// reword "erases everything" (kWhyRestoreAsks, kReplaceOptionHelp), since
-/// CB6 bans "Erases" for deleting.
+/// scans lib/data/backup). Shown in the Replace confirmation (S10b).
 const kRememberedRecipientsNotInBackup =
     'Remembered recipients are a phone preference, not part of a backup. '
     'Replace and Undo leave them alone. Delete data clears them.';
@@ -53,6 +51,10 @@ const kRememberedRecipientsNotInBackup =
 const kPhoneTransferNotice =
     "Android's phone-to-phone transfer will not carry mmogo data. "
     'A backup file is the only way to move to a new phone.';
+
+/// D7 (S10b, A7): the ONE place this sentence is written. Shown on the Backup
+/// page only (S11 / WN1 reuses the constant; the Privacy page does not).
+const kBackupNotRestorableByOlder = 'A backup made with 0.1.2 cannot be restored by 0.1.1 or older.';
 
 /// W3: why a backup matters (Backup page header, What's-new, Privacy page).
 const kUninstallErasesNotice =
@@ -69,7 +71,6 @@ const kRestoreIntro = 'Pick a mmogo backup file. Nothing changes until you choos
 /// Modal progress labels.
 const kRestoreCheckingFile = 'Checking file...';
 const kRestoreRestoring = 'Restoring...';
-const kRestoreReplacing = 'Saving a safety copy, then replacing...';
 const kRestoreUndoing = 'Undoing...';
 
 /// Rejection dialog (plain reason, then "Nothing was changed.").
@@ -85,16 +86,12 @@ const kRejectInvalidEntry = 'This backup has an invalid entry';
 const kRestoreFailedTitle = 'Could not restore';
 const kRestoreFailedMessage = 'Could not restore. Nothing was changed.';
 
-/// Replace is refused when the safety copy could not hold every entry.
-const kReplaceNeedsCompleteCopy =
-    'Replace needs a complete safety copy and some entries cannot be saved in it. Use Merge instead.';
-
 /// Merge-or-replace dialog.
 const kMergeDialogTitle = 'Restore from this backup?';
 const kMergeOptionTitle = 'Merge';
 const kMergeOptionHelp = 'Keep what is here and add what is missing.';
 const kReplaceOptionTitle = 'Replace';
-const kReplaceOptionHelp = "Wipe this phone first, then put the file's data in.";
+const kReplaceOptionHelp = "Swap this phone's data for the file's data.";
 const kBackupHasNoEntries = 'This backup has no entries.';
 
 /// Replace confirmation.
@@ -110,9 +107,9 @@ const kUndoNotExactNotice =
     'A setting that was not set before keeps the value Replace gave it.';
 
 /// W5.
-String replaceRemovesLine(int transactions, int classifications, int receivers) =>
+String replaceRemovesLine(int transactions, int categories, int receivers) =>
     'Replace will remove ${_n(transactions, 'transaction', 'transactions')}, '
-    '${_n(classifications, 'classification', 'classifications')} and '
+    '${_n(categories, 'category you made', 'categories you made')} and '
     '${_n(receivers, 'saved receiver', 'saved receivers')} from this phone, '
     "including recently deleted ones, and put the file's data in. "
     'A safety copy of the current data is saved first so you can undo.';
@@ -128,6 +125,16 @@ const kResultMergeNote =
 const kResultReplaceNote = 'Everything on this phone now matches the file.';
 const kResultSafetyCopyNote = 'A safety copy of what was on this phone is kept in the app, so you can undo.';
 const kResultUndoneNote = 'The data from before the replace is back. Entries added after the replace were not kept.';
+
+/// S10b A2 (PM placeholder): the Undo result after a Replace that lost [n]
+/// rows. Never claims the data "is back" in full.
+String resultUndoneLostNote(int n) =>
+    'Everything except ${n == 1 ? 'that entry' : 'those $n entries'} is back. '
+    'Entries added after the replace were not kept.';
+
+/// S10b A2 (PM placeholder): the safety copy could not be removed after Undo.
+const kResultSafetyCopyStillThere =
+    'The safety copy could not be removed. It stays in the app until the next Replace or Delete data.';
 const kSettingsNotApplied = 'Restored, but some settings could not be applied.';
 
 /// Auto-backup card (B21), wording from the signed-off prototype.
@@ -139,7 +146,9 @@ const kAutoBackupPausedBannerTitle = 'Auto-backup is paused.';
 const kAutoBackupPausedBannerBody =
     ' mmogo can no longer use the folder you picked. Choose a folder again to resume.';
 const kAutoBackupNoFolderBanner = 'No folder yet. Choose where the backup files go and auto-backup starts.';
-const kAutoBackupFailedBanner = 'Last auto-backup failed. It will try again after your next saved entry.';
+/// S10b A6: replaces the old "Last auto-backup failed" banner. No button, no stripe.
+const kAutoBackupStuckLine =
+    'The last automatic backup did not finish and was stopped. It will try again after your next saved entry.';
 const kAutoBackupPausedStatus = 'No automatic retry while paused.';
 const kAutoBackupFolderHint =
     'On Android 11 and later, top-level folders such as Downloads are refused. '

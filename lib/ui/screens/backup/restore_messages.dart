@@ -5,6 +5,7 @@ library;
 import '../../../data/backup/backup_limits.dart';
 import '../../../data/backup/restore_types.dart';
 import '../../../data/backup/restore_service.dart' show RestoreRejected, RestoreRejectReason;
+import '../../copy/backup_copy.dart';
 import '../../copy/data_copy.dart';
 import '../../copy/delete_data_copy.dart';
 import 'backup_format.dart';
@@ -72,10 +73,26 @@ String restoreCountsLine(int transactions, int classifications, int receivers) =
 /// `20 Sep 2026, 10:15` from the file's epoch-millisecond creation time.
 String restoreFileDate(int epochMs) => formatBackupTime(DateTime.fromMillisecondsSinceEpoch(epochMs));
 
-/// The user-visible text of a [RestoreFailed]. Replace refused for an
-/// incomplete safety copy is the only case that differs from the one message.
+/// The user-visible text of a [RestoreFailed] outside the Replace confirm
+/// (Merge, Undo): busy and "this changed" have their own texts, everything
+/// else is the one message. `safetyCopyIncomplete` is no longer thrown (S10a)
+/// and has no text.
 String restoreFailedText(RestoreFailed e) => switch (e.reason) {
-      RestoreFailReason.safetyCopyIncomplete => kReplaceNeedsCompleteCopy,
+      RestoreFailReason.busy => kDataOpBusy,
+      RestoreFailReason.skippedChanged => kChangedWhileChecking,
+      _ => kRestoreFailedMessage,
+    };
+
+/// The text in the red box inside the Replace confirm (mock M3, A9f): the
+/// safety copy could not be saved, another change is running, or the one
+/// message. ("This changed" is not a failure: the flow shows the preview again.)
+String replaceFailedText(Object error) {
+  if (error is RestoreFailed) {
+    return switch (error.reason) {
+      RestoreFailReason.safetyCopyFailed => kReplaceSafetyCopyFailed,
       RestoreFailReason.busy => kDataOpBusy,
       _ => kRestoreFailedMessage,
     };
+  }
+  return kRestoreFailedMessage;
+}

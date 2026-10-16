@@ -14,6 +14,7 @@ import 'package:mmogo/data/backup/backup_repair.dart';
 import 'package:mmogo/data/backup/backup_service.dart';
 import 'package:mmogo/data/prefs/backup_prefs.dart';
 import 'package:mmogo/platform/storage_bridge.dart';
+import 'package:mmogo/ui/copy/backup_copy.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
 import 'package:mmogo/ui/screens/backup/backup_export_flow.dart';
 import 'package:mmogo/ui/screens/backup/backup_screen.dart';
@@ -22,6 +23,7 @@ import 'package:mmogo/ui/shell/routes.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../support/fake_backup_ui.dart';
 import '../../../support/fake_storage_bridge.dart';
 import '../../../support/fake_delete_data.dart';
 
@@ -87,6 +89,10 @@ Future<void> _pump(
   Object? countsError,
   BackupExportFlow? flow,
 }) async {
+  // S10b: the D7 line makes the page longer; keep the Back up now button on screen.
+  t.view.physicalSize = const Size(900, 2400);
+  t.view.devicePixelRatio = 1;
+  addTearDown(t.view.reset);
   await t.pumpWidget(
     MaterialApp(
       home: BackupScreen(
@@ -111,6 +117,7 @@ Future<void> _backUpAndAcknowledge(WidgetTester t) async {
 void main() {
   // S9b-2 (A1): nothing here may reach the real Delete data service.
   setUp(() => useFakeDeleteData());
+  setUp(() => useFakeBackupUi()); // S10b (A12): nothing here may reach a real service
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   testWidgets('normal: header card, counts line, not-included line, warning, enabled button', (t) async {
@@ -124,7 +131,7 @@ void main() {
     expect(find.text('Never backed up'), findsOneWidget);
     expect(
       find.text(
-        'A backup holds your 120 transactions, 3 classifications you made, 8 saved receivers and your settings, in one file.',
+        'A backup holds your 120 transactions, 3 categories you made, 8 saved receivers and your settings, in one file.',
       ),
       findsOneWidget,
     );
@@ -156,7 +163,7 @@ void main() {
       counts: const BackupCounts(transactions: 1, userClassifications: 0, receivers: 0, deletedLeftOut: 0),
     );
     expect(find.byKey(const Key('backupNotIncluded')), findsNothing);
-    expect(find.textContaining('1 transaction, 0 classifications you made'), findsOneWidget);
+    expect(find.textContaining('1 transaction, 0 categories you made'), findsOneWidget);
   });
 
   testWidgets('empty: clear message, button disabled, no counts line', (t) async {
@@ -242,10 +249,12 @@ void main() {
     run.gate!.complete(_export());
     await t.pumpAndSettle();
     expect(find.text('Preparing your backup...'), findsNothing);
-    expect(find.byKey(const Key('backupResult')), findsOneWidget);
+    // S10b (A3): no inline success text any more; the Backup shared sheet opens.
+    expect(find.byKey(const Key('backupResult')), findsNothing);
+    expect(find.text(kBackupSharedTitle), findsOneWidget);
   });
 
-  testWidgets('success: shared once, temp file cleaned, last backup line updates, no repaired or skipped wording', (
+  testWidgets('success: shared once, temp file cleaned, last backup line updates, the sheet has no repaired or left-out wording', (
     t,
   ) async {
     final bridge = FakeStorageBridge();
@@ -259,10 +268,12 @@ void main() {
     expect(run.files.written, ['mmogo-backup-20260925-091400.json']);
     expect(run.files.deleted, ['/tmp/mmogo-backup-20260925-091400.json']);
     expect(find.text('Last backup (manual): 25 Sep 2026, 09:14'), findsOneWidget);
-    final msg = t.widget<Text>(find.byKey(const Key('backupResult'))).data!;
+    // S10b (A3): the old inline "Backup ready ..." text is gone; the sheet says what went out.
+    expect(find.byKey(const Key('backupResult')), findsNothing);
+    final msg = t.widget<Text>(find.byKey(const Key('backupSharedCounts'))).data!;
     expect(msg, contains('120 transactions'));
-    expect(msg, isNot(contains('tidied')));
-    expect(msg, isNot(contains('left out')));
+    expect(find.byKey(const Key('backupSharedTidied')), findsNothing);
+    expect(find.byKey(const Key('backupLeftOutNote')), findsNothing);
     // Manual backups go through the share sheet, not the folder bridge.
     expect(bridge.calls, isEmpty);
   });
@@ -280,10 +291,10 @@ void main() {
       ),
     );
     await _backUpAndAcknowledge(t);
-    final msg = t.widget<Text>(find.byKey(const Key('backupResult'))).data!;
-    expect(msg, contains('2 entries were tidied'));
-    expect(msg, contains('1 entry could not be made valid and was left out'));
-    expect(msg, isNot(contains('amount_cents')));
+    expect(t.widget<Text>(find.byKey(const Key('backupSharedTidied'))).data, contains('2 entries were tidied'));
+    final left = t.widget<Text>(find.descendant(of: find.byType(BottomSheet), matching: find.byKey(const Key('backupLeftOutLine')))).data!;
+    expect(left, contains('1 entry could not be made valid and was left out'));
+    expect(left, isNot(contains('amount_cents')));
   });
 
   testWidgets('failure: the plain message, nothing shared, last backup not written', (t) async {

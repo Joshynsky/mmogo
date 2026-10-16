@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mmogo/data/backup/backup_repair.dart';
 import 'package:mmogo/data/backup/backup_service.dart';
 import 'package:mmogo/data/prefs/backup_prefs.dart';
+import 'package:mmogo/ui/copy/backup_copy.dart';
 import 'package:mmogo/ui/screens/backup/backup_export_flow.dart';
 import 'package:mmogo/ui/screens/backup/backup_format.dart';
 
@@ -156,27 +157,16 @@ void main() {
   });
 
   group('messages', () {
-    test('no repaired or skipped wording when both are zero', () {
-      final m = backupResultMessage(_export());
-      expect(m, contains('10 transactions'));
-      expect(m, isNot(contains('tidied')));
-      expect(m, isNot(contains('left out')));
-    });
-
-    test('repaired and skipped counts are reported in plain words, with no row values', () {
-      final m = backupResultMessage(
-        _export(
-          repaired: 3,
-          skipped: [
-            const BackupSkippedRow(table: 'transactions', rowId: 7, field: 'counterparty_label', rule: 'tooLong'),
-            const BackupSkippedRow(table: 'transactions', rowId: 9, field: 'amount_cents', rule: 'range'),
-          ],
-        ),
+    // S10b (A3): backupResultMessage ("Backup ready ... Check that you saved
+    // it ...") is gone; its repaired / left-out sentences live in backup_copy.dart
+    // and are tested with the Backup shared sheet (backup_shared_sheet_test.dart).
+    test('the left-out and tidied sentences are plain words with no row values', () {
+      expect(
+        backupLeftOutLine(2, allEntries: true),
+        '2 entries could not be made valid and were left out of the backup. Your data on this phone was not changed.',
       );
-      expect(m, contains('3 entries were tidied'));
-      expect(m, contains('2 entries could not be made valid and were left out'));
-      expect(m, isNot(contains('counterparty_label')));
-      expect(m, isNot(contains('amount_cents')));
+      expect(backupLeftOutLine(1, allEntries: false), startsWith('1 item could not be made valid and was left out'));
+      expect(backupTidiedLine(3), startsWith('3 entries were tidied in the backup copy'));
     });
 
     test('not-included line, singular and plural', () {

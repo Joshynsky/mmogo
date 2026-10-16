@@ -20,6 +20,7 @@ import 'package:mmogo/ui/screens/backup/restore_messages.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../support/fake_backup_ui.dart';
 import '../../../support/fake_restore_service.dart';
 import '../../../support/fake_storage_bridge.dart';
 
@@ -90,6 +91,7 @@ String _text(WidgetTester t, String key) {
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() => useFakeBackupUi()); // S10b (A12)
 
   group('button and picker', () {
     testWidgets('the Restore button is on the page and enabled even when the phone is empty', (t) async {
@@ -321,7 +323,7 @@ void main() {
       await _tap(t, 'restoreOptionReplace');
       await _tap(t, 'restoreContinue');
       expect(find.byKey(const Key('restoreReplaceDialog')), findsOneWidget);
-      expect(r.service.calls, ['inspect']); // nothing restored yet
+      expect(r.service.calls, ['inspect', 'previewReplace']); // nothing restored yet
     });
   });
 
@@ -336,7 +338,7 @@ void main() {
       expect(find.byKey(const Key('restoreResultSheet')), findsOneWidget);
       expect(_text(t, 'restoreResultTitle'), kResultMergedTitle);
       // result_sheet_lists_counts
-      for (final s in ['142', '45', '11', '4', 'Transactions', 'Classifications', 'Saved receivers', 'Added', 'Skipped', 'Rejected']) {
+      for (final s in ['142', '45', '11', '4', 'Transactions', 'Categories', 'Saved receivers', 'Added', 'Skipped', 'Rejected']) {
         expect(find.text(s), findsWidgets, reason: s);
       }
       expect(find.text(kResultMergeNote), findsOneWidget);
@@ -388,17 +390,18 @@ void main() {
       final r = _Rig();
       await _pump(t, r);
       await _toReplaceConfirm(t, r);
-      expect(r.service.calls, ['inspect']);
+      // S10b: the Replace preview is read BEFORE the confirm.
+      expect(r.service.calls, ['inspect', 'previewReplace']);
       expect(find.text(kReplaceConfirmTitle), findsOneWidget);
       // 60 live + 4 recently deleted = 64 transactions removed.
       expect(
         _text(t, 'restoreReplaceRemoves'),
-        'Replace will remove 64 transactions, 3 classifications and 7 saved receivers from this phone, '
+        'Replace will remove 64 transactions, 3 categories you made and 7 saved receivers from this phone, '
         "including recently deleted ones, and put the file's data in. "
         'A safety copy of the current data is saved first so you can undo.',
       );
-      expect(_text(t, 'restoreReplacePhone'), '60 transactions, 3 classifications, 7 saved receivers');
-      expect(_text(t, 'restoreReplaceFile'), '187 transactions, 2 classifications, 15 saved receivers');
+      expect(_text(t, 'restoreReplacePhone'), '60 transactions, 3 categories, 7 saved receivers');
+      expect(_text(t, 'restoreReplaceFile'), '187 transactions, 2 categories, 15 saved receivers');
       expect(find.text(kReplaceConfirmButton), findsOneWidget);
     });
 
@@ -427,12 +430,12 @@ void main() {
       await _toReplaceConfirm(t, r);
       await t.tap(find.text('Cancel'));
       await t.pumpAndSettle();
-      expect(r.service.calls, ['inspect']);
+      expect(r.service.calls, ['inspect', 'previewReplace']);
       expect(r.refreshes, 0);
       expect(find.byType(AlertDialog), findsNothing);
     });
 
-    testWidgets('confirmed Replace shows the safety-copy progress, then the sheet with Undo', (t) async {
+    testWidgets('confirmed Replace shows the step list, then the sheet with Undo', (t) async {
       final r = _Rig();
       r.service.restoreGate = Completer<void>();
       await _pump(t, r);
@@ -440,10 +443,11 @@ void main() {
       await t.tap(find.byKey(const Key('restoreReplaceGo')));
       await t.pump();
       await t.pump();
-      expect(find.text(kRestoreReplacing), findsOneWidget);
+      // S10b: the step list replaces the one-line "Saving a safety copy, then replacing...".
+      expect(find.byKey(const Key('restoreStepList')), findsOneWidget);
       r.service.restoreGate!.complete();
       await t.pumpAndSettle();
-      expect(r.service.calls, ['inspect', 'restore:replace']);
+      expect(r.service.calls, ['inspect', 'previewReplace', 'restore:replace']);
       expect(_text(t, 'restoreResultTitle'), kResultReplacedTitle);
       expect(find.text(kResultReplaceNote), findsOneWidget);
       expect(find.byKey(const Key('restoreResultSafetyNote')), findsOneWidget);
@@ -451,19 +455,8 @@ void main() {
       expect(r.refreshes, 1);
     });
 
-    testWidgets('Replace refused for an incomplete safety copy shows the Use Merge line', (t) async {
-      final r = _Rig();
-      r.service.restoreError = const RestoreFailed(RestoreFailReason.safetyCopyIncomplete);
-      await _pump(t, r);
-      await _toReplaceConfirm(t, r);
-      await _tap(t, 'restoreReplaceGo');
-      expect(_text(t, 'restoreFailedMessage'), kReplaceNeedsCompleteCopy);
-      expect(
-        kReplaceNeedsCompleteCopy,
-        'Replace needs a complete safety copy and some entries cannot be saved in it. Use Merge instead.',
-      );
-      expect(r.refreshes, 0);
-    });
+    // S10b (A12): the 'Replace refused for an incomplete safety copy' test is gone with
+    // kReplaceNeedsCompleteCopy; the consent path is tested in replace_flow_s10b_test.dart.
 
     testWidgets('undo_after_replace restores the previous data and refreshes again', (t) async {
       final r = _Rig();
@@ -471,7 +464,7 @@ void main() {
       await _toReplaceConfirm(t, r);
       await _tap(t, 'restoreReplaceGo');
       await _tap(t, 'restoreUndoButton');
-      expect(r.service.calls, ['inspect', 'restore:replace', 'undo']);
+      expect(r.service.calls, ['inspect', 'previewReplace', 'restore:replace', 'undo']);
       expect(r.refreshes, 2);
       expect(_text(t, 'restoreResultTitle'), kResultUndoneTitle);
       expect(find.byKey(const Key('restoreUndoButton')), findsNothing); // Undo disappears
@@ -485,7 +478,7 @@ void main() {
       await _toReplaceConfirm(t, r);
       await _tap(t, 'restoreReplaceGo');
       await _tap(t, 'restoreDoneButton');
-      expect(r.service.calls, ['inspect', 'restore:replace']);
+      expect(r.service.calls, ['inspect', 'previewReplace', 'restore:replace']);
     });
 
     testWidgets('a failing Undo shows the one failure message', (t) async {
