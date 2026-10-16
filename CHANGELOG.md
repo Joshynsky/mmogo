@@ -2,6 +2,29 @@
 
 What changed in each version of mmogo, newest first. Written for the people who use the app, so it says what you will notice, not how it was built. Dates are when the version was released.
 
+## 0.1.2 (date set at release)
+
+### Added
+- **Withdrawals, airtime and Pochi.** mmogo now understands these M-Pesa messages. Home and Paid to show how many you made and what they cost. A withdrawal adds 0 to what you spent; only its Transaction cost counts toward costs. Airtime bought for another number is read as airtime, and the other number is not kept.
+- **Messages with a name but no phone number.** mmogo asks once whether it is Pochi or Send Money, and can remember your answer if you tick the box. Remembered recipients are listed in Settings, where you can forget them, and they are not part of a backup.
+- **Weeks.** Home and Analytics group days into calendar weeks, starting on the day you choose in Settings. Past weeks are regrouped to match. No transactions change.
+- **Manage categories.** In Settings: create, rename, delete and restore your categories.
+- **Delete data.** In Settings, with two levels: delete your transactions, or reset the app to first launch. You type DELETE to confirm, and backup files you saved earlier are not touched.
+- **What's new.** A short set of cards, opened from the Updates page, about what changed in this version.
+- **A screen for when mmogo cannot open.** It says so, offers Try again, and lists what to do next.
+
+### Changed
+- **Settings is grouped, and has Appearance.** The groups are Look, Adding entries, Your data and About. Appearance is three icons on one row: System, Light or Dark.
+- **Restoring with Replace tells you more first.** It shows what would be lost and asks you to confirm. A safety copy is made first and Undo is offered afterwards.
+- **Easier to read and tap.** Text size, button sizes, colour contrast of the payment-type labels and screen-reader labels were checked and fixed, and M-Pesa no longer splits across two lines at its hyphen.
+
+### Fixed
+- **Same phone number, one person.** Earlier versions counted one number as two people when it was written two ways, for example 0712 345 678 and +254 712 345 678. That was a mistake. They now count as one person on Paid to, and their totals are added together. The numbers saved on your entries do not change.
+
+### Good to know
+- **Backups.** Backups from 0.1.1 still restore. A backup made with 0.1.2 cannot be restored by 0.1.1 or older. Uninstalling mmogo erases your data from this phone. Only a backup you saved can bring it back.
+- **Privacy.** No permissions except internet, used only to check for updates (switchable off). The internet is used only to check for updates. GitHub sees your IP address and that the request comes from the mmogo app. No entries, names or messages are sent.
+
 ## 0.1.1 (2 October 2026)
 
 ### Added

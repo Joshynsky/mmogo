@@ -14,7 +14,7 @@ An Android app for seeing where your M-Pesa money goes (the name is short for "M
 
 **[Download for Android](https://joshynsky.github.io/mmogo/)** from the website, or get `mmogo.apk` from the [latest release](https://github.com/Joshynsky/mmogo/releases/latest). It isn't on the Play Store, so see [Install](#install-android) for the few prompts Android shows.
 
-mmogo is an independent project. It is not made by, or connected to, Safaricom or M-Pesa. It is an early release built by one person, so expect some rough edges.
+mmogo is independent. Not made or approved by Safaricom. It is an early release built by one person, so expect some rough edges.
 
 ## Why it exists
 
@@ -34,6 +34,8 @@ I didn't research the space properly first. When I did, I found that M-Pesa trac
 - **Make it yours:** three colour palettes (light and dark follow your phone), a short guided tip on each page, a name for the Home greeting, and **Export CSV** through the share sheet.
 
 ## Privacy
+
+No permissions except internet, used only to check for updates (switchable off).
 
 - Your data is stored in a local SQLite database on the device. There are no accounts and no server.
 - mmogo reads **only the message you paste**. It picks out the amount, receiver, code, date and transaction cost. It has no access to your SMS inbox or any other message.
