@@ -80,7 +80,7 @@ class DetailsCard extends StatelessWidget {
             ),
           ),
           if (codeShapeInvalid)
-            _errorText(palette, key: const Key('addCodeShapeError'), text: 'Enter the 10-character M-Pesa code')
+            _errorText(palette, key: const Key('addCodeShapeError'), text: 'Enter the 10-character M\u2011Pesa code')
           else if (codeDuplicate)
             _errorText(palette, key:const Key('addCodeDuplicateError'), text: 'This code is already recorded'),
           Divider(height: 1, color: palette.line),

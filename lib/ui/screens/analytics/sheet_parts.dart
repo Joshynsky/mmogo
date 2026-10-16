@@ -4,7 +4,7 @@ import '../../../domain/analytics/analytics_period.dart';
 import '../../theme/app_colors.dart';
 
 /// §ANALYTICS.SHEET_PARTS — the shared sheet action row, field styling and picker theme.
-/// Cancel (track) + primary action, 42px pills (mock `.acts`).
+/// Cancel (track) + primary action, 44px pills (mock `.acts` is 42; S11b raised it to the 44 floor).
 class AnalyticsSheetActions extends StatelessWidget {
   const AnalyticsSheetActions({
     super.key,
@@ -25,7 +25,7 @@ class AnalyticsSheetActions extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget button(Key key, String label, Color bg, Color fg, VoidCallback? onTap) => Expanded(
       child: SizedBox(
-        height: 42,
+        height: 44, // S11b: was 42 (mock .acts); 44 is the hit-area floor
         child: FilledButton(
           key: key,
           onPressed: onTap,

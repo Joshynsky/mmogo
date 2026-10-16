@@ -34,7 +34,7 @@ const kWhatsNewCard1Title = 'Withdrawals, airtime and Pochi';
 /// what they cost" is not true in the app, so the second part says what the
 /// app really shows.
 const kWhatsNewCard1Body =
-    'mmogo now understands these M-Pesa messages. '
+    'mmogo now understands these M\u2011Pesa messages. '
     'Home and Paid to show how many you made and what they cost. '
     'A withdrawal adds 0 to what you spent; only its Transaction cost counts toward costs.';
 

@@ -110,7 +110,7 @@ class PasteCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Parse M-Pesa message',
+                      'Parse M\u2011Pesa message',
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: palette.tintInk),
                     ),
                     const SizedBox(height: 2),
@@ -183,7 +183,7 @@ class _PasteSheetState extends State<_PasteSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Parse the M-Pesa message',
+                'Parse the M\u2011Pesa message',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: palette.ink),
               ),
               const SizedBox(height: 4),

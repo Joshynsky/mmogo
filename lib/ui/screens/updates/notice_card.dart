@@ -97,7 +97,12 @@ class _NoticeCardState extends State<NoticeCard> {
             ],
           ),
           const SizedBox(height: 8),
-          Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, height: 1.3, color: palette.ink)),
+          // S11b (CB5): the notice title is a heading for a screen reader.
+          Semantics(
+            header: true,
+            container: true,
+            child: Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, height: 1.3, color: palette.ink)),
+          ),
           if (notes.isNotEmpty) ...[
             const SizedBox(height: 8),
             LayoutBuilder(
@@ -127,7 +132,7 @@ class _NoticeCardState extends State<NoticeCard> {
                         onPressed: () => setState(() => _open = !_open),
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
-                          minimumSize: Size.zero,
+                          minimumSize: const Size(44, 44), // S11b: hit-area floor (was Size.zero)
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           foregroundColor: palette.primary,
                         ),
@@ -144,7 +149,7 @@ class _NoticeCardState extends State<NoticeCard> {
           if (n.backupPaused) ...[
             const SizedBox(height: 6),
             SizedBox(
-              height: 42,
+              height: 44, // S11b: was 42; 44 is the hit-area floor
               child: FilledButton(
                 key: const Key('noticeOpenBackup'),
                 onPressed: widget.onOpenBackup,
@@ -155,7 +160,7 @@ class _NoticeCardState extends State<NoticeCard> {
           ] else if (!n.welcome) ...[
             const SizedBox(height: 6),
             SizedBox(
-              height: 42,
+              height: 44, // S11b: was 42; 44 is the hit-area floor
               child: FilledButton(
                 key: const Key('noticeSeeWhatsNew'),
                 onPressed: widget.onSeeWhatsNew,

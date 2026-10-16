@@ -248,14 +248,16 @@ class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                _countdownText(row),
-                key: Key('deletedRowCountdown_${row.id}'),
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: palette.diffUp,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+              Flexible(
+                child: Text(
+                  _countdownText(row),
+                  key: Key('deletedRowCountdown_${row.id}'),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: palette.diffUp,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                 ),
               ),
               OutlinedButton(

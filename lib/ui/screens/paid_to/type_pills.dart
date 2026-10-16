@@ -129,7 +129,7 @@ class _TypePill extends StatelessWidget {
     const pill = BorderRadius.all(Radius.circular(999));
     final pc = type == null ? palette.primary : palette.typePillFill(type!);
     final onPc = type == null ? palette.onPrimary : palette.typePillText(type!);
-    final ink = type == null ? palette.ink : pc;
+    final ink = type == null ? palette.ink : palette.typePillInk(type!, page: palette.card);
     final fg = selected ? onPc : ink;
     return Semantics(
       selected: selected,
@@ -159,7 +159,7 @@ class _TypePill extends StatelessWidget {
                         TextSpan(text: label),
                         TextSpan(
                           text: ' $short',
-                          style: TextStyle(fontWeight: FontWeight.w600, color: fg.withValues(alpha: 0.8)),
+                          style: TextStyle(fontWeight: FontWeight.w600, color: fg), // S11b: full colour, 80% failed 4.5:1
                         ),
                       ],
                     ),

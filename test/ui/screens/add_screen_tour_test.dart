@@ -5,6 +5,7 @@
 // inside testWidgets).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../support/mpesa_text.dart';
 import 'package:mmogo/ui/screens/add/add_screen.dart';
 import 'package:mmogo/ui/widgets/coach_tour.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -71,7 +72,7 @@ void main() {
     await _pumpAdd(tester);
     expect(find.byKey(coachTourBubbleKey), findsOneWidget);
     expect(find.text('1 of 4'), findsOneWidget);
-    expect(find.textContaining('Paste an M-Pesa message'), findsOneWidget);
+    expect(find.textContaining(mpesaText('Paste an M-Pesa message')), findsOneWidget);
     expect(await _storedSeen(), isNull);
 
     await _next(tester);

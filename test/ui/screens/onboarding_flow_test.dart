@@ -12,6 +12,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../support/mpesa_text.dart';
 import 'package:mmogo/app_info.dart';
 import 'package:mmogo/data/prefs/app_prefs.dart';
 import 'package:mmogo/data/prefs/update_prefs.dart';
@@ -201,14 +202,14 @@ void main() {
       // again (a second pushReplacement would replace onboarding).
       await tester.tap(find.byKey(const Key('onboarding-next')));
       await tester.pumpAndSettle();
-      expect(find.text('Paste an M-Pesa SMS'), findsOneWidget);
+      expect(find.text(mpesaText('Paste an M-Pesa SMS')), findsOneWidget);
       // S1 C-B10(e): the paste step describes the product, so it carries the short independence line.
       expect(find.textContaining(kIndependenceShort), findsOneWidget);
       presented.complete();
       await tester.pump();
       await tester.pump(welcomeDuration * 2);
       await tester.pumpAndSettle();
-      expect(find.text('Paste an M-Pesa SMS'), findsOneWidget);
+      expect(find.text(mpesaText('Paste an M-Pesa SMS')), findsOneWidget);
       expect(find.text('Welcome'), findsNothing);
     });
 
@@ -274,7 +275,7 @@ void main() {
 
       // Step 1
       expect(find.text('Track every shilling'), findsOneWidget);
-      expect(find.text('Your M-Pesa and cash spending, in one place.'), findsOneWidget);
+      expect(find.text(mpesaText('Your M-Pesa and cash spending, in one place.')), findsOneWidget);
       expect(find.text('It all stays on this phone. No account needed.'), findsOneWidget);
       expect(find.bySemanticsLabel('Step 1 of 4'), findsOneWidget);
       expect(find.byKey(const Key('onboarding-back')), findsNothing);
@@ -283,7 +284,7 @@ void main() {
 
       // Step 2 — the 3-frame parse strip
       await _tapNext(tester);
-      expect(find.text('Paste an M-Pesa SMS'), findsOneWidget);
+      expect(find.text(mpesaText('Paste an M-Pesa SMS')), findsOneWidget);
       expect(
         find.text(
           'Copy the confirmation SMS, paste it into Add, and the details fill themselves in. '
@@ -292,8 +293,8 @@ void main() {
         findsOneWidget,
       );
       for (final caption in [
-        'Copy the M-Pesa SMS',
-        'Tap Parse M-Pesa message and paste',
+        mpesaText('Copy the M-Pesa SMS'),
+        mpesaText('Tap Parse M-Pesa message and paste'),
         'Details filled in, ready to confirm',
       ]) {
         expect(find.textContaining(caption, findRichText: true), findsOneWidget);
@@ -328,7 +329,7 @@ void main() {
       expect(find.text('Cash counts too'), findsOneWidget);
       await tester.tap(find.byKey(const Key('onboarding-back')));
       await tester.pumpAndSettle();
-      expect(find.text('Paste an M-Pesa SMS'), findsOneWidget);
+      expect(find.text(mpesaText('Paste an M-Pesa SMS')), findsOneWidget);
       semantics.dispose();
     });
 
@@ -336,7 +337,7 @@ void main() {
       await tester.pumpWidget(_onboardingApp());
       await tester.pumpAndSettle();
       await _tapNext(tester);
-      expect(find.text('Paste an M-Pesa SMS'), findsOneWidget);
+      expect(find.text(mpesaText('Paste an M-Pesa SMS')), findsOneWidget);
 
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();

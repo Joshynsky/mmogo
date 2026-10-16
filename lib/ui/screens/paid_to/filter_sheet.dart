@@ -115,7 +115,7 @@ class _PaidToFilterSheetState extends State<PaidToFilterSheet> {
 
     Widget action(Key key, String text, Color bg, Color fg, VoidCallback onTap) => Expanded(
       child: SizedBox(
-        height: 42,
+        height: 44, // S11b: was 42; 44 is the hit-area floor
         child: FilledButton(
           key: key,
           onPressed: onTap,

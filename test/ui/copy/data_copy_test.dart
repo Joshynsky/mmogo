@@ -1,6 +1,7 @@
 // B13: the shared data-safety copy holds the required phrases and none of the
 // banned ones.
 import 'package:flutter_test/flutter_test.dart';
+import '../../support/mpesa_text.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
 
 void main() {
@@ -25,7 +26,7 @@ void main() {
     expect(kNetworkDisclosure, contains('at most once a week after a successful check'));
     expect(kNetworkDisclosure, contains('when you open the app'));
     expect(kNetworkDisclosure, contains('No entries, names or messages are sent'));
-    expect(kFeedbackHint, contains('M-Pesa messages'));
+    expect(kFeedbackHint, contains(mpesaText('M-Pesa messages')));
     expect(kFeedbackHint, contains('public issue'));
     expect(kWhyRestoreAsks, contains('Merge'));
     expect(kWhyRestoreAsks, contains('Replace'));

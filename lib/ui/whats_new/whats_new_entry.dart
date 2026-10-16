@@ -38,10 +38,15 @@ class WhatsNewEntryCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  kWhatsNewPagerTitle,
-                  key: const Key('whatsNewEntryTitle'),
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, height: 1.3, color: palette.ink),
+                // S11b (CB5): the entry heading is a heading for a screen reader.
+                child: Semantics(
+                  header: true,
+                  container: true,
+                  child: Text(
+                    kWhatsNewPagerTitle,
+                    key: const Key('whatsNewEntryTitle'),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, height: 1.3, color: palette.ink),
+                  ),
                 ),
               ),
               if (showNew) ...[

@@ -161,7 +161,12 @@ class _Section extends StatelessWidget {
               SettingsRowIcon(icon: icon, palette: palette),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: palette.ink)),
+                // S11b (CB5): the section title is a heading for a screen reader.
+                child: Semantics(
+                  header: true,
+                  container: true,
+                  child: Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: palette.ink)),
+                ),
               ),
             ],
           ),

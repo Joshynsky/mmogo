@@ -30,11 +30,11 @@ const kUpdateCheckCadence = 'mmogo checks when you open the app, and at most onc
 const kNetworkDisclosure = '$kNetworkSentence $kUpdateCheckCadence';
 
 /// W6: under the Send feedback row.
-const kFeedbackHint = 'Do not paste M-Pesa messages, names or phone numbers into a public issue.';
+const kFeedbackHint = 'Do not paste M\u2011Pesa messages, names or phone numbers into a public issue.';
 
 /// W4 (a and b): the merge-or-replace dialog's explanation of why Restore asks.
 const kWhyRestoreAsks =
-    'Merge adds what is missing and skips entries already on this phone (matched by M-Pesa code). '
+    'Merge adds what is missing and skips entries already on this phone (matched by M\u2011Pesa code). '
     "Replace removes this phone's transactions, categories you made and saved receivers, then puts the file's data in. "
     'Use Merge unless you want this phone to match the file exactly. '
     'On a new phone both give the same result. '
@@ -121,7 +121,7 @@ const kResultMergedTitle = 'Merged from the backup';
 const kResultReplacedTitle = 'Replaced from the backup';
 const kResultUndoneTitle = 'Previous data restored';
 const kResultMergeNote =
-    'Skipped entries were already on this phone (matched by M-Pesa code). Nothing here was changed or deleted.';
+    'Skipped entries were already on this phone (matched by M\u2011Pesa code). Nothing here was changed or deleted.';
 const kResultReplaceNote = 'Everything on this phone now matches the file.';
 const kResultSafetyCopyNote = 'A safety copy of what was on this phone is kept in the app, so you can undo.';
 const kResultUndoneNote = 'The data from before the replace is back. Entries added after the replace were not kept.';

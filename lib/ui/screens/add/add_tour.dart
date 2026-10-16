@@ -38,14 +38,14 @@ List<CoachStep> addTourSteps({
   );
   if (cash) {
     return [
-      CoachStep(target: segKey, text: 'Switch back to M-Pesa to paste a message.'),
+      CoachStep(target: segKey, text: 'Switch back to M\u2011Pesa to paste a message.'),
       categoryStep,
     ];
   }
   return [
     CoachStep(
       target: pasteKey,
-      text: 'Paste an M-Pesa message and we fill the form in. You check it before saving.',
+      text: 'Paste an M\u2011Pesa message and we fill the form in. You check it before saving.',
     ),
     CoachStep(target: segKey, text: 'Paid in cash? Switch to Cash.'),
     if (hasReceiver)

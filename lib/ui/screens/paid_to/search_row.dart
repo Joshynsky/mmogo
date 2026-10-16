@@ -36,7 +36,7 @@ class PaidToSearchRow extends StatelessWidget {
       children: [
         Expanded(
           child: SizedBox(
-            height: 40,
+            height: 44, // S11b: was 40; 44 is the hit-area floor
             child: Theme(
               data: analyticsPickerTheme(palette),
               child: TextField(
@@ -78,7 +78,7 @@ class PaidToSearchRow extends StatelessWidget {
               customBorder: const RoundedRectangleBorder(borderRadius: radius),
               onTap: onFilter,
               child: SizedBox(
-                height: 40,
+                height: 44, // S11b: was 40; 44 is the hit-area floor
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Row(

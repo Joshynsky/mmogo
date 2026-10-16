@@ -218,6 +218,7 @@ class _ProfileScreenState extends State<ProfileScreen> with PrimaryTabRefresh<Pr
                         decoration: InputDecoration(
                           hintText: 'Your name (optional)',
                           hintStyle: TextStyle(color: palette.mutedInk),
+                          constraints: const BoxConstraints(minHeight: 44), // S11b: hit-area floor
                           isDense: true,
                           counterText: '',
                           filled: true,

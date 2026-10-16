@@ -4,6 +4,7 @@
 // test/data/home_s5_dao_test.dart). Invented data only.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../support/mpesa_text.dart';
 import 'package:mmogo/domain/home/home_period.dart';
 import 'package:mmogo/domain/money/spent_amount.dart';
 import 'package:mmogo/ui/copy/spend_copy.dart';
@@ -108,7 +109,7 @@ void main() {
       expect(find.byKey(const Key('homeCashWithdrawn')), findsNothing);
       expect(find.textContaining('Cash withdrawn'), findsNothing);
       expect(find.byKey(const Key('homeCostWithdrawalFees')), findsNothing);
-      expect(find.text('Transaction cost (all M-Pesa)'), findsOneWidget);
+      expect(find.text(mpesaText('Transaction cost (all M-Pesa)')), findsOneWidget);
       expect(tester.widget<Text>(find.byKey(const Key('homeCost'))).data, 'Ksh 62.00');
     });
 

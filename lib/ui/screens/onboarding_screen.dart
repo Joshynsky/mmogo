@@ -38,19 +38,19 @@ class _Step {
 const _steps = <_Step>[
   _Step(
     title: 'Track every shilling',
-    lines: ['Your M-Pesa and cash spending, in one place.', 'It all stays on this phone. No account needed.'],
+    lines: ['Your M\u2011Pesa and cash spending, in one place.', 'It all stays on this phone. No account needed.'],
     image: OnboardingAssets.step1,
   ),
   _Step(
-    title: 'Paste an M-Pesa SMS',
+    title: 'Paste an M\u2011Pesa SMS',
     lines: [
       'Copy the confirmation SMS, paste it into Add, and the details fill themselves in. '
           'You confirm before anything is saved.',
       kIndependenceShort,
     ],
     frames: [
-      (OnboardingAssets.step2Copy, 'Copy the M-Pesa SMS'),
-      (OnboardingAssets.step2Paste, 'Tap Parse M-Pesa message and paste'),
+      (OnboardingAssets.step2Copy, 'Copy the M\u2011Pesa SMS'),
+      (OnboardingAssets.step2Paste, 'Tap Parse M\u2011Pesa message and paste'),
       (OnboardingAssets.step2Filled, 'Details filled in, ready to confirm'),
     ],
   ),

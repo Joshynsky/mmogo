@@ -11,6 +11,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../support/mpesa_text.dart';
 import 'package:mmogo/data/prefs/app_prefs.dart';
 import 'package:mmogo/data/updates/updates_inbox.dart';
 import 'package:mmogo/domain/home/home_period.dart';
@@ -171,7 +172,7 @@ void main() {
         find.text('This month'),
         find.byKey(const Key('homeTotal')),
         find.byKey(const Key('homeDiff')),
-        find.text('Transaction cost (all M-Pesa)'),
+        find.text(mpesaText('Transaction cost (all M-Pesa)')),
       ]) {
         expect(find.descendant(of: card, matching: f), findsOneWidget);
       }
@@ -249,7 +250,7 @@ void main() {
 
     testWidgets('the cost row is shown with Ksh 0.00 when nothing was spent', (tester) async {
       await _pumpHome(tester, _FakeHomeDb(now: _morning));
-      expect(find.text('Transaction cost (all M-Pesa)'), findsOneWidget);
+      expect(find.text(mpesaText('Transaction cost (all M-Pesa)')), findsOneWidget);
       expect(tester.widget<Text>(find.byKey(const Key('homeCost'))).data, 'Ksh 0.00');
       expect(find.text('Ksh 0.00'), findsNWidgets(8)); // total + 6 bars + cost
       for (final c in ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'CASH', 'POCHI_LA_BIASHARA', 'AIRTIME']) {

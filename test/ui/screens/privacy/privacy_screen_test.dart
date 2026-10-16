@@ -3,6 +3,7 @@
 // row (opens the issues constant through the bridge only).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../../support/mpesa_text.dart';
 import 'package:mmogo/app_constants.dart';
 import 'package:mmogo/data/backup/backup_counts.dart';
 import 'package:mmogo/platform/storage_bridge.dart';
@@ -219,8 +220,10 @@ void main() {
       expect(find.text('Send feedback'), findsOneWidget);
       expect(
         find.text(
-          'Opens the mmogo issues page on GitHub in your browser. '
-          'Do not paste M-Pesa messages, names or phone numbers into a public issue.',
+          mpesaText(
+            'Opens the mmogo issues page on GitHub in your browser. '
+            'Do not paste M-Pesa messages, names or phone numbers into a public issue.',
+          ),
         ),
         findsOneWidget,
       );

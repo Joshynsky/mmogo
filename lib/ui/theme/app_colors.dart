@@ -256,6 +256,28 @@ class AppPalette {
   /// The text colour on [typePillFill].
   Color typePillText(String sourceType) => sourceType == 'AIRTIME' ? (onPillAirtime ?? onTypeColor) : onTypeColor;
 
+  /// S11b AX1a (A1): the text colour of an UNSELECTED type pill (Add's and
+  /// Paid to's), drawn on a 10% tint of the pill fill over [page]. The pill
+  /// fill itself, or a darker (light palettes) / lighter (dark palettes) shade
+  /// of the SAME hue, whichever first reaches 4.55:1 on that tint (the bar is
+  /// 4.5; the margin absorbs rounding). No new hue: type colours are untouched.
+  Color typePillInk(String sourceType, {required Color page}) {
+    final base = typePillFill(sourceType);
+    final tint = Color.alphaBlend(base.withValues(alpha: 0.10), page);
+    final toward = brightness == Brightness.light ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+    double ratio(Color a, Color b) {
+      final la = a.computeLuminance();
+      final lb = b.computeLuminance();
+      return (la > lb ? la + 0.05 : lb + 0.05) / (la > lb ? lb + 0.05 : la + 0.05);
+    }
+
+    for (var i = 0; i <= 20; i++) {
+      final c = Color.lerp(base, toward, i * 0.05)!;
+      if (ratio(c, tint) >= 4.55) return c;
+    }
+    return toward;
+  }
+
   static const light = AppPalette(
     brightness: Brightness.light,
     primary: Color(0xFF0A6E8A), // Ocean; white text 5.82:1

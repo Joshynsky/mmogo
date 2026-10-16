@@ -50,7 +50,7 @@ const kPrivacySentenceStandard = 'No permissions except internet, used only to c
 /// form wherever the app prose describes the products.
 const kIndependenceFull =
     'mmogo is an independent app. It is not made, approved or checked by Safaricom. '
-    'Product names such as M-Pesa, Paybill, Buy Goods and Pochi are used only to describe the messages it reads.';
+    'Product names such as M\u2011Pesa, Paybill, Buy Goods and Pochi are used only to describe the messages it reads.';
 const kIndependenceShort = 'mmogo is independent. Not made or approved by Safaricom.';
 
 const kPrivacyLeavesTitle = 'What leaves the phone';

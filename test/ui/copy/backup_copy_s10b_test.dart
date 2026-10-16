@@ -120,7 +120,7 @@ void main() {
         }
       }
       expect(hits..sort(), [
-        'lib/ui/copy/data_copy.dart: Skipped entries were already on this phone (matched by M-Pesa code). Nothing here was changed or deleted.',
+        'lib/ui/copy/data_copy.dart: Skipped entries were already on this phone (matched by M\\u2011Pesa code). Nothing here was changed or deleted.',
         'lib/ui/screens/backup/restore_result_sheet.dart: Skipped',
       ]);
     });

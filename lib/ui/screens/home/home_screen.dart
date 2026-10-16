@@ -251,8 +251,8 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
     final addStep = CoachStep(
       target: _fabTourKey,
       text: _recent.isEmpty
-          ? 'Add your first transaction here: paste an M-Pesa message or enter cash.'
-          : 'Add a transaction: paste an M-Pesa message or enter cash.',
+          ? 'Add your first transaction here: paste an M\u2011Pesa message or enter cash.'
+          : 'Add a transaction: paste an M\u2011Pesa message or enter cash.',
       actionLabel: 'Take me there',
       onAction: () => Navigator.of(context).pushNamed(Routes.add),
     );

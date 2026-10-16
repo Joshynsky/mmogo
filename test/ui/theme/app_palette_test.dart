@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../support/mpesa_text.dart';
 import 'package:mmogo/data/prefs/app_prefs.dart';
 import 'package:mmogo/main.dart';
 import 'package:mmogo/ui/screens/onboarding_screen.dart';
@@ -180,7 +181,7 @@ void main() {
         expect(tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor, palette.background);
         expect(tester.widget<ColoredBox>(find.byKey(const Key('onboarding-image-area'))).color, palette.tint);
         expect(_textColor(tester, 'Track every shilling'), palette.ink);
-        expect(_textColor(tester, 'Your M-Pesa and cash spending, in one place.'), palette.softInk);
+        expect(_textColor(tester, mpesaText('Your M-Pesa and cash spending, in one place.')), palette.softInk);
         expect(_buttonBg(tester, const Key('onboarding-next')), palette.primary);
         expect(_buttonFg(tester, const Key('onboarding-next')), palette.onPrimary);
         expect(_buttonBg(tester, const Key('onboarding-skip')), palette.skipBg);

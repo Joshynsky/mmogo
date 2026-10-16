@@ -107,7 +107,7 @@ class _TypePillsState extends State<TypePills> {
   Widget _pill(AppPalette palette, {required String type, required String name, required String code}) {
     final selected = widget.type == type;
     final locked = widget.locked;
-    final tc = palette.typeColor(type);
+    final tc = palette.typePillFill(type); // S11b: the pill fill, so the tint matches typePillInk
     final Color fill;
     final Color border;
     final Color ink;
@@ -122,7 +122,7 @@ class _TypePillsState extends State<TypePills> {
     } else {
       fill = Color.alphaBlend(tc.withValues(alpha: 0.10), palette.surface);
       border = Color.alphaBlend(tc.withValues(alpha: 0.45), palette.line);
-      ink = tc;
+      ink = palette.typePillInk(type, page: palette.surface);
     }
     return Semantics(
       container: true,

@@ -224,7 +224,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SizedBox(
-                  height: 42,
+                  height: 44, // S11b: was 42; 44 is the hit-area floor
                   child: OutlinedButton.icon(
                     key: const Key('checkNowButton'),
                     onPressed: _checking ? null : _checkNow,

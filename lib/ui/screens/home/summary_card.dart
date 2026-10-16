@@ -133,7 +133,7 @@ class HomeSummaryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   HomeSplitLine(
-                    start: Text('Transaction cost (all M-Pesa)', style: TextStyle(fontSize: 12, color: palette.mutedInk)),
+                    start: Text('Transaction cost (all M\u2011Pesa)', style: TextStyle(fontSize: 12, color: palette.mutedInk)),
                     end: Text(
                       formatKsh(costCents),
                       key: const Key('homeCost'),
