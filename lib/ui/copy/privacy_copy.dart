@@ -71,3 +71,7 @@ const kPrivacyCloudTitle = 'Folders that sync to the cloud';
 const kSendFeedbackLabel = 'Send feedback';
 const kSendFeedbackSubtitle = 'Opens the mmogo issues page on GitHub in your browser. $kFeedbackHint';
 const kSendFeedbackCouldNotOpen = 'Could not open the browser.';
+
+/// 0.1.2 S11a (A6): the label of the collapsed detail that holds
+/// `kNetworkDisclosure` and `kPrivacyLeavesBody`.
+const kPrivacyLeavesToggle = 'What exactly leaves the phone';

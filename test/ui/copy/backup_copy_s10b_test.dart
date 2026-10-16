@@ -165,12 +165,17 @@ void main() {
       expect(n, 1);
     });
 
-    test('only the Backup page shows it (S11 reuses the constant; Privacy does not)', () {
+    test('only the Backup page and the pager Backups card copy use it (S11a reuses the constant; Privacy does not)', () {
       final users = [
         for (final f in _dartFiles('lib'))
           if (f.readAsStringSync().contains('kBackupNotRestorableByOlder')) _p(f),
       ]..sort();
-      expect(users, ['lib/ui/copy/data_copy.dart', 'lib/ui/screens/backup/backup_section.dart']);
+      // S11a: pager card 4 reuses the constant (one source); still no Privacy page.
+      expect(users, [
+        'lib/ui/copy/data_copy.dart',
+        'lib/ui/copy/whats_new_pager_copy.dart',
+        'lib/ui/screens/backup/backup_section.dart',
+      ]);
     });
   });
 

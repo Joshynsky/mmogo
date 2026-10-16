@@ -47,6 +47,13 @@ Future<void> _pumpPage(WidgetTester tester, Widget home, {Size size = const Size
   await tester.pumpAndSettle();
 }
 
+/// S11a (A6): the "what exactly leaves the phone" detail is collapsed at first.
+Future<void> _expandLeaves(WidgetTester tester) async {
+  await tester.ensureVisible(find.byKey(const Key('privacyLeavesToggle')));
+  await tester.tap(find.byKey(const Key('privacyLeavesToggle')));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUp(() {
     useFakeBackupUi(); // S10b (A12): this file opens the Backup page
@@ -57,6 +64,7 @@ void main() {
   group('Privacy and your data page', () {
     testWidgets('privacy_page_contains_backup_warning_cloud_notice_and_network_disclosure_verbatim', (tester) async {
       await _pumpPage(tester, const PrivacyScreen());
+      await _expandLeaves(tester);
       expect(find.text(kPrivacyTitle), findsOneWidget);
       final text = _allText(tester);
       expect(text, contains(kBackupFileWarning));
@@ -69,6 +77,7 @@ void main() {
 
     testWidgets('has the four card titles, what is stored, and how to turn the check off', (tester) async {
       await _pumpPage(tester, const PrivacyScreen());
+      await _expandLeaves(tester);
       for (final t in [kPrivacyStoredTitle, kPrivacyLeavesTitle, kPrivacyBackupFilesTitle, kPrivacyCloudTitle]) {
         expect(find.text(t), findsOneWidget, reason: t);
       }
@@ -135,6 +144,7 @@ void main() {
       expect(kPrivacyLeavesBody, isNot(contains('no request at all')));
       expect(find.text(kPrivacyCheckNowOnce), findsOneWidget);
       expect(kPrivacyCheckNowOnce, 'Even with automatic checks off, Check for updates now goes online once when you tap it.');
+      await _expandLeaves(tester);
       expect(_allText(tester), contains(kPrivacyLeavesBody));
     });
 

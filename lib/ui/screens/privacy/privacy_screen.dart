@@ -45,16 +45,7 @@ class PrivacyScreen extends StatelessWidget {
               _Para(palette, '$kUninstallErasesNotice $kPhoneTransferNotice'),
             ],
           ),
-          _Section(
-            palette: palette,
-            icon: Icons.cloud_outlined,
-            title: kPrivacyLeavesTitle,
-            children: [
-              _Para(palette, kNetworkDisclosure),
-              _Para(palette, kPrivacyLeavesBody),
-              _Para(palette, kPrivacyCheckNowOnce, bold: true),
-            ],
-          ),
+          _LeavesSection(palette: palette),
           _Section(
             palette: palette,
             icon: Icons.description_outlined,
@@ -87,6 +78,65 @@ class PrivacyScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 0.1.2 S11a (A6): "What leaves the phone". The detail (what exactly is sent,
+/// how often, and that it can be switched off) is behind a 44 px toggle,
+/// collapsed at first; the "goes online once" line stays visible OUTSIDE it.
+class _LeavesSection extends StatefulWidget {
+  const _LeavesSection({required this.palette});
+
+  final AppPalette palette;
+
+  @override
+  State<_LeavesSection> createState() => _LeavesSectionState();
+}
+
+class _LeavesSectionState extends State<_LeavesSection> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = widget.palette;
+    return _Section(
+      palette: palette,
+      icon: Icons.cloud_outlined,
+      title: kPrivacyLeavesTitle,
+      children: [
+        Semantics(
+          container: true,
+          button: true,
+          expanded: _open,
+          label: kPrivacyLeavesToggle,
+          excludeSemantics: true,
+          onTap: () => setState(() => _open = !_open),
+          child: InkWell(
+            key: const Key('privacyLeavesToggle'),
+            onTap: () => setState(() => _open = !_open),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      kPrivacyLeavesToggle,
+                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: palette.primary),
+                    ),
+                  ),
+                  Icon(_open ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: palette.primary),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (_open) ...[
+          _Para(palette, kNetworkDisclosure, key: const Key('privacyLeavesDetail')),
+          _Para(palette, kPrivacyLeavesBody),
+        ],
+        _Para(palette, kPrivacyCheckNowOnce, bold: true, key: const Key('privacyCheckNowOnce')),
+      ],
     );
   }
 }

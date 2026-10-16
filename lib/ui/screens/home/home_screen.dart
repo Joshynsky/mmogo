@@ -21,7 +21,7 @@ import '../../shell/primary_scaffold.dart';
 import '../../shell/primary_shell.dart';
 import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
-import '../../whats_new/whats_new_dialog.dart';
+import '../../whats_new/whats_new_hook.dart';
 import '../../widgets/coach_tour.dart';
 import 'home_consts.dart';
 import 'recent_list.dart';

@@ -96,7 +96,11 @@ void main() {
       expect(find.text(kUpdatesSwitchTitle), findsOneWidget);
       expect(find.text(kUpdatesCheckNowLabel), findsOneWidget);
       expect(find.textContaining('Last checked 2 Oct 2026.'), findsOneWidget);
-      expect(find.textContaining('GitHub sees your IP address'), findsOneWidget);
+      // S11a: the footnote (always shown now) also holds the network sentence, so look inside the switch row.
+      expect(
+        find.descendant(of: find.byKey(const Key('updateSwitch')), matching: find.textContaining('GitHub sees your IP address')),
+        findsOneWidget,
+      );
       expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
     });
 

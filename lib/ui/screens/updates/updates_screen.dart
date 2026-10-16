@@ -3,16 +3,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../app_constants.dart';
+import '../../../app_info.dart';
 import '../../../data/prefs/update_prefs.dart';
 import '../../../data/updates/update_check_service.dart';
 import '../../../data/updates/updates_inbox.dart';
 import '../../../platform/storage_bridge.dart';
 import '../../copy/data_copy.dart';
+import '../../copy/whats_new_pager_copy.dart';
 import '../../shell/routes.dart';
 import '../../shell/secondary_scaffold.dart';
 import '../../theme/app_colors.dart';
 import '../backup/backup_format.dart';
 import '../settings/settings_widgets.dart';
+import '../../whats_new/whats_new_entry.dart';
+import '../../whats_new/whats_new_pager.dart';
 import 'notice_card.dart';
 
 /// The Updates page (B27; it replaced the "Coming soon" notifications page).
@@ -21,11 +25,28 @@ import 'notice_card.dart';
 /// newest first, or an empty state. Notices are marked read when the page is
 /// left, so the bell and Settings dots clear after a visit.
 class UpdatesScreen extends StatefulWidget {
-  const UpdatesScreen({super.key, this.inbox, this.service});
+  const UpdatesScreen({
+    super.key,
+    this.inbox,
+    this.service,
+    this.readSeenVersion,
+    this.writeSeenVersion,
+    this.installedVersionName,
+    this.openSettings,
+    this.openBackup,
+  });
 
   /// Test seams (default to the app's singletons).
   final UpdatesInbox? inbox;
   final UpdateCheckService? service;
+
+  /// What's-new entry seams (S11a): the stored seen version, its writer, the
+  /// installed version, and the openers of the pager's two buttons.
+  final Future<String?> Function()? readSeenVersion;
+  final Future<void> Function(String versionName)? writeSeenVersion;
+  final String? installedVersionName;
+  final VoidCallback? openSettings;
+  final VoidCallback? openBackup;
 
   @override
   State<UpdatesScreen> createState() => _UpdatesScreenState();
@@ -40,6 +61,10 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
   bool _checking = false;
   String? _checkMessage;
 
+  /// The stored What's-new seen version; the NEW pill waits until it is read.
+  String? _seen;
+  bool _seenLoaded = false;
+
   @override
   void initState() {
     super.initState();
@@ -50,6 +75,8 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
   @override
   void dispose() {
     _inbox.unreadCount.removeListener(_refresh);
+    // Leaving the page clears the entry's NEW pill for this process (S11a).
+    WhatsNewProcess.pillCleared = true;
     // Leaving the page is what marks the notices read (the "New" markers stay
     // visible for the whole visit).
     unawaited(_inbox.markAllRead());
@@ -63,12 +90,35 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
   Future<void> _load() async {
     final enabled = await UpdatePrefs.readEnabled();
     final last = await UpdatePrefs.readLastCheckAt();
+    String? seen;
+    try {
+      seen = await (widget.readSeenVersion ?? UpdatePrefs.readWhatsNewSeenVersion)();
+    } catch (_) {}
     await _inbox.ensureLoaded();
     if (!mounted) return;
     setState(() {
       _enabled = enabled;
       _lastChecked = last;
+      _seen = seen;
+      _seenLoaded = true;
     });
+  }
+
+  /// The NEW pill: while the stored version is not the pager's version and it
+  /// was not cleared in this process. No key of its own.
+  bool get _showNew => _seenLoaded && !WhatsNewProcess.pillCleared && _seen != kWhatsNewPagerVersion;
+
+  Future<void> _openPager() async {
+    final installed = widget.installedVersionName ?? AppInfo.versionName;
+    final gotIt = await showWhatsNewPager(
+      context,
+      onOpenSettings: widget.openSettings ?? () => Navigator.of(context).pushNamed(Routes.settings),
+      onOpenBackup: widget.openBackup ?? () => Navigator.of(context).pushNamed(Routes.backup),
+    );
+    if (!gotIt) return;
+    WhatsNewProcess.pillCleared = true;
+    writeSeenQuietly(widget.writeSeenVersion ?? (v) async => await UpdatePrefs.writeWhatsNewSeenVersion(v), installed);
+    if (mounted) setState(() {});
   }
 
   Future<void> _setEnabled(bool value) async {
@@ -123,24 +173,23 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
         children: [
           _controls(palette),
           const SizedBox(height: 14),
-          if (notices.isEmpty)
-            _empty(palette)
-          else ...[
-            for (final n in notices)
-              NoticeCard(
-                notice: n,
-                onSeeWhatsNew: _seeWhatsNew,
-                onOpenBackup: () => Navigator.of(context).pushNamed(Routes.backup),
-              ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                kUpdatesFootnote,
-                key: const Key('updatesFootnote'),
-                style: TextStyle(fontSize: 12, height: 1.4, color: palette.mutedInk),
-              ),
+          for (final n in notices)
+            NoticeCard(
+              notice: n,
+              onSeeWhatsNew: _seeWhatsNew,
+              onOpenBackup: () => Navigator.of(context).pushNamed(Routes.backup),
             ),
-          ],
+          // The one synthetic What's-new entry: always there, even with no notices.
+          WhatsNewEntryCard(showNew: _showNew, onOpen: _openPager),
+          if (notices.isEmpty) _empty(palette),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              kUpdatesFootnote,
+              key: const Key('updatesFootnote'),
+              style: TextStyle(fontSize: 12, height: 1.4, color: palette.mutedInk),
+            ),
+          ),
         ],
       ),
     );

@@ -15,6 +15,7 @@ class BackupSheetShell extends StatelessWidget {
     required this.body,
     this.actions,
     this.titleKey = const Key('backupSheetTitle'),
+    this.scrollController,
   });
 
   final AppPalette palette;
@@ -26,6 +27,9 @@ class BackupSheetShell extends StatelessWidget {
 
   /// The title text's key (a few sheets keep a key older tests read).
   final Key titleKey;
+
+  /// Optional: lets a caller (the What's-new pager, S11a) scroll back to the top.
+  final ScrollController? scrollController;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +58,7 @@ class BackupSheetShell extends StatelessWidget {
                   Flexible(
                     child: SingleChildScrollView(
                       key: const Key('backupSheetScroll'),
+                      controller: scrollController,
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
