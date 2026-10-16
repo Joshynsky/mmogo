@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_startup.dart';
+import 'data/db/startup_open.dart';
 import 'ui/restart_scope.dart';
 import 'ui/screens/add/add_screen.dart';
 import 'ui/screens/backup/backup_screen.dart';
@@ -15,6 +16,7 @@ import 'ui/screens/welcome_screen.dart';
 import 'ui/shell/app_messenger.dart';
 import 'ui/shell/primary_shell.dart';
 import 'ui/shell/routes.dart';
+import 'ui/startup_gate.dart';
 import 'ui/startup_notice.dart';
 import 'ui/theme/app_colors.dart';
 import 'ui/theme/app_palette_scope.dart';
@@ -29,7 +31,17 @@ Future<void> main() async {
   final controller = await bootstrapApp();
   runApp(RestartScope(
     controller: controller,
-    builder: (c) => MpesaTrackerApp(controller: c),
+    // S10c: the open-failure gate (OF1). A soft restart re-runs it (cheap: the
+    // handle is already open, so the open returns at once).
+    builder: (c) => StartupGate(
+      controller: c,
+      open: openAppDatabaseForStart,
+      readStage: readAppOpenStage,
+      closeDatabase: closeAppDatabaseForRetry,
+      beforeOpen: prepareAppOpenSnapshot,
+      classify: classifyAppOpenFailure,
+      child: MpesaTrackerApp(controller: c),
+    ),
   ));
 }
 

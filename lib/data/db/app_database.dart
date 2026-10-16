@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'db_open.dart';
+import 'migrations.dart';
+import 'open_stage.dart';
 
 /// Owns the single sqflite [Database] instance for the whole app.
 ///
@@ -51,6 +53,10 @@ class AppDatabase {
 
   Database? _db;
 
+  /// S10c (OF1/E0): how far the last open attempt got. Reset at the start of
+  /// every attempt; only the open-failure classifier reads it.
+  OpenStage lastOpenStage = OpenStage.none;
+
   bool get isOpen => _db != null;
 
   Future<Database> get database async {
@@ -87,11 +93,22 @@ class AppDatabase {
       databaseFactory = databaseFactoryFfi;
     }
 
+    lastOpenStage = OpenStage.none;
     final dbPath = await databasePath();
     debugPrint('AppDatabase: opening $dbPath');
 
-    // DB1: the one shared open function (foreign-key rule lives there).
-    return openMmogoDatabase(_factoryOverride ?? databaseFactory, dbPath);
+    // DB1: the one shared open function (foreign-key rule lives there). The
+    // onUpgrade wrapper only records the stage (S10c, E0); the migration is
+    // unchanged.
+    return openMmogoDatabase(
+      _factoryOverride ?? databaseFactory,
+      dbPath,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        lastOpenStage = OpenStage.inUpgrade;
+        await AppMigrations.migrate(db, oldVersion, newVersion);
+        lastOpenStage = OpenStage.afterUpgrade;
+      },
+    );
   }
 
   /// Closes and clears the cached instance. Bounded by [closeTimeout]: a
