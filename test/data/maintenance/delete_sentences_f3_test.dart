@@ -107,8 +107,8 @@ void main() {
   });
 
   group('the sentences say exactly that', () {
-    final level1 = '$kDeleteLevel1Short $kDeleteExtraLevel1 $kDeleteExtraBackups';
-    final level2 = '$kDeleteLevel2Short $kDeleteExtraLevel2 $kDeleteExtraBackups';
+    final level1 = '$kDeleteLevel1Short $kDeleteExtraLevel1 $kDeleteNotTouched';
+    final level2 = '$kDeleteLevel2Short $kDeleteExtraLevel2 $kDeleteNotTouched';
 
     // observed fact -> the words the text for that level must contain
     const words = {

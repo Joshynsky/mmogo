@@ -15,22 +15,38 @@ const kSettingsAboutGroup = 'About';
 const kPaletteTitle = 'Colour palette';
 const kPaletteSubtitle = 'Recolours the whole app.';
 const kAppearanceTitle = 'Appearance';
-const kAppearanceSubtitle = 'System follows your phone’s setting.';
+
+/// F4 (R20, PM): the Appearance caption follows the choice.
+const kAppearanceCaptionSystem = 'Follows your phone’s setting.';
+const kAppearanceCaptionLight = 'Always light.';
+const kAppearanceCaptionDark = 'Always dark.';
+
+/// `mode` is `system` | `light` | `dark`; anything else reads as System.
+String appearanceCaption(String mode) => switch (mode) {
+  'light' => kAppearanceCaptionLight,
+  'dark' => kAppearanceCaptionDark,
+  _ => kAppearanceCaptionSystem,
+};
+
 const kFirstDayTitle = 'First day of the week';
-const kFirstDaySubtitle = 'Weeks in Analytics and on Home run from this day.';
+
+/// F4 (R16): shown ONLY in the First day dialog, not on the row.
 const kFirstDayRegrouped = 'Past weeks are regrouped to match. No transactions change.';
+
+/// F4 (R22): the toast after the day was changed (not when the same day is picked again).
+String weeksNowStartOnText(String dayName) => 'Weeks now start on $dayName.';
+const kWeeksToastDuration = Duration(seconds: 2);
 const kFirstDayDefaultTag = 'Default';
 const kFirstDayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const kMonthChartTitle = 'Month chart shows';
-const kMonthChartHelp = 'Days: one bar for every day of the month.\nWeeks: the month in calendar weeks; the first and last can be part weeks.';
-const kYearViewTitle = 'Year view amounts';
-const kYearViewHelp = 'Quarter totals: one total under each three months of the year.\nMonthly amounts: an amount under every month.';
+const kMonthChartTitle = 'Month chart';
+const kMonthChartLine = 'One bar per day or week.';
+const kYearViewTitle = 'Year view';
+const kYearViewLine = 'Quarter or month totals.';
 const kShowWithdrawalsTitle = 'Show withdrawals in the chart';
 const kShowWithdrawalsSubtitle =
     'Withdrawals are not counted as spending. Turn this on to see them in the chart as a separate pattern.';
 const kWhereStyleTitle = 'Where it went style';
-const kWhereStyleHelp =
-    'Button: a small button opens the list of categories to pick from.\nStrip: ranked category cards you swipe sideways.';
+const kWhereStyleLine = 'Buttons or a strip.';
 
 /// PLACEHOLDER (CB13, PM signs the final words). The mock's older line
 /// ("Saved on this phone only. Set again after restoring a backup.") is stale.

@@ -437,7 +437,7 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
             ),
         ],
         group([
-          analyticsFieldLabel(p, 'Classification'),
+          analyticsFieldLabel(p, 'Category'),
           Row(
             children: [
               Flexible(
@@ -448,7 +448,7 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
                     borderRadius: const BorderRadius.all(Radius.circular(999)),
                   ),
                   child: Text(
-                    'Classification: $_classificationName',
+                    'Category: $_classificationName',
                     key: const Key('editClassificationChosen'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -497,7 +497,7 @@ class _EditClassificationPickerSheet extends StatelessWidget {
       palette: p,
       children: [
         Text(
-          'Choose a classification',
+          'Choose a category',
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: p.ink),
         ),
         sourceType == 'CASH'

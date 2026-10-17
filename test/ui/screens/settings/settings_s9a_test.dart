@@ -81,8 +81,8 @@ void main() {
         find.text('Colour palette'),
         find.text('Appearance'),
         find.text('First day of the week'),
-        find.text('Month chart shows'),
-        find.text('Year view amounts'),
+        find.text('Month chart'),
+        find.text('Year view'),
         find.text('Show withdrawals in the chart'),
         find.text('Where it went style'),
         find.text('ADDING ENTRIES'),
@@ -91,8 +91,8 @@ void main() {
         find.text('Remembered recipients'),
         find.text('YOUR DATA'),
         find.text('Backup and restore'),
+        find.text('Export CSV'), // F4 (R19): by purpose, getting data out first
         find.text('Recently deleted'),
-        find.text('Export CSV'),
         find.text('Delete data'), // S9b-2: the LAST row of Your data
         find.text('ABOUT'),
         find.text('Privacy and your data'),
@@ -208,7 +208,7 @@ void main() {
       }
       expect(tester.getSemantics(find.byKey(const Key('appearance-system'))).flagsCollection.isSelected, Tristate.isTrue);
       expect(tester.getSemantics(find.byKey(const Key('appearance-dark'))).flagsCollection.isSelected, Tristate.isFalse);
-      expect(find.text('System follows your phone’s setting.'), findsOneWidget);
+      expect(find.text('Follows your phone’s setting.'), findsOneWidget);
       expect(find.text('Appearance'), findsOneWidget);
       semantics.dispose();
     });

@@ -6,7 +6,6 @@ library;
 
 import 'data_copy.dart';
 import 'privacy_copy.dart';
-import 'settings_copy.dart';
 
 /// The version the pager is about. A FIXED constant (not `AppInfo`): the app
 /// version is bumped at the release step, but the pager's title and the
@@ -41,15 +40,18 @@ const kWhatsNewCard1Body =
 // Card 2
 const kWhatsNewCard2Title = 'Weeks';
 const kWhatsNewCard2Body =
-    'Home and Analytics group days into calendar weeks, starting on the day you choose in Settings. '
-    '$kFirstDayRegrouped';
+    'Before, a week meant the last 7 days: today and the 6 days before it. '
+    'That did not match the calendar, so we corrected it. '
+    'A week now runs from the day you choose in Settings (Monday unless you change it). '
+    'Past weekly figures are regrouped to match; nothing saved changes.';
 const kWhatsNewChangeInSettings = 'Change in Settings';
 
 // Card 3 (invented example name and numbers, as in the mock)
 const kWhatsNewCard3Title = 'Same phone number = one person';
 const kWhatsNewCard3Body =
     'Earlier versions counted one number as two people when it was written two ways, for example '
-    '0712 345 678 and +254 712 345 678. That was a mistake. They now count as one person on Paid to, '
+    '0712 345 678 and +254 712 345 678 (07 and 01 numbers alike). '
+    'We have corrected that: they now count as one person on Paid to, '
     'and their totals are added together. The numbers saved on your entries do not change.';
 // R5 (F2): the signed wording, word for word.
 const kWhatsNewCard3Extra =
@@ -70,4 +72,6 @@ const kWhatsNewCard4Body =
 
 // Card 5
 const kWhatsNewCard5Title = 'Privacy';
-const kWhatsNewCard5Body = '$kPrivacySentenceStandard $kNetworkSentence';
+/// R14 (F4): the canonical sentence already says the internet is used only to
+/// check for updates, so only the second half of W7 follows it.
+const kWhatsNewCard5Body = '$kPrivacySentenceStandard $kNetworkSeenSentence';

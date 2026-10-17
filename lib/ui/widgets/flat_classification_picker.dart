@@ -108,8 +108,8 @@ class _FlatClassificationPickerState extends State<FlatClassificationPicker> {
       if (!mounted) return;
       setState(() {
         _createError = e.isUniqueConstraintError()
-            ? 'A classification named "$name" already exists.'
-            : 'Could not create classification: $e';
+            ? 'A category named "$name" already exists.'
+            : 'Could not create category: $e';
       });
     } finally {
       if (mounted) setState(() => _creating = false);
@@ -140,7 +140,7 @@ class _FlatClassificationPickerState extends State<FlatClassificationPicker> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Text(
-          'No classifications yet — add one below (e.g. Family/Friends, Rent, Barber, Mechanic).',
+          'No categories yet — add one below (e.g. Family/Friends, Rent, Barber, Mechanic).',
           style: TextStyle(fontSize: 12.5, color: widget.palette.mutedInk),
         ),
       );
@@ -175,7 +175,7 @@ class _FlatClassificationPickerState extends State<FlatClassificationPicker> {
                 cursorColor: p.primary,
                 decoration: InputDecoration(
                   isDense: true,
-                  hintText: 'New classification name',
+                  hintText: 'New category name',
                   hintStyle: TextStyle(color: p.mutedInk),
                   border: border(p.line),
                   enabledBorder: border(p.line),

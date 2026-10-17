@@ -44,7 +44,9 @@ void main() {
       await pumpSettings(tester, fake, size: const Size(400, 800));
       await openDeleteSheet(tester);
       expect(find.text('This cannot be undone.'), findsOneWidget);
-      expect(find.text(kDeleteExtraBackups), findsNothing, reason: 'behind the "?"');
+      // F4: the backup-files sentence is always visible again, next to "This cannot be undone." (not behind the "?").
+      expect(find.text(kDeleteNotTouched), findsOneWidget);
+      expect(kDeleteExtras, isNot(contains(kDeleteNotTouched)), reason: 'never twice');
       expect(find.byKey(const Key('deleteBackUpNow')), findsOneWidget);
       expect(find.textContaining(kDeleteCountsPrefix), findsOneWidget);
       expect(find.text(kDeleteWordLabel), findsOneWidget);

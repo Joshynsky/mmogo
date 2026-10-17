@@ -122,9 +122,10 @@ void main() {
     final src = _noLineComments(_lib()['lib/ui/copy/whats_new_pager_copy.dart']!);
     expect(src, contains(r'$kBackupNotRestorableByOlder'));
     expect(src, contains(r'$kUninstallErasesNotice'));
-    expect(src, contains(r'$kNetworkSentence'));
+    expect(src, contains(r'$kNetworkSeenSentence'), reason: 'card 5 (F4 R14): only the second half of W7');
+    expect(src, isNot(contains(r'$kNetworkSentence')), reason: 'the full W7 would repeat the canonical sentence');
     expect(src, contains(r'$kPrivacySentenceStandard'));
-    expect(src, contains(r'$kFirstDayRegrouped'));
+    expect(src, isNot(contains(r'$kFirstDayRegrouped')), reason: 'F4 R4: card 2 has its own text; the line is for the First day dialog');
     expect(src, isNot(contains('GitHub sees your IP')));
     expect(src, isNot(contains('cannot be restored by')));
     expect(src, isNot(contains('Uninstalling mmogo')));

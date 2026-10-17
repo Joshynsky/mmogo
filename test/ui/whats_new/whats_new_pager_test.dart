@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
 import 'package:mmogo/ui/copy/privacy_copy.dart';
-import 'package:mmogo/ui/copy/settings_copy.dart';
 import 'package:mmogo/ui/copy/whats_new_copy.dart';
 import 'package:mmogo/ui/copy/whats_new_pager_copy.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
@@ -132,17 +131,20 @@ void main() {
     testWidgets('card 2: Weeks text with the regrouped sentence and the Change in Settings button', (tester) async {
       await _pump(tester);
       await _tapNext(tester);
-      expect(_bodyText(tester), contains('starting on the day you choose in Settings'));
-      expect(_bodyText(tester), contains(kFirstDayRegrouped));
+      expect(_bodyText(tester), contains('A week now runs from the day you choose in Settings (Monday unless you change it).'));
+      expect(_bodyText(tester), contains('Before, a week meant the last 7 days: today and the 6 days before it.'));
+      expect(_bodyText(tester), contains('Past weekly figures are regrouped to match; nothing saved changes.'));
       expect(find.byKey(const Key('whatsNewCalSettings')), findsOneWidget);
       expect(find.text('Change in Settings'), findsOneWidget);
     });
 
-    testWidgets('card 3: before / after picture with an invented name, names both the 07 and 01 forms, "That was a mistake", no setting', (tester) async {
+    testWidgets('card 3: before / after picture with an invented name, names both the 07 and 01 forms, the softer wording (F4 R10), no setting', (tester) async {
       await _pump(tester);
       await _tapNext(tester, 2);
       final body = _bodyText(tester);
-      expect(body, contains('That was a mistake.'));
+      expect(body, contains('(07 and 01 numbers alike)'));
+      expect(body, contains('We have corrected that: they now count as one person on Paid to,'));
+      expect(body, isNot(contains('mistake')));
       expect(body, contains('0712 345 678 and +254 712 345 678'));
       expect(body, contains('totals are added together'));
       expect(body, contains('The numbers saved on your entries do not change.'));
@@ -175,10 +177,43 @@ void main() {
       expect(find.text(kWhatsNewOpenBackup), findsOneWidget);
     });
 
+    testWidgets('R13 (F4): "Change in Settings" and "Open Backup and restore" are real buttons of one style, 44 px high', (tester) async {
+      final h = tester.ensureSemantics();
+      await _pump(tester);
+      Future<(Size, Color?, TextDecoration?)> look(Key k, String label) async {
+        final b = tester.widget<FilledButton>(find.byKey(k));
+        final text = tester.widget<Text>(find.descendant(of: find.byKey(k), matching: find.text(label)));
+        final sem = tester.getSemantics(find.byKey(k));
+        expect(sem.flagsCollection.isButton, isTrue, reason: label);
+        expect(sem.label, label);
+        return (tester.getSize(find.byKey(k)), b.style?.backgroundColor?.resolve({}), text.style?.decoration);
+      }
+
+      await _tapNext(tester);
+      final settings = await look(const Key('whatsNewCalSettings'), 'Change in Settings');
+      await _tapNext(tester, 2);
+      final backup = await look(const Key('whatsNewOpenBackup'), 'Open Backup and restore');
+      expect(settings.$1.height, greaterThanOrEqualTo(44));
+      expect(backup.$1.height, greaterThanOrEqualTo(44));
+      expect(backup.$2, isNotNull);
+      expect(backup.$2, settings.$2, reason: 'same fill on cards 2 and 4');
+      expect(backup.$3, isNull, reason: 'no underline: not a link');
+      expect(find.byType(TextButton), findsNothing);
+      h.dispose();
+    });
+
     testWidgets('card 5: the canonical sentence, W7, the sign-off, plain text with no expander', (tester) async {
       await _pump(tester);
       await _tapNext(tester, 4);
-      expect(_bodyText(tester), '$kPrivacySentenceStandard $kNetworkSentence');
+      // R14 (F4): the canonical sentence, then only the second half of W7 (no repeated "used only to check for updates").
+      expect(_bodyText(tester), '$kPrivacySentenceStandard $kNetworkSeenSentence');
+      expect(
+        _bodyText(tester),
+        'No permissions except internet, used only to check for updates (switchable off). '
+        'GitHub sees your IP address and that the request comes from the mmogo app. '
+        'No entries, names or messages are sent.',
+      );
+      expect('used only to check for updates'.allMatches(_bodyText(tester)), hasLength(1));
       expect(tester.widget<Text>(find.byKey(const Key('whatsNewSignOff'))).data, kWhatsNewSignOff);
       expect(kWhatsNewSignOff, '— Josh');
       expect(find.byType(ExpansionTile), findsNothing);

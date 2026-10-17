@@ -77,14 +77,14 @@ class WhatsNewCardView extends StatelessWidget {
             style: TextStyle(fontSize: 12, height: 1.4, color: palette.mutedInk),
           ),
         ],
-        if (index == 1) _link(const Key('whatsNewCalSettings'), kWhatsNewChangeInSettings, onOpenSettings),
+        if (index == 1) _button(const Key('whatsNewCalSettings'), kWhatsNewChangeInSettings, onOpenSettings),
         if (index == 2) ...[
           const SizedBox(height: 10),
           WhatsNewPicture(palette: palette),
           const SizedBox(height: 10),
           Text(kWhatsNewCard3Extra, key: const Key('whatsNewCard3Extra'), style: body),
         ],
-        if (index == 3) _link(const Key('whatsNewOpenBackup'), kWhatsNewOpenBackup, onOpenBackup),
+        if (index == 3) _button(const Key('whatsNewOpenBackup'), kWhatsNewOpenBackup, onOpenBackup),
         if (index == 4) ...[
           const SizedBox(height: 10),
           Text(
@@ -97,20 +97,22 @@ class WhatsNewCardView extends StatelessWidget {
     );
   }
 
-  Widget _link(Key key, String label, VoidCallback? onTap) => Align(
-    alignment: AlignmentDirectional.centerStart,
-    child: TextButton(
-      key: key,
-      onPressed: onTap,
-      style: TextButton.styleFrom(
-        minimumSize: const Size(kMinTapTarget, kMinTapTarget),
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        foregroundColor: palette.primary,
-        alignment: AlignmentDirectional.centerStart,
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, decoration: TextDecoration.underline),
+  /// R13 (F4): a real button (a filled tint, 44 high), not an underlined link.
+  /// Cards 2 and 4 use the same one. It is spoken as a button.
+  Widget _button(Key key, String label, VoidCallback? onTap) => Padding(
+    padding: const EdgeInsets.only(top: 10),
+    child: Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: FilledButton.tonal(
+        key: key,
+        onPressed: onTap,
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(kMinTapTarget, kMinTapTarget),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          backgroundColor: palette.tint,
+          foregroundColor: palette.tintInk,
+        ),
+        child: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
       ),
     ),
   );

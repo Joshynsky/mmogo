@@ -36,7 +36,7 @@ void main() {
 
     test('the sheets and results state what stays (backups, auto list, SMS, safety copy, categories)', () {
       expect(kDeleteIntro, 'This cannot be undone.');
-      expect(kDeleteExtraBackups, 'Backup files you saved earlier are not touched.');
+      expect(kDeleteNotTouched, 'Backup files you saved earlier are not touched.');
       expect(kDeleteStayBackups, contains('Backup files you saved earlier'));
       expect(kDeleteStayAutoList, contains('automatic backup'));
       expect(kDeleteStaySms, contains('original SMS'));

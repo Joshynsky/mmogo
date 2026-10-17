@@ -171,6 +171,11 @@ class _DeleteDataSheetState extends State<DeleteDataSheet> {
           bottomGap: 0,
           stripe: false,
         ),
+        Text(
+          kDeleteNotTouched,
+          key: const Key('deleteNotTouched'),
+          style: TextStyle(fontSize: 12.5, height: 1.4, color: palette.softInk),
+        ),
         if (_extras)
           Container(
             key: const Key('deleteExtras'),

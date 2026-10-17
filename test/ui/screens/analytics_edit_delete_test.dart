@@ -80,7 +80,7 @@ void main() {
       expect(find.byKey(const Key('editAccountField')), findsNothing);
       expect(find.byKey(const Key('editCostField')), findsOneWidget);
       expect(find.byKey(const Key('editDeleteButton')), findsOneWidget);
-      expect(find.text('Classification: Family/Friends'), findsOneWidget);
+      expect(find.text('Category: Family/Friends'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('editChooseClassificationButton')));
       await tester.pumpAndSettle();
@@ -88,7 +88,7 @@ void main() {
       expect(find.text('Rent Payment'), findsNothing, reason: 'locked to Send Money');
       await tester.tap(find.text('Rent'));
       await tester.pumpAndSettle();
-      expect(find.text('Classification: Rent'), findsOneWidget);
+      expect(find.text('Category: Rent'), findsOneWidget);
 
       await tester.enterText(find.byKey(const Key('editAmountField')), '2000');
       await tester.pump();
@@ -272,7 +272,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final sheet = tester.widget<Container>(
-        find.ancestor(of: find.text('Choose a classification'), matching: find.byType(Container)).first,
+        find.ancestor(of: find.text('Choose a category'), matching: find.byType(Container)).first,
       );
       expect((sheet.decoration as BoxDecoration).color, p.card);
       final item = tester.widget<Text>(find.text('Rent'));

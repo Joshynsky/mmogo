@@ -206,7 +206,7 @@ class ClassificationDao {
 
   /// T8 — real `COUNT(*)` of (non-soft-deleted) `transactions` rows
   /// referencing [classificationId], for the delete-confirmation dialog's
-  /// message ("N transactions use this classification; it will be hidden, not
+  /// message ("N transactions use this category; it will be hidden, not
   /// deleted, and can be restored later" — not a generic "are you sure").
   /// Filters `deleted_at IS NULL`, consistent with every other read in
   /// this codebase (`home_dashboard_dao.dart`'s same convention) — a

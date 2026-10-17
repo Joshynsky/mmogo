@@ -128,8 +128,8 @@ class _MpesaClassificationPickerState extends State<MpesaClassificationPicker> {
       if (!mounted) return;
       setState(() {
         _createError = e.isUniqueConstraintError()
-            ? 'A classification named "$name" already exists.'
-            : 'Could not create classification: $e';
+            ? 'A category named "$name" already exists.'
+            : 'Could not create category: $e';
       });
     } finally {
       if (mounted) setState(() => _creating = false);
@@ -160,7 +160,7 @@ class _MpesaClassificationPickerState extends State<MpesaClassificationPicker> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Text(
-          'No classifications yet — add one below.',
+          'No categories yet — add one below.',
           style: TextStyle(fontSize: 12.5, color: widget.palette.mutedInk),
         ),
       );
@@ -196,7 +196,7 @@ class _MpesaClassificationPickerState extends State<MpesaClassificationPicker> {
                 cursorColor: p.primary,
                 decoration: InputDecoration(
                   isDense: true,
-                  hintText: 'New classification name',
+                  hintText: 'New category name',
                   hintStyle: TextStyle(color: p.mutedInk),
                   border: border(p.line),
                   enabledBorder: border(p.line),

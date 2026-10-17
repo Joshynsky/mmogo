@@ -11,11 +11,27 @@ import '../theme/app_colors.dart';
 /// the palette's colours instead. Use it in place of [AlertDialog] (same
 /// `key`, `title`, `content` and `actions`).
 class PaletteAlertDialog extends StatelessWidget {
-  const PaletteAlertDialog({super.key, this.title, this.content, this.actions});
+  const PaletteAlertDialog({
+    super.key,
+    this.title,
+    this.content,
+    this.actions,
+    this.insetPadding,
+    this.titlePadding,
+    this.contentPadding,
+    this.actionsPadding,
+  });
 
   final Widget? title;
   final Widget? content;
   final List<Widget>? actions;
+
+  /// Optional tighter paddings (the First day dialog). Null keeps the Material
+  /// default, so every other dialog is unchanged.
+  final EdgeInsets? insetPadding;
+  final EdgeInsetsGeometry? titlePadding;
+  final EdgeInsetsGeometry? contentPadding;
+  final EdgeInsetsGeometry? actionsPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +59,10 @@ class PaletteAlertDialog extends StatelessWidget {
         title: title,
         content: content,
         actions: actions,
+        insetPadding: insetPadding ?? const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+        titlePadding: titlePadding,
+        contentPadding: contentPadding,
+        actionsPadding: actionsPadding,
       ),
     );
   }

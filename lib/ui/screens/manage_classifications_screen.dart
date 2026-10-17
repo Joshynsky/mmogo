@@ -11,6 +11,14 @@ import '../widgets/palette_alert_dialog.dart';
 /// R31: the one sentence that ends the Delete category dialog (in use or not).
 const kDeleteCategoryTail = 'It moves to Inactive (deleted) and you can restore it any time. Past entries keep it.';
 
+/// The Delete category confirmation: the real count, with the verb agreeing
+/// with it ("1 transaction uses", "3 transactions use"; F4 grammar fix).
+String deleteCategoryMessage(int count, String name) {
+  if (count == 0) return 'No transactions currently use "$name". $kDeleteCategoryTail';
+  final what = count == 1 ? '1 transaction uses' : '$count transactions use';
+  return '$what "$name". $kDeleteCategoryTail';
+}
+
 /// Group codes whose built-in category is locked and that have no create row.
 const Set<String> manageLockedGroupCodes = {'AGENT_WITHDRAWAL', 'AIRTIME'};
 
@@ -190,9 +198,7 @@ class _ManageClassificationsScreenState extends State<ManageClassificationsScree
     if (!mounted) return;
     // The delete confirmation shows a real COUNT(*)-by-category message,
     // never a generic "are you sure".
-    final message = count == 0
-        ? 'No transactions currently use "${item.name}". $kDeleteCategoryTail'
-        : '$count transaction${count == 1 ? '' : 's'} use "${item.name}". $kDeleteCategoryTail';
+    final message = deleteCategoryMessage(count, item.name);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => PaletteAlertDialog(

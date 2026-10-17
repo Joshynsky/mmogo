@@ -178,9 +178,15 @@ String autoBackupIsOnToast(int n) =>
 // --- B27 / B28 / B49: the Updates page and its Settings row ------------------
 
 /// W7 on its own (the cadence sentence follows separately where needed).
-const kNetworkSentence =
-    'The internet is used only to check for updates. GitHub sees your IP address and that the request comes '
-    'from the mmogo app. No entries, names or messages are sent.';
+const kNetworkSentence = '$kNetworkUsedOnlySentence $kNetworkSeenSentence';
+
+/// The two halves of W7. The What's-new Privacy card uses only the second half,
+/// because [kPrivacySentenceStandard] already says the internet is used only to
+/// check for updates (F4, R14). Everywhere else the full [kNetworkSentence] is used.
+const kNetworkUsedOnlySentence = 'The internet is used only to check for updates.';
+const kNetworkSeenSentence =
+    'GitHub sees your IP address and that the request comes from the mmogo app. '
+    'No entries, names or messages are sent.';
 
 const kUpdatesTitle = 'Updates';
 const kUpdatesSwitchTitle = 'Check for updates when you open the app, at most once a week';
@@ -221,7 +227,7 @@ String settingsUpdatesOn(String? lastChecked) =>
 String updateNoticeTitle(String tag) => 'mmogo ${tag.startsWith('v') ? tag.substring(1) : tag} is out';
 
 /// The first-launch greeting notice (B49).
-const kWelcomeNoticeTitle = 'Hello, and welcome to mmogo 0.1.1';
+const kWelcomeNoticeTitle = 'Hello, and welcome to mmogo';
 const kWelcomeNoticeNotes =
     'Thanks for installing mmogo. One thing is new: update checks are switched on.\n\n'
     '$kNetworkSentence\n'

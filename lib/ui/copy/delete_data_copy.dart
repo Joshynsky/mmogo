@@ -37,7 +37,8 @@ const kDeleteRowSubtitleNothing = 'Nothing to delete';
 
 /// The main sheet (F3: the mock delete-data-help.html). One always-visible
 /// line, one short sentence per option; the rest is behind the "?" in the
-/// header ([kDeleteExtras]). Every sentence is pinned to what the service
+/// header ([kDeleteExtras]); "Backup files you saved earlier are not touched."
+/// stays visible beside "This cannot be undone." (F4). Every sentence is pinned to what the service
 /// really clears by test/data/maintenance/delete_sentences_f3_test.dart.
 const kDeleteIntro = 'This cannot be undone.';
 const kDeleteHelpLabel = 'About deleting data';
@@ -81,8 +82,11 @@ const kDeleteExtraLevel1 =
     'Delete my transactions also clears Recently deleted and the safety copy of your last Replace, so Undo of that Replace is gone.';
 const kDeleteExtraLevel2 =
     'Reset app also deletes your preferences, your own categories, changes you made to built-in categories and your display name. It forgets the auto-backup folder.';
-const kDeleteExtraBackups = 'Backup files you saved earlier are not touched.';
-const kDeleteExtras = [kDeleteExtraLevel1, kDeleteExtraLevel2, kDeleteExtraBackups];
+const kDeleteExtras = [kDeleteExtraLevel1, kDeleteExtraLevel2];
+
+/// F4 (carry-over from F3): ALWAYS visible next to [kDeleteIntro]; it is true
+/// for both options, so it is not behind the "?".
+const kDeleteNotTouched = 'Backup files you saved earlier are not touched.';
 const kDeleteLevel2BackupsForget =
     'Backup files you saved earlier stay where they are, but mmogo forgets which folder they are in.';
 
@@ -170,7 +174,7 @@ const kDeleteDataAllStrings = <String>[
   kDeleteLevel2Short,
   kDeleteExtraLevel1,
   kDeleteExtraLevel2,
-  kDeleteExtraBackups,
+  kDeleteNotTouched,
   kDeleteLevel2BackupsForget,
   kDeleteCountsPrefix,
   kDeleteCountsUnknown,

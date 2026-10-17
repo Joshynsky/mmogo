@@ -96,6 +96,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _backupSubtitle = 'Never backed up';
   bool _backupPaused = false;
 
+  /// The messenger that shows the First day toast (R22); kept so the toast is removed the
+  /// moment Settings starts to close (a SnackBar alive during the route change makes the
+  /// pages under Settings, which are all mounted, each draw a hero with the same tag).
+  ScaffoldMessengerState? _messenger;
+
   // Coach-tour anchors.
   final _paletteTourKey = GlobalKey();
   final _dataTourKey = GlobalKey();
@@ -107,6 +112,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     BackupPrefs.pausedNotifier.addListener(_onPausedChanged);
     _bootstrap();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _messenger = ScaffoldMessenger.maybeOf(context);
   }
 
   @override
@@ -165,9 +176,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _pickFirstDay() async {
     final day = await showFirstDayDialog(context, current: _firstDay);
     if (day == null || !mounted) return; // Cancel, a tap outside or Back: nothing changes
+    final changed = day != _firstDay;
     setState(() => _firstDay = day);
     await AppPrefs.writeFirstDayOfWeek(day);
     _lookChanged();
+    // R22: a short toast when the day really changed (not for the same day again).
+    if (changed && mounted) {
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(content: Text(weeksNowStartOnText(kFirstDayNames[day - 1])), duration: kWeeksToastDuration),
+        );
+    }
   }
 
   Future<void> _setMonthStyle(MonthChartStyle v) async {
@@ -301,7 +321,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ),
     CoachStep(
       target: _dataTourKey,
-      text: 'Back up and restore, bring back deleted transactions, or share everything as a CSV.',
+      text: 'Back up and restore, share everything as a CSV, or bring back deleted transactions.',
       onEnter: () => scrollIntoView(_dataTourKey),
     ),
   ];
@@ -318,61 +338,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final palette = AppPalette.of(context);
     final exportEnabled = !_loading && _activeCount > 0 && !_exporting;
     // B48: a secondary page opened from Profile (back button, no bottom bar).
-    return SecondaryScaffold(
-      title: kSettingsTitle,
-      followPalette: true,
-      // No pull-to-refresh on Settings (PM direct decision, T23 draft):
-      // nothing here changes from elapsed time the way Home/Analytics do.
-      body: ListView(
-        key: const Key('settingsScroll'),
-        padding: const EdgeInsets.fromLTRB(14, 6, 14, 32),
-        children: [
-          LookSection(
-            palette: palette,
-            tourKey: _paletteTourKey,
-            appearance: AppPaletteScope.of(context).appearance,
-            onAppearance: _setAppearance,
-            firstDay: _firstDay,
-            onFirstDay: _pickFirstDay,
-            monthStyle: _monthStyle,
-            onMonthStyle: _setMonthStyle,
-            yearAmounts: _yearAmounts,
-            onYearAmounts: _setYearAmounts,
-            showWithdrawals: _showWithdrawals,
-            onShowWithdrawals: _setShowWithdrawals,
-            whereStyle: _whereStyle,
-            onWhereStyle: _setWhereStyle,
-          ),
-          const SizedBox(height: 14),
-          AddingSection(
-            palette: palette,
-            tourKey: _addingTourKey,
-            autoRecognize: _autoRecognize,
-            onAutoRecognizeChanged: _loading ? null : _handleAutoRecognizeChanged,
-          ),
-          const SizedBox(height: 14),
-          DataSection(
-            palette: palette,
-            tourKey: _dataTourKey,
-            exportSubtitle: _exportSubtitle,
-            exportEnabled: exportEnabled,
-            onExport: _handleExport,
-            backupSubtitle: _backupSubtitle,
-            onBackup: _openBackup,
-            backupPaused: _backupPaused,
-            deleteData: widget.deleteData,
-            restart: widget.restart,
-            backupFlow: widget.backupFlow,
-          ),
-          const SizedBox(height: 14),
-          AboutSection(palette: palette),
-          const SizedBox(height: 14),
-          Text(
-            '${AppInfo.name} ${AppInfo.versionName} · your data stays on this phone',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11.5, color: palette.mutedInk),
-          ),
-        ],
+    return PopScope(
+      // R22: the First day toast goes the moment Settings starts to close.
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) _messenger?.removeCurrentSnackBar();
+      },
+      child: SecondaryScaffold(
+        title: kSettingsTitle,
+        followPalette: true,
+        // No pull-to-refresh on Settings (PM direct decision, T23 draft):
+        // nothing here changes from elapsed time the way Home/Analytics do.
+        body: ListView(
+          key: const Key('settingsScroll'),
+          padding: const EdgeInsets.fromLTRB(14, 6, 14, 32),
+          children: [
+            LookSection(
+              palette: palette,
+              tourKey: _paletteTourKey,
+              appearance: AppPaletteScope.of(context).appearance,
+              onAppearance: _setAppearance,
+              firstDay: _firstDay,
+              onFirstDay: _pickFirstDay,
+              monthStyle: _monthStyle,
+              onMonthStyle: _setMonthStyle,
+              yearAmounts: _yearAmounts,
+              onYearAmounts: _setYearAmounts,
+              showWithdrawals: _showWithdrawals,
+              onShowWithdrawals: _setShowWithdrawals,
+              whereStyle: _whereStyle,
+              onWhereStyle: _setWhereStyle,
+            ),
+            const SizedBox(height: 14),
+            AddingSection(
+              palette: palette,
+              tourKey: _addingTourKey,
+              autoRecognize: _autoRecognize,
+              onAutoRecognizeChanged: _loading ? null : _handleAutoRecognizeChanged,
+            ),
+            const SizedBox(height: 14),
+            DataSection(
+              palette: palette,
+              tourKey: _dataTourKey,
+              exportSubtitle: _exportSubtitle,
+              exportEnabled: exportEnabled,
+              onExport: _handleExport,
+              backupSubtitle: _backupSubtitle,
+              onBackup: _openBackup,
+              backupPaused: _backupPaused,
+              deleteData: widget.deleteData,
+              restart: widget.restart,
+              backupFlow: widget.backupFlow,
+            ),
+            const SizedBox(height: 14),
+            AboutSection(palette: palette),
+            const SizedBox(height: 14),
+            Text(
+              '${AppInfo.name} ${AppInfo.versionName} · your data stays on this phone',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11.5, color: palette.mutedInk),
+            ),
+          ],
+        ),
       ),
     );
   }

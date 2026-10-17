@@ -142,7 +142,7 @@ void main() {
     testWidgets('welcome: its title and wording, New pill, no "See what\'s new"', (tester) async {
       await _pump(tester, stored: [_notice('Welcome', '', welcome: true)]);
       expect(find.text(kWelcomeNoticeTitle), findsOneWidget);
-      expect(find.text('Hello, and welcome to mmogo 0.1.1'), findsOneWidget);
+      expect(find.text('Hello, and welcome to mmogo'), findsOneWidget);
       expect(find.byKey(const Key('noticeNewPill')), findsOneWidget);
       expect(find.byKey(const Key('noticeSeeWhatsNew')), findsNothing);
       expect(find.text('Welcome'), findsOneWidget, reason: 'the tag chip');

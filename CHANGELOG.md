@@ -19,7 +19,7 @@ What changed in each version of mmogo, newest first. Written for the people who 
 - **Easier to read and tap.** Text size, button sizes, colour contrast of the payment-type labels and screen-reader labels were checked and fixed, and M-Pesa no longer splits across two lines at its hyphen.
 
 ### Fixed
-- **Same phone number, one person.** Earlier versions counted one number as two people when it was written two ways, for example 0712 345 678 and +254 712 345 678. That was a mistake. They now count as one person on Paid to, and their totals are added together. The numbers saved on your entries do not change.
+- **Same phone number, one person.** Earlier versions counted one number as two people when it was written two ways, for example 0712 345 678 and +254 712 345 678 (07 and 01 numbers alike). We have corrected that: they now count as one person on Paid to, and their totals are added together. The numbers saved on your entries do not change.
 
 ### Good to know
 - **Backups.** Backups from 0.1.1 still restore. A backup made with 0.1.2 cannot be restored by 0.1.1 or older. Uninstalling mmogo erases your data from this phone. Only a backup you saved can bring it back.

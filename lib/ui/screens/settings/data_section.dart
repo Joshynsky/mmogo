@@ -9,8 +9,9 @@ import 'delete_data_row.dart';
 import 'settings_widgets.dart';
 
 /// Settings "Your data, careful" section (0.1.2 S9a, mock M9): Backup and
-/// restore, Recently deleted, Export CSV (Manage categories moved to Adding
-/// entries). ST1. State (export subtitle/enabled, handler) is owned by the
+/// restore, Export CSV, Recently deleted, then Delete data last (F4 R19: by
+/// purpose, getting data out before removing it; Manage categories moved to
+/// Adding entries). ST1. State (export subtitle/enabled, handler) is owned by the
 /// Settings shell; [tourKey] is its coach-tour anchor.
 class DataSection extends StatelessWidget {
   const DataSection({
@@ -72,17 +73,17 @@ class DataSection extends StatelessWidget {
                 ),
                 SettingsLink(
                   palette: palette,
-                  icon: Icons.restore_from_trash_outlined,
-                  label: 'Recently deleted',
-                  subtitle: 'Restore transactions you removed',
-                  onTap: () => Navigator.of(context).pushNamed(Routes.recentlyDeleted),
-                ),
-                SettingsLink(
-                  palette: palette,
                   icon: Icons.ios_share,
                   label: 'Export CSV',
                   subtitle: exportSubtitle,
                   onTap: exportEnabled ? onExport : null,
+                ),
+                SettingsLink(
+                  palette: palette,
+                  icon: Icons.restore_from_trash_outlined,
+                  label: 'Recently deleted',
+                  subtitle: 'Restore transactions you removed',
+                  onTap: () => Navigator.of(context).pushNamed(Routes.recentlyDeleted),
                 ),
                 // S9b-2: the Delete data row is the LAST row of the card.
                 DeleteDataRow(palette: palette, deleteData: deleteData, restart: restart, backupFlow: backupFlow),
