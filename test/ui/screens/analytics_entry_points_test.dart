@@ -217,7 +217,7 @@ void main() {
           type: 'SEND_MONEY',
           partyKey: maryKey,
           partyName: 'MARY WANJIKU',
-          period: AnalyticsPeriod.year(2026, today: analyticsTestNow),
+          period: AnalyticsPeriod.year(2026, today: analyticsTestNow, firstDay: 1),
           classification: 'Rent',
         ),
       );
@@ -256,7 +256,7 @@ void main() {
         rows: analyticsSampleRows(),
         args: AnalyticsRouteArgs(
           type: 'SEND_MONEY',
-          period: AnalyticsPeriod.monthShown(DateTime(2026, 8, 1), today: analyticsTestNow),
+          period: AnalyticsPeriod.monthShown(DateTime(2026, 8, 1), today: analyticsTestNow, firstDay: 1),
           classification: 'Rent',
         ),
       );

@@ -228,7 +228,7 @@ class AnalyticsPeriod {
     required DateTime anchor,
     this.custom,
     this.blockBack = 0,
-    this.firstDay = 1,
+    required this.firstDay,
   }) : anchor = dateOnly(anchor);
 
   final AnalyticsGranularity granularity;
@@ -248,38 +248,46 @@ class AnalyticsPeriod {
   final int blockBack;
 
   /// The nav-bar default: the whole calendar week containing [today].
-  factory AnalyticsPeriod.thisWeek(DateTime today, {int firstDay = 1}) =>
+  factory AnalyticsPeriod.thisWeek(DateTime today, {required int firstDay}) =>
       AnalyticsPeriod._(granularity: AnalyticsGranularity.week, anchor: today, firstDay: firstDay);
 
   /// One day (Home's row hand-off, a Week/Custom bar tap, the Day menu).
-  factory AnalyticsPeriod.day(DateTime day) => AnalyticsPeriod._(granularity: AnalyticsGranularity.day, anchor: day);
+  factory AnalyticsPeriod.day(DateTime day, {required int firstDay}) =>
+      AnalyticsPeriod._(granularity: AnalyticsGranularity.day, anchor: day, firstDay: firstDay);
 
-  factory AnalyticsPeriod.month(DateTime anyDay) =>
-      AnalyticsPeriod._(granularity: AnalyticsGranularity.month, anchor: monthStart(anyDay));
+  factory AnalyticsPeriod.month(DateTime anyDay, {required int firstDay}) =>
+      AnalyticsPeriod._(granularity: AnalyticsGranularity.month, anchor: monthStart(anyDay), firstDay: firstDay);
 
   /// One month as the Month menu picks it. Used by the menu and by Paid to's
   /// hand-off (T22). Since S6b the Month chart shows that one month only, so
   /// [today] no longer matters; the parameter stays for the callers.
-  factory AnalyticsPeriod.monthShown(DateTime anyDay, {required DateTime today}) => AnalyticsPeriod.month(anyDay);
+  factory AnalyticsPeriod.monthShown(DateTime anyDay, {required DateTime today, required int firstDay}) =>
+      AnalyticsPeriod.month(anyDay, firstDay: firstDay);
 
-  factory AnalyticsPeriod.year(int year, {required DateTime today}) => AnalyticsPeriod._(
+  factory AnalyticsPeriod.year(int year, {required DateTime today, required int firstDay}) => AnalyticsPeriod._(
     granularity: AnalyticsGranularity.year,
     anchor: year == today.year ? today : DateTime(year, 1, 1),
+    firstDay: firstDay,
   );
 
-  factory AnalyticsPeriod.allTime(DateTime today) =>
-      AnalyticsPeriod._(granularity: AnalyticsGranularity.all, anchor: today);
+  factory AnalyticsPeriod.allTime(DateTime today, {required int firstDay}) =>
+      AnalyticsPeriod._(granularity: AnalyticsGranularity.all, anchor: today, firstDay: firstDay);
 
   /// The Custom sheet's "Show": swapped dates are put in order and both are
   /// clamped to today.
-  factory AnalyticsPeriod.custom(DateTime from, DateTime to, {required DateTime today}) {
+  factory AnalyticsPeriod.custom(DateTime from, DateTime to, {required DateTime today, required int firstDay}) {
     var a = dateOnly(from);
     var b = dateOnly(to);
     if (a.isAfter(b)) (a, b) = (b, a);
     final t = dateOnly(today);
     if (b.isAfter(t)) b = t;
     if (a.isAfter(b)) a = b;
-    return AnalyticsPeriod._(granularity: AnalyticsGranularity.custom, anchor: b, custom: DayRange(a, b));
+    return AnalyticsPeriod._(
+      granularity: AnalyticsGranularity.custom,
+      anchor: b,
+      custom: DayRange(a, b),
+      firstDay: firstDay,
+    );
   }
 
   /// The same period under another first day of the week (1..7).
@@ -386,15 +394,21 @@ class AnalyticsPeriod {
 
   /// The pill's left half: switch the length, keeping the end of the current
   /// range (clamped to today) as the new anchor.
-  /// [firstDay] (1..7) overrides this period's first day of the week, so a
-  /// switch to Week uses the preference even from a Day or Month period.
-  AnalyticsPeriod withGranularity(AnalyticsGranularity g, {required DateTime today, DateTime? first, int? firstDay}) {
+  /// [firstDay] (1..7, required) is the first day of the week the new period
+  /// uses, so a switch to Week uses the preference even from a Day or Month
+  /// period.
+  AnalyticsPeriod withGranularity(
+    AnalyticsGranularity g, {
+    required DateTime today,
+    DateTime? first,
+    required int firstDay,
+  }) {
     final r = range(today: today, first: first);
     final end = _minDay(r.end, dateOnly(today));
     return AnalyticsPeriod._(
       granularity: g,
       anchor: g == AnalyticsGranularity.month ? monthStart(end) : end,
-      firstDay: firstDay ?? this.firstDay,
+      firstDay: firstDay,
     );
   }
 
@@ -413,7 +427,7 @@ class AnalyticsPeriod {
                   ? 'Yesterday'
                   : '${weekdayShort(addDays(t, -k))} ${fmtDayMonth(addDays(t, -k))}',
               selected: sameDay(addDays(t, -k), anchor),
-              period: AnalyticsPeriod.day(addDays(t, -k)),
+              period: AnalyticsPeriod.day(addDays(t, -k), firstDay: firstDay),
             ),
         ];
       case AnalyticsGranularity.week:
@@ -440,7 +454,7 @@ class AnalyticsPeriod {
               return PeriodOption(
                 label: '${_monthFull[m.month - 1]} ${m.year}',
                 selected: sameMonth(m, anchor),
-                period: AnalyticsPeriod.monthShown(m, today: t),
+                period: AnalyticsPeriod.monthShown(m, today: t, firstDay: firstDay),
               );
             }(),
         ];
@@ -451,7 +465,7 @@ class AnalyticsPeriod {
             PeriodOption(
               label: '$y',
               selected: anchor.year == y,
-              period: AnalyticsPeriod.year(y, today: t),
+              period: AnalyticsPeriod.year(y, today: t, firstDay: firstDay),
             ),
         ];
       case AnalyticsGranularity.all:
@@ -533,7 +547,7 @@ class AnalyticsPeriod {
     final t = dateOnly(today);
     if (granularity == AnalyticsGranularity.custom && custom != null) {
       final n = custom!.days;
-      return AnalyticsPeriod.custom(addDays(t, -(n - 1)), t, today: t);
+      return AnalyticsPeriod.custom(addDays(t, -(n - 1)), t, today: t, firstDay: firstDay);
     }
     return AnalyticsPeriod._(granularity: granularity, anchor: t, custom: custom, firstDay: firstDay);
   }
@@ -594,7 +608,7 @@ class AnalyticsPeriod {
             startMs: s,
             endMs: e,
             future: d.isAfter(t),
-            target: AnalyticsPeriod.day(d),
+            target: AnalyticsPeriod.day(d, firstDay: firstDay),
           ),
         );
       }
@@ -624,7 +638,7 @@ class AnalyticsPeriod {
               endMs: e,
               future: d.isAfter(t),
               name: '${weekdayShort(d)} ${fmtDayMonth(d)}',
-              target: AnalyticsPeriod.day(d),
+              target: AnalyticsPeriod.day(d, firstDay: firstDay),
               tipLines: (cents) => dayTipLines(d, cents),
             ),
           );
@@ -678,7 +692,7 @@ class AnalyticsPeriod {
             endMs: e,
             future: d.isAfter(t),
             name: _monthFull[m - 1],
-            target: AnalyticsPeriod.month(d),
+            target: AnalyticsPeriod.month(d, firstDay: firstDay),
           ),
         );
       }
@@ -710,7 +724,7 @@ class AnalyticsPeriod {
             endMs: e,
             future: empty,
             name: '$y',
-            target: AnalyticsPeriod.year(y, today: t),
+            target: AnalyticsPeriod.year(y, today: t, firstDay: firstDay),
           ),
         );
       }
@@ -759,7 +773,7 @@ class AnalyticsPeriod {
             label: days > 10 ? (d.day % 5 == 0 ? '${d.day}' : '') : weekdayShort(d).substring(0, 2),
             startMs: s,
             endMs: e,
-            target: AnalyticsPeriod.day(d),
+            target: AnalyticsPeriod.day(d, firstDay: firstDay),
           ),
         );
       }
@@ -795,10 +809,11 @@ class AnalyticsPeriod {
       other.granularity == granularity &&
       other.anchor == anchor &&
       other.custom == custom &&
-      other.blockBack == blockBack;
+      other.blockBack == blockBack &&
+      other.firstDay == firstDay;
 
   @override
-  int get hashCode => Object.hash(granularity, anchor, custom, blockBack);
+  int get hashCode => Object.hash(granularity, anchor, custom, blockBack, firstDay);
 
   @override
   String toString() => 'AnalyticsPeriod($granularity, $anchor, custom: $custom, blockBack: $blockBack)';

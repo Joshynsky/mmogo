@@ -48,7 +48,7 @@ AnalyticsTransactionRow _row(int id, String type, int amount) => AnalyticsTransa
 );
 
 AnalyticsView _view(List<AnalyticsTransactionRow> rows) {
-  final period = AnalyticsPeriod.month(_now);
+  final period = AnalyticsPeriod.month(_now, firstDay: 1);
   return AnalyticsView(
     period: period,
     party: false,
@@ -191,7 +191,7 @@ void main() {
     test('Analytics change pills read with an arrow (up and down)', () {
       final up = analyticsChange(
         granularity: AnalyticsGranularity.month,
-        range: AnalyticsPeriod.month(DateTime(2026, 9, 1)).range(today: DateTime(2026, 10, 14)),
+        range: AnalyticsPeriod.month(DateTime(2026, 9, 1), firstDay: 1).range(today: DateTime(2026, 10, 14)),
         today: DateTime(2026, 10, 14),
         totalCents: 200000,
         priorCents: 100000,
@@ -199,7 +199,7 @@ void main() {
       );
       final down = analyticsChange(
         granularity: AnalyticsGranularity.month,
-        range: AnalyticsPeriod.month(DateTime(2026, 9, 1)).range(today: DateTime(2026, 10, 14)),
+        range: AnalyticsPeriod.month(DateTime(2026, 9, 1), firstDay: 1).range(today: DateTime(2026, 10, 14)),
         today: DateTime(2026, 10, 14),
         totalCents: 50000,
         priorCents: 100000,

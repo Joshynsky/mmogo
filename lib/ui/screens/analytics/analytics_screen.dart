@@ -127,7 +127,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
   @override
   void initState() {
     super.initState();
-    _period = AnalyticsPeriod.thisWeek(_now());
+    _period = AnalyticsPeriod.thisWeek(_now(), firstDay: _firstDay);
     // Back from the background: fresh data, but the period, filters and
     // scroll position stay where the user was (T21 brief, binding add-on).
     _lifecycle = AppLifecycleListener(onResume: _load);
@@ -238,7 +238,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
   ///    longer applies). Set directly, never broadcast: Home is untouched
   ///    (F6).
   void _applyPaidTo(AnalyticsResolvedArgs r) {
-    final period = r.period ?? AnalyticsPeriod.allTime(dateOnly(_now()));
+    // Whatever first day the caller built the period with, this page's own
+    // (last loaded) preference wins; `_load` re-reads it again anyway.
+    final period = (r.period ?? AnalyticsPeriod.allTime(dateOnly(_now()), firstDay: _firstDay)).withFirstDay(_firstDay);
     _crossNote = null;
     if (r.partyKey != null) {
       _enterParty(r.type!, r.partyKey!, r.partyName);
@@ -275,7 +277,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     _partyType = null;
     _partyKey = null;
     _partyName = null;
-    _period = saved?.period ?? AnalyticsPeriod.thisWeek(_now(), firstDay: _firstDay);
+    _period = (saved?.period ?? AnalyticsPeriod.thisWeek(_now(), firstDay: _firstDay)).withFirstDay(_firstDay);
     _filters = saved?.filters ?? AnalyticsFilters.none;
     _whereTab = saved?.whereTab ?? false;
     _openRowId = null;
@@ -295,7 +297,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
       }
       if (!mounted) return;
       if (occurredAt != null) {
-        _period = AnalyticsPeriod.day(occurredAt);
+        _period = AnalyticsPeriod.day(occurredAt, firstDay: _firstDay);
         _pendingHighlightId = highlightId;
       }
     }
@@ -308,8 +310,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     final db = await _db();
     final now = _now();
     final today = dateOnly(now);
-    // CW1: the first day of the week is a preference; a change (from Settings,
-    // a restore) re-anchors the period before it is read.
+    // CW1: the first day of the week is a preference. EVERY load re-anchors
+    // the period to it (idempotent), not only when it changed: a period can
+    // arrive from a caller that built it with another first day (R33).
     final firstDay = await AppPrefs.readFirstDayOfWeek();
     // S6b: the Month chart style and the Year amounts, read on every load.
     final monthStyle = await AppPrefs.readMonthChartStyle();
@@ -318,10 +321,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     final showHatch = await AppPrefs.readShowWithdrawalsInChart();
     final whereStyle = await AppPrefs.readWhereItWentStyle();
     if (!mounted || seq != _loadSeq) return;
-    if (firstDay != _firstDay) {
-      _firstDay = firstDay;
-      _period = _period.withFirstDay(firstDay);
-    }
+    _firstDay = firstDay;
+    _period = _period.withFirstDay(firstDay);
     final firstAt = await AnalyticsDao.firstOccurredAt(db);
     final first = firstAt == null ? null : dateOnly(firstAt);
     // T22: the recipient view keeps its own period (Paid to's, then stepped
@@ -533,6 +534,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
           to: end,
           today: today,
           firstDate: DateTime((v.first ?? today).year - 1, 1, 1),
+          firstDay: _firstDay,
         ),
       ),
     );

@@ -421,9 +421,9 @@ void main() {
     expect(homePeriodForAnalytics(AnalyticsGranularity.year), isNull);
     expect(homePeriodForAnalytics(AnalyticsGranularity.all), isNull);
     expect(homePeriodForAnalytics(AnalyticsGranularity.custom), isNull);
-    expect(analyticsPeriodForHome(HomePeriod.today, today), AnalyticsPeriod.day(today));
-    expect(analyticsPeriodForHome(HomePeriod.week, today), AnalyticsPeriod.thisWeek(today));
-    expect(analyticsPeriodForHome(HomePeriod.month, today), AnalyticsPeriod.month(today));
+    expect(analyticsPeriodForHome(HomePeriod.today, today, firstDay: 1), AnalyticsPeriod.day(today, firstDay: 1));
+    expect(analyticsPeriodForHome(HomePeriod.week, today, firstDay: 1), AnalyticsPeriod.thisWeek(today, firstDay: 1));
+    expect(analyticsPeriodForHome(HomePeriod.month, today, firstDay: 1), AnalyticsPeriod.month(today, firstDay: 1));
   });
 }
 

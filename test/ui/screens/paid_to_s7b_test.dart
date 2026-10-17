@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/ui/screens/analytics_screen.dart';
 import 'package:mmogo/ui/screens/paid_to_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_analytics_db.dart';
 
@@ -161,6 +162,7 @@ Future<String> _showLabel(WidgetTester tester) async {
 }
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   testWidgets('five pills: All open ("All 6", recipients only), the others collapsed to their codes', (tester) async {
     final sem = tester.ensureSemantics();
     await _pump(tester);

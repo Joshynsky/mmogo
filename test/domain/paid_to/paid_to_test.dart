@@ -122,23 +122,23 @@ void main() {
     final today = DateTime(2026, 9, 24);
 
     test('paidToPeriodNow: the current one of each length', () {
-      expect(paidToPeriodNow(AnalyticsGranularity.month, today), AnalyticsPeriod.month(today));
-      expect(paidToPeriodNow(AnalyticsGranularity.year, today), AnalyticsPeriod.year(2026, today: today));
-      expect(paidToPeriodNow(AnalyticsGranularity.all, today), AnalyticsPeriod.allTime(today));
+      expect(paidToPeriodNow(AnalyticsGranularity.month, today, firstDay: 1), AnalyticsPeriod.month(today, firstDay: 1));
+      expect(paidToPeriodNow(AnalyticsGranularity.year, today, firstDay: 1), AnalyticsPeriod.year(2026, today: today, firstDay: 1));
+      expect(paidToPeriodNow(AnalyticsGranularity.all, today, firstDay: 1), AnalyticsPeriod.allTime(today, firstDay: 1));
     });
 
     test('analyticsPeriodForPaidTo: same length and anchor (Month is one month since S6b, no chart window)', () {
-      final may = analyticsPeriodForPaidTo(AnalyticsPeriod.month(DateTime(2026, 3, 1)), today);
+      final may = analyticsPeriodForPaidTo(AnalyticsPeriod.month(DateTime(2026, 3, 1), firstDay: 1), today, firstDay: 1);
       expect(may.granularity, AnalyticsGranularity.month);
       expect(may.range(today: today), DayRange(DateTime(2026, 3, 1), DateTime(2026, 3, 31)));
-      expect(may, AnalyticsPeriod.month(DateTime(2026, 3, 1)));
-      final sep = analyticsPeriodForPaidTo(AnalyticsPeriod.month(today), today);
-      expect(sep, AnalyticsPeriod.month(today));
+      expect(may, AnalyticsPeriod.month(DateTime(2026, 3, 1), firstDay: 1));
+      final sep = analyticsPeriodForPaidTo(AnalyticsPeriod.month(today, firstDay: 1), today, firstDay: 1);
+      expect(sep, AnalyticsPeriod.month(today, firstDay: 1));
       expect(
-        analyticsPeriodForPaidTo(AnalyticsPeriod.year(2025, today: today), today),
-        AnalyticsPeriod.year(2025, today: today),
+        analyticsPeriodForPaidTo(AnalyticsPeriod.year(2025, today: today, firstDay: 1), today, firstDay: 1),
+        AnalyticsPeriod.year(2025, today: today, firstDay: 1),
       );
-      expect(analyticsPeriodForPaidTo(AnalyticsPeriod.allTime(today), today), AnalyticsPeriod.allTime(today));
+      expect(analyticsPeriodForPaidTo(AnalyticsPeriod.allTime(today, firstDay: 1), today, firstDay: 1), AnalyticsPeriod.allTime(today, firstDay: 1));
     });
   });
 }

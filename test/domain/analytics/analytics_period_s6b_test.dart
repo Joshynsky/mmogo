@@ -29,7 +29,7 @@ ChangeDisplay? change(AnalyticsPeriod p, DateTime t, int total, int? prior) => a
 
 void main() {
   group('Month: one month, by weeks (default)', () {
-    final month = AnalyticsPeriod.month(today);
+    final month = AnalyticsPeriod.month(today, firstDay: 1);
 
     test('Sep 2026: five segments, the first and last are part weeks with their day counts', () {
       final s = month.chart(now: now, first: first);
@@ -46,7 +46,7 @@ void main() {
     });
 
     test('a month with no part week has no legend (Feb 2027 starts on a Monday)', () {
-      final s = AnalyticsPeriod.month(DateTime(2027, 2, 1)).chart(now: now, first: first);
+      final s = AnalyticsPeriod.month(DateTime(2027, 2, 1), firstDay: 1).chart(now: now, first: first);
       expect(s.legend, '');
       expect(s.buckets.any((b) => b.part), isFalse);
     });
@@ -72,14 +72,14 @@ void main() {
     });
 
     test('Sunday-first weeks cut the month differently', () {
-      final s = AnalyticsPeriod.month(today).withFirstDay(7).chart(now: now, first: first);
+      final s = AnalyticsPeriod.month(today, firstDay: 1).withFirstDay(7).chart(now: now, first: first);
       expect(labels(s), ['1-5', '6-12', '13-19', '20-26', '27-30']);
     });
   });
 
   group('Month: by days (preference)', () {
     test('every day of that month and no other, the 1st / 5th / last labelled', () {
-      final s = AnalyticsPeriod.month(DateTime(2026, 8, 1)).chart(now: now, first: first, monthStyle: MonthChartStyle.days);
+      final s = AnalyticsPeriod.month(DateTime(2026, 8, 1), firstDay: 1).chart(now: now, first: first, monthStyle: MonthChartStyle.days);
       expect(s.buckets, hasLength(31));
       expect(s.buckets.where((b) => b.label.isNotEmpty).map((b) => b.label), ['1', '5', '10', '15', '20', '25', '31']);
       expect(at(s.buckets.first.startMs), DateTime(2026, 8, 1));
@@ -89,24 +89,24 @@ void main() {
       expect(s.legend, '');
       expect(s.buckets.every((b) => b.hasTip), isTrue);
       expect(s.buckets[2].tipLines!(50000), ['Mon 3 Aug', 'Ksh 500', 'Tap again to open the day']);
-      expect(s.buckets[2].target, AnalyticsPeriod.day(DateTime(2026, 8, 3)));
+      expect(s.buckets[2].target, AnalyticsPeriod.day(DateTime(2026, 8, 3), firstDay: 1));
     });
 
     test('days after today are future (the current month)', () {
-      final s = AnalyticsPeriod.month(today).chart(now: now, first: first, monthStyle: MonthChartStyle.days);
+      final s = AnalyticsPeriod.month(today, firstDay: 1).chart(now: now, first: first, monthStyle: MonthChartStyle.days);
       expect(s.buckets.where((b) => !b.future), hasLength(24));
       expect(s.buckets[24].tappable, isFalse);
     });
 
     test('February incl. a leap day: 29 bars', () {
-      final s = AnalyticsPeriod.month(DateTime(2028, 2, 5)).chart(now: now, first: first, monthStyle: MonthChartStyle.days);
+      final s = AnalyticsPeriod.month(DateTime(2028, 2, 5), firstDay: 1).chart(now: now, first: first, monthStyle: MonthChartStyle.days);
       expect(s.buckets, hasLength(29));
     });
   });
 
   group('Month stepping: one month at a time', () {
     test('Previous and Next move one month and stop at the current one', () {
-      final m = AnalyticsPeriod.month(today);
+      final m = AnalyticsPeriod.month(today, firstDay: 1);
       expect(m.canStepForward(today: today), isFalse);
       final aug = m.step(-1, today: today);
       expect(aug.range(today: today), d(DateTime(2026, 8, 1), DateTime(2026, 8, 31)));
@@ -116,7 +116,7 @@ void main() {
     });
 
     test('Previous stops at a year before the first transaction', () {
-      var p = AnalyticsPeriod.month(today);
+      var p = AnalyticsPeriod.month(today, firstDay: 1);
       var steps = 0;
       while (p.canStepBack(today: today, first: first) && steps < 100) {
         p = p.step(-1, today: today);
@@ -127,14 +127,14 @@ void main() {
     });
 
     test('the Month menu entries are plain months; picking one keeps its anchor', () {
-      final o = AnalyticsPeriod.month(today).options(today: today);
+      final o = AnalyticsPeriod.month(today, firstDay: 1).options(today: today);
       expect(o[5].period.anchor, DateTime(2026, 4, 1));
       expect(o[5].period.step(1, today: today).anchor, DateTime(2026, 5, 1));
     });
   });
 
   group('Year: twelve months with quarter totals or monthly amounts', () {
-    final year = AnalyticsPeriod.year(2026, today: today);
+    final year = AnalyticsPeriod.year(2026, today: today, firstDay: 1);
 
     test('quarters (default): 12 bars, a spanning line per three months, no Q1-Q4 text', () {
       final s = year.chart(now: now, first: first);
@@ -152,14 +152,14 @@ void main() {
   });
 
   group('All time: five-year blocks, no comparison', () {
-    final all = AnalyticsPeriod.allTime(today);
+    final all = AnalyticsPeriod.allTime(today, firstDay: 1);
 
     test('2026: five year bars 2026-2030; only years that can hold data are tappable', () {
       final s = all.chart(now: now, first: first);
       expect(labels(s), ['2026', '2027', '2028', '2029', '2030']);
       expect(s.title, 'By year, 2026 to 2030');
       expect([for (final b in s.buckets) b.tappable], [true, false, false, false, false]);
-      expect(s.buckets.first.target, AnalyticsPeriod.year(2026, today: today));
+      expect(s.buckets.first.target, AnalyticsPeriod.year(2026, today: today, firstDay: 1));
       expect(s.hint, 'Tap a year with data to open it');
     });
 
@@ -183,9 +183,9 @@ void main() {
     });
 
     test('block boundaries: 2025 sits in 2021-2025, 2031 starts a new block', () {
-      expect(AnalyticsPeriod.allTime(DateTime(2025, 12, 31)).chart(now: DateTime(2025, 12, 31), first: DateTime(2025, 1, 1)).title,
+      expect(AnalyticsPeriod.allTime(DateTime(2025, 12, 31), firstDay: 1).chart(now: DateTime(2025, 12, 31), first: DateTime(2025, 1, 1)).title,
           'By year, 2021 to 2025');
-      expect(AnalyticsPeriod.allTime(DateTime(2031, 1, 1)).chart(now: DateTime(2031, 1, 1), first: DateTime(2026, 1, 1)).title,
+      expect(AnalyticsPeriod.allTime(DateTime(2031, 1, 1), firstDay: 1).chart(now: DateTime(2031, 1, 1), first: DateTime(2026, 1, 1)).title,
           'By year, 2031 to 2035');
     });
 
@@ -204,16 +204,16 @@ void main() {
 
   group('Custom: days up to 31, calendar-week blocks beyond', () {
     test('31 days stays days, 32 days becomes weeks', () {
-      final days31 = AnalyticsPeriod.custom(DateTime(2026, 8, 25), today, today: today).chart(now: now);
+      final days31 = AnalyticsPeriod.custom(DateTime(2026, 8, 25), today, today: today, firstDay: 1).chart(now: now);
       expect(days31.title, 'By day');
       expect(days31.buckets, hasLength(31));
-      final days32 = AnalyticsPeriod.custom(DateTime(2026, 8, 24), today, today: today).chart(now: now);
+      final days32 = AnalyticsPeriod.custom(DateTime(2026, 8, 24), today, today: today, firstDay: 1).chart(now: now);
       expect(days32.title, 'By week');
       expect(days32.buckets, hasLength(5));
     });
 
     test('blocks align to calendar weeks (Monday), clipped and striped at both ends', () {
-      final s = AnalyticsPeriod.custom(DateTime(2026, 8, 20), today, today: today).chart(now: now);
+      final s = AnalyticsPeriod.custom(DateTime(2026, 8, 20), today, today: today, firstDay: 1).chart(now: now);
       expect(labels(s), ['20', '24', '31', '7', '14', '21']);
       expect([for (final b in s.buckets) b.part], [true, false, false, false, false, true]);
       expect(at(s.buckets.first.startMs), DateTime(2026, 8, 20), reason: 'clipped to the chosen start');
@@ -224,24 +224,24 @@ void main() {
     });
 
     test('first day Sunday', () {
-      final s = AnalyticsPeriod.custom(DateTime(2026, 8, 20), today, today: today).withFirstDay(7).chart(now: now);
+      final s = AnalyticsPeriod.custom(DateTime(2026, 8, 20), today, today: today, firstDay: 1).withFirstDay(7).chart(now: now);
       expect(labels(s), ['20', '23', '30', '6', '13', '20']);
       expect(s.buckets.map((b) => b.part), [true, false, false, false, false, true]);
     });
 
     test('whole weeks only: no legend', () {
       // Mon 3 Aug to Sun 6 Sep: 35 days, five whole weeks; today is later so no clip.
-      final s = AnalyticsPeriod.custom(DateTime(2026, 8, 3), DateTime(2026, 9, 6), today: today).chart(now: now);
+      final s = AnalyticsPeriod.custom(DateTime(2026, 8, 3), DateTime(2026, 9, 6), today: today, firstDay: 1).chart(now: now);
       expect(s.buckets, hasLength(5));
       expect(s.legend, '');
     });
   });
 
   group('the change pill (Analytics)', () {
-    final week = AnalyticsPeriod.thisWeek(today);
+    final week = AnalyticsPeriod.thisWeek(today, firstDay: 1);
 
     test('Week days 1-3 show the cue "3/7" with its words, day 4 shows the change', () {
-      final w = AnalyticsPeriod.thisWeek(DateTime(2026, 9, 23));
+      final w = AnalyticsPeriod.thisWeek(DateTime(2026, 9, 23), firstDay: 1);
       final c = change(w, DateTime(2026, 9, 23), 9000, 1000)!;
       expect(c.look, ChangeLook.cue);
       expect(c.text, '3/7');
@@ -253,24 +253,24 @@ void main() {
     });
 
     test('Month cue and the first day it shows', () {
-      final aug = AnalyticsPeriod.month(DateTime(2026, 8, 1));
+      final aug = AnalyticsPeriod.month(DateTime(2026, 8, 1), firstDay: 1);
       expect(change(aug, DateTime(2026, 8, 8), 100, 50)!.text, '8/31');
       expect(change(aug, DateTime(2026, 8, 15), 100, 50)!.look, ChangeLook.cue);
       expect(change(aug, DateTime(2026, 8, 16), 100, 50)!.look, ChangeLook.up);
-      final sep = AnalyticsPeriod.month(DateTime(2026, 9, 1));
+      final sep = AnalyticsPeriod.month(DateTime(2026, 9, 1), firstDay: 1);
       expect(change(sep, DateTime(2026, 9, 14), 100, 50)!.look, ChangeLook.cue);
       expect(change(sep, DateTime(2026, 9, 15), 100, 50)!.look, ChangeLook.up);
       expect(change(sep, DateTime(2026, 9, 14), 100, 50)!.label, 'Day 14 of 30. The change shows from day 15');
     });
 
     test('a past week or month always shows the change', () {
-      final lastWeek = AnalyticsPeriod.thisWeek(DateTime(2026, 9, 16));
+      final lastWeek = AnalyticsPeriod.thisWeek(DateTime(2026, 9, 16), firstDay: 1);
       expect(change(lastWeek, DateTime(2026, 9, 22), 100, 50)!.look, ChangeLook.up);
-      expect(change(AnalyticsPeriod.month(DateTime(2026, 8, 1)), DateTime(2026, 9, 2), 100, 50)!.look, ChangeLook.up);
+      expect(change(AnalyticsPeriod.month(DateTime(2026, 8, 1), firstDay: 1), DateTime(2026, 9, 2), 100, 50)!.look, ChangeLook.up);
     });
 
     test('Year: the cue is the month number until day 183, then the change', () {
-      final y = AnalyticsPeriod.year(2026, today: today);
+      final y = AnalyticsPeriod.year(2026, today: today, firstDay: 1);
       final c = change(y, DateTime(2026, 5, 20), 100, 50)!;
       expect(c.look, ChangeLook.cue);
       expect(c.text, '5/12');
@@ -279,7 +279,7 @@ void main() {
       expect(change(y, DateTime(2026, 7, 1), 100, 50)!.look, ChangeLook.cue);
       expect(change(y, DateTime(2026, 7, 2), 100, 50)!.look, ChangeLook.up);
       expect(change(y, DateTime(2026, 7, 2), 100, 50)!.text, '▲ 100% vs last year');
-      expect(change(AnalyticsPeriod.year(2025, today: today), DateTime(2026, 1, 3), 100, 50)!.look, ChangeLook.up, reason: 'a past year');
+      expect(change(AnalyticsPeriod.year(2025, today: today, firstDay: 1), DateTime(2026, 1, 3), 100, 50)!.look, ChangeLook.up, reason: 'a past year');
     });
 
     test('prior total 0: "nothing before to compare" with spending, "no spending" without', () {
@@ -290,17 +290,17 @@ void main() {
 
     test('equal totals: Week and Month say "—" (never "= 0%"), the others keep "▲ 0%"', () {
       expect(change(week, today, 700, 700)!.text, '—');
-      expect(change(AnalyticsPeriod.month(today), today, 700, 700)!.text, '—');
-      expect(change(AnalyticsPeriod.day(today), today, 700, 700)!.text, '▲ 0% vs day before');
-      expect(change(AnalyticsPeriod.year(2025, today: today), today, 700, 700)!.text, '▲ 0% vs last year');
+      expect(change(AnalyticsPeriod.month(today, firstDay: 1), today, 700, 700)!.text, '—');
+      expect(change(AnalyticsPeriod.day(today, firstDay: 1), today, 700, 700)!.text, '▲ 0% vs day before');
+      expect(change(AnalyticsPeriod.year(2025, today: today, firstDay: 1), today, 700, 700)!.text, '▲ 0% vs last year');
     });
 
     test('percent rounds |this - prior| / prior; down is green; the captions are kept', () {
       expect(change(week, today, 4000, 5000)!.text, '▼ 20% vs last week');
       expect(change(week, today, 4000, 5000)!.look, ChangeLook.down);
-      expect(change(AnalyticsPeriod.month(DateTime(2026, 8, 1)), DateTime(2026, 9, 2), 1, 3)!.text, '▼ 67% vs last month');
-      expect(change(AnalyticsPeriod.day(today), today, 150, 100)!.text, '▲ 50% vs day before');
-      final custom = AnalyticsPeriod.custom(DateTime(2026, 9, 18), today, today: today);
+      expect(change(AnalyticsPeriod.month(DateTime(2026, 8, 1), firstDay: 1), DateTime(2026, 9, 2), 1, 3)!.text, '▼ 67% vs last month');
+      expect(change(AnalyticsPeriod.day(today, firstDay: 1), today, 150, 100)!.text, '▲ 50% vs day before');
+      final custom = AnalyticsPeriod.custom(DateTime(2026, 9, 18), today, today: today, firstDay: 1);
       expect(change(custom, today, 150, 100)!.text, '▲ 50% vs previous 7 days');
     });
   });
@@ -310,7 +310,7 @@ void main() {
       for (var day = 1; day <= 31; day++) {
         final t = DateTime(2026, 8, day);
         final home = periodProgress(ProgressKind.month, DateTime(t.year, t.month, 1), t);
-        final an = change(AnalyticsPeriod.month(t), t, 100, 50)!;
+        final an = change(AnalyticsPeriod.month(t, firstDay: 1), t, 100, 50)!;
         expect(an.look == ChangeLook.cue, home.hide, reason: 'day $day');
         if (home.hide) expect(an.text, home.cue);
         // Home's prior window is the same whole previous month.

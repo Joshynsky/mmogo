@@ -510,7 +510,7 @@ void main() {
       // Rent is soft-deleted as a classification: its history still counts.
       await db.update('classifications', {'active': 0}, where: 'id = ?', whereArgs: [rent]);
 
-      final (s, e) = AnalyticsPeriod.thisWeek(anchor).range(today: anchor).bounds;
+      final (s, e) = AnalyticsPeriod.thisWeek(anchor, firstDay: 1).range(today: anchor).bounds;
       final rows = await AnalyticsDao.itemizedTransactions(db, startMs: s, endMs: e, types: AnalyticsDao.allTypes);
       final where = groupSpendByName(rows.map((r) => (r.classificationName, r.amountCents)));
       expect(where.map((w) => w.name), ['Shopping', 'Rent']);
@@ -540,7 +540,7 @@ void main() {
         amountCents: 7000,
         occurredAtMs: nowMs - dayMs,
       );
-      final (s, e) = AnalyticsPeriod.thisWeek(anchor).range(today: anchor).bounds;
+      final (s, e) = AnalyticsPeriod.thisWeek(anchor, firstDay: 1).range(today: anchor).bounds;
       Future<int> total() async => (await AnalyticsDao.itemizedTransactions(
         db,
         startMs: s,

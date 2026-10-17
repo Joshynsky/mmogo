@@ -16,6 +16,7 @@ class AnalyticsCustomDatesSheet extends StatefulWidget {
     required this.to,
     required this.today,
     required this.firstDate,
+    required this.firstDay,
   });
 
   final AppPalette palette;
@@ -23,6 +24,9 @@ class AnalyticsCustomDatesSheet extends StatefulWidget {
   final DateTime to;
   final DateTime today;
   final DateTime firstDate;
+
+  /// The first day of the week the chosen Custom period carries.
+  final int firstDay;
 
   @override
   State<AnalyticsCustomDatesSheet> createState() => _CustomDatesSheetState();
@@ -101,7 +105,7 @@ class _CustomDatesSheetState extends State<AnalyticsCustomDatesSheet> {
           cancelKey: const Key('analyticsCustomCancel'),
           primaryKey: const Key('analyticsCustomShow'),
           primaryLabel: 'Show',
-          onPrimary: () => Navigator.of(context).pop(AnalyticsPeriod.custom(_from, _to, today: widget.today)),
+          onPrimary: () => Navigator.of(context).pop(AnalyticsPeriod.custom(_from, _to, today: widget.today, firstDay: widget.firstDay)),
         ),
       ],
     );

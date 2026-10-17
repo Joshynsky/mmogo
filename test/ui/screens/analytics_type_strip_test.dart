@@ -29,7 +29,7 @@ AnalyticsTransactionRow _row(int id, String type, int amount, {String cls = 'Sho
 );
 
 AnalyticsView _view(List<AnalyticsTransactionRow> rows) {
-  final period = AnalyticsPeriod.month(_now);
+  final period = AnalyticsPeriod.month(_now, firstDay: 1);
   return AnalyticsView(
     period: period,
     party: false,

@@ -47,7 +47,7 @@ Future<void> _openParty(WidgetTester tester, String type, String key, String nam
             type: type,
             partyKey: key,
             partyName: name,
-            period: AnalyticsPeriod.month(DateTime(2026, 9, 1)),
+            period: AnalyticsPeriod.month(DateTime(2026, 9, 1), firstDay: 1),
           ),
         ),
         builder: (_) => AnalyticsScreen(db: db, clock: () => analyticsTestNow),

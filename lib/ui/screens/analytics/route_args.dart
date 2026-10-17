@@ -75,11 +75,12 @@ class AnalyticsResolvedArgs {
 
 /// F6: Home's period -> Analytics' (Today -> Day today, This week -> the
 /// whole current calendar week, This month -> this month). [firstDay] is
-/// the first day of the week preference (1 = Monday).
-AnalyticsPeriod analyticsPeriodForHome(HomePeriod p, DateTime today, {int firstDay = 1}) => switch (p) {
-  HomePeriod.today => AnalyticsPeriod.day(today),
+/// the first day of the week preference (1 = Monday), required so no caller
+/// can forget it.
+AnalyticsPeriod analyticsPeriodForHome(HomePeriod p, DateTime today, {required int firstDay}) => switch (p) {
+  HomePeriod.today => AnalyticsPeriod.day(today, firstDay: firstDay),
   HomePeriod.week => AnalyticsPeriod.thisWeek(today, firstDay: firstDay),
-  HomePeriod.month => AnalyticsPeriod.month(today),
+  HomePeriod.month => AnalyticsPeriod.month(today, firstDay: firstDay),
 };
 
 /// F6: Analytics' length -> Home's; `null` for Year, All time and Custom

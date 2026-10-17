@@ -83,7 +83,7 @@ Future<void> _pumpList(WidgetTester t, List<AnalyticsTransactionRow> rows, {Stri
       Column(
         children: analyticsTransactionSections(
           palette: _p,
-          view: _view(AnalyticsPeriod.month(_now), rows),
+          view: _view(AnalyticsPeriod.month(_now, firstDay: 1), rows),
           filters: AnalyticsFilters.handOff(type: typeFilter),
           highlightedId: null,
           openRowId: null,
@@ -112,20 +112,20 @@ void main() {
     ];
 
     testWidgets('the cost fact says "Transaction cost" and sums every row cost, withdrawal fee included', (t) async {
-      await _pumpHero(t, AnalyticsPeriod.month(_now), rows);
+      await _pumpHero(t, AnalyticsPeriod.month(_now, firstDay: 1), rows);
       expect(_rich('Transaction cost Ksh 36'), findsOneWidget);
       expect(find.textContaining('fees', findRichText: true), findsNothing);
     });
 
     testWidgets('avg/day is hidden for Day, hidden for a one-day Custom span, shown for a longer span', (t) async {
       final today = DateTime(2026, 10, 14);
-      await _pumpHero(t, AnalyticsPeriod.day(today), rows);
+      await _pumpHero(t, AnalyticsPeriod.day(today, firstDay: 1), rows);
       expect(find.byKey(const Key('analyticsFactAvg')), findsNothing);
-      await _pumpHero(t, AnalyticsPeriod.custom(today, today, today: today), rows);
+      await _pumpHero(t, AnalyticsPeriod.custom(today, today, today: today, firstDay: 1), rows);
       expect(find.byKey(const Key('analyticsFactAvg')), findsNothing);
-      await _pumpHero(t, AnalyticsPeriod.custom(DateTime(2026, 10, 12), today, today: today), rows);
+      await _pumpHero(t, AnalyticsPeriod.custom(DateTime(2026, 10, 12), today, today: today, firstDay: 1), rows);
       expect(find.byKey(const Key('analyticsFactAvg')), findsOneWidget);
-      await _pumpHero(t, AnalyticsPeriod.month(_now), const []);
+      await _pumpHero(t, AnalyticsPeriod.month(_now, firstDay: 1), const []);
       expect(find.byKey(const Key('analyticsFactAvg')), findsNothing, reason: 'no rows, no average');
     });
   });

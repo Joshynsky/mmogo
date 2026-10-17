@@ -87,7 +87,7 @@ void main() {
 
   group('Analytics week', () {
     test('a Wednesday shows all seven days with the label of the WHOLE week', () {
-      final p = AnalyticsPeriod.thisWeek(wed);
+      final p = AnalyticsPeriod.thisWeek(wed, firstDay: 1);
       final r = p.range(today: wed);
       expect(r.start, d(2026, 10, 12));
       expect(r.end, d(2026, 10, 18));
@@ -112,7 +112,7 @@ void main() {
     });
 
     test('the comparison is the whole previous calendar week', () {
-      final p = AnalyticsPeriod.thisWeek(wed);
+      final p = AnalyticsPeriod.thisWeek(wed, firstDay: 1);
       final prior = p.priorRange(today: wed)!;
       expect(prior.start, d(2026, 10, 5));
       expect(prior.end, d(2026, 10, 11));
@@ -120,7 +120,7 @@ void main() {
     });
 
     test('an earlier week reads "Spent that week" and the label is its whole week', () {
-      final back = AnalyticsPeriod.thisWeek(wed).step(-1, today: wed);
+      final back = AnalyticsPeriod.thisWeek(wed, firstDay: 1).step(-1, today: wed);
       final w = back.words(today: wed);
       expect(w.value, '5–11 Oct');
       expect(w.spent, 'Spent that week');
@@ -128,7 +128,7 @@ void main() {
     });
 
     test('stepping: back is allowed, forward is off on the current week and returns from the past', () {
-      final now = AnalyticsPeriod.thisWeek(wed);
+      final now = AnalyticsPeriod.thisWeek(wed, firstDay: 1);
       expect(now.canStepForward(today: wed), isFalse);
       final back = now.step(-1, today: wed);
       expect(back.canStepForward(today: wed), isTrue);
@@ -138,7 +138,7 @@ void main() {
     });
 
     test('pull to refresh from an old week shows the whole CURRENT calendar week', () {
-      final old = AnalyticsPeriod.thisWeek(d(2026, 8, 5)); // a Wednesday in August
+      final old = AnalyticsPeriod.thisWeek(d(2026, 8, 5), firstDay: 1); // a Wednesday in August
       expect(old.words(today: wed).value, '3–9 Aug');
       final fresh = old.backToNow(today: wed);
       expect(fresh.range(today: wed).start, d(2026, 10, 12));
@@ -150,20 +150,20 @@ void main() {
     });
 
     test('pull to refresh keeps the length: a Day goes to today, a Month to this month', () {
-      expect(AnalyticsPeriod.day(d(2026, 9, 1)).backToNow(today: wed).range(today: wed).start, wed);
-      expect(AnalyticsPeriod.month(d(2026, 3, 1)).backToNow(today: wed).range(today: wed).start, d(2026, 10, 1));
+      expect(AnalyticsPeriod.day(d(2026, 9, 1), firstDay: 1).backToNow(today: wed).range(today: wed).start, wed);
+      expect(AnalyticsPeriod.month(d(2026, 3, 1), firstDay: 1).backToNow(today: wed).range(today: wed).start, d(2026, 10, 1));
     });
 
     test('switching length to Week from a Month uses the first-day preference', () {
-      final m = AnalyticsPeriod.month(wed);
+      final m = AnalyticsPeriod.month(wed, firstDay: 1);
       final w = m.withGranularity(AnalyticsGranularity.week, today: wed, firstDay: 7);
       expect(w.range(today: wed).start, d(2026, 10, 11));
-      final mon = m.withGranularity(AnalyticsGranularity.week, today: wed);
+      final mon = m.withGranularity(AnalyticsGranularity.week, today: wed, firstDay: 1);
       expect(mon.range(today: wed).start, d(2026, 10, 12));
     });
 
     test('the Week menu lists whole calendar weeks, this week first', () {
-      final opts = AnalyticsPeriod.thisWeek(wed).options(today: wed);
+      final opts = AnalyticsPeriod.thisWeek(wed, firstDay: 1).options(today: wed);
       expect(opts, hasLength(6));
       expect(opts[0].label, '12–18 Oct');
       expect(opts[0].note, 'this week');
@@ -180,7 +180,7 @@ void main() {
     });
 
     test('no "last 7 days" wording is left in the period words or menus', () {
-      final p = AnalyticsPeriod.thisWeek(wed);
+      final p = AnalyticsPeriod.thisWeek(wed, firstDay: 1);
       final all = [
         p.words(today: wed).spent,
         p.words(today: wed).vs,
@@ -209,8 +209,8 @@ void main() {
 
       final today = d(2026, 10, 12); // Monday: both weeks above are complete
       // Monday first: 28 Sep-4 Oct, 5-11 Oct.
-      final w1 = AnalyticsPeriod.thisWeek(d(2026, 9, 30));
-      final w2 = AnalyticsPeriod.thisWeek(d(2026, 10, 7));
+      final w1 = AnalyticsPeriod.thisWeek(d(2026, 9, 30), firstDay: 1);
+      final w2 = AnalyticsPeriod.thisWeek(d(2026, 10, 7), firstDay: 1);
       expect(total(w1.range(today: today)), 1000 + 2000 + 4000 + 8000);
       expect(total(w2.range(today: today)), 16000 + 32000 + 64000);
       // Sunday first: Sun 27 Sep-Sat 3 Oct, Sun 4 Oct-Sat 10 Oct, Sun 11 Oct-...

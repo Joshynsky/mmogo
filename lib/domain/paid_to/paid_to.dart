@@ -287,16 +287,20 @@ const paidToGranularities = [
 
 /// [g] as of [today] (the pill's left half, and pull-to-refresh "back to
 /// now": the same length, the current one).
-AnalyticsPeriod paidToPeriodNow(AnalyticsGranularity g, DateTime today) => switch (g) {
-  AnalyticsGranularity.all => AnalyticsPeriod.allTime(today),
-  AnalyticsGranularity.year => AnalyticsPeriod.year(today.year, today: today),
-  _ => AnalyticsPeriod.month(today),
+AnalyticsPeriod paidToPeriodNow(AnalyticsGranularity g, DateTime today, {required int firstDay}) => switch (g) {
+  AnalyticsGranularity.all => AnalyticsPeriod.allTime(today, firstDay: firstDay),
+  AnalyticsGranularity.year => AnalyticsPeriod.year(today.year, today: today, firstDay: firstDay),
+  _ => AnalyticsPeriod.month(today, firstDay: firstDay),
 };
 
 /// The Analytics period a Paid to tap opens on: the same length and anchor
 /// (a month is placed on Analytics' 6-month chart window).
-AnalyticsPeriod analyticsPeriodForPaidTo(AnalyticsPeriod p, DateTime today) => switch (p.granularity) {
-  AnalyticsGranularity.month => AnalyticsPeriod.monthShown(p.anchor, today: today),
-  AnalyticsGranularity.year => AnalyticsPeriod.year(p.anchor.year, today: today),
-  _ => AnalyticsPeriod.allTime(today),
-};
+///
+/// [firstDay] is the week-start preference, read fresh by the caller: the
+/// period Analytics opens on must follow it (finding R33).
+AnalyticsPeriod analyticsPeriodForPaidTo(AnalyticsPeriod p, DateTime today, {required int firstDay}) =>
+    switch (p.granularity) {
+      AnalyticsGranularity.month => AnalyticsPeriod.monthShown(p.anchor, today: today, firstDay: firstDay),
+      AnalyticsGranularity.year => AnalyticsPeriod.year(p.anchor.year, today: today, firstDay: firstDay),
+      _ => AnalyticsPeriod.allTime(today, firstDay: firstDay),
+    };

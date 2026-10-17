@@ -3,6 +3,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../../data/db/analytics_dao.dart';
 import '../../../data/db/app_database.dart';
+import '../../../data/prefs/app_prefs.dart';
 import '../../../domain/analytics/analytics_period.dart';
 import '../../../domain/paid_to/paid_to.dart';
 import '../../../domain/paid_to/paid_to_counts.dart';
@@ -62,7 +63,11 @@ class PaidToScreen extends StatefulWidget {
 
 class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<PaidToScreen> {
   // §PAIDTO.SHELL.STATE ---- state ---------------------------------------------------
-  late AnalyticsPeriod _period = AnalyticsPeriod.month(_now());
+  /// The week-start preference, re-read on every load. Paid to's own blocks
+  /// are days 1-7, 8-14 ... of the month; this only rides along into the
+  /// periods handed to Analytics.
+  int _firstDay = AppPrefs.defaultFirstDayOfWeek;
+  late AnalyticsPeriod _period = AnalyticsPeriod.month(_now(), firstDay: _firstDay);
 
   /// The loaded period's payments (the period they belong to is [_shown]).
   List<PaidToPayment>? _payments;
@@ -118,6 +123,9 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
 
   Future<void> _load() async {
     final seq = ++_loadSeq;
+    final firstDay = await AppPrefs.readFirstDayOfWeek();
+    _firstDay = firstDay;
+    _period = _period.withFirstDay(firstDay);
     final period = _period;
     final db = widget.db ?? await AppDatabase.instance.database;
     final today = dateOnly(_now());
@@ -172,7 +180,7 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
   /// search is cleared; type, category and sort stay (mock PT_API).
   Future<void> _backToNow() async {
     _search.clear();
-    setState(() => _period = paidToPeriodNow(_period.granularity, dateOnly(_now())));
+    setState(() => _period = paidToPeriodNow(_period.granularity, dateOnly(_now()), firstDay: _firstDay));
     if (_scroll.hasClients) _scroll.jumpTo(0);
     await _load();
   }
@@ -186,7 +194,7 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
       items: [for (final (g, label) in paidToGranularities) (label, '', _period.granularity == g, g)],
     );
     if (picked == null || !mounted) return;
-    _setPeriod(paidToPeriodNow(picked, today));
+    _setPeriod(paidToPeriodNow(picked, today, firstDay: _firstDay));
   }
 
   Future<void> _openValueMenu() async {
@@ -275,9 +283,12 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
   /// The 0.1.1 hand-off (kept): the Analytics recipient view on this period's length and anchor,
   /// with the active category as its filter. Works for all five types (S7b: Pochi by phone key
   /// else name, Withdrawal by agent number else name).
-  void _openAnalytics(PaidToRecipient r) {
+  Future<void> _openAnalytics(PaidToRecipient r) async {
     final today = dateOnly(_now());
-    final period = analyticsPeriodForPaidTo(_shown ?? _period, today);
+    // Read fresh: the setting may have changed since this page last loaded.
+    final firstDay = await AppPrefs.readFirstDayOfWeek();
+    if (!mounted) return;
+    final period = analyticsPeriodForPaidTo(_shown ?? _period, today, firstDay: firstDay);
     final args = AnalyticsRouteArgs(
       type: r.sourceType,
       partyKey: r.partyKey,

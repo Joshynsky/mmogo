@@ -103,7 +103,7 @@ void main() {
       type: 'SEND_MONEY',
       partyKey: 'no|0700000',
       partyName: 'JOHN KAMAU',
-      period: AnalyticsPeriod.month(DateTime(2026, 9, 1)),
+      period: AnalyticsPeriod.month(DateTime(2026, 9, 1), firstDay: 1),
     ),
     actions: () => [
       A11yAction('Close party strip', _k('analyticsPartyClose')),

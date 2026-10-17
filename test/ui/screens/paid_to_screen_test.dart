@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/domain/analytics/analytics_period.dart';
 import 'package:mmogo/ui/screens/analytics_screen.dart';
 import 'package:mmogo/ui/screens/paid_to_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_analytics_db.dart';
 
@@ -65,6 +66,7 @@ String? _text(WidgetTester tester, Key key) {
 Finder _rich(String s) => find.text(s, findRichText: true);
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   testWidgets('defaults: this month, the Paid out card, type pills, top 3 + See all, no Cash', (tester) async {
     await _pump(tester);
     expect(find.text('Paid to'), findsWidgets);
@@ -221,7 +223,7 @@ void main() {
     expect(named.type, 'SEND_MONEY');
     expect(named.partyKey, '0712345678');
     expect(named.partyName, 'MARY WANJIKU');
-    expect(named.period, AnalyticsPeriod.month(DateTime(2026, 9)));
+    expect(named.period, AnalyticsPeriod.month(DateTime(2026, 9), firstDay: 1));
     expect(named.classification, isNull);
 
     Navigator.of(tester.element(find.text('ANALYTICS'))).pop();
