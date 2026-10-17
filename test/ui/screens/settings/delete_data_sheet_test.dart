@@ -228,13 +228,19 @@ void main() {
       final fake = useFakeDeleteData();
       await pumpSettings(tester, fake);
       await openDeleteSheet(tester);
-      expect(find.textContaining('Backup files you saved earlier are not touched'), findsOneWidget);
-      expect(find.textContaining(kDeleteStayBackups), findsOneWidget);
-      expect(find.textContaining(kDeleteStayAutoList), findsOneWidget);
-      expect(find.text(kDeleteStaySms), findsNWidgets(2), reason: 'on both cards');
-      expect(find.text(kDeleteLevel1SafetyGone), findsOneWidget);
-      expect(find.text(kDeleteLevel1CategoriesStay), findsOneWidget);
-      expect(find.textContaining('Deleted from this phone'), findsWidgets);
+      // F3: one short sentence per card; the rest sits behind the "?" in the header.
+      expect(find.text(kDeleteLevel1Short), findsOneWidget);
+      expect(find.text(kDeleteLevel2Short), findsOneWidget);
+      expect(find.byKey(const Key('deleteExtras')), findsNothing);
+      await tester.tap(find.byKey(const Key('deleteHelpButton')));
+      await tester.pumpAndSettle();
+      for (final line in kDeleteExtras) {
+        expect(find.text(line), findsOneWidget);
+      }
+      expect(find.textContaining('safety copy'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('deleteHelpButton')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('deleteExtras')), findsNothing);
     });
   });
 

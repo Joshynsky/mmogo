@@ -14,6 +14,18 @@ const kBackupFileWarning =
     'This backup is not encrypted. It contains your transactions, including names and phone numbers. '
     'Anyone who gets the file can read it. Keep it somewhere private.';
 
+/// F3 (R42 / R46): the short form, shown ONCE on the Back up now card. The full
+/// W1 above stays on the Privacy page and in the auto-backup setup sheet; the
+/// contents sentence lives in the Backup page's "?" sheet.
+const kBackupNotEncryptedShort = 'Backups are not encrypted.';
+
+/// F3: the "?" sheet of the Backup page ("About backups"). W3 stays visible on
+/// the page; the phone-to-phone sentence is here only ([kPhoneTransferNotice]).
+const kBackupHelpTitle = 'About backups';
+const kBackupContentsNote =
+    'A backup contains names and phone numbers; anyone who gets the file can read it. Keep it somewhere private.';
+const kBackupHelpParagraphs = [kPhoneTransferNotice, kBackupContentsNote];
+
 /// W2: shown once each time a backup folder is picked, before it is saved, and
 /// on the Privacy page.
 const kCloudSyncNotice =

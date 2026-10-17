@@ -48,6 +48,7 @@ class BackupExport {
     this.liveClassifications,
     this.liveTransactions,
     this.liveCounterpartyMap,
+    this.userClassifications = 0,
   });
 
   final Uint8List bytes;
@@ -87,6 +88,10 @@ class BackupExport {
   final int? liveTransactions;
   final int? liveCounterpartyMap;
 
+  /// F3 (R41): how many of the categories IN the file the person made (no
+  /// `seed_key`). In-memory only; the file format is unchanged.
+  final int userClassifications;
+
   int _skippedIn(String table) => skipped.where((s) => s.table == table).length;
 
   /// CB8: included + skipped = live, per table, as data.
@@ -112,6 +117,7 @@ class BackupExport {
   BackupSharedCounts get sharedCounts => BackupSharedCounts(
         transactions: transactions,
         categories: classifications,
+        userCategories: userClassifications,
         leftOutEntries: _skippedIn('transactions'),
         skippedCount: skippedCount,
       );
@@ -122,11 +128,15 @@ class BackupSharedCounts {
   const BackupSharedCounts({
     required this.transactions,
     required this.categories,
+    this.userCategories = 0,
     required this.leftOutEntries,
     required this.skippedCount,
   });
   final int transactions;
   final int categories;
+
+  /// Of [categories], how many the person made (F3, R41: "18 categories (1 you made)").
+  final int userCategories;
 
   /// Entries (transactions) left out.
   final int leftOutEntries;
@@ -285,6 +295,7 @@ class BackupService {
         liveTransactions: txs.length,
         liveCounterpartyMap: map.length,
         classifications: repair.classifications.length,
+        userClassifications: repair.classifications.where((c) => c['seed_key'] == null).length,
         transactions: repair.transactions.length,
         counterpartyMap: repair.counterpartyMap.length,
         excludedSoftDeleted: excluded,

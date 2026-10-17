@@ -160,10 +160,8 @@ class AutoBackupCard extends StatelessWidget {
           ),
         ));
       }
-      children.add(Padding(
-        padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-        child: BackupWarning(palette: palette, text: kBackupFileWarning, bottomGap: 0, stripe: false),
-      ));
+      // F3 (R46): no encryption warning here; it is said once on the Back up now card.
+      children.add(const SizedBox(height: 12));
     }
     return SettingsCard(
       palette: palette,

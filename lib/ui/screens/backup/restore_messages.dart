@@ -33,7 +33,7 @@ String restoreRejectReasonText(RestoreRejected e) {
 }
 
 const _tableNames = {
-  'classifications': 'classifications',
+  'classifications': 'categories',
   'transactions': 'transactions',
   'counterparty_map': 'saved receivers',
   'prefs': 'settings',
@@ -64,10 +64,11 @@ String? _knownField(String? table, String? field) {
 
 String _n(int n, String one, String many) => '$n ${n == 1 ? one : many}';
 
-/// `187 transactions, 2 classifications, 15 saved receivers`.
-String restoreCountsLine(int transactions, int classifications, int receivers) =>
+/// `187 transactions, 2 categories, 15 saved receivers` (F3, R44: the word is
+/// "categories"; the file's JSON key "classifications" is not touched).
+String restoreCountsLine(int transactions, int categories, int receivers) =>
     '${_n(transactions, 'transaction', 'transactions')}, '
-    '${_n(classifications, 'classification', 'classifications')}, '
+    '${_n(categories, 'category', 'categories')}, '
     '${_n(receivers, 'saved receiver', 'saved receivers')}';
 
 /// `20 Sep 2026, 10:15` from the file's epoch-millisecond creation time.

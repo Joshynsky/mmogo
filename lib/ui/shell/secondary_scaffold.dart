@@ -19,11 +19,22 @@ import 'chrome_widgets.dart';
 /// Back button, an `ink` title and the
 /// system bars from `AppPalette.of(context).systemOverlayStyle`.
 class SecondaryScaffold extends StatelessWidget {
-  const SecondaryScaffold({super.key, required this.title, required this.body, this.followPalette = false});
+  const SecondaryScaffold({
+    super.key,
+    required this.title,
+    required this.body,
+    this.followPalette = false,
+    this.actions,
+  });
 
   final String title;
   final Widget body;
   final bool followPalette;
+
+  /// F3: the "?" help button at the top right (only with [followPalette]). When
+  /// there is one, the title may wrap to a second line at large text so it is
+  /// not cut off beside the button.
+  final List<Widget>? actions;
 
   @override
   Widget build(BuildContext context) {
@@ -50,8 +61,12 @@ class SecondaryScaffold extends StatelessWidget {
           leadingWidth: 56,
           title: Text(
             title,
+            maxLines: actions == null ? null : 2,
+            softWrap: actions == null ? null : true,
             style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: palette.ink),
           ),
+          actions: actions == null ? null : [...actions!, const SizedBox(width: 6)],
+          toolbarHeight: actions != null && MediaQuery.textScalerOf(context).scale(16) > 18.4 ? 80 : null,
           backgroundColor: WidgetStateColor.resolveWith(
             (states) => states.contains(WidgetState.scrolledUnder) ? scrolledBg : palette.background,
           ),

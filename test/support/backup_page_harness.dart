@@ -33,6 +33,7 @@ double contrastRatio(Color a, Color b) {
 BackupExport fakeExport({
   int tx = 120,
   int cats = 3,
+  int userCats = 0,
   int receivers = 8,
   int repaired = 0,
   List<SkippedRowInfo> rows = const [],
@@ -45,6 +46,7 @@ BackupExport fakeExport({
   return BackupExport(
     bytes: Uint8List.fromList([123, 125]),
     classifications: cats,
+    userClassifications: userCats,
     transactions: tx,
     counterpartyMap: receivers,
     excludedSoftDeleted: 0,

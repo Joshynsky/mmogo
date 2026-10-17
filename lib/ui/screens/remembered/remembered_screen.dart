@@ -8,6 +8,7 @@ import '../../shell/secondary_scaffold.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/error_notes.dart';
+import '../../widgets/help_sheet.dart';
 import '../../widgets/palette_alert_dialog.dart';
 import '../add/recipient_chooser.dart' show recipientTypeName;
 
@@ -124,6 +125,7 @@ class _RememberedScreenState extends State<RememberedScreen> {
     return SecondaryScaffold(
       title: kRememberedTitle,
       followPalette: true,
+      actions: const [HelpPageButton(title: kRememberedHelpTitle, paragraphs: kRememberedHelpParagraphs)],
       body: Column(
         children: [
           Expanded(
@@ -133,20 +135,21 @@ class _RememberedScreenState extends State<RememberedScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Text(
-                    kRememberedIntro,
-                    key: const Key('rememberedIntro'),
-                    style: TextStyle(fontSize: 12.5, height: 1.5, color: palette.mutedInk),
+                  child: Row(
+                    children: [
+                      Icon(Icons.lock_outline, size: 14, color: palette.mutedInk),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          kRememberedIntro,
+                          key: const Key('rememberedIntro'),
+                          style: TextStyle(fontSize: 13, height: 1.45, fontWeight: FontWeight.w600, color: palette.mutedInk),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(2, 6, 2, 12),
-                  child: Text(
-                    kRememberedStaySentence,
-                    key: const Key('rememberedStay'),
-                    style: TextStyle(fontSize: 12.5, height: 1.5, color: palette.ink, fontWeight: FontWeight.w600),
-                  ),
-                ),
+                const SizedBox(height: 12),
                 if (_error)
                   FieldError(kRememberedCouldNot, padding: const EdgeInsets.fromLTRB(2, 0, 2, 10)),
                 if (_loaded && _entries.isEmpty) _empty(palette),

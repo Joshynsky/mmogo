@@ -10,10 +10,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../../../data/backup/backup_service.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/prefs/backup_prefs.dart';
-import '../../copy/data_copy.dart';
-import '../../theme/app_colors.dart';
 import 'backup_ui_seams.dart';
-import 'backup_widgets.dart';
 import '../../widgets/palette_alert_dialog.dart';
 
 /// Builds the backup (the real [BackupService.export] by default).
@@ -127,20 +124,13 @@ class BackupExportFlow {
 
   /// The warning dialog. `true` only when the user taps "Share backup".
   static Future<bool> confirm(BuildContext context) async {
-    final palette = AppPalette.of(context);
+    // F3 (R42): the "not encrypted" warning is on the Back up now card, not repeated here.
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => PaletteAlertDialog(
         title: const Text('Before you back up'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              BackupWarning(palette: palette, text: kBackupFileWarning, bottomGap: 10, stripe: false),
-              const Text("The next screen is Android's share sheet. Pick where the file goes."),
-            ],
-          ),
+        content: const SingleChildScrollView(
+          child: Text("The next screen is Android's share sheet. Pick where the file goes."),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),

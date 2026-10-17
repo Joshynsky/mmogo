@@ -12,6 +12,7 @@ import 'package:mmogo/data/backup/backup_counts.dart';
 import 'package:mmogo/data/prefs/backup_prefs.dart';
 import 'package:mmogo/platform/storage_bridge.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
+import 'package:mmogo/ui/screens/backup/auto_backup_card.dart';
 import 'package:mmogo/ui/screens/backup/backup_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -201,7 +202,7 @@ void main() {
   });
 
   group('working card', () {
-    testWidgets('folder, defaults 10 and 5, status with entries left, W1 on the card', (t) async {
+    testWidgets('folder, defaults 10 and 5, status with entries left, NO encryption warning on the card (R46)', (t) async {
       final last = DateTime(2026, 9, 25, 8, 2);
       await _pump(t, prefs: _working(since: 4, lastMs: last.millisecondsSinceEpoch));
       expect(find.text(autoBackupOnSubtitle(10)), findsOneWidget);
@@ -214,7 +215,10 @@ void main() {
         find.text('Last auto-backup: 25 Sep 2026, 08:02. 6 more saved entries until the next one.'),
         findsOneWidget,
       );
-      expect(find.text(kBackupFileWarning), findsNWidgets(2)); // Back up now card and this card
+      // F3 (R46): the warning is said ONCE, short, on the Back up now card; the Auto-backup card repeats nothing.
+      expect(find.text(kBackupFileWarning), findsNothing);
+      expect(find.text(kBackupNotEncryptedShort), findsOneWidget);
+      expect(find.descendant(of: find.byType(AutoBackupCard), matching: find.text(kBackupNotEncryptedShort)), findsNothing);
       expect(find.byKey(const Key('autoBackupPausedBanner')), findsNothing);
       expect(find.byKey(const Key('autoBackupFailedBanner')), findsNothing);
     });

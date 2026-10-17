@@ -25,9 +25,11 @@ const kBackupFilesApp = 'mmogo cannot see where you saved it. Check your Files a
 
 const kBackupNotSharedLine = 'The share sheet was closed. No backup was saved.';
 
-String backupSharedCountsLine(int transactions, int categories, int receivers) =>
+/// "18 categories (1 you made)": the total, then how many the person made; the
+/// bracket is left out when it is 0 (F3, R41).
+String backupSharedCountsLine(int transactions, int categories, int receivers, {int userCategories = 0}) =>
     '${_n(transactions, 'transaction', 'transactions')}, '
-    '${_n(categories, 'category', 'categories')} and '
+    '${_n(categories, 'category', 'categories')}${userCategories > 0 ? ' ($userCategories you made)' : ''} and '
     '${_n(receivers, 'saved receiver', 'saved receivers')} went to the share sheet.';
 
 /// "N entries could not be made valid and were left out of the backup. ..."

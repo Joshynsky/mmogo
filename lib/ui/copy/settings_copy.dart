@@ -46,15 +46,22 @@ const kRememberedRowSubtitle = 'Name and type, kept on this phone';
 
 // ---- Remembered recipients page (mock remembered.html) ----
 const kRememberedTitle = 'Remembered recipients';
-const kRememberedIntro =
-    'People and businesses you told us are Send Money or Pochi. Kept on this phone only. Not in backups. Not shared.';
 
-/// PLACEHOLDER (product-partner finding F2, PM signs the final words).
-const kRememberedStaySentence =
-    'Remembered names stay until you forget them, even if you turn off “Also record the receiver’s details”.';
+/// F3 (R26): the ONE always-visible line under the title. The long intro and
+/// the bold sentence moved into the "?" sheet below.
+const kRememberedIntro = 'Kept on this phone only.';
+
+/// F3 (R27): the "?" sheet. R25: the switch is named once, in general words
+/// (the Add screen words it per type, so no exact switch name is quoted).
+const kRememberedHelpTitle = 'About remembered names';
+const kRememberedHelpParagraphs = [
+  'We remember a name and its type (Send Money or Pochi) so we do not ask again.',
+  'They are not in backups and are never shared.',
+  'A remembered name stays until you forget it, even if you turn off the “Also record” switch on Add.',
+];
 const kRememberedEmptyTitle = 'Nothing remembered yet.';
 const kRememberedEmptyBody = 'When a message has a name but no phone number, we ask once and can remember your answer.';
-const kRememberedEmptyNote = 'Names are remembered only when “Also record the receiver’s details” is on.';
+const kRememberedEmptyNote = 'Names are remembered only when the “Also record” switch on Add is on.';
 const kForgetAll = 'Forget all';
 const kForgetAllTitle = 'Forget all remembered recipients?';
 const kForgetAllBody = 'We will ask again next time.';

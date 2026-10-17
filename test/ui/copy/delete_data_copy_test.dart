@@ -28,19 +28,23 @@ void main() {
       final all = kDeleteDataAllStrings.join('\n').toLowerCase();
       expect(all, contains('deleted from this phone'));
       expect(kDeleteDoneTitle.toLowerCase(), contains('deleted from this phone'));
-      expect(kDeleteLevel1Deletes.toLowerCase(), contains('deleted from this phone'));
-      expect(kDeleteLevel2Deletes.toLowerCase(), contains('deleted from this phone'));
+      // F3: the option sentences are short ("Deletes ..."); the plain list of what each really clears is
+      // pinned in test/data/maintenance/delete_sentences_f3_test.dart.
+      expect(kDeleteLevel1Short, startsWith('Deletes your transactions'));
+      expect(kDeleteLevel2Short, startsWith('Deletes everything mmogo keeps on this phone'));
     });
 
     test('the sheets and results state what stays (backups, auto list, SMS, safety copy, categories)', () {
-      expect(kDeleteIntro, contains('Backup files you saved earlier are not touched'));
+      expect(kDeleteIntro, 'This cannot be undone.');
+      expect(kDeleteExtraBackups, 'Backup files you saved earlier are not touched.');
       expect(kDeleteStayBackups, contains('Backup files you saved earlier'));
       expect(kDeleteStayAutoList, contains('automatic backup'));
       expect(kDeleteStaySms, contains('original SMS'));
       expect(kDeleteLevel1SafetyGone, contains('Undo of your last Replace is gone'));
       expect(kDeleteLevel1CategoriesStay, contains('renamed or hid'));
-      expect(kDeleteLevel2Deletes, allOf(contains('preferences'), contains('own categories'), contains('display name'), contains('recipients')));
-      expect(kDeleteLevel2Deletes, contains('first launch'));
+      expect(kDeleteExtraLevel2, allOf(contains('preferences'), contains('own categories'), contains('display name')));
+      expect(kDeleteLevel1Short, allOf(contains('names it remembers'), contains('Keeps your settings and categories')));
+      expect(kDeleteLevel2Short, allOf(contains('first launch'), contains('Backup files you saved earlier stay')));
     });
 
     test('nothing promises anything about future automatic backup files', () {
@@ -60,7 +64,7 @@ void main() {
           .map((m) => m.group(1)!)
           .toSet();
       // Not strings of a Delete data screen: the word itself and the stale-Undo text.
-      names.removeAll(['kDeleteWordWord', 'kEntryNoLongerThere', 'kDeleteDataAllStrings']);
+      names.removeAll(['kDeleteWordWord', 'kEntryNoLongerThere', 'kDeleteDataAllStrings', 'kDeleteExtras']);
       expect(kDeleteDataAllStrings.length, names.length, reason: 'add the new constant to kDeleteDataAllStrings');
     });
 

@@ -120,18 +120,19 @@ void main() {
   setUp(() => useFakeBackupUi()); // S10b (A12): nothing here may reach a real service
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('normal: header card, counts line, not-included line, warning, enabled button', (t) async {
+  testWidgets('normal: header card with W3, counts line, not-included line, ONE short warning, enabled button', (t) async {
     t.view.physicalSize = const Size(420, 3000); // tall enough that the Auto-backup card (last) is built
     t.view.devicePixelRatio = 1;
     addTearDown(t.view.reset);
     await _pump(t);
     expect(find.text('Your data lives only on this phone'), findsOneWidget);
     expect(find.text(kUninstallErasesNotice), findsOneWidget);
-    expect(find.text(kPhoneTransferNotice), findsOneWidget);
+    // F3: the phone-to-phone sentence is in the "?" sheet only, not on the page.
+    expect(find.text(kPhoneTransferNotice), findsNothing);
     expect(find.text('Never backed up'), findsOneWidget);
     expect(
       find.text(
-        'A backup holds your 120 transactions, 3 categories you made, 8 saved receivers and your settings, in one file.',
+        'A backup holds your 120 transactions, 3 categories you made, 8 saved receivers and your settings.',
       ),
       findsOneWidget,
     );
@@ -139,7 +140,8 @@ void main() {
       find.text('5 recently deleted transactions are not included. Restore them first if you want them in the backup.'),
       findsOneWidget,
     );
-    expect(find.text(kBackupFileWarning), findsOneWidget);
+    expect(find.text(kBackupNotEncryptedShort), findsOneWidget);
+    expect(find.text(kBackupFileWarning), findsNothing, reason: 'the long W1 is on the Privacy page only');
     expect(t.widget<FilledButton>(find.byKey(const Key('backUpNowButton'))).onPressed, isNotNull);
     // B17 added Restore, B21 the Auto-backup card (off: just the switch); B32 added Privacy.
     expect(find.text('Restore from a file'), findsOneWidget);
@@ -171,7 +173,7 @@ void main() {
     expect(find.textContaining('Nothing to back up yet.'), findsOneWidget);
     expect(find.byKey(const Key('backupCountsLine')), findsNothing);
     expect(t.widget<FilledButton>(find.byKey(const Key('backUpNowButton'))).onPressed, isNull);
-    expect(find.text(kBackupFileWarning), findsOneWidget);
+    expect(find.text(kBackupNotEncryptedShort), findsOneWidget);
   });
 
   testWidgets('loading: counts placeholder while the numbers load, button enabled', (t) async {
@@ -213,8 +215,10 @@ void main() {
     await t.tap(find.byKey(const Key('backUpNowButton')));
     await t.pumpAndSettle();
     expect(find.text('Before you back up'), findsOneWidget);
-    // W1 now appears twice: the page panel and the dialog.
-    expect(find.text(kBackupFileWarning), findsNWidgets(2));
+    // F3 (R42): the warning is on the page card only; the dialog just says where the file goes.
+    expect(find.text(kBackupNotEncryptedShort), findsOneWidget);
+    expect(find.text(kBackupFileWarning), findsNothing);
+    expect(find.text("The next screen is Android's share sheet. Pick where the file goes."), findsOneWidget);
     expect(find.text('Share backup'), findsOneWidget);
     expect(run.exports, 0);
     expect(run.shares, 0);

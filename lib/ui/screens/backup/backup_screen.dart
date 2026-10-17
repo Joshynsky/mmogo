@@ -13,7 +13,9 @@ import '../../shell/primary_shell.dart';
 import '../../shell/routes.dart';
 import '../../widgets/palette_alert_dialog.dart';
 import '../settings/settings_widgets.dart';
+import '../../copy/data_copy.dart';
 import '../../shell/secondary_scaffold.dart';
+import '../../widgets/help_sheet.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_palette_scope.dart';
 import 'auto_backup_card.dart';
@@ -211,6 +213,7 @@ class _BackupScreenState extends State<BackupScreen> {
     return SecondaryScaffold(
       title: 'Backup and restore',
       followPalette: true,
+      actions: const [HelpPageButton(title: kBackupHelpTitle, paragraphs: kBackupHelpParagraphs)],
       body: ListView(
         key: const Key('backupScroll'),
         padding: const EdgeInsets.fromLTRB(14, 6, 14, 32),

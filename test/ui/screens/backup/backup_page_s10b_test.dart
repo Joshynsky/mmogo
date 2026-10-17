@@ -10,6 +10,7 @@ import 'package:mmogo/ui/screens/backup/auto_backup_card.dart';
 import 'package:mmogo/ui/screens/backup/auto_backup_state.dart';
 import 'package:mmogo/ui/screens/privacy/privacy_screen.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
+import 'package:mmogo/ui/widgets/palette_alert_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../support/backup_page_harness.dart';
@@ -38,15 +39,16 @@ void main() {
   }
 
   group('page order and fixed lines', () {
-    testWidgets('top to bottom: header, D7 line, Back up now, Auto-backup, Restore, Privacy link (BP2)', (t) async {
+    testWidgets('top to bottom: header, Back up now, Auto-backup, Restore (D7 line directly above its button), Privacy link (F3 order)', (t) async {
       await pumpBackupPage(t);
       double y(Finder f) => t.getTopLeft(f.first).dy;
       final order = [
         y(find.text('Your data lives only on this phone')),
-        y(find.byKey(const Key('backupD7Line'))),
         y(find.text('BACK UP NOW')),
         y(find.byKey(const Key('autoBackupSwitch'))),
         y(find.text('RESTORE')),
+        y(find.byKey(const Key('backupD7Line'))),
+        y(find.byKey(const Key('restoreButton'))),
         y(find.text('Privacy and your data')),
       ];
       for (var i = 1; i < order.length; i++) {
@@ -69,7 +71,7 @@ void main() {
     testWidgets('the counts sentence says "categories you made", and no "classification" shows on the page', (t) async {
       await pumpBackupPage(t);
       expect(
-        find.text('A backup holds your 120 transactions, 3 categories you made, 8 saved receivers and your settings, in one file.'),
+        find.text('A backup holds your 120 transactions, 3 categories you made, 8 saved receivers and your settings.'),
         findsOneWidget,
       );
       expect(find.textContaining('lassification'), findsNothing);
@@ -84,28 +86,28 @@ void main() {
       return (box.decoration! as BoxDecoration).border != null;
     }
 
-    testWidgets('the W1 box on the Back up now card has no left stripe', (t) async {
+    testWidgets('the not-encrypted box on the Back up now card has no left stripe', (t) async {
       await pumpBackupPage(t);
-      expect(striped(t, find.text(kBackupFileWarning).first), isFalse);
+      expect(striped(t, find.text(kBackupNotEncryptedShort)), isFalse);
     });
 
-    testWidgets('the W1 box on the Auto-backup card and in the "Before you back up" dialog have no stripe', (t) async {
+    testWidgets('R42 / R46: the not-encrypted warning appears ONCE (Back up now card), not on the Auto-backup card or in the "Before you back up" dialog', (t) async {
       SharedPreferences.setMockInitialValues({
         'auto_backup_enabled': true,
         'auto_backup_folder_uri': 'content://tree/x',
         'auto_backup_folder_name': 'Folder',
       });
       await pumpBackupPage(t);
-      expect(find.text(kBackupFileWarning), findsNWidgets(2));
-      for (final f in find.text(kBackupFileWarning).evaluate()) {
-        expect(striped(t, find.byWidget(f.widget)), isFalse);
-      }
+      expect(find.text(kBackupNotEncryptedShort), findsOneWidget);
+      expect(find.text(kBackupFileWarning), findsNothing);
       await t.tap(find.byKey(const Key('backUpNowButton')));
       await t.pumpAndSettle();
       expect(find.text('Before you back up'), findsOneWidget);
-      for (final f in find.text(kBackupFileWarning).evaluate()) {
-        expect(striped(t, find.byWidget(f.widget)), isFalse);
-      }
+      // The dialog keeps only its own share-sheet line; the page behind it still shows the warning once.
+      expect(find.text(kBackupNotEncryptedShort), findsOneWidget);
+      expect(find.text(kBackupFileWarning), findsNothing);
+      expect(find.descendant(of: find.byType(PaletteAlertDialog), matching: find.textContaining('encrypted')), findsNothing);
+      expect(find.descendant(of: find.byType(PaletteAlertDialog), matching: find.textContaining('Android')), findsOneWidget);
     });
 
     testWidgets('the W1 box in the auto-backup setup sheet has no stripe', (t) async {

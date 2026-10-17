@@ -43,8 +43,8 @@ Future<RecipientMemory> _seeded() async {
   return m;
 }
 
-Future<void> _pump(WidgetTester tester, RecipientMemory memory, {double scale = 1.0, bool dark = false}) async {
-  tester.view.physicalSize = const Size(400, 900);
+Future<void> _pump(WidgetTester tester, RecipientMemory memory, {double scale = 1.0, bool dark = false, double width = 400}) async {
+  tester.view.physicalSize = Size(width, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -97,23 +97,12 @@ void main() {
     ];
     expect(tags, ['Pochi', 'Send Money', 'Pochi']);
     expect(find.text('Remembered recipients'), findsWidgets);
-    expect(
-      find.text('People and businesses you told us are Send Money or Pochi. Kept on this phone only. Not in backups. Not shared.'),
-      findsOneWidget,
-    );
+    expect(find.text('Kept on this phone only.'), findsOneWidget);
     expect(find.text('Change to Send Money'), findsNWidgets(2));
     expect(find.text('Change to Pochi'), findsOneWidget);
     expect(find.text('Forget'), findsNWidgets(3));
     expect(find.text('Forget all'), findsOneWidget);
     expect(find.byIcon(Icons.add), findsNothing, reason: 'no Add button on a secondary page');
-  });
-
-  testWidgets('F2: a plain line says names stay until forgotten, even with the switch off', (tester) async {
-    await _pump(tester, await _seeded());
-    expect(
-      find.text('Remembered names stay until you forget them, even if you turn off “Also record the receiver’s details”.'),
-      findsOneWidget,
-    );
   });
 
   testWidgets('Forget one: that name goes, the others stay in order, a counts-only snackbar shows', (tester) async {
@@ -203,7 +192,7 @@ void main() {
     await _pump(tester, _mem());
     expect(find.text('Nothing remembered yet.'), findsOneWidget);
     expect(find.text('When a message has a name but no phone number, we ask once and can remember your answer.'), findsOneWidget);
-    expect(find.text('Names are remembered only when “Also record the receiver’s details” is on.'), findsOneWidget);
+    expect(find.text('Names are remembered only when the “Also record” switch on Add is on.'), findsOneWidget);
     expect(find.byKey(const Key('rememberedName')), findsNothing);
     expect(tester.widget<OutlinedButton>(find.byKey(const Key('rememberedForgetAll'))).onPressed, isNull);
   });
@@ -304,5 +293,83 @@ void main() {
     // A message built from a key or name would interpolate entry.key / e.key
     // into a Text outside the row or into a SnackBar.
     expect(RegExp(r'SnackBar\([^)]*(\.key|name)').hasMatch(code), isFalse);
+  });
+
+  group('F3: the "?" help pattern on Remembered recipients (mock remembered-help.html)', () {
+    testWidgets('one visible line under the title: "Kept on this phone only."; the long intro and the bold sentence are gone', (tester) async {
+      await _pump(tester, await _seeded());
+      expect(find.text('Kept on this phone only.'), findsOneWidget);
+      expect(find.byKey(const Key('rememberedStay')), findsNothing);
+      expect(find.textContaining('People and businesses'), findsNothing);
+      expect(find.textContaining('stay until you forget'), findsNothing);
+      expect(find.textContaining('Not in backups'), findsNothing);
+    });
+
+    testWidgets('the round "?" at the top right (44 px, "About this page") opens "About remembered names" with the three sentences', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _pump(tester, await _seeded());
+      final button = find.byKey(const Key('helpButton'));
+      expect(tester.getSize(button), const Size(44, 44));
+      expect(tester.getSemantics(button).label, 'About this page');
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(find.text('About remembered names'), findsOneWidget);
+      expect(find.text('We remember a name and its type (Send Money or Pochi) so we do not ask again.'), findsOneWidget);
+      expect(find.text('They are not in backups and are never shared.'), findsOneWidget);
+      expect(
+        find.text('A remembered name stays until you forget it, even if you turn off the “Also record” switch on Add.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('helpSheetClose')));
+      await tester.pumpAndSettle();
+      expect(find.text('About remembered names'), findsNothing);
+      semantics.dispose();
+    });
+
+    for (final empty in [false, true]) {
+      testWidgets('R25: no text on the page (${empty ? 'empty' : 'with names'}) or in the sheet quotes the switch "Also record the receiver’s details"', (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        await _pump(tester, empty ? _mem() : await _seeded());
+        await tester.tap(find.byKey(const Key('helpButton')));
+        await tester.pumpAndSettle();
+        for (final t in tester.widgetList<Text>(find.byType(Text))) {
+          final s = t.data ?? t.textSpan?.toPlainText() ?? '';
+          expect(s.contains('receiver’s details'), isFalse, reason: s);
+          expect(s.contains("receiver's details"), isFalse, reason: s);
+        }
+      });
+    }
+
+    testWidgets('the empty state names the switch once, in general words', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await _pump(tester, _mem());
+      expect(find.text('Names are remembered only when the “Also record” switch on Add is on.'), findsOneWidget);
+    });
+
+    testWidgets('row buttons are 44 px high; Forget all is pinned and 44+ px; its dialog is unchanged', (tester) async {
+      await _pump(tester, await _seeded());
+      for (final k in ['rememberedChange', 'rememberedForget']) {
+        for (var i = 0; i < 3; i++) {
+          expect(tester.getSize(find.byKey(Key(k)).at(i)).height, greaterThanOrEqualTo(44), reason: k);
+        }
+      }
+      await tester.tap(find.byKey(const Key('rememberedForgetAll')));
+      await tester.pumpAndSettle();
+      expect(find.text('Forget all remembered recipients?'), findsOneWidget);
+      expect(find.text('We will ask again next time.'), findsOneWidget);
+    });
+
+    for (final scale in [1.3, 1.6]) {
+      testWidgets('text $scale on a 320 dp wide phone, dark: page and sheet do not overflow, Close stays on screen', (tester) async {
+        await _pump(tester, await _seeded(), scale: scale, dark: true, width: 320);
+        expect(tester.takeException(), isNull);
+        await tester.tap(find.byKey(const Key('helpButton')));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        final close = tester.getRect(find.byKey(const Key('helpSheetClose')));
+        expect(close.bottom, lessThanOrEqualTo(900));
+        expect(close.right, lessThanOrEqualTo(320));
+      });
+    }
   });
 }

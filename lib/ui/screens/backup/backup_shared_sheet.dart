@@ -94,7 +94,7 @@ class _BackupSharedSheet extends StatelessWidget {
       title: kBackupSharedTitle,
       body: [
         Text(
-          backupSharedCountsLine(c.transactions, c.categories, export.counterpartyMap),
+          backupSharedCountsLine(c.transactions, c.categories, export.counterpartyMap, userCategories: c.userCategories),
           key: const Key('backupSharedCounts'),
           style: ink(),
         ),

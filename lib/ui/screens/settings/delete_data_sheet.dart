@@ -6,10 +6,12 @@ import '../../../data/maintenance/delete_data_types.dart';
 import '../../copy/delete_data_copy.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/bottom_sheet_shell.dart';
+import '../../widgets/help_sheet.dart';
 import '../../widgets/palette_alert_dialog.dart';
 import '../../widgets/tap_target.dart';
 import '../backup/backup_export_flow.dart';
 import '../backup/backup_format.dart' show kBackupFailedMessage;
+import '../backup/backup_widgets.dart' show BackupWarning;
 
 /// §SETTINGS.DELETE_SHEET — the Delete data sheet (0.1.2 S9b-2, DD2 + CB6) and
 /// its Reset app confirm sheet. This file only CHOOSES: it never calls the
@@ -58,6 +60,9 @@ class _DeleteDataSheetState extends State<DeleteDataSheet> {
   DeleteDataPeek? _peek;
   late DeleteLevel _level;
   bool _backingUp = false;
+
+  /// The "?" in the header shows the extras (what each option also deletes).
+  bool _extras = false;
 
   bool get _level1Disabled => _peek?.nothingLeftToDeleteAtLevel1 ?? false;
   bool get _matches => _word.text.trim().toUpperCase() == kDeleteWordWord;
@@ -149,24 +154,54 @@ class _DeleteDataSheetState extends State<DeleteDataSheet> {
     final peek = _peek;
     final matches = _matches;
     final l1 = _level == DeleteLevel.transactions;
-    return BottomSheetShell(
-      palette: palette,
-      children: [
-        Semantics(
-          header: true,
-          child: Text(kDeleteDataTitle, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: palette.ink)),
+    return HelpSheetFrame(
+      title: kDeleteDataTitle,
+      bodyKey: const Key('deleteSheetScroll'),
+      headerAction: HelpButton(
+        key: const Key('deleteHelpButton'),
+        label: kDeleteHelpLabel,
+        expanded: _extras,
+        onPressed: () => setState(() => _extras = !_extras),
+      ),
+      body: [
+        BackupWarning(
+          key: const Key('deleteIntro'),
+          palette: palette,
+          text: kDeleteIntro,
+          bottomGap: 0,
+          stripe: false,
         ),
-        Text(kDeleteIntro, style: TextStyle(fontSize: 13, height: 1.45, color: palette.ink)),
-        OutlinedButton.icon(
-          key: const Key('deleteBackUpNow'),
-          autofocus: true,
-          onPressed: _backUp,
-          icon: const Icon(Icons.backup_outlined, size: 18),
-          label: const Text(kDeleteBackUpNow),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(kMinTapTarget, kMinTapTarget),
-            foregroundColor: palette.primary,
-            side: BorderSide(color: palette.primary),
+        if (_extras)
+          Container(
+            key: const Key('deleteExtras'),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            decoration: BoxDecoration(color: palette.tint, borderRadius: BorderRadius.circular(12)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < kDeleteExtras.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 6),
+                  Text(
+                    kDeleteExtras[i],
+                    style: TextStyle(fontSize: 12.5, height: 1.45, fontWeight: FontWeight.w600, color: palette.tintInk),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            key: const Key('deleteBackUpNow'),
+            autofocus: true,
+            onPressed: _backUp,
+            icon: const Icon(Icons.backup_outlined, size: 18),
+            label: const Text(kDeleteBackUpNow),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(kMinTapTarget, kMinTapTarget),
+              foregroundColor: palette.primary,
+              side: BorderSide(color: palette.primary),
+            ),
           ),
         ),
         Semantics(
@@ -191,7 +226,7 @@ class _DeleteDataSheetState extends State<DeleteDataSheet> {
                 title: kDeleteLevel2Title,
                 selected: !l1,
                 enabled: true,
-                lines: const [kDeleteLevel2Deletes, kDeleteLevel2BackupsForget, kDeleteStaySms],
+                lines: const [kDeleteLevel2Short],
                 onTap: () => _select(DeleteLevel.reset),
               ),
             ],
@@ -217,40 +252,43 @@ class _DeleteDataSheetState extends State<DeleteDataSheet> {
             focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: palette.primary, width: 2)),
           ),
         ),
-        Row(
-          children: [
-            Expanded(
-              child: TextButton(
-                key: const Key('deleteCancel'),
-                onPressed: () => Navigator.of(context).pop(),
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(kMinTapTarget, kMinTapTarget),
-                  foregroundColor: palette.ink,
-                ),
-                child: const Text(kDeleteCancel),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: FilledButton(
-                key: const Key('deleteGo'),
-                onPressed: matches ? _go : null,
-                style: _redStyle(palette),
-                // The hint merges into the button's own node (spoken while it is off).
-                child: Semantics(
-                  hint: matches ? null : kDeleteButtonSemanticsHint,
-                  child: Text(l1 ? kDeleteButtonLevel1 : kDeleteButtonLevel2, textAlign: TextAlign.center),
-                ),
-              ),
-            ),
-          ],
-        ),
       ],
+      // R30: Cancel and the red button are PINNED under the scrolling body, so
+      // they stay on screen above the keyboard and at large text; the field's
+      // own caret logic scrolls the field and its hint into the body above them.
+      actions: Row(
+        children: [
+          Expanded(
+            child: TextButton(
+              key: const Key('deleteCancel'),
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(kMinTapTarget, kMinTapTarget),
+                foregroundColor: palette.ink,
+              ),
+              child: const Text(kDeleteCancel),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: FilledButton(
+              key: const Key('deleteGo'),
+              onPressed: matches ? _go : null,
+              style: _redStyle(palette),
+              // The hint merges into the button's own node (spoken while it is off).
+              child: Semantics(
+                hint: matches ? null : kDeleteButtonSemanticsHint,
+                child: Text(l1 ? kDeleteButtonLevel1 : kDeleteButtonLevel2, textAlign: TextAlign.center),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   /// The Level 1 card: the live counts (omitted when the read was incomplete),
-  /// then what goes and what stays.
+  /// then what goes and what stays in one sentence (F3).
   List<String> _level1Lines(DeleteDataPeek? p) {
     final counts = (p == null || p.incomplete)
         ? ''
@@ -262,11 +300,7 @@ class _DeleteDataSheetState extends State<DeleteDataSheet> {
           );
     return [
       if (p != null && p.incomplete) kDeleteCountsUnknown else if (counts.isNotEmpty) '$kDeleteCountsPrefix$counts.',
-      kDeleteLevel1Deletes,
-      kDeleteLevel1SafetyGone,
-      kDeleteLevel1CategoriesStay,
-      '$kDeleteStayBackups $kDeleteStayAutoList',
-      kDeleteStaySms,
+      kDeleteLevel1Short,
     ];
   }
 }

@@ -291,7 +291,7 @@ void main() {
       expect(find.byKey(const Key('restoreWhyAsks')), findsOneWidget);
       expect(t.widget<Text>(find.byKey(const Key('restoreWhyAsks'))).textSpan!.toPlainText(), contains(kWhyRestoreAsks));
       expect(_text(t, 'restoreFileDate'), '20 Sep 2026, 10:15');
-      expect(_text(t, 'restoreInFile'), '187 transactions, 2 classifications, 15 saved receivers');
+      expect(_text(t, 'restoreInFile'), '187 transactions, 2 categories, 15 saved receivers');
       expect(_text(t, 'restoreNewHere'), '142 transactions');
       expect(_text(t, 'restoreAlreadyHere'), '45 transactions');
       expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);

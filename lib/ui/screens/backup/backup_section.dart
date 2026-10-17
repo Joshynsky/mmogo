@@ -10,12 +10,14 @@ import 'backup_shared_sheet.dart';
 import 'backup_widgets.dart';
 
 /// The cards of the Backup page, in the order [BackupScreen] stacks them
-/// (S10b, BP2): the header (why back up, last backup line, the D7 line), Back
-/// up now, then (in the screen) Auto-backup, Restore, and the Privacy link.
+/// (S10b, BP2; F3 order from the approved mock backup-help.html): the header
+/// (why back up, W3, last backup line), Back up now, then (in the screen)
+/// Auto-backup, Restore (with the D7 line above its button), and the Privacy
+/// link. The phone-to-phone sentence is in the page's "?" sheet only.
 /// All stateless: [BackupScreen] owns the state.
 
-/// "Your data lives only on this phone", the last backup line, and the D7
-/// line (a 0.1.2 backup cannot be restored by 0.1.1 or older).
+/// "Your data lives only on this phone", W3 (uninstall erases your data; stays
+/// visible, F3) and the last backup line.
 class BackupHeaderCard extends StatelessWidget {
   const BackupHeaderCard({super.key, required this.palette, required this.lastManual, this.lastAuto});
 
@@ -28,51 +30,36 @@ class BackupHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return BackupCard(
+      palette: palette,
       children: [
-        BackupCard(
-          palette: palette,
+        Row(
           children: [
-            Row(
-              children: [
-                Icon(Icons.save_alt_rounded, size: 22, color: palette.tintInk),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Your data lives only on this phone',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, height: 1.3, color: palette.ink),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            BackupPara(kUninstallErasesNotice, palette: palette),
-            BackupPara(kPhoneTransferNotice, palette: palette),
-            Text(
-              lastBackupLine(lastManual, auto: lastAuto),
-              key: const Key('backupLastLine'),
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: palette.mutedInk),
+            Icon(Icons.save_alt_rounded, size: 22, color: palette.tintInk),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Your data lives only on this phone',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, height: 1.3, color: palette.ink),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 10),
-        Container(
-          key: const Key('backupD7Line'),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(color: palette.tint, borderRadius: BorderRadius.circular(12)),
-          child: Text(
-            kBackupNotRestorableByOlder,
-            style: TextStyle(fontSize: 12.5, height: 1.45, fontWeight: FontWeight.w600, color: palette.tintInk),
-          ),
+        const SizedBox(height: 8),
+        BackupPara(kUninstallErasesNotice, palette: palette),
+        Text(
+          lastBackupLine(lastManual, auto: lastAuto),
+          key: const Key('backupLastLine'),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: palette.mutedInk),
         ),
       ],
     );
   }
 }
 
-/// The Back up now card: counts, the W1 box (flat), the button, the short
-/// not-shared line, and the left-out note kept from the last backup.
+/// The Back up now card: counts, the short not-encrypted line (F3: the ONLY
+/// place the warning is on this page), the button, the short not-shared line,
+/// and the left-out note kept from the last backup.
 class BackUpNowCard extends StatelessWidget {
   const BackUpNowCard({
     super.key,
@@ -117,7 +104,12 @@ class BackUpNowCard extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         ..._summary(c, empty),
-        BackupWarning(palette: palette, text: kBackupFileWarning, stripe: false),
+        BackupWarning(
+          key: const Key('backupNotEncrypted'),
+          palette: palette,
+          text: kBackupNotEncryptedShort,
+          stripe: false,
+        ),
         FilledButton(
           key: const Key('backUpNowButton'),
           onPressed: (empty || busy) ? null : onBackUp,
@@ -184,7 +176,7 @@ class BackUpNowCard extends StatelessWidget {
       BackupPara(
         'A backup holds your ${_n(c.transactions, 'transaction', 'transactions')}, '
         '${_n(c.userClassifications, 'category you made', 'categories you made')}, '
-        '${_n(c.receivers, 'saved receiver', 'saved receivers')} and your settings, in one file.',
+        '${_n(c.receivers, 'saved receiver', 'saved receivers')} and your settings.',
         palette: palette,
         key: const Key('backupCountsLine'),
       ),
@@ -196,7 +188,8 @@ class BackUpNowCard extends StatelessWidget {
   static String _n(int n, String one, String many) => '$n ${n == 1 ? one : many}';
 }
 
-/// The Restore card: one line and the button.
+/// The Restore card: the D7 line directly above the button (F3, from the
+/// mock), the button, then one line.
 class RestoreCard extends StatelessWidget {
   const RestoreCard({
     super.key,
@@ -223,7 +216,16 @@ class RestoreCard extends StatelessWidget {
           style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: palette.mutedInk),
         ),
         const SizedBox(height: 8),
-        BackupPara(kRestoreIntro, palette: palette),
+        Container(
+          key: const Key('backupD7Line'),
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(color: palette.tint, borderRadius: BorderRadius.circular(12)),
+          child: Text(
+            kBackupNotRestorableByOlder,
+            style: TextStyle(fontSize: 12.5, height: 1.45, fontWeight: FontWeight.w600, color: palette.tintInk),
+          ),
+        ),
         OutlinedButton(
           key: const Key('restoreButton'),
           onPressed: (busy || restoring) ? null : onRestore,
@@ -236,6 +238,8 @@ class RestoreCard extends StatelessWidget {
           ),
           child: const Text(kRestoreButtonLabel),
         ),
+        const SizedBox(height: 9),
+        BackupPara(kRestoreIntro, palette: palette, bottom: 0),
       ],
     );
   }

@@ -35,8 +35,12 @@ const kDeleteRowSubtitle = 'Delete your transactions, or reset the app';
 const kDeleteRowSubtitleLevel1Done = 'Transactions deleted. You can still reset the app.';
 const kDeleteRowSubtitleNothing = 'Nothing to delete';
 
-/// The main sheet.
-const kDeleteIntro = 'Backup files you saved earlier are not touched. This cannot be undone.';
+/// The main sheet (F3: the mock delete-data-help.html). One always-visible
+/// line, one short sentence per option; the rest is behind the "?" in the
+/// header ([kDeleteExtras]). Every sentence is pinned to what the service
+/// really clears by test/data/maintenance/delete_sentences_f3_test.dart.
+const kDeleteIntro = 'This cannot be undone.';
+const kDeleteHelpLabel = 'About deleting data';
 const kDeleteBackUpNow = 'Back up now';
 const kDeleteChooseSemantics = 'What to delete';
 const kDeleteLevel1Title = 'Delete my transactions';
@@ -44,7 +48,7 @@ const kDeleteLevel1Nothing = 'Nothing left to delete here.';
 const kDeleteLevel2Title = 'Reset app';
 const kDeleteWordLabel = 'Type DELETE to confirm';
 const kDeleteWordWord = 'DELETE';
-const kDeleteWordHint = 'The red button turns on when the word matches.';
+const kDeleteWordHint = 'The red button stays off until the word matches.';
 const kDeleteButtonLevel1 = 'Delete transactions';
 const kDeleteButtonLevel2 = 'Reset app…';
 const kDeleteCancel = 'Cancel';
@@ -62,11 +66,23 @@ const kDeleteLevel1SafetyGone =
     'The safety copy is deleted too, so Undo of your last Replace is gone.';
 const kDeleteLevel1CategoriesStay =
     'Your own categories, and built-in categories you renamed or hid, stay. So do your preferences.';
-const kDeleteLevel1Deletes =
-    'Deleted from this phone: your transactions, Recently deleted, the receivers mmogo has learned and the recipients it remembers.';
 
-const kDeleteLevel2Deletes =
-    'Deleted from this phone: your transactions, your preferences, your own categories, your display name and the recipients mmogo remembers. mmogo returns to first launch.';
+/// One sentence per option (F3). Delete my transactions: the transactions, the
+/// receivers mmogo has learned and the names it remembers go; the settings and
+/// ALL categories stay. Reset app: everything mmogo keeps goes; saved backup
+/// files stay (the mock said "everything", which they are not part of).
+const kDeleteLevel1Short =
+    'Deletes your transactions, the receivers mmogo has learned and the names it remembers. Keeps your settings and categories.';
+const kDeleteLevel2Short =
+    'Deletes everything mmogo keeps on this phone and returns it to first launch. Backup files you saved earlier stay where they are.';
+
+/// Behind the "?" (F3): what each option ALSO deletes, and what is never touched.
+const kDeleteExtraLevel1 =
+    'Delete my transactions also clears Recently deleted and the safety copy of your last Replace, so Undo of that Replace is gone.';
+const kDeleteExtraLevel2 =
+    'Reset app also deletes your preferences, your own categories, changes you made to built-in categories and your display name. It forgets the auto-backup folder.';
+const kDeleteExtraBackups = 'Backup files you saved earlier are not touched.';
+const kDeleteExtras = [kDeleteExtraLevel1, kDeleteExtraLevel2, kDeleteExtraBackups];
 const kDeleteLevel2BackupsForget =
     'Backup files you saved earlier stay where they are, but mmogo forgets which folder they are in.';
 
@@ -131,6 +147,7 @@ const kDeleteDataAllStrings = <String>[
   kDeleteRowSubtitleLevel1Done,
   kDeleteRowSubtitleNothing,
   kDeleteIntro,
+  kDeleteHelpLabel,
   kDeleteBackUpNow,
   kDeleteChooseSemantics,
   kDeleteLevel1Title,
@@ -149,8 +166,11 @@ const kDeleteDataAllStrings = <String>[
   kDeleteStaySms,
   kDeleteLevel1SafetyGone,
   kDeleteLevel1CategoriesStay,
-  kDeleteLevel1Deletes,
-  kDeleteLevel2Deletes,
+  kDeleteLevel1Short,
+  kDeleteLevel2Short,
+  kDeleteExtraLevel1,
+  kDeleteExtraLevel2,
+  kDeleteExtraBackups,
   kDeleteLevel2BackupsForget,
   kDeleteCountsPrefix,
   kDeleteCountsUnknown,
