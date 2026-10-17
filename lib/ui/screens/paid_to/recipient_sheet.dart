@@ -15,7 +15,7 @@ import '../../widgets/type_icon.dart';
 /// §PAIDTO.SHEET — the recipient sheet INSIDE Paid to (mock `openRecipient`): header (tile, name,
 /// "Type · detail", close X), the combined-numbers note when more than one stored phone form, a 2x2
 /// grid (Total paid / Total withdrawn for an agent, Payments / Withdrawals, Average, Transaction
-/// cost), First and Last payment, a bar chart (PER WEEK for Month, PER MONTH for Year and All time)
+/// cost), First and Last payment, a bar chart (PER 7 DAYS for Month, PER MONTH for Year and All time)
 /// and BY CATEGORY rows, then the Analytics ("See in Analytics") and Close buttons side by side. Figures are the row's own
 /// (shown period, the row's category filter). Closed by Close, the X, a scrim tap or Back.
 /// Pops `true` when "See these payments in Analytics" was chosen, else `null`.
@@ -241,7 +241,7 @@ class PaidToRecipientSheet extends StatelessWidget {
           TextSpan(
             style: label,
             children: [
-              TextSpan(text: data.perWeek ? 'PER WEEK ' : 'PER MONTH '),
+              TextSpan(text: data.perWeek ? 'PER 7 DAYS ' : 'PER MONTH '),
               TextSpan(
                 text: '· $periodWords${data.perWeek ? ' (days 1–7, 8–14 ...)' : ''}',
                 style: const TextStyle(letterSpacing: 0, fontWeight: FontWeight.w600),

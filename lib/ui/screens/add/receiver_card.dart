@@ -12,6 +12,9 @@ const receiverFieldMaxLength = 200;
 /// The longest agent number the database accepts (`agent_number` CHECK).
 const agentNumberMaxLength = 20;
 
+/// The line under the "Also record ..." label (also its spoken hint).
+const kReceiverCaptureHint = 'So you can see them on Paid to. Leave it off to keep it private.';
+
 /// §ADD.RECEIVER — receiver capture (T15/T6-D3), opt-in: the per-type label
 /// and fields (Name + Phone / Business + Account / Shop / Pochi name /
 /// Agent name + Agent number, S8c-1), plus the subline
@@ -68,35 +71,44 @@ class ReceiverCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          InkWell(
-            key: const Key('addCaptureCheckbox'),
+          // R53: the row and its checkbox are ONE stop: label, hint and checked.
+          Semantics(
+            container: true,
+            checked: checked,
+            label: label,
+            hint: kReceiverCaptureHint,
             onTap: () => onCheckedChanged(!checked),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Checkbox(
-                    value: checked,
-                    activeColor: palette.primary,
-                    checkColor: palette.onPrimary,
-                    side: BorderSide(color: palette.mutedInk, width: 1.5),
-                    onChanged: (v) => onCheckedChanged(v ?? false),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: palette.ink)),
-                        const SizedBox(height: 2),
-                        Text(
-                          'So you can see them on Paid to. Leave it off to keep it private.',
-                          style: TextStyle(fontSize: 11.5, color: palette.mutedInk),
-                        ),
-                      ],
+            excludeSemantics: true,
+            child: InkWell(
+              key: const Key('addCaptureCheckbox'),
+              onTap: () => onCheckedChanged(!checked),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Checkbox(
+                      value: checked,
+                      activeColor: palette.primary,
+                      checkColor: palette.onPrimary,
+                      side: BorderSide(color: palette.mutedInk, width: 1.5),
+                      onChanged: (v) => onCheckedChanged(v ?? false),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: palette.ink)),
+                          const SizedBox(height: 2),
+                          Text(
+                            kReceiverCaptureHint,
+                            style: TextStyle(fontSize: 11.5, color: palette.mutedInk),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

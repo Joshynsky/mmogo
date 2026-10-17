@@ -4,8 +4,8 @@ import '../../theme/app_colors.dart';
 
 /// §ADD.REVIEW_BAR — the sticky bottom "Review & save" bar:
 /// disabled until there is an
-/// amount, a valid code (M-Pesa) and a category; the hint line says what's
-/// missing.
+/// amount, a valid code (M-Pesa) and a category; the hint line ("Still needed: ...")
+/// names only what is missing and keeps its one line of height when empty.
 class ReviewBar extends StatelessWidget {
   const ReviewBar({super.key, required this.enabled, required this.hint, required this.onTap});
 
@@ -37,10 +37,15 @@ class ReviewBar extends StatelessWidget {
                 ),
               ),
             ),
-            if (hint.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(hint, key: const Key('addReviewHint'), style: TextStyle(fontSize: 11, color: palette.mutedInk)),
-            ],
+            const SizedBox(height: 6),
+            // F2 (R29/R39): the hint line always takes (at least) one line of height, so the
+            // button above never moves when the words appear or go.
+            if (hint.isNotEmpty)
+              Text(hint, key: const Key('addReviewHint'), style: TextStyle(fontSize: 11, color: palette.mutedInk))
+            else
+              ExcludeSemantics(
+                child: Text('\u00A0', key: const Key('addReviewHintSlot'), style: TextStyle(fontSize: 11, color: palette.mutedInk)),
+              ),
           ],
         ),
       ),

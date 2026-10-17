@@ -315,7 +315,7 @@ void main() {
       await _tapPill(tester, 'AGENT_WITHDRAWAL');
       await _amountAndCode(tester);
       expect(reviewEnabled(tester), isFalse);
-      expect(tester.widget<Text>(find.byKey(const Key('addReviewHint'))).data, 'Add the fee.');
+      expect(tester.widget<Text>(find.byKey(const Key('addReviewHint'))).data, 'Still needed: fee.');
       // Not touched yet: no inline error.
       expect(find.byKey(const Key('addFeeError')), findsNothing);
 
@@ -353,7 +353,7 @@ void main() {
       await tester.enterText(find.byKey(const Key('addFeeField')), '20000000');
       await settle(tester);
       expect(find.text('Enter a cost from 0 to 10,000,000.00'), findsOneWidget);
-      expect(tester.widget<Text>(find.byKey(const Key('addReviewHint'))).data, contains('a valid fee'));
+      expect(tester.widget<Text>(find.byKey(const Key('addReviewHint'))).data, endsWith('fee.'));
 
       // Send Money: an empty fee is fine and shows no fee error.
       await _tapPill(tester, 'SEND_MONEY');

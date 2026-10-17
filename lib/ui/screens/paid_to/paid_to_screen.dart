@@ -81,6 +81,9 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
   PaidToSort _sort = PaidToSort.amount;
   final _search = TextEditingController();
 
+  /// R35: lets the Filter & sort sheet hand the focus back only to a user who was typing.
+  final _searchFocus = FocusNode(debugLabel: 'paidToSearch');
+
   final _scroll = ScrollController();
   final _granKey = GlobalKey();
   final _valueKey = GlobalKey();
@@ -103,6 +106,7 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
   @override
   void dispose() {
     _search.dispose();
+    _searchFocus.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -233,6 +237,11 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
 
   Future<void> _openFilterSheet() async {
     final palette = AppPalette.of(context);
+    // R35: the field keeps the focus when the phone's keyboard is closed with Back, and Flutter
+    // hands that focus back when the sheet closes (the keyboard would open again). Let go of it
+    // now; take it back after the sheet only when the user was typing (keyboard up) as it opened.
+    final wasTyping = _searchFocus.hasFocus && MediaQuery.viewInsetsOf(context).bottom > 0;
+    _searchFocus.unfocus();
     final result = await showModalBottomSheet<(String?, PaidToSort)>(
       context: context,
       isScrollControlled: true,
@@ -247,6 +256,7 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
         term: _search.text.trim(),
       ),
     );
+    if (wasTyping && mounted) _searchFocus.requestFocus();
     if (result == null || !mounted) return;
     setState(() {
       _cls = result.$1;
@@ -380,6 +390,7 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
           child: PaidToSearchRow(
             palette: palette,
             controller: _search,
+            focusNode: _searchFocus,
             activeFilters: _activeFilters,
             onChanged: () => setState(() {}),
             onFilter: _openFilterSheet,

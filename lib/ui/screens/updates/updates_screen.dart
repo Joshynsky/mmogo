@@ -182,14 +182,8 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
           // The one synthetic What's-new entry: always there, even with no notices.
           WhatsNewEntryCard(showNew: _showNew, onOpen: _openPager),
           if (notices.isEmpty) _empty(palette),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              kUpdatesFootnote,
-              key: const Key('updatesFootnote'),
-              style: TextStyle(fontSize: 12, height: 1.4, color: palette.mutedInk),
-            ),
-          ),
+          // R2: no footnote under the entry; the network sentence stays in the switch
+          // subtitle and on the Privacy page.
         ],
       ),
     );

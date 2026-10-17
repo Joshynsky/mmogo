@@ -48,7 +48,7 @@ class PaidToSheetData {
   final DateTime first;
   final DateTime last;
 
-  /// Month: one bar per 7-day block (PER WEEK); Year and All time: one bar per month (PER MONTH).
+  /// Month: one bar per 7-day block (PER 7 DAYS); Year and All time: one bar per month (PER MONTH).
   final bool perWeek;
   final List<PaidToBar> bars;
 

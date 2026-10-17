@@ -180,13 +180,8 @@ const kUpdatesShowFewerNotes = 'Show fewer notes';
 const kUpdatesNewPill = 'New';
 const kUpdatesEmptyTitle = 'No updates yet.';
 const kUpdatesEmptyOff = 'Update checks are off. Turn them on with the switch above.';
-/// The Updates footnote, built from its three parts (C-B10 b/f, S2): the PM's
-/// sentence (08-10-2026, word for word), the retained 0.1.1 browser sentence,
-/// then [kNetworkSentence]. One constant for the page.
-const kUpdatesFootnotePm =
-    'Release notes come from GitHub. They are shown as plain text only (no links), shortened to 30 lines.';
-const kUpdatesFootnoteBrowser = "\"See what's new\" opens the mmogo page in your browser.";
-const kUpdatesFootnote = '$kUpdatesFootnotePm $kUpdatesFootnoteBrowser $kNetworkSentence';
+// R2 (F2): the Updates footnote ("Release notes come from GitHub ...") is gone; the network
+// sentence stays in the switch subtitle below and on the Privacy page.
 
 /// Under "Check for updates now" while the automatic switch is off (Q2, PM-signed
 /// 08-10-2026). Not shown when checks are on.

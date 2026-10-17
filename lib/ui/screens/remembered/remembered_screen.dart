@@ -56,7 +56,8 @@ class _RememberedScreenState extends State<RememberedScreen> {
     // Counts only, never a name.
     final messenger = appMessengerKey.currentState ?? ScaffoldMessenger.maybeOf(context);
     messenger?.hideCurrentSnackBar();
-    messenger?.showSnackBar(SnackBar(content: Text(text)));
+    // R28 (F2): about 2 seconds, so it does not linger over the pinned Forget all button.
+    messenger?.showSnackBar(SnackBar(content: Text(text), duration: const Duration(seconds: 2)));
   }
 
   Future<void> _run(Future<bool> Function() op, {String? done}) async {

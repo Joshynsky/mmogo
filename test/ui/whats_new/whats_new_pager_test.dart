@@ -147,8 +147,12 @@ void main() {
       expect(body, contains('totals are added together'));
       expect(body, contains('The numbers saved on your entries do not change.'));
       expect(find.text(kWhatsNewCard3Extra), findsOneWidget);
-      expect(kWhatsNewCard3Extra, contains('07 and 01'));
-      expect(kWhatsNewCard3Extra, contains('never joined'));
+      expect(
+        kWhatsNewCard3Extra,
+        'A number written 07... or +254 7... is the same number, so it joins. '
+        'The same goes for 01... and +254 1.... '
+        'A 07 number and a 01 number are different numbers and stay separate.',
+      );
       expect(find.byKey(const Key('whatsNewPicture')), findsOneWidget);
       // The picture is read as one image with the mock's description.
       final handle = tester.ensureSemantics();

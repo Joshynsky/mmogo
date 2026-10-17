@@ -322,7 +322,9 @@ void main() {
 
       expect(find.text('Delete category?'), findsOneWidget);
       expect(
-        find.text('3 transactions use "Rent". It will be hidden, not deleted, and can be restored later.'),
+        find.text(
+          '3 transactions use "Rent". It moves to Inactive (deleted) and you can restore it any time. Past entries keep it.',
+        ),
         findsOneWidget,
       );
     },
@@ -342,7 +344,7 @@ void main() {
       expect(
         find.text(
           'No transactions currently use "Family/Friends". '
-          'It will be hidden, not deleted, and can be restored later.',
+          'It moves to Inactive (deleted) and you can restore it any time. Past entries keep it.',
         ),
         findsOneWidget,
       );
@@ -495,5 +497,28 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+  });
+
+  // F2 R38: the pencil (rename) and bin (delete) icons have a 44 x 44 hit area.
+  group('R38 row icon hit areas', () {
+    testWidgets('pencil and bin are at least 44 x 44; a tap 1 px inside the edge works', (tester) async {
+      await tester.pumpWidget(_harness(_FakeDatabase()));
+      await _settle(tester);
+      for (final (icon, tooltip) in [(Icons.edit_outlined, 'Rename Groceries'), (Icons.delete_outline, 'Delete Groceries')]) {
+        final button = find.ancestor(of: find.byIcon(icon), matching: find.byType(IconButton)).first;
+        final size = tester.getSize(button);
+        // ignore: avoid_print
+        print('R38 measured $tooltip: $size');
+        expect(size.width, greaterThanOrEqualTo(44), reason: tooltip);
+        expect(size.height, greaterThanOrEqualTo(44), reason: tooltip);
+        expect(find.byTooltip(tooltip), findsOneWidget);
+      }
+      // Tap near the bottom-right corner of the pencil's 44 px box (1 px in).
+      final pencil = find.ancestor(of: find.byIcon(Icons.edit_outlined), matching: find.byType(IconButton)).first;
+      final rect = tester.getRect(pencil);
+      await tester.tapAt(Offset(rect.right - 1, rect.bottom - 1));
+      await _settle(tester);
+      expect(find.text('Rename category'), findsOneWidget, reason: 'the edge tap reached the pencil');
+    });
   });
 }

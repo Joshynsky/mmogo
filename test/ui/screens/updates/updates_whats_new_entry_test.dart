@@ -115,7 +115,7 @@ Future<void> _gotItFromCard1(WidgetTester tester) async {
 
 void main() {
   group('the entry is always there', () {
-    testWidgets('with an EMPTY notice list the entry, the empty state and the footnote all show', (tester) async {
+    testWidgets('with an EMPTY notice list the entry and the empty state show, and there is no footnote', (tester) async {
       final rig = await _pump(tester);
       await _openUpdates(tester);
       expect(rig.inbox.notices, isEmpty);
@@ -123,19 +123,18 @@ void main() {
       expect(find.text(kWhatsNewPagerTitle), findsOneWidget);
       expect(find.text(kWhatsNewEntryBody), findsOneWidget);
       expect(find.byKey(const Key('updatesEmpty')), findsOneWidget);
-      expect(find.byKey(const Key('updatesFootnote')), findsOneWidget);
+      expect(find.byKey(const Key('updatesFootnote')), findsNothing);
     });
 
-    testWidgets('with a release notice the entry sits under it and the footnote ends the page', (tester) async {
+    testWidgets('with a release notice the entry sits under it and ends the page (no footnote after it)', (tester) async {
       await _pump(tester, stored: [_notice('v0.1.3')]);
       await _openUpdates(tester);
       expect(find.byKey(const Key('notice-v0.1.3')), findsOneWidget);
       expect(find.byKey(const Key('updatesEmpty')), findsNothing);
       final noticeY = tester.getTopLeft(find.byKey(const Key('notice-v0.1.3'))).dy;
       final entryY = tester.getTopLeft(find.byKey(_entry)).dy;
-      final footY = tester.getTopLeft(find.byKey(const Key('updatesFootnote'))).dy;
+      expect(find.byKey(const Key('updatesFootnote')), findsNothing);
       expect(noticeY, lessThan(entryY));
-      expect(entryY, lessThan(footY));
     });
 
     testWidgets('the entry button has its own key and label, apart from the "See what\'s new" browser buttons', (tester) async {
@@ -160,16 +159,6 @@ void main() {
       await _openPager(tester);
       expect(rig.inbox.notices, isEmpty);
       expect(rig.inbox.unreadCount.value, 0);
-    });
-
-    testWidgets('the footnote holds the PM sentence, the browser sentence and the network sentence', (tester) async {
-      await _pump(tester);
-      await _openUpdates(tester);
-      final text = tester.widget<Text>(find.byKey(const Key('updatesFootnote'))).data!;
-      expect(text, contains(kUpdatesFootnotePm));
-      expect(text, contains("\"See what's new\" opens the mmogo page in your browser."));
-      expect(text, contains(kNetworkSentence));
-      expect(text, kUpdatesFootnote);
     });
 
     testWidgets('the entry button does not open the browser', (tester) async {

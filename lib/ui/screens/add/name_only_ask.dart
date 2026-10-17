@@ -145,50 +145,59 @@ class _AskSheetState extends State<_AskSheet> {
             ),
             if (widget.showTick) ...[
               const SizedBox(height: 8),
-              InkWell(
-                key: const Key('addAskTick'),
+              // R53: the tick and its words are ONE stop: label, hint and checked.
+              Semantics(
+                container: true,
+                checked: _tick,
+                label: nameOnlyTickLabel(widget.name, change: widget.change, on: _tick),
+                hint: kNameOnlyKeptNote,
                 onTap: _toggle,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: kMinTapTarget),
-                  child: Row(
-                    children: [
-                      Checkbox(
-                        value: _tick,
-                        activeColor: palette.primary,
-                        checkColor: palette.onPrimary,
-                        side: BorderSide(color: palette.mutedInk, width: 1.5),
-                        onChanged: (_) => _toggle(),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              nameOnlyTickLabel(
-                                widget.name,
-                                change: widget.change,
-                                on: _tick,
-                              ),
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: palette.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              kNameOnlyKeptNote,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                height: 1.4,
-                                color: palette.mutedInk,
-                              ),
-                            ),
-                          ],
+                excludeSemantics: true,
+                child: InkWell(
+                  key: const Key('addAskTick'),
+                  onTap: _toggle,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: kMinTapTarget),
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value: _tick,
+                          activeColor: palette.primary,
+                          checkColor: palette.onPrimary,
+                          side: BorderSide(color: palette.mutedInk, width: 1.5),
+                          onChanged: (_) => _toggle(),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                nameOnlyTickLabel(
+                                  widget.name,
+                                  change: widget.change,
+                                  on: _tick,
+                                ),
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: palette.ink,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                kNameOnlyKeptNote,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  height: 1.4,
+                                  color: palette.mutedInk,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

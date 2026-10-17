@@ -249,6 +249,7 @@ class _PrimaryBottomNav extends StatelessWidget {
                         : _NavItem(
                             icon: _icons[i]!,
                             label: _labels[i],
+                            active: activeIndex == i,
                             color: activeIndex == i ? palette.primary : palette.mutedInk,
                             onTap: () => onTap(i),
                           ),
@@ -273,32 +274,49 @@ class _PrimaryBottomNav extends StatelessWidget {
 }
 
 class _NavItem extends StatelessWidget {
-  const _NavItem({required this.icon, required this.label, required this.color, required this.onTap});
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.color,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
+
+  /// R49: the tab the user is on reads as selected to a screen reader.
+  final bool active;
   final Color color;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return Semantics(
+      container: true,
+      button: true,
+      selected: active,
+      label: label,
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 20, color: color),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                maxLines: 1,
-                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: color),
-              ),
-            ],
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 20, color: color),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: color),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -382,22 +400,32 @@ class _Fab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      key: const Key('primaryFabRing'),
-      behavior: HitTestBehavior.opaque,
+    // R48: ONE spoken node "Add" (button, selected on the Add page); the ring,
+    // the inner InkWell and the icon add no stop of their own.
+    return Semantics(
+      container: true,
+      button: true,
+      selected: active,
+      label: 'Add',
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(5),
-        decoration: BoxDecoration(color: palette.card, shape: BoxShape.circle),
-        child: Material(
-          key: const Key('primaryFab'),
-          color: palette.primary,
-          // On Add itself: a ring in the deep ocean shade marks "you are here".
-          shape: CircleBorder(side: active ? BorderSide(color: palette.deep, width: 2) : BorderSide.none),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: SizedBox(width: 54, height: 54, child: Icon(Icons.add, color: palette.onPrimary, size: 26)),
+      excludeSemantics: true,
+      child: GestureDetector(
+        key: const Key('primaryFabRing'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(color: palette.card, shape: BoxShape.circle),
+          child: Material(
+            key: const Key('primaryFab'),
+            color: palette.primary,
+            // On Add itself: a ring in the deep ocean shade marks "you are here".
+            shape: CircleBorder(side: active ? BorderSide(color: palette.deep, width: 2) : BorderSide.none),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              child: SizedBox(width: 54, height: 54, child: Icon(Icons.add, color: palette.onPrimary, size: 26)),
+            ),
           ),
         ),
       ),

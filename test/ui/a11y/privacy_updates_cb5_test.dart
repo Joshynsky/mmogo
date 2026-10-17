@@ -168,11 +168,14 @@ void main() {
         }
         await a11ySettle(t);
         expect(t.getSemantics(_k('checkNowButton')).label, isNotEmpty);
-        expect(t.getSemantics(_k('updateSwitch')).label, isNotEmpty);
+        // F2 (R51): the row and its switch are ONE node: the title and on/off in a single stop.
+        final switchRows = semanticsNodes(t)
+            .where((n) => n.label.contains(kUpdatesSwitchTitle) && n.flagsCollection.isToggled != Tristate.none)
+            .toList();
+        expect(switchRows, hasLength(1), reason: 'one stop for the switch row');
         await t.scrollUntilVisible(_k('whatsNewEntryButton'), 200);
         expect(t.getSemantics(_k('whatsNewEntryButton')).label, kWhatsNewPagerTitle);
-        await t.scrollUntilVisible(_k('updatesFootnote'), 300);
-        expect(_k('updatesFootnote'), findsOneWidget);
+        expect(_k('updatesFootnote'), findsNothing, reason: 'R2: the footnote is gone');
       });
     }
 

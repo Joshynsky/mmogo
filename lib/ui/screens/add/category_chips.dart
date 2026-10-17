@@ -294,25 +294,33 @@ class _CategoryChipsState extends State<CategoryChips> {
   Widget _alwaysUseRow(AppPalette palette) {
     return Padding(
       padding: const EdgeInsets.only(top: 6),
-      child: InkWell(
-        key: const Key('addAlwaysUseCheckbox'),
+      // R53: the tick and its words are ONE stop: label and checked.
+      child: Semantics(
+        container: true,
+        checked: widget.autoApplyChecked,
+        label: 'Always use "${widget.selectedName}" for ${widget.counterpartyDisplayName}',
         onTap: () => widget.onAutoApplyChanged(!widget.autoApplyChecked),
-        child: Row(
-          children: [
-            Checkbox(
-              value: widget.autoApplyChecked,
-              activeColor: palette.primary,
-              checkColor: palette.onPrimary,
-              side: BorderSide(color: palette.mutedInk, width: 1.5),
-              onChanged: (v) => widget.onAutoApplyChanged(v ?? false),
-            ),
-            Expanded(
-              child: Text(
-                'Always use "${widget.selectedName}" for ${widget.counterpartyDisplayName}',
-                style: TextStyle(fontSize: 12.5, color: palette.ink),
+        excludeSemantics: true,
+        child: InkWell(
+          key: const Key('addAlwaysUseCheckbox'),
+          onTap: () => widget.onAutoApplyChanged(!widget.autoApplyChecked),
+          child: Row(
+            children: [
+              Checkbox(
+                value: widget.autoApplyChecked,
+                activeColor: palette.primary,
+                checkColor: palette.onPrimary,
+                side: BorderSide(color: palette.mutedInk, width: 1.5),
+                onChanged: (v) => widget.onAutoApplyChanged(v ?? false),
               ),
-            ),
-          ],
+              Expanded(
+                child: Text(
+                  'Always use "${widget.selectedName}" for ${widget.counterpartyDisplayName}',
+                  style: TextStyle(fontSize: 12.5, color: palette.ink),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

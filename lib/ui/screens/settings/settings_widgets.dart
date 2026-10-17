@@ -214,33 +214,43 @@ class SettingsToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      child: InkWell(
+      // R51: the row and its switch read as ONE stop: label, hint and on/off.
+      child: Semantics(
+        container: true,
+        toggled: value,
+        enabled: onChanged != null,
+        label: label,
+        hint: subtitle,
         onTap: onChanged == null ? null : () => onChanged!(!value),
-        child: Container(
-          decoration: BoxDecoration(border: first ? null : Border(top: BorderSide(color: palette.line))),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          child: Row(
-            children: [
-              SettingsRowIcon(icon: icon, palette: palette),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: palette.ink)),
-                    const SizedBox(height: 2),
-                    Text(subtitle, style: TextStyle(fontSize: 12, height: 1.35, color: palette.mutedInk)),
-                  ],
+        excludeSemantics: true,
+        child: InkWell(
+          onTap: onChanged == null ? null : () => onChanged!(!value),
+          child: Container(
+            decoration: BoxDecoration(border: first ? null : Border(top: BorderSide(color: palette.line))),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            child: Row(
+              children: [
+                SettingsRowIcon(icon: icon, palette: palette),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: palette.ink)),
+                      const SizedBox(height: 2),
+                      Text(subtitle, style: TextStyle(fontSize: 12, height: 1.35, color: palette.mutedInk)),
+                    ],
+                  ),
                 ),
-              ),
-              Switch(
-                value: value,
-                onChanged: onChanged,
-                activeThumbColor: palette.onPrimary,
-                activeTrackColor: palette.primary,
-              ),
-            ],
+                Switch(
+                  value: value,
+                  onChanged: onChanged,
+                  activeThumbColor: palette.onPrimary,
+                  activeTrackColor: palette.primary,
+                ),
+              ],
+            ),
           ),
         ),
       ),

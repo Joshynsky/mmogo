@@ -169,45 +169,39 @@ class AddDraft {
   }
 
   /// Build step 7: "disabled until there is an amount, a valid code
-  /// (M-Pesa) and a category."
+  /// (M-Pesa) and a category." F2 (R29/R39): the short names the hint line uses.
   List<String> get missing {
     final miss = <String>[];
-    if (amountCents == null) miss.add('an amount');
-    if (!isCash && !codeValidShape) miss.add('the 10-character code');
-    if (classificationId == null) miss.add('a category');
+    if (amountCents == null) miss.add('amount');
+    if (!isCash && !codeValidShape) miss.add('code');
+    if (classificationId == null) miss.add('category');
     return miss;
   }
 
   bool get canReview => missing.isEmpty && !(!isCash && codeDuplicate) && identityPairComplete && feeCents != null;
 
-  /// What "Also record the receiver's name & phone" still needs (Send Money:
-  /// name + phone; Paybill: business + account). Empty when the box is off,
-  /// for Buy Goods and for Cash, or when both are filled.
-  List<String> get missingIdentity {
-    if (identityPairComplete) return const [];
-    final (first, second) = type == 'PAYBILL'
-        ? ('the business name', 'the account number')
-        : ('the receiver’s name', 'the receiver’s phone');
+  /// The receiver part the switch still needs, in the hint's short words, or null when
+  /// nothing is missing. Only what really blocks Review & save is named ([identityPairComplete]):
+  /// Send Money "name and phone", Paybill "business and account" (or just the one that is
+  /// empty). Buy Goods, Pochi and Withdrawal receivers are optional, so they are never named.
+  String? get missingReceiverPart {
+    if (identityPairComplete) return null;
     final noName = nameText.trim().isEmpty;
     final noSub = subText.trim().isEmpty;
-    if (noName && noSub) {
-      return [type == 'PAYBILL' ? 'the business name and account number' : 'the receiver’s name and phone'];
-    }
-    return [if (noName) first, if (noSub) second];
+    final (first, second) = type == 'PAYBILL' ? ('business', 'account') : ('name', 'phone');
+    if (noName && noSub) return '$first and $second';
+    return noName ? first : second;
   }
 
+  /// F2 (R29/R39): ONE line naming only what is still missing, in this order: amount, code,
+  /// category, the receiver part (switch on), the fee. Empty when nothing is missing (the bar
+  /// keeps the line's height, so the button never moves).
   String get reviewHint {
     if (!isCash && codeDuplicate) return 'That code is already recorded.';
-    final identity = missingIdentity;
-    final miss = [
-      ...missing,
-      ...identity,
-      if (feeCents == null) (isWithdrawal && feeText.trim().isEmpty ? 'the fee' : 'a valid fee'),
-    ];
+    final receiver = missingReceiverPart;
+    final miss = [...missing, ?receiver, if (feeCents == null) 'fee'];
     if (miss.isEmpty) return '';
-    final list = miss.length == 1 ? miss.first : '${miss.sublist(0, miss.length - 1).join(', ')} and ${miss.last}';
-    // The box is what asks for them, so say how to skip it too.
-    return identity.isEmpty ? 'Add $list.' : 'Add $list, or untick “Also record the receiver’s name & phone”.';
+    return 'Still needed: ${miss.join(', ')}.';
   }
 
   String get typeLabel => switch (isCash ? 'CASH' : type) {

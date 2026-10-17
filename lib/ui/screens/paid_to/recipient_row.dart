@@ -74,6 +74,8 @@ class _PaidToRecipientRowState extends State<PaidToRecipientRow> {
     final last = _last(g.lastAt);
     final sub = 'Last $last${g.detail.isNotEmpty ? ' · ${g.detail}' : ''}';
     final small = TextStyle(fontSize: 11, color: palette.mutedInk, fontFeatures: tabularFigures);
+    // R36: at large text the name wraps to two lines instead of being cut; the second line stays one.
+    final nameLines = MediaQuery.textScalerOf(context).scale(100) / 100 > 1.15 ? 2 : 1;
 
     final top = LayoutBuilder(
       builder: (context, box) => Row(
@@ -87,7 +89,7 @@ class _PaidToRecipientRowState extends State<PaidToRecipientRow> {
               children: [
                 Text(
                   g.name,
-                  maxLines: 1,
+                  maxLines: nameLines,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: palette.ink),
                 ),

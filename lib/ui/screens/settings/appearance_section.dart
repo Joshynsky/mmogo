@@ -37,21 +37,25 @@ class PaletteGroup extends StatelessWidget {
           child: Semantics(
             container: true,
             label: 'Colour palette',
-            child: Row(
-              children: [
-                for (final (i, set) in AppPalettes.all.indexed) ...[
-                  if (i > 0) const SizedBox(width: 8),
-                  Expanded(
-                    child: _PaletteTile(
-                      set: set,
-                      brightness: palette.brightness,
-                      accent: palette,
-                      selected: set.id == currentPaletteId,
-                      onTap: () => onSelect(set.id),
+            // R37: a name may wrap to two lines at large text; the three tiles then share one height.
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final (i, set) in AppPalettes.all.indexed) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    Expanded(
+                      child: _PaletteTile(
+                        set: set,
+                        brightness: palette.brightness,
+                        accent: palette,
+                        selected: set.id == currentPaletteId,
+                        onTap: () => onSelect(set.id),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -149,9 +153,7 @@ class _PaletteTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      set.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      set.name, // R37: no line cap, so the name wraps and is never cut
                       style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: preview.ink),
                     ),
                   ],

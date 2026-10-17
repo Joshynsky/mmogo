@@ -51,7 +51,11 @@ const kWhatsNewCard3Body =
     'Earlier versions counted one number as two people when it was written two ways, for example '
     '0712 345 678 and +254 712 345 678. That was a mistake. They now count as one person on Paid to, '
     'and their totals are added together. The numbers saved on your entries do not change.';
-const kWhatsNewCard3Extra = 'Numbers starting 07 and 01 each merge; 07 and 01 are never joined.';
+// R5 (F2): the signed wording, word for word.
+const kWhatsNewCard3Extra =
+    'A number written 07... or +254 7... is the same number, so it joins. '
+    'The same goes for 01... and +254 1.... '
+    'A 07 number and a 01 number are different numbers and stay separate.';
 const kWhatsNewPicBefore = 'Before (0.1.1)';
 const kWhatsNewPicNow = 'Now (0.1.2)';
 const kWhatsNewPicBecomes = 'becomes';

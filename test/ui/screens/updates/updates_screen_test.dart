@@ -201,18 +201,16 @@ void main() {
       expect(find.text('mmogo 0.2.0 is out'), findsOneWidget);
       expect(find.text('Faster Analytics'), findsOneWidget);
       expect(find.byKey(const Key('noticeSeeWhatsNew')), findsOneWidget);
-      expect(find.textContaining('shortened to 30 lines'), findsOneWidget, reason: 'the footnote');
+      expect(find.textContaining('shortened to 30 lines'), findsNothing, reason: 'R2: the footnote is gone');
     });
 
-    testWidgets('S2 footnote: the PM sentence + the retained browser sentence + the network sentence, exact', (tester) async {
+    testWidgets('R2 the page shows no footnote; the network sentence stays in the switch subtitle', (tester) async {
       await _pump(tester, stored: [_notice('v0.2.0', 'x')]);
-      const expected =
-          'Release notes come from GitHub. They are shown as plain text only (no links), shortened to 30 lines. '
-          '"See what\'s new" opens the mmogo page in your browser. '
-          'The internet is used only to check for updates. GitHub sees your IP address and that the request comes '
-          'from the mmogo app. No entries, names or messages are sent.';
-      expect(kUpdatesFootnote, expected);
-      expect(tester.widget<Text>(find.byKey(const Key('updatesFootnote'))).data, expected);
+      expect(find.byKey(const Key('updatesFootnote')), findsNothing);
+      expect(find.textContaining('Release notes come from GitHub'), findsNothing);
+      expect(find.textContaining('shortened to 30 lines'), findsNothing);
+      expect(find.textContaining('opens the mmogo page in your browser'), findsNothing);
+      expect(find.textContaining(kNetworkSentence), findsOneWidget, reason: 'the switch subtitle keeps the disclosure');
     });
 
     testWidgets('S2 a Check now that finds a release keeps the dot until the page is left', (tester) async {

@@ -179,6 +179,25 @@ void main() {
     }
   });
 
+  testWidgets('R28: the "Forgot N" toast lasts about 2 seconds, then goes (no Undo)', (tester) async {
+    final m = await _seeded();
+    await _pump(tester, m);
+    await tester.tap(find.byKey(const Key('rememberedForgetAll')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('forgetAllConfirm')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Forgot 3 recipients'), findsOneWidget);
+    expect(tester.widget<SnackBar>(find.byType(SnackBar)).duration, const Duration(seconds: 2));
+    expect(find.widgetWithText(SnackBarAction, 'Undo'), findsNothing);
+    // Not yet gone at 1.5 s, gone shortly after 2 s (the default 4 s would still show it).
+    await tester.pump(const Duration(milliseconds: 1200));
+    expect(find.text('Forgot 3 recipients'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Forgot 3 recipients'), findsNothing);
+  });
+
   testWidgets('empty state: the mock text, and no rows', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await _pump(tester, _mem());

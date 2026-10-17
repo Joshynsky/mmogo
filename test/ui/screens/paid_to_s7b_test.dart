@@ -488,8 +488,8 @@ void main() {
       expect(find.byKey(const Key('paidToSheetCombined')), findsOneWidget);
       expect(_text(tester, const Key('paidToSheetCombined')), contains('+254722114455'));
       expect(_text(tester, const Key('paidToSheetCombined')), contains('0722114455'));
-      // PER WEEK for Month: blocks 1-7 .. 29-30, value labels compact.
-      expect(_rich('PER WEEK · Sep 2026 (days 1–7, 8–14 ...)'), findsOneWidget);
+      // PER 7 DAYS for Month (R34): blocks 1-7 .. 29-30, value labels compact.
+      expect(_rich('PER 7 DAYS · Sep 2026 (days 1–7, 8–14 ...)'), findsOneWidget);
       for (final l in ['1–7', '8–14', '15–21', '22–28', '29–30']) {
         expect(
           find.descendant(of: find.byKey(const Key('paidToSheetChart')), matching: find.text(l)),

@@ -1,4 +1,6 @@
 // S11b (CB5): small helpers to read the semantics tree in widget tests.
+import 'dart:ui' show CheckedState, Tristate;
+
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -31,6 +33,17 @@ List<String> unlabelledTappables(WidgetTester t) => [
         n.value.trim().isEmpty &&
         n.hint.trim().isEmpty &&
         n.tooltip.trim().isEmpty)
+      'node ${n.id} rect ${n.rect}',
+];
+
+/// F2 (R51, R53): nodes that carry a switch / tick state but have no label of
+/// their own (a screen reader says "on" or "checked" with no name). A row whose
+/// switch or tick is merged into the row's label has none of these.
+List<String> unnamedStateNodes(WidgetTester t) => [
+  for (final n in semanticsNodes(t))
+    if (!n.flagsCollection.isHidden &&
+        (n.flagsCollection.isToggled != Tristate.none || n.flagsCollection.isChecked != CheckedState.none) &&
+        n.label.trim().isEmpty)
       'node ${n.id} rect ${n.rect}',
 ];
 

@@ -67,12 +67,12 @@ void main() {
       await _pumpAdd(tester, db);
 
       expect(tester.widget<FilledButton>(find.byKey(const Key('addReviewButton'))).onPressed, isNull);
-      expect(find.text('Add an amount, the 10-character code and a category.'), findsOneWidget);
+      expect(find.text('Still needed: amount, code, category.'), findsOneWidget);
 
       await tester.enterText(find.byKey(const Key('addAmountField')), '500');
       await tester.enterText(find.byKey(const Key('addCodeField')), 'abcd123456');
       await _settle(tester);
-      expect(find.text('Add a category.'), findsOneWidget);
+      expect(find.text('Still needed: category.'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('addCategoryChip_101')));
       await _settle(tester);
@@ -80,8 +80,6 @@ void main() {
     });
 
     group('the hint names what "Also record the receiver…" still needs', () {
-      const untick = 'or untick “Also record the receiver’s name & phone”';
-
       Future<void> fillBasics(WidgetTester tester) async {
         await tester.enterText(find.byKey(const Key('addAmountField')), '500');
         await tester.enterText(find.byKey(const Key('addCodeField')), 'abcd123456');
@@ -98,7 +96,7 @@ void main() {
         await _pumpAdd(tester, FakeAddDb(), captureReceiver: true);
         await fillBasics(tester);
         expect(reviewEnabled(tester), isFalse);
-        expect(hint(tester), 'Add the receiver’s name and phone, $untick.');
+        expect(hint(tester), 'Still needed: name and phone.');
       });
 
       testWidgets('Send Money, name but no phone: just the phone (the case that used to be blank)', (tester) async {
@@ -107,7 +105,7 @@ void main() {
         await tester.enterText(find.byKey(const Key('addReceiverNameField')), 'alice wambui');
         await _settle(tester);
         expect(reviewEnabled(tester), isFalse);
-        expect(hint(tester), 'Add the receiver’s phone, $untick.');
+        expect(hint(tester), 'Still needed: phone.');
       });
 
       testWidgets('Send Money, phone but no name: just the name', (tester) async {
@@ -115,7 +113,7 @@ void main() {
         await fillBasics(tester);
         await tester.enterText(find.byKey(const Key('addReceiverSubField')), '0711000001');
         await _settle(tester);
-        expect(hint(tester), 'Add the receiver’s name, $untick.');
+        expect(hint(tester), 'Still needed: name.');
       });
 
       testWidgets('both filled: enabled, no hint', (tester) async {
@@ -135,7 +133,7 @@ void main() {
         await _settle(tester);
         expect(
           hint(tester),
-          'Add the 10-character code, a category and the receiver’s phone, $untick.',
+          'Still needed: code, category, phone.',
         );
       });
 
@@ -147,14 +145,14 @@ void main() {
         await tester.enterText(find.byKey(const Key('addCodeField')), 'abcd123456');
         await tester.tap(find.byKey(const Key('addCategoryChip_105'))); // Paybill's own category
         await _settle(tester);
-        expect(hint(tester), 'Add the business name and account number, $untick.');
+        expect(hint(tester), 'Still needed: business and account.');
       });
 
       testWidgets('box unticked: no receiver words in the hint', (tester) async {
         await _pumpAdd(tester, FakeAddDb());
         await tester.enterText(find.byKey(const Key('addAmountField')), '500');
         await _settle(tester);
-        expect(hint(tester), 'Add the 10-character code and a category.');
+        expect(hint(tester), 'Still needed: code, category.');
       });
     });
 
@@ -315,7 +313,7 @@ void main() {
       await tester.tap(find.byKey(const Key('addTypePill_PAYBILL')));
       await _settle(tester);
       expect(find.byKey(const Key('addCategoryChip_101')), findsNothing); // Send Money's own group list
-      expect(find.textContaining('a category'), findsWidgets);
+      expect(find.textContaining('Still needed: amount, code, category'), findsWidgets);
     });
   });
 

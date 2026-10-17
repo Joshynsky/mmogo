@@ -11,6 +11,7 @@ class PaidToSearchRow extends StatelessWidget {
     super.key,
     required this.palette,
     required this.controller,
+    this.focusNode,
     required this.activeFilters,
     required this.onChanged,
     required this.onFilter,
@@ -18,6 +19,9 @@ class PaidToSearchRow extends StatelessWidget {
 
   final AppPalette palette;
   final TextEditingController controller;
+
+  /// R35: the screen's node for the field (null = the field makes its own).
+  final FocusNode? focusNode;
 
   /// Badge on the Filter button (category + non-default sort).
   final int activeFilters;
@@ -42,6 +46,7 @@ class PaidToSearchRow extends StatelessWidget {
               child: TextField(
                 key: const Key('paidToSearch'),
                 controller: controller,
+                focusNode: focusNode,
                 onChanged: (_) => onChanged(),
                 textInputAction: TextInputAction.search,
                 style: TextStyle(fontSize: 13, color: palette.ink),
