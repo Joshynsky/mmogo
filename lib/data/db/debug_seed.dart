@@ -71,7 +71,7 @@ class DebugSampleData {
 
     // 1. SEND_MONEY, today — active.
     await insertTx({
-      'display_code': 'DBG-SEND1',
+      'display_code': 'QDB1SEND01',
       'source_type': 'SEND_MONEY',
       'amount_cents': 150000,
       'transaction_cost_cents': 2200,
@@ -87,7 +87,7 @@ class DebugSampleData {
 
     // 2. BUY_GOODS, today — active.
     await insertTx({
-      'display_code': 'DBG-BUY1',
+      'display_code': 'QDB1BUYG01',
       'source_type': 'BUY_GOODS',
       'amount_cents': 85000,
       'transaction_cost_cents': 0,
@@ -103,7 +103,7 @@ class DebugSampleData {
 
     // 3. PAYBILL, yesterday — active (feeds Today period's prior-day diff).
     await insertTx({
-      'display_code': 'DBG-PAY1',
+      'display_code': 'QDB1PAYB01',
       'source_type': 'PAYBILL',
       'amount_cents': 120000,
       'transaction_cost_cents': 1500,
@@ -138,7 +138,7 @@ class DebugSampleData {
     // 5. SEND_MONEY, 9 days ago (prior-week bucket, still this calendar
     //    month) — active.
     await insertTx({
-      'display_code': 'DBG-SEND2',
+      'display_code': 'QDB1SEND02',
       'source_type': 'SEND_MONEY',
       'amount_cents': 200000,
       'transaction_cost_cents': 2500,
@@ -171,7 +171,7 @@ class DebugSampleData {
     // 7. BUY_GOODS, early this month (this-month bucket, outside this-week)
     //    — active.
     await insertTx({
-      'display_code': 'DBG-BUY2',
+      'display_code': 'QDB1BUYG02',
       'source_type': 'BUY_GOODS',
       'amount_cents': 64000,
       'transaction_cost_cents': 0,
@@ -188,7 +188,7 @@ class DebugSampleData {
     // 8. SEND_MONEY, last calendar month (prior-month bucket, feeds the
     //    Month period's diff line) — active.
     await insertTx({
-      'display_code': 'DBG-SEND3',
+      'display_code': 'QDB1SEND03',
       'source_type': 'SEND_MONEY',
       'amount_cents': 175000,
       'transaction_cost_cents': 2000,
@@ -207,7 +207,7 @@ class DebugSampleData {
     //    (`deleted_at IS NULL` on every read), proving the filter
     //    actually works rather than just not crashing on an empty table.
     await insertTx({
-      'display_code': 'DBG-DELETED1',
+      'display_code': 'QDB1DELT01',
       'source_type': 'SEND_MONEY',
       'amount_cents': 999999,
       'transaction_cost_cents': 5000,

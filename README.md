@@ -22,6 +22,10 @@ I could never say where my money went. I'd have enough at the start of the month
 
 I didn't research the space properly first. When I did, I found that M-Pesa trackers already exist, with plenty of users, and some do more than mmogo does today (Mpesa: Ledger and Monee, for example). They are also on the Play Store and mmogo isn't, so it starts behind. What mmogo offers is a different set of trade-offs: you paste the message yourself, so it needs no SMS permission; its only permission is internet, used only to check for updates, and you can switch that off; it keeps no balance and no account; and the code is open. If that suits you, try it. If another app suits you better, that's a fair choice too.
 
+## How it was built
+
+I decided what mmogo does and what it doesn't, and I tested each release on a real phone. Most of the code was written with Claude Code, an AI coding assistant, working from my instructions; the commit history shows it as co-author. I approved every screen and every piece of wording, set the privacy rules (your data stays on your phone, and nothing about your entries is sent anywhere), and checked every fix by hand before it shipped. It has thousands of automated tests, and each fix was proven by breaking it on purpose and watching a test fail. The app itself contains no AI, and it has not had an outside security audit.
+
 ## What you can do
 
 - **Add an entry three ways:** paste an M-Pesa message (Send Money, Paybill and Buy Goods are read for you), type it yourself, or log a cash payment. You always check an entry before it is saved.
