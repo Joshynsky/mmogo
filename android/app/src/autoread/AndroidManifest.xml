@@ -1,0 +1,20 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Auto-read flavor only (AR1). Exactly these two permissions on top of the
+         main manifest's INTERNET; tool/check_apk_manifest.ps1 (autoread) asserts it.
+         Dangerous permissions are never granted at install: the user opts in later. -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <application>
+        <!-- Stub: does nothing yet. Disabled until the user switches Read on.
+             BROADCAST_SMS means only the system can deliver to it. No priority. -->
+        <receiver
+            android:name="app.mmogo.SmsReceiver"
+            android:enabled="false"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED"/>
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

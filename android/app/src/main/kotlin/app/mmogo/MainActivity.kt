@@ -13,6 +13,7 @@ class MainActivity : FlutterActivity() {
         val bridge = StorageBridge(this)
         storage = bridge
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, StorageBridge.CHANNEL).setMethodCallHandler(bridge)
+        FeatureHooks.configureFlutterEngine(flutterEngine)
     }
 
     @Deprecated("Deprecated in Java")
