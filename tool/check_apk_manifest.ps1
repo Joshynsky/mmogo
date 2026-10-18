@@ -257,10 +257,10 @@ try {
   $libs = @($zip.Entries | Where-Object { $_.FullName -match '^lib/[^/]+/libapp\.so$' })
   if ($libs.Count -eq 0) { Say 'SKIP  libapp.so sentinel check: no libapp.so in this APK (debug/JIT build); it runs on the signed release APK' }
   else {
-    $sent = @(); foreach ($l in $libs) { $lb = EntryBytes $l; foreach ($t in @('pending_entries_v1', 'autoread_pending_v1.', 'kAutoReadSentinel', 'app/mmogo/autoread')) { if (HasText $lb $t) { $sent += "$($l.FullName):$t" } } }
+    $sent = @(); foreach ($l in $libs) { $lb = EntryBytes $l; foreach ($t in @('kAutoReadSentinel', 'app/mmogo/autoread')) { if (HasText $lb $t) { $sent += "$($l.FullName):$t" } } }
     $libNames = ($libs | ForEach-Object { $_.FullName }) -join ' '
     $sentText = "libapp.so scanned: $libNames"; if ($sent.Count) { $sentText = 'found: ' + ($sent -join ', ') }
-    Check 'libapp.so has no autoread-only sentinel string (pending_entries_v1, kAutoReadSentinel)' ($sent.Count -eq 0) $sentText
+    Check 'libapp.so has no autoread-only sentinel string (kAutoReadSentinel, app/mmogo/autoread)' ($sent.Count -eq 0) $sentText
   }
 } finally { $zip.Dispose() }
 } else { Say 'SKIP  dex, resource-table and libapp.so absence scans: they are the standard flavor checks for no auto-read code and do not apply to the autoread flavor' }

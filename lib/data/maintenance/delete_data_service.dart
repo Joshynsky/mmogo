@@ -108,8 +108,8 @@ class DeleteDataServiceImpl implements DeleteDataService {
     var extraKeys = false;
     try {
       final keys = await env.prefs.keys();
-      queue = queueKeys.any(keys.contains);
-      extraKeys = keys.any((k) => k != kBaselinePrefKey);
+      queue = queueKeys.any(keys.contains) || keys.any(_isQueuePrefixed);
+      extraKeys = keys.any((k) => k != kBaselinePrefKey && k != kPendingGenerationPrefsKey);
     } catch (_) {
       incomplete = true;
     }
@@ -131,6 +131,8 @@ class DeleteDataServiceImpl implements DeleteDataService {
       incomplete: incomplete,
     );
   }
+
+  static bool _isQueuePrefixed(String k) => queueKeyPrefixes.any(k.startsWith);
 
   Future<int> _scalar(DatabaseExecutor db, String sql) async => firstIntOf(await db.rawQuery(sql)) ?? 0;
 
@@ -209,10 +211,16 @@ class DeleteDataServiceImpl implements DeleteDataService {
       // d. the queue (and the phone-merge report): removed, read back absent.
       step = DeleteDataStep.queue;
       try {
-        for (final k in [...queueKeys, kPhoneMergeReportKey]) {
+        // Generation first: a parse that began earlier is then stale and its
+        // write is refused, so nothing can land after the removal below.
+        final gen = await env.prefs.readInt(kPendingGenerationPrefsKey) ?? 0;
+        if (!await env.prefs.setInt(kPendingGenerationPrefsKey, gen + 1)) throw StateError('not bumped');
+        if (await env.prefs.readInt(kPendingGenerationPrefsKey) != gen + 1) throw StateError('not bumped');
+        for (final k in [...queueKeys, kPhoneMergeReportKey, ...(await env.prefs.keys()).where(_isQueuePrefixed)]) {
           if (await env.prefs.has(k) && !await env.prefs.remove(k)) throw StateError('not removed');
           if (await env.prefs.has(k)) throw StateError('still stored');
         }
+        if ((await env.prefs.keys()).any(_isQueuePrefixed)) throw StateError('still stored');
       } catch (_) {
         return partial(DeleteDataOutcome.notFinished, step);
       }

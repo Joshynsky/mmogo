@@ -21,6 +21,21 @@ const String kPhoneMergeReportKey = 'phone_merge_report_v1';
 /// name when the autoread feature defines it (AR1/AR4A).
 const List<String> queueKeys = [kPendingEntriesKey];
 
+/// Prefix of one stored auto-read waiting item (one pref per item, the prefix
+/// plus a 32-hex id). The same string as `kPendingItemPrefix` in
+/// `lib/autoread/data/pending_items_store.dart`, repeated here because the
+/// standard build drops `lib/autoread/`; a test pins the two together. These are
+/// the only keys removed by prefix, and only this prefix.
+const String kPendingItemKeyPrefix = 'autoread_pending_v1.';
+
+/// The auto-read generation counter (see `kPendingGenerationKey`). Delete data
+/// BUMPS it (never removes it) so a parse that started earlier cannot write
+/// afterwards. It holds no user data.
+const String kPendingGenerationPrefsKey = 'autoread_generation_v1';
+
+/// Every prefix whose keys the queue step removes.
+const List<String> queueKeyPrefixes = [kPendingItemKeyPrefix];
+
 /// The only pref that exists on a device that was never used or was just
 /// reset (Welcome re-marks it). Used by `nothingLeftAtLevel2`.
 const String kBaselinePrefKey = 'whatsnew_seen_version';

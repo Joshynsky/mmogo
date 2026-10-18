@@ -44,6 +44,7 @@ Future<Map<String, Object?>> _kept(DataOpEnv env) async {
         'pending_entries_v1',
         'phone_merge_report_v1',
         'auto_backup_since_count',
+        kPendingGenerationPrefsKey, // bumped on purpose, see delete_autoread_queue_test
       }.contains(e.key))
         e.key: e.value,
   };
@@ -144,6 +145,7 @@ void main() {
     expect(after.containsKey('pending_entries_v1'), isFalse);
     expect(after.containsKey('phone_merge_report_v1'), isFalse);
     expect(after['auto_backup_since_count'], 0);
+    expect(after[kPendingGenerationPrefsKey], 1, reason: 'bumped from absent, never removed');
   });
 
   test('3. the safety folder is empty (copy and .partial) and Undo of Replace is not offered', () async {
