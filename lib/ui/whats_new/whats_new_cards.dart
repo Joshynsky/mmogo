@@ -111,6 +111,8 @@ class WhatsNewCardView extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           backgroundColor: palette.tint,
           foregroundColor: palette.tintInk,
+          // F8 (R56): a 1 px primary border so the button shape reads (3:1+ vs the sheet in all 6 themes).
+          side: BorderSide(color: palette.primary),
         ),
         child: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
       ),

@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
+import 'package:mmogo/ui/whats_new/whats_new_cards.dart';
 import 'package:mmogo/ui/theme/app_theme.dart';
 
 double _lum(Color c) {
@@ -90,7 +91,9 @@ void main() {
       add('3 "NEW" pill (onPrimary on primary)', p.onPrimary, p.primary, 4.5);
       add('3 "Default" tag (mutedInk on card)', p.mutedInk, card, 4.5);
       add('4 pager button label (tintInk on tint)', p.tintInk, p.tint, 4.5);
-      add('4 pager button tint vs sheet (card), component', p.tint, card, 3.0);
+      add('4 pager button tint vs sheet (card), fill only (border carries the shape), report only', p.tint, card, 3.0, only: true);
+      add('4 pager button border (primary, 1 px) vs sheet (card), component', p.primary, card, 3.0);
+      add('4 (info) line token vs card, not used: too faint', p.line, card, 3.0, only: true);
       final chip = _over(p.highlight, card);
       add('5 amber chip text (ink on highlight)', p.ink, chip, 4.5);
       add('5 amber chip fill vs card (info, text is inside), report only', chip, card, 3.0, only: true);
@@ -109,6 +112,36 @@ void main() {
     b.writeln('FAIL counts: $fails');
     // ignore: avoid_print
     print(b);
-    expect(rows.length, 6 * 15);
+    expect(rows.length, 6 * 17);
   });
+
+  // F8 (R56): the REAL button is drawn with a 1 px border whose ratio vs the sheet (card) is >= 3:1.
+  for (final e in {
+    'Ocean light': AppPalette.light,
+    'Ocean dark': AppPalette.dark,
+    'Leaf light': AppPalette.leafLight,
+    'Leaf dark': AppPalette.leafDark,
+    'Indigo light': AppPalette.indigoLight,
+    'Indigo dark': AppPalette.indigoDark,
+  }.entries) {
+    testWidgets('F8 pager button border >= 3:1 vs sheet: ${e.key}', (tester) async {
+      final p = e.value;
+      final focus = FocusNode();
+      addTearDown(focus.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.forPalette(p),
+          home: Scaffold(
+            body: WhatsNewCardView(index: 1, palette: p, titleFocus: focus, onOpenSettings: () {}),
+          ),
+        ),
+      );
+      final btn = tester.widget<FilledButton>(find.byKey(const Key('whatsNewCalSettings')));
+      final side = btn.style!.side!.resolve(<WidgetState>{})!;
+      expect(side.width, 1.0);
+      expect(side.style, BorderStyle.solid);
+      expect(_ratio(side.color, p.card), greaterThanOrEqualTo(3.0));
+      expect(tester.getSize(find.byKey(const Key('whatsNewCalSettings'))).height, greaterThanOrEqualTo(44));
+    });
+  }
 }
