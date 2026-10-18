@@ -17,5 +17,10 @@ fun main() {
     println("Notifier: " + (if (notifier.isEmpty()) "ALL PASS" else "FAILS=" + notifier.size))
     failed += notifier.size
 
+    val sms = SmsReceiverSelfCheck.runAll()
+    sms.forEach { println("  FAIL: $it") }
+    println("SmsReceiverLogic: " + (if (sms.isEmpty()) "ALL PASS" else "FAILS=" + sms.size))
+    failed += sms.size
+
     if (failed != 0) System.exit(1)
 }
