@@ -1,4 +1,4 @@
-package app.mmogo
+package app.mmogo.autoread
 
 import android.content.BroadcastReceiver
 import android.content.Context

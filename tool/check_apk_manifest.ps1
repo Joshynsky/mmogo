@@ -167,8 +167,8 @@ Check 'manifest contains none of RECEIVE_SMS, READ_SMS, POST_NOTIFICATIONS, BIND
   $nodes = ParseTree $tree
   $recvIdx = @(0..($nodes.Count - 1) | Where-Object { $nodes[$_].Type -eq 'receiver' })
   $svcIdx = @(0..($nodes.Count - 1) | Where-Object { $nodes[$_].Type -eq 'service' })
-  $smsIdx = @($recvIdx | Where-Object { $nodes[$_].Attrs['android:name'] -eq 'app.mmogo.SmsReceiver' })
-  $otherRecv = @($recvIdx | Where-Object { $allowedReceivers -notcontains $nodes[$_].Attrs['android:name'] -and $nodes[$_].Attrs['android:name'] -ne 'app.mmogo.SmsReceiver' } | ForEach-Object { $nodes[$_].Attrs['android:name'] })
+  $smsIdx = @($recvIdx | Where-Object { $nodes[$_].Attrs['android:name'] -eq 'app.mmogo.autoread.SmsReceiver' })
+  $otherRecv = @($recvIdx | Where-Object { $allowedReceivers -notcontains $nodes[$_].Attrs['android:name'] -and $nodes[$_].Attrs['android:name'] -ne 'app.mmogo.autoread.SmsReceiver' } | ForEach-Object { $nodes[$_].Attrs['android:name'] })
   $recvNames = ($recvIdx | ForEach-Object { $nodes[$_].Attrs['android:name'] }) -join ', '
   $unexpR = ''; if ($otherRecv.Count) { $unexpR = '  UNEXPECTED: ' + ($otherRecv -join ', ') }
   Check 'receivers = the two 0.1.1 baseline plugin receivers plus exactly one SmsReceiver' (($otherRecv.Count -eq 0) -and ($smsIdx.Count -eq 1) -and ($recvIdx.Count -eq 3)) ("receivers: $recvNames" + $unexpR)
@@ -245,6 +245,9 @@ try {
   $dexHit = @(); foreach ($d in $dexes) { if (HasText (EntryBytes $d) 'app/mmogo/autoread') { $dexHit += $d.FullName } }
   $dexNames = ($dexes | ForEach-Object { $_.FullName }) -join ' '
   Check "classes*.dex has no 'app/mmogo/autoread'" (($dexes.Count -gt 0) -and ($dexHit.Count -eq 0)) "dex files scanned: $dexNames"
+  $clsHit = @(); foreach ($d in $dexes) { $db = EntryBytes $d; foreach ($t in @('SmsReceiver', 'AutoReadBridge')) { if (HasText $db $t) { $clsHit += "$($d.FullName):$t" } } }
+  $clsText = 'dex scanned for the class names SmsReceiver, AutoReadBridge'; if ($clsHit.Count) { $clsText = 'found: ' + ($clsHit -join ', ') }
+  Check "classes*.dex has no class named SmsReceiver or AutoReadBridge" (($dexes.Count -gt 0) -and ($clsHit.Count -eq 0)) $clsText
   $arsc = $zip.GetEntry('resources.arsc')
   $arscHit = @()
   if ($arsc) { $ab = EntryBytes $arsc; foreach ($t in @('mmogo_mpesa_messages', 'autoread', 'AutoRead', 'auto_read')) { if (HasText $ab $t) { $arscHit += $t } } }

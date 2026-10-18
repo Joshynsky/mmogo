@@ -1,5 +1,6 @@
 package app.mmogo
 
+import app.mmogo.autoread.AutoReadBridge
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 

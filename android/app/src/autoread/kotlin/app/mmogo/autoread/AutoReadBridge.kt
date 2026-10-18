@@ -1,4 +1,4 @@
-package app.mmogo
+package app.mmogo.autoread
 
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel

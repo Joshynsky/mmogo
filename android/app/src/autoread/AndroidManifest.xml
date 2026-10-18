@@ -8,7 +8,7 @@
         <!-- Stub: does nothing yet. Disabled until the user switches Read on.
              BROADCAST_SMS means only the system can deliver to it. No priority. -->
         <receiver
-            android:name="app.mmogo.SmsReceiver"
+            android:name="app.mmogo.autoread.SmsReceiver"
             android:enabled="false"
             android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
