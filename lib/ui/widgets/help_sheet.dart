@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
@@ -96,7 +98,10 @@ class HelpSheetFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    final maxH = MediaQuery.sizeOf(context).height * 0.92;
+    // A modal sheet's route strips the top padding from MediaQuery, so the status bar height is read from the view.
+    final statusBar = MediaQueryData.fromView(View.of(context)).padding.top;
+    // Never taller than 92 percent of the screen, and never into the status bar: what is left above the keyboard minus the top safe area and a gap (R55).
+    final maxH = math.min(MediaQuery.sizeOf(context).height * 0.92, MediaQuery.sizeOf(context).height - MediaQuery.viewInsetsOf(context).bottom - statusBar - 8);
     return Semantics(
       scopesRoute: true,
       namesRoute: true,
