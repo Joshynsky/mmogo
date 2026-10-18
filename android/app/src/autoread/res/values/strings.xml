@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="autoread_channel_name">M-Pesa messages</string>
+    <string name="autoread_channel_description">Tells you a new M-Pesa message is ready to read in mmogo.</string>
+    <string name="autoread_notification_title">mmogo</string>
+    <string name="autoread_notification_text">An M-Pesa message is ready to read in mmogo</string>
+</resources>
