@@ -20,7 +20,6 @@ import 'package:flutter/widgets.dart';
 import '../../domain/notifications/notif_chip.dart';
 import '../../ui/shell/routes.dart';
 import '../bridge/method_channel_autoread_bridge.dart';
-import 't1_test_host.dart' show BridgeT1Controls;
 import '../logic/waiting_logic.dart';
 import '../model/waiting_item.dart';
 import '../model/waiting_repository.dart';
@@ -36,8 +35,7 @@ abstract class AutoReadLaunchSource {
 }
 
 /// Adapts the real bridge. The launch id is read from the platform ONCE and the
-/// answer is shared by everyone who asks (the router and, in a debug build, the
-/// T1 test host), so neither steals the id from the other.
+/// answer is shared by everyone who asks.
 class BridgeLaunchSource implements AutoReadLaunchSource {
   BridgeLaunchSource(this._bridge);
   final MethodChannelAutoReadBridge _bridge;
@@ -159,14 +157,4 @@ class _HomeObserver extends NavigatorObserver {
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) =>
       _on(newRoute);
-}
-
-/// TEMPORARY (goes with the T1 host, removed by the integration slice): the T1
-/// test host's controls over the SAME bridge and the shared launch id.
-class SharedBridgeT1Controls extends BridgeT1Controls {
-  SharedBridgeT1Controls(super.bridge, this._source);
-  final AutoReadLaunchSource _source;
-
-  @override
-  Future<String?> takeLaunchId() => _source.takeLaunchId();
 }

@@ -1,16 +1,13 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import 'app_startup.dart';
 import 'autoread/autoread_feature.dart';
-import 'autoread/bridge/method_channel_autoread_bridge.dart';
 import 'autoread/data/ingesting_launch_source.dart';
-import 'autoread/data/pending_items_store.dart';
 import 'autoread/data/real_waiting_repository.dart';
 import 'autoread/model/waiting_repository.dart';
+import 'autoread/runtime.dart';
 import 'autoread/service/autoread_service.dart';
 import 'autoread/ui/launch_router.dart';
-import 'autoread/ui/t1_test_host.dart';
 import 'autoread/ui/waiting_bell_numbers.dart';
 import 'data/db/app_database.dart';
 import 'data/db/startup_open.dart';
@@ -41,6 +38,10 @@ import 'ui/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Auto-read: the one bridge and controller, and the Delete data wipe hook,
+  // are set BEFORE the reset resume so a cut-short Delete data is finished with
+  // the auto-read wipe too.
+  if (kAutoReadCompiled) AutoReadRuntime.install();
   // S9b-1: a "Reset app" that was cut short is finished FIRST (before the
   // palette load and before anything opens the database), then S9a (AP1):
   // the palette and the Appearance are read BEFORE the first frame, so a dark
@@ -95,38 +96,32 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
   AutoReadWaitingRepository? _waiting;
   RealWaitingRepository? _realWaiting;
   AutoReadLaunchRouter? _launchRouter;
-  BridgeLaunchSource? _launchSource;
   late final BellCountsTracker _bell;
 
-  /// One bridge for the router and the T1 host (one platform handler per
-  /// channel). Built lazily, so the standard build never constructs it.
-  late final MethodChannelAutoReadBridge _bridge =
-      MethodChannelAutoReadBridge(generation: () => _pendingStore.readGeneration());
-
-  /// The per-item store of parsed waiting items. The bridge's generation is the
-  /// store's, so Off and Delete data (which bump it) make an older parse stale.
-  late final SharedPrefsPendingItemsStore _pendingStore = SharedPrefsPendingItemsStore();
-
-  /// The navigator key of the autoread build (the T1 host and the launch router
-  /// share it). One per app instance, so a soft restart gets a NEW navigator.
+  /// The navigator key of the autoread build (the launch router uses it). One
+  /// per app instance, so a soft restart gets a NEW navigator.
   final GlobalKey<NavigatorState> _autoReadNavigatorKey = GlobalKey<NavigatorState>();
 
   @override
   void initState() {
     super.initState();
     if (kAutoReadCompiled) {
+      // The ONE shared bridge and store (AutoReadRuntime), also used by the
+      // Settings controller and the Delete data wipe.
       _realWaiting = RealWaitingRepository(
-        bridge: _bridge,
-        store: _pendingStore,
+        bridge: AutoReadRuntime.bridge,
+        store: AutoReadRuntime.store,
         service: AutoReadService(
-          bridge: _bridge,
-          store: _pendingStore,
+          bridge: AutoReadRuntime.bridge,
+          store: AutoReadRuntime.store,
           savedCodes: TransactionCodeLookup(() => AppDatabase.instance.database),
           now: DateTime.now,
         ),
       );
       _waiting = _realWaiting;
       WidgetsBinding.instance.addObserver(this);
+      // Delete data rebuilds the rows through this once it has wiped.
+      AutoReadRuntime.refresh = _realWaiting!.ingest;
       // Look at what is held once the first frame is up (on start).
       WidgetsBinding.instance.addPostFrameCallback((_) => _realWaiting?.ingest());
     }
@@ -136,9 +131,8 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
     );
     if (kAutoReadCompiled) {
       // F8: a tap on a phone notification opens the Notifications page.
-      _launchSource = BridgeLaunchSource(_bridge);
       _launchRouter = AutoReadLaunchRouter(
-        source: IngestingLaunchSource(_launchSource!, _realWaiting!),
+        source: IngestingLaunchSource(BridgeLaunchSource(AutoReadRuntime.bridge), _realWaiting!),
         navigatorKey: _autoReadNavigatorKey,
         waiting: _waiting,
       );
@@ -160,6 +154,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
   void dispose() {
     if (kAutoReadCompiled) {
       WidgetsBinding.instance.removeObserver(this);
+      if (AutoReadRuntime.refresh == _realWaiting?.ingest) AutoReadRuntime.refresh = null;
       _realWaiting?.dispose();
     }
     _launchRouter?.dispose();
@@ -203,13 +198,6 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
       debugShowCheckedModeBanner: false,
       navigatorKey: kAutoReadCompiled ? _autoReadNavigatorKey : null,
       navigatorObservers: [if (kAutoReadCompiled) _launchRouter!.observer],
-      builder: (context, child) => (kAutoReadCompiled && kDebugMode)
-          ? T1TestHost(
-              navigatorKey: _autoReadNavigatorKey,
-              controls: SharedBridgeT1Controls(_bridge, _launchSource!),
-              child: child ?? const SizedBox.shrink(),
-            )
-          : child ?? const SizedBox.shrink(),
       // T27 — see app_messenger.dart's own doc comment.
       scaffoldMessengerKey: appMessengerKey,
       // T16: every launch starts on Welcome, which routes on to onboarding

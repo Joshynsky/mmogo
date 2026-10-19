@@ -290,7 +290,7 @@ void main() {
     // ...and none of these device-only keys is in it (denied by absence).
     const deviceOnly = [
       'appearance_mode', 'recipient_types_v1', 'pending_entries_v1',
-      'reset_pending_v1', 'phone_merge_report_v1',
+      'autoread_consent_version_v1', 'reset_pending_v1', 'phone_merge_report_v1',
       'auto_backup_enabled', 'auto_backup_folder_uri', 'auto_backup_folder_name',
       'auto_backup_since_count', 'auto_backup_paused', 'auto_backup_last_at',
       'backup_last_manual_at',
@@ -308,6 +308,18 @@ void main() {
     // NEGATIVE CONTROL: the same predicate flags an allowlist that leaks one.
     expect(leaks([...prefsKeys, 'appearance_mode']), {'appearance_mode'});
     expect(leaks([...prefsKeys, 'recipient_types_v1', 'reset_pending_v1']), hasLength(2));
+  });
+
+  test('AR9 (I2): the consent answer is never in an export and a file carrying it sets nothing', () async {
+    SharedPreferences.setMockInitialValues({'autoread_consent_version_v1': 1, 'palette_id': 'leaf'});
+    final snap = await BackupSettings().snapshot();
+    expect(snap.containsKey('autoread_consent_version_v1'), isFalse);
+    expect(snap['palette_id'], 'leaf');
+    // A file that carries it: the key is not applied (the allowlist has no such key).
+    SharedPreferences.setMockInitialValues({});
+    final r = await BackupSettings().applyAfterCommit({'autoread_consent_version_v1': 1, 'palette_id': 'leaf'});
+    expect((await _prefs()).containsKey('autoread_consent_version_v1'), isFalse);
+    expect(r.applied, isNot(contains('autoread_consent_version_v1')));
   });
 
   group('BackupPrefs pinned keys and defaults (F3)', () {

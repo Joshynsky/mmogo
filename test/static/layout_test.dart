@@ -14,8 +14,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Files outside lib/autoread/ that may import it (E13). Paths are relative to
-/// lib/, forward slashes. main.dart: the T1 test host hook (T1a, 19-10-2026), guarded by
-/// `kAutoReadCompiled && kDebugMode`; removed when the real Notifications page lands.
+/// lib/, forward slashes. main.dart: the auto-read wiring (repository, router, shared bridge,
+/// Delete data hook), inside `if (kAutoReadCompiled)`. (The T1 test host hook was removed in I2.)
 /// ui/screens/notifications/notifications_page.dart: the shared Notifications page (F3, 19-10-2026);
 /// every auto-read use sits inside `if (kAutoReadCompiled)` so the standard build drops it.
 /// ui/shell/bell_button.dart: the bell's auto-read counts and spoken words, inside

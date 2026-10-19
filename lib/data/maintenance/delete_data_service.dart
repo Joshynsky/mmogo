@@ -221,6 +221,9 @@ class DeleteDataServiceImpl implements DeleteDataService {
           if (await env.prefs.has(k)) throw StateError('still stored');
         }
         if ((await env.prefs.keys()).any(_isQueuePrefixed)) throw StateError('still stored');
+        // Device state outside prefs (platform side of a feature), if any: it
+        // must prove itself gone, else this step fails and Try again re-runs it.
+        if (!await env.runDeviceWipe()) throw StateError('device state left');
       } catch (_) {
         return partial(DeleteDataOutcome.notFinished, step);
       }

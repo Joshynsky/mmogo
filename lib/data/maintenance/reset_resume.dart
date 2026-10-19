@@ -23,6 +23,7 @@ class ResetEnv {
     StorageBridge Function()? bridge,
     DataFileSystem? fs,
     int Function()? nowMs,
+    Future<bool> Function()? deviceWipe,
     this.grantTimeout = const Duration(seconds: 5),
     this.flagReadTimeout = const Duration(seconds: 2),
   })  : db = db ?? AppDatabase.instance,
@@ -31,7 +32,8 @@ class ResetEnv {
         prefs = prefs ?? SharedDataPrefsAccess(),
         bridge = bridge ?? (() => StorageBridge.instance),
         fs = fs ?? const IoDataFileSystem(),
-        nowMs = nowMs ?? (() => DateTime.now().millisecondsSinceEpoch);
+        nowMs = nowMs ?? (() => DateTime.now().millisecondsSinceEpoch),
+        deviceWipe = deviceWipe ?? defaultDeviceWipe;
 
   final AppDatabase db;
   final DatabaseFactory Function() dbFactory;
@@ -40,6 +42,27 @@ class ResetEnv {
   final StorageBridge Function() bridge;
   final DataFileSystem fs;
   final int Function() nowMs;
+
+  /// Device state that lives outside the database and the preferences (the
+  /// platform side of a feature). True only when it is gone AND read back; false
+  /// or a throw = the delete did not finish (fail closed). Null = nothing to do.
+  final Future<bool> Function()? deviceWipe;
+
+  /// What a default [ResetEnv] uses. Feature code sets it once at start (before
+  /// the start-up resume); null in the standard build.
+  static Future<bool> Function()? defaultDeviceWipe;
+
+  /// Runs [deviceWipe]; true when there is none or it proved the wipe.
+  Future<bool> runDeviceWipe() async {
+    final w = deviceWipe;
+    if (w == null) return true;
+    try {
+      return await w();
+    } catch (_) {
+      return false;
+    }
+  }
+
   final Duration grantTimeout;
   final Duration flagReadTimeout;
 }
@@ -62,6 +85,7 @@ class ResetSteps {
     } catch (_) {
       return DeleteDataStep.safetyCopy;
     }
+    if (!await env.runDeviceWipe()) return DeleteDataStep.queue;
     await _releaseGrant(); // best effort, never a failure
     if (!await _wipePrefs()) return DeleteDataStep.prefs;
     if (!await _removeFlag()) return DeleteDataStep.resetFlag;

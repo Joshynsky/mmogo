@@ -1,5 +1,5 @@
 // Auto-read static guard (Judge: no network, no logging of message content).
-// Every .dart file under lib/autoread/ (T1 test host included) must reach no
+// Every .dart file under lib/autoread/ must reach no
 // network class or package, write no log or console output, and launch no URL.
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,12 +23,6 @@ void main() {
     expect(files.length, greaterThanOrEqualTo(15), reason: 'scanner found too few files under lib/autoread: ${files.length}');
     final hits = scanFiles(files, _rules);
     expect(hits, isEmpty, reason: 'forbidden code in lib/autoread (file:line):\n${hits.join('\n')}');
-  });
-
-  test('the T1 test host files are among the scanned files', () {
-    final names = filesUnder('lib/autoread', {'.dart'}).map((f) => normPath(f.path)).toList();
-    expect(names.any((p) => p.endsWith('t1_test_host.dart')), isTrue);
-    expect(names.any((p) => p.endsWith('t1_test_copy.dart')), isTrue);
   });
 
   group('detector self-test', () {

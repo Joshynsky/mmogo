@@ -27,6 +27,7 @@ const _deviceOnly = <String, Object?>{
   'appearance_mode': 'dark',
   'recipient_types_v1': '{"x":"y"}',
   'pending_entries_v1': '[1]',
+  'autoread_consent_version_v1': 1, // AR9 (I2): the consent answer never travels
   'reset_pending_v1': true,
   'phone_merge_report_v1': '3',
   'auto_backup_folder_uri': 'content://evil',
@@ -109,6 +110,7 @@ void main() {
         'appearance_mode': 'light',
         'recipient_types_v1': '{"mine":"1"}',
         'pending_entries_v1': '[7]',
+        'autoread_consent_version_v1': 1,
         'reset_pending_v1': false,
         'auto_backup_folder_uri': 'content://mine',
       });
@@ -121,6 +123,7 @@ void main() {
         expect(p.getString('appearance_mode'), 'light', reason: mode.name);
         expect(p.getString('recipient_types_v1'), '{"mine":"1"}', reason: mode.name);
         expect(p.getString('pending_entries_v1'), '[7]', reason: mode.name);
+        expect(p.getInt('autoread_consent_version_v1'), 1, reason: 'a restore leaves the consent answer as it was (${mode.name})');
         expect(p.getBool('reset_pending_v1'), false, reason: mode.name);
         expect(p.getString('auto_backup_folder_uri'), 'content://mine', reason: mode.name);
         for (final k in const ['phone_merge_report_v1', 'auto_backup_enabled', 'update_check_enabled']) {

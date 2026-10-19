@@ -33,6 +33,13 @@ const String kPendingItemKeyPrefix = 'autoread_pending_v1.';
 /// afterwards. It holds no user data.
 const String kPendingGenerationPrefsKey = 'autoread_generation_v1';
 
+/// The auto-read consent answer (the version of the consent text the user
+/// agreed to). Device only and NEVER in a backup: it is not in the backup
+/// allowlist, a restore file carrying it is ignored, and Delete data removes
+/// it. The same string as `kReadingConsentKey` in
+/// `lib/autoread/logic/reading_controller.dart` (a test pins the two).
+const String kReadingConsentPrefsKey = 'autoread_consent_version_v1';
+
 /// Every prefix whose keys the queue step removes.
 const List<String> queueKeyPrefixes = [kPendingItemKeyPrefix];
 
