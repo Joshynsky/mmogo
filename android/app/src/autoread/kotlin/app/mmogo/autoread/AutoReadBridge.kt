@@ -119,7 +119,6 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
             setComponent(false)
             AutoReadSwitch.setEnabled(activity, false)
             Notifier.cancelAll(activity)
-            store.deleteAll()
         }
         return AutoReadSwitch.isOn(activity)
     }

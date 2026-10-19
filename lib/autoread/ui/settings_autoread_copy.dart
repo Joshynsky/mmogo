@@ -39,9 +39,6 @@ const String kReadDeniedNotifications = 'Notifications were not allowed, so Read
 const String kReadDeniedBlocked =
     'Android did not allow it, so Read is still off. Tap Trouble turning it on? for help.';
 const String kReadFailed = 'Could not change this. Try again.';
-const String kReadOffCleared = 'Read is off. Held messages were removed.';
-const String kReadOffNotCleared =
-    'Read is off, but some held messages could not be removed. Use Delete held messages.';
 const String kReadStillOn = 'Could not turn Read off. Try again.';
 
 // The visible "capture is on but not working" row (Judge condition 7).
@@ -96,6 +93,8 @@ const String kConsentWhatIsRead =
 const String kConsentAndroidPrompt =
     'Android will ask to “send and view SMS”. That prompt is broader than what mmogo uses: the filter for M-Pesa is in mmogo’s own code.';
 const String kConsentOthers = kOtherMessagesLine;
+const String kConsentNotification =
+    'The notification on your phone only says a message is ready. It shows no amount and no name.';
 const String kConsentWhereItStays =
     'Where it stays: on this phone. mmogo does not send messages anywhere.';
 const String kConsentDeveloper = kDeveloperLine;
@@ -103,7 +102,7 @@ const String kConsentForged =
     'A forged message can look genuine. mmogo reads the message text only and cannot check it with M-Pesa.';
 String get kConsentHeld => 'Held messages: $kHeldWindowCopy';
 const String kConsentOff =
-    'You can turn this off at any time in Settings. Turning it off removes the messages mmogo is holding. The originals stay in your phone’s Messages.';
+    'You can turn this off at any time in Settings. Turning it off stops new messages from being read. Messages already held stay until you delete them or they expire. The originals stay in your phone’s Messages.';
 String get kConsentResponsible => 'Responsible for this feature: $kResponsiblePerson.';
 
 const String kConsentAgree = 'Agree';
@@ -112,6 +111,7 @@ const String kConsentNotNow = 'Not now';
 /// Shown behind "More details", in order.
 List<String> get kConsentDetailLines => [
       kConsentWhatIsRead,
+      kConsentNotification,
       kConsentWhereItStays,
       kConsentOthers,
       kConsentAndroidPrompt,
@@ -134,8 +134,6 @@ List<String> allSettingsAutoReadCopy() => [
       kReadDeniedNotifications,
       kReadDeniedBlocked,
       kReadFailed,
-      kReadOffCleared,
-      kReadOffNotCleared,
       kReadStillOn,
       kFixLabel,
       kFixSms,

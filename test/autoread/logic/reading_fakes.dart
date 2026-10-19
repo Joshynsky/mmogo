@@ -54,7 +54,6 @@ class FakeReadingBridge implements ReadingBridge {
     if (setEnabledError != null) throw setEnabledError!;
     if (!value && setEnabledIgnoresOff) return enabled;
     enabled = value;
-    if (!value) heldCount = 0;
     return enabled;
   }
 

@@ -1,10 +1,9 @@
 /// §AUTOREAD.READING — the Dart side of the Read on/off switch (FE-N7, AR5).
 ///
 /// Turning ON needs the user's consent (asked by the UI first) and BOTH system
-/// permissions, and only then calls `setEnabled(true)`. Turning OFF does the
-/// whole job Dart owns: `setEnabled(false)`, bump the generation, remove every
-/// pending item key, read it all back, and say plainly when something could
-/// not be cleared (fail closed). Kotlin wipes its held store itself.
+/// permissions, and only then calls `setEnabled(true)`. Turning OFF only stops
+/// capture: `setEnabled(false)`. Messages already read or held are KEPT (PM
+/// 19-10-2026); Delete held messages and Delete data are the ways to clear.
 ///
 /// No message text is ever read here: the controller sees counts and flags.
 /// Autoread flavor only.
@@ -106,11 +105,8 @@ class TurnOnResult {
 }
 
 enum TurnOffResult {
-  /// Off, generation bumped, every pending item gone, held messages gone.
-  offAndCleared,
-
-  /// Off, but something could not be cleared or confirmed. Say so.
-  offNotCleared,
+  /// Off: no new messages are captured. What was read or held is kept.
+  off,
 
   /// The switch could not be turned off.
   stillOn,
@@ -224,29 +220,19 @@ class ReadingController {
     }
   }
 
-  /// Turns Read off AND clears what Dart holds: the generation is bumped once
-  /// (a parse that began earlier is then stale) and every pending item key is
-  /// removed. Everything is read back. Safe to call again.
+  /// Turns Read off. Nothing is cleared: the waiting and held messages stay.
   Future<TurnOffResult> turnOff() async {
-    var off = false;
     try {
-      off = !await _bridge.setEnabled(false);
+      return await _bridge.setEnabled(false) ? TurnOffResult.stillOn : TurnOffResult.off;
     } catch (_) {
-      off = false;
-    }
-    if (!off) {
-      // Still try to clear what Dart holds; the switch itself is not off.
-      await _clearPending();
       return TurnOffResult.stillOn;
     }
-    final cleared = await _clearPending();
-    final held = await _heldIsEmpty();
-    return cleared && held ? TurnOffResult.offAndCleared : TurnOffResult.offNotCleared;
   }
 
   /// Bump first, then remove every prefixed key, then read back. True only when
-  /// the bump took and no prefixed key is left.
-  Future<bool> _clearPending() async {
+  /// the bump took and no prefixed key is left. Used by Delete held messages
+  /// (and, in integration, Delete data).
+  Future<bool> clearWaiting() async {
     var ok = true;
     try {
       final before = await _store.readGeneration();
@@ -274,14 +260,17 @@ class ReadingController {
     }
   }
 
-  /// Removes every held message on the Kotlin side; true when read back empty.
+  /// Removes every held message on the Kotlin side AND the waiting items Dart
+  /// keeps for them; true when both read back empty.
   Future<bool> deleteHeld() async {
     try {
       await _bridge.deleteAllHeld();
     } catch (_) {
+      await clearWaiting();
       return false;
     }
-    return _heldIsEmpty();
+    final cleared = await clearWaiting();
+    return await _heldIsEmpty() && cleared;
   }
 
   /// Opens the app's own page in Android settings. False on a platform error.

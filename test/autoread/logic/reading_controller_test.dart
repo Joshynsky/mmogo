@@ -90,66 +90,41 @@ void main() {
   });
 
   group('turnOff', () {
-    test('bumps the generation exactly once and clears only prefixed keys', () async {
+    test('only switches capture off: waiting and held messages are kept', () async {
       final b = FakeReadingBridge(enabled: true, smsGranted: true, notifGranted: true, heldCount: 3);
       final m = _make(bridge: b);
       m.p.data[pendingKey(1)] = 'x';
       m.p.data[pendingKey(2)] = 'y';
-      m.p.data['recipient_types_v1'] = 'keep';
       m.p.data['autoread_generation_v1'] = 5;
       final r = await m.c.turnOff();
-      expect(r, TurnOffResult.offAndCleared);
-      expect(m.s.bumps, 1);
-      expect(m.p.data.keys.where((k) => k.startsWith('autoread_pending_v1.')), isEmpty);
-      expect(m.p.data['recipient_types_v1'], 'keep');
+      expect(r, TurnOffResult.off);
+      expect(m.s.bumps, 0);
+      expect(m.p.data.keys.where((k) => k.startsWith('autoread_pending_v1.')).length, 2);
       expect(m.p.data['autoread_generation_v1'], 5);
       expect(m.p.data[kReadingConsentKey], kReadingConsentVersion); // consent stays
-      expect(b.calls.first, 'setEnabled:false');
+      expect(b.calls, ['setEnabled:false']);
       expect(b.enabled, isFalse);
+      expect(b.heldCount, 3);
     });
 
-    test('says "could not clear" when a key will not go', () async {
-      final b = FakeReadingBridge(enabled: true);
-      final m = _make(bridge: b);
-      m.p.data[pendingKey(1)] = 'x';
-      m.p.failRemove = true;
-      expect(await m.c.turnOff(), TurnOffResult.offNotCleared);
-      expect(b.enabled, isFalse); // it is off, but it says so
-    });
-
-    test('says "could not clear" when the generation bump fails', () async {
-      final m = _make(bridge: FakeReadingBridge(enabled: true));
-      m.s.failBump = true;
-      m.p.data[pendingKey(1)] = 'x';
-      expect(await m.c.turnOff(), TurnOffResult.offNotCleared);
-      // The keys were still removed.
-      expect(m.p.data.keys.where((k) => k.startsWith('autoread_pending_v1.')), isEmpty);
-    });
-
-    test('held messages still counted after off: not cleared', () async {
-      final b = FakeReadingBridge(enabled: true, heldCount: 2)..setEnabledIgnoresOff = false;
-      final m = _make(bridge: b);
-      // Kotlin answers off but still reports held (read back disagrees).
-      final sneaky = _SneakyBridge();
-      final c = ReadingController(bridge: sneaky, store: m.s, prefs: m.p);
-      expect(await c.turnOff(), TurnOffResult.offNotCleared);
-    });
-
-    test('the switch cannot be turned off: stillOn (and Dart still clears)', () async {
+    test('the switch cannot be turned off: stillOn, nothing cleared', () async {
       final b = FakeReadingBridge(enabled: true)..setEnabledIgnoresOff = true;
       final m = _make(bridge: b);
       m.p.data[pendingKey(1)] = 'x';
       expect(await m.c.turnOff(), TurnOffResult.stillOn);
-      expect(m.p.data.keys.where((k) => k.startsWith('autoread_pending_v1.')), isEmpty);
+      expect(m.p.data.keys.where((k) => k.startsWith('autoread_pending_v1.')).length, 1);
+    });
+
+    test('a bridge error is stillOn', () async {
+      final b = FakeReadingBridge(enabled: true)..setEnabledError = StateError('x');
+      expect(await _make(bridge: b).c.turnOff(), TurnOffResult.stillOn);
     });
 
     test('idempotent: a second call ends in the same state', () async {
       final m = _make(bridge: FakeReadingBridge(enabled: true, heldCount: 1));
-      m.p.data[pendingKey(1)] = 'x';
-      expect(await m.c.turnOff(), TurnOffResult.offAndCleared);
-      expect(await m.c.turnOff(), TurnOffResult.offAndCleared);
+      expect(await m.c.turnOff(), TurnOffResult.off);
+      expect(await m.c.turnOff(), TurnOffResult.off);
       expect(m.b.enabled, isFalse);
-      expect(m.s.bumps, 2); // one per call, never more
     });
   });
 
@@ -182,6 +157,7 @@ void main() {
       final m = _make(bridge: b);
       expect(await m.c.deleteHeld(), isTrue);
       expect(b.calls, contains('deleteAllHeld'));
+      expect(m.s.bumps, 1); // waiting items are cleared too
       final b2 = FakeReadingBridge(enabled: true, heldCount: 2)..deleteHeldKeepsMessages = true;
       expect(await _make(bridge: b2).c.deleteHeld(), isFalse);
     });
@@ -201,15 +177,4 @@ void main() {
       expect(kReadingConsentKey, 'autoread_consent_version_v1');
     });
   });
-}
-
-class _SneakyBridge extends FakeReadingBridge {
-  _SneakyBridge() : super(enabled: true, heldCount: 2);
-
-  @override
-  Future<bool> setEnabled(bool value) async {
-    calls.add('setEnabled:$value');
-    enabled = value;
-    return enabled; // does NOT clear heldCount
-  }
 }

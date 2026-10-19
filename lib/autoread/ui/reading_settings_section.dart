@@ -114,8 +114,7 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
           final r = await c.turnOff();
           if (!mounted) return;
           _message = switch (r) {
-            TurnOffResult.offAndCleared => null,
-            TurnOffResult.offNotCleared => kReadOffNotCleared,
+            TurnOffResult.off => null,
             TurnOffResult.stillOn => kReadStillOn,
           };
         }

@@ -119,25 +119,17 @@ void main() {
     expect(t.widget<Switch>(find.byType(Switch)).value, isFalse);
   });
 
-  testWidgets('turning off removes pending items and shows the plain result', (t) async {
-    final r = _Rig(consent: true, bridge: FakeReadingBridge(enabled: true, smsGranted: true, notifGranted: true));
+  testWidgets('turning off keeps waiting items and shows no error', (t) async {
+    final r = _Rig(consent: true, bridge: FakeReadingBridge(enabled: true, smsGranted: true, notifGranted: true, heldCount: 2));
     r.p.data[pendingKey(1)] = 'x';
     await _pump(t, r);
     await t.tap(_switch);
     await t.pumpAndSettle();
     expect(r.b.enabled, isFalse);
-    expect(r.s.bumps, 1);
-    expect(r.p.data.keys.where((k) => k.startsWith('autoread_pending_v1.')), isEmpty);
-  });
-
-  testWidgets('off but could not clear is said plainly (fail closed)', (t) async {
-    final r = _Rig(consent: true, bridge: FakeReadingBridge(enabled: true, smsGranted: true, notifGranted: true));
-    r.p.data[pendingKey(1)] = 'x';
-    r.p.failRemove = true;
-    await _pump(t, r);
-    await t.tap(_switch);
-    await t.pumpAndSettle();
-    expect(find.text(kReadOffNotCleared), findsOneWidget);
+    expect(r.b.heldCount, 2);
+    expect(r.s.bumps, 0);
+    expect(r.p.data.keys.where((k) => k.startsWith('autoread_pending_v1.')).length, 1);
+    expect(find.text(kReadStillOn), findsNothing);
   });
 
   group('capture-fix row', () {
