@@ -7,7 +7,8 @@ import android.provider.Telephony
 import java.io.File
 
 /**
- * §AUTOREAD.RECEIVER. Fixed order: action, switch, sender (address only), body, size, store, notify.
+ * §AUTOREAD.RECEIVER. Fixed order: action, switch, sender (address only), body, size, store, notify
+ * (notify only when the body is a recognised outgoing kind; see SmsReceiverLogic.trackedKind).
  * Short synchronous file work; no logging; never throws.
  */
 class SmsReceiver : BroadcastReceiver() {
@@ -28,7 +29,8 @@ class SmsReceiver : BroadcastReceiver() {
             if (!SmsReceiverLogic.bodyAcceptable(body)) return
             val id = HeldStore(File(context.cacheDir, "autoread_held"))
                 .put(body, parts[0].timestampMillis) ?: return
-            Notifier.post(context, id)
+            // Only a recognised outgoing kind interrupts the user; the rest stay held, silently.
+            if (SmsReceiverLogic.trackedKind(body)) Notifier.post(context, id)
         } catch (_: Throwable) {
             // A receiver must never crash on a hostile message.
         }
