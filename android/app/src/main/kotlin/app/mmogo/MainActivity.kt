@@ -13,7 +13,18 @@ class MainActivity : FlutterActivity() {
         val bridge = StorageBridge(this)
         storage = bridge
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, StorageBridge.CHANNEL).setMethodCallHandler(bridge)
-        FeatureHooks.configureFlutterEngine(flutterEngine)
+        FeatureHooks.configureFlutterEngine(this, flutterEngine)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        FeatureHooks.onNewIntent(this, intent)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        FeatureHooks.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
     @Deprecated("Deprecated in Java")

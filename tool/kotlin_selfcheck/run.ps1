@@ -29,8 +29,8 @@ $k = Join-Path $root 'android\app\src\autoread\kotlin\app\mmogo\autoread'
 $sc = $PSScriptRoot
 $src = @(
   (Join-Path $k 'HeldId.kt'), (Join-Path $k 'HeldStore.kt'), (Join-Path $k 'NotifierPure.kt'),
-  (Join-Path $k 'SmsReceiverLogic.kt'),
-  (Join-Path $sc 'HeldStoreSelfCheck.kt'), (Join-Path $sc 'NotifierSelfCheck.kt'), (Join-Path $sc 'SmsReceiverSelfCheck.kt'), (Join-Path $sc 'SelfCheckMain.kt'))
+  (Join-Path $k 'SmsReceiverLogic.kt'), (Join-Path $k 'BridgeLogic.kt'),
+  (Join-Path $sc 'HeldStoreSelfCheck.kt'), (Join-Path $sc 'NotifierSelfCheck.kt'), (Join-Path $sc 'SmsReceiverSelfCheck.kt'), (Join-Path $sc 'BridgeSelfCheck.kt'), (Join-Path $sc 'SelfCheckMain.kt'))
 foreach ($s in $src) { if (-not (Test-Path $s)) { Write-Host "MISSING file: $s"; exit 2 } }
 
 New-Item -ItemType Directory -Force $Out | Out-Null

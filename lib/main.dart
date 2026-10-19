@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import 'app_startup.dart';
+import 'autoread/autoread_feature.dart';
+import 'autoread/ui/t1_test_host.dart';
 import 'data/db/startup_open.dart';
 import 'ui/restart_scope.dart';
 import 'ui/screens/add/add_screen.dart';
@@ -21,6 +24,9 @@ import 'ui/startup_notice.dart';
 import 'ui/theme/app_colors.dart';
 import 'ui/theme/app_palette_scope.dart';
 import 'ui/theme/app_theme.dart';
+
+/// T1 test scaffolding (§AUTOREAD.T1): only used when autoread is compiled in a debug build.
+final GlobalKey<NavigatorState> _t1NavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -112,6 +118,10 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
         _ => ThemeMode.system,
       },
       debugShowCheckedModeBanner: false,
+      navigatorKey: kAutoReadCompiled && kDebugMode ? _t1NavigatorKey : null,
+      builder: (context, child) => (kAutoReadCompiled && kDebugMode)
+          ? T1TestHost(navigatorKey: _t1NavigatorKey, child: child ?? const SizedBox.shrink())
+          : child ?? const SizedBox.shrink(),
       // T27 — see app_messenger.dart's own doc comment.
       scaffoldMessengerKey: appMessengerKey,
       // T16: every launch starts on Welcome, which routes on to onboarding

@@ -14,8 +14,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Files outside lib/autoread/ that may import it (E13). Paths are relative to
-/// lib/, forward slashes. Empty until the hook slices add their lines.
-const kAutoReadHookFiles = <String>[];
+/// lib/, forward slashes. main.dart: the T1 test host hook (T1a, 19-10-2026), guarded by
+/// `kAutoReadCompiled && kDebugMode`; removed when the real Notifications page lands.
+const kAutoReadHookFiles = <String>['main.dart'];
 
 const _codeMapPath = '../_pipeline/knowledge/code-map.md';
 

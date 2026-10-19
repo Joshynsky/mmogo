@@ -22,5 +22,10 @@ fun main() {
     println("SmsReceiverLogic: " + (if (sms.isEmpty()) "ALL PASS" else "FAILS=" + sms.size))
     failed += sms.size
 
+    val bridge = BridgeSelfCheck.runAll()
+    bridge.forEach { println("  FAIL: $it") }
+    println("BridgeLogic: " + (if (bridge.isEmpty()) "ALL PASS" else "FAILS=" + bridge.size))
+    failed += bridge.size
+
     if (failed != 0) System.exit(1)
 }
