@@ -1,3 +1,5 @@
+import '../../domain/notifications/notif_chip.dart';
+
 /// Named-route constants for the whole app. Single source of truth so no
 /// screen hardcodes a route string that could drift from `main.dart`'s
 /// route table.
@@ -48,10 +50,22 @@ class Routes {
   /// Updates and feedback > Updates.
   static const updates = '/updates';
 
+  /// 0.1.2 F8 — the Notifications page: opened by the bell and (auto-read build)
+  /// by a tap on a phone notification. Arguments: [NotificationsRouteArgs]
+  /// (none = the All chip). [updates] stays for Settings > Updates.
+  static const notifications = '/notifications';
+
   /// B32 — the static Privacy and your data page: opened from Settings >
   /// Privacy and security and from a link row on the Backup page.
   static const privacy = '/privacy';
 
   /// 0.1.2 S9a: opened from Settings > Adding entries > Remembered recipients.
   static const rememberedRecipients = '/remembered-recipients';
+}
+
+/// Route arguments of [Routes.notifications]: the chip to open on. A chip that
+/// is not available in this flavor opens News (the page decides).
+class NotificationsRouteArgs {
+  const NotificationsRouteArgs({this.chip = NotifChip.all});
+  final NotifChip chip;
 }

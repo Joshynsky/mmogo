@@ -11,14 +11,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/updates/updates_inbox.dart';
 import 'package:mmogo/ui/screens/updates/updates_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mmogo/ui/screens/notifications/news_row.dart';
+import 'package:mmogo/ui/screens/notifications/notifications_page.dart';
+import 'package:mmogo/ui/shell/bell_counts.dart';
 import 'package:mmogo/ui/shell/chrome_widgets.dart';
+import 'package:mmogo/ui/shell/notifications_route.dart';
+import 'package:mmogo/ui/shell/notifications_scope.dart';
+import 'package:mmogo/ui/shell/updates_news_repository.dart';
 import 'package:mmogo/ui/shell/primary_scaffold.dart';
 import 'package:mmogo/ui/shell/routes.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
-
-/// Finds the [IconCircleButton] with a given tooltip.
-Finder _iconCircleButton(String tooltip) =>
-    find.byWidgetPredicate((w) => w is IconCircleButton && w.tooltip == tooltip);
 
 void _setPhone(WidgetTester tester, Brightness brightness) {
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
@@ -267,74 +269,81 @@ void main() {
     });
   });
 
-  group('T25/B27 — the Updates bell', () {
+  // 0.1.2 F8: the bell is the F7 NotifBell (four signed icon states) and opens
+  // the Notifications page. The old red dot and the "Updates" tooltip are gone
+  // (bell-notes.md: red is not used). Settings > Updates still opens Updates.
+  group('T25/B27/F8 — the bell', () {
+    late UpdatesNewsRepository news;
+    late BellCountsTracker tracker;
+
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       await UpdatesInbox.instance.load();
     });
 
     Future<void> pumpBell(WidgetTester tester) async {
+      news = UpdatesNewsRepository(UpdatesInbox.instance);
+      tracker = BellCountsTracker(news: news.watchNews());
+      addTearDown(() {
+        tracker.dispose();
+        news.dispose();
+      });
       await tester.pumpWidget(
-        MaterialApp(
-          home: PrimaryScaffold(title: 'Profile', activeIndex: 4, body: const SizedBox.shrink()),
-          routes: {Routes.updates: (_) => const UpdatesScreen()},
+        NotificationsScope(
+          news: news,
+          counts: tracker.value,
+          child: MaterialApp(
+            home: PrimaryScaffold(title: 'Profile', activeIndex: 4, body: const SizedBox.shrink()),
+            routes: {
+              Routes.updates: (_) => const UpdatesScreen(),
+              Routes.notifications: (_) => const NotificationsRoute(),
+            },
+          ),
         ),
       );
       await tester.pumpAndSettle();
     }
 
-    testWidgets('B27: no dot while nothing is unread', (tester) async {
+    testWidgets('B27: no update arrow or star while nothing is unread; the red dot is gone', (tester) async {
       await pumpBell(tester);
       expect(find.byKey(const Key('bellUnreadDot')), findsNothing);
+      expect(find.byKey(const ValueKey('bell-button')), findsOneWidget);
+      expect(find.byKey(const ValueKey('bell-circle')), findsOneWidget);
     });
 
-    testWidgets('B27: a red dot while any notice is unread; opening the page and leaving clears it', (tester) async {
+    testWidgets('B27: an unread update shows the arrow and is spoken; tapping opens the page with that row', (tester) async {
       SharedPreferences.setMockInitialValues({
         'updates_inbox_v1': jsonEncode([
           {'tag': 'v0.2.0', 'notes': 'Shiny', 'receivedAt': 1000, 'read': false},
         ]),
       });
       await UpdatesInbox.instance.load();
+      final handle = tester.ensureSemantics();
       await pumpBell(tester);
-      expect(find.byKey(const Key('bellUnreadDot')), findsOneWidget);
-      expect(_iconCircleButton('Updates, 1 unread'), findsOneWidget);
-
-      await tester.tap(_iconCircleButton('Updates, 1 unread'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('noticeNewPill')), findsOneWidget, reason: 'New stays visible during the visit');
-
-      await tester.tap(find.byTooltip('Back'));
-      await tester.pumpAndSettle();
       expect(find.byKey(const Key('bellUnreadDot')), findsNothing);
-      expect(_iconCircleButton('Updates'), findsOneWidget);
-      expect(UpdatesInbox.instance.unreadCount.value, 0);
+      expect(find.bySemanticsLabel('Notifications, 1 update available'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('bell-button')));
+      await tester.pumpAndSettle();
+      expect(find.text('Notifications'), findsWidgets, reason: 'the Notifications page, not Updates');
+      expect(find.byType(NewsRow), findsOneWidget, reason: 'the update from the inbox is a News row');
+      handle.dispose();
     });
 
-    testWidgets('B48: the bell is the only top-right button (no Help ?, no Profile); same size/style; '
-        'tapping it opens Updates', (tester) async {
+    testWidgets('B48: the bell is the only top-right button; tapping it opens the Notifications page', (tester) async {
       await pumpBell(tester);
-
-      const p = AppPalette.light;
-      final bell = tester.widget<IconCircleButton>(_iconCircleButton('Updates'));
-      expect(bell.icon, Icons.notifications_none_rounded);
-      expect(bell.size, 36);
-      expect(bell.background, p.card);
-      expect(bell.foreground, p.ink);
-
       expect(
         find.descendant(of: find.byType(AppBar), matching: find.byType(IconCircleButton)),
-        findsOneWidget,
-        reason: 'bell only in the top bar',
+        findsNothing,
+        reason: 'the bell is the NotifBell, no other round button in the top bar',
       );
-      expect(_iconCircleButton('Profile'), findsNothing);
       expect(find.byKey(const Key('pageHelpButton')), findsNothing);
       expect(find.byTooltip('Show tips for this page'), findsNothing);
 
-      await tester.tap(_iconCircleButton('Updates'));
+      await tester.tap(find.byKey(const ValueKey('bell-button')));
       await tester.pumpAndSettle();
-      expect(find.text('Updates'), findsOneWidget, reason: 'the secondary page title');
-      expect(find.text('Coming soon'), findsNothing);
-      expect(find.byKey(const Key('updatesEmpty')), findsOneWidget);
+      expect(find.byType(NotificationsPage), findsOneWidget);
+      expect(find.byKey(const Key('updatesEmpty')), findsNothing);
     });
   });
 }

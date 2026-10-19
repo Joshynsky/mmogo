@@ -555,7 +555,7 @@ void main() {
       await _pumpHome(tester, _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 3));
       expect(find.byKey(coachTourBubbleKey), findsNothing);
       expect(find.byKey(const Key('pageHelpButton')), findsNothing);
-      expect(find.byTooltip('Updates'), findsOneWidget);
+      expect(find.byKey(const ValueKey('bell-button')), findsOneWidget);
       expect(find.byTooltip('Profile'), findsNothing);
     });
 

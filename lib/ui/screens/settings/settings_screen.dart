@@ -7,6 +7,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../../app_info.dart';
+import '../../../autoread/autoread_feature.dart';
+import '../../../autoread/ui/reading_settings_section.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/db/export_dao.dart';
 import '../../../data/maintenance/delete_data_service.dart';
@@ -390,6 +392,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               backupFlow: widget.backupFlow,
             ),
             const SizedBox(height: 14),
+            if (kAutoReadCompiled) ...[const ReadingSettingsSection(), const SizedBox(height: 14)],
             AboutSection(palette: palette),
             const SizedBox(height: 14),
             Text(

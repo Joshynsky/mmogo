@@ -120,3 +120,49 @@ List<String> allAutoReadCopy() => [
       kToastParsed,
       kToastRemoved,
     ];
+
+// F3 additions: the All chip and the reading-off quiet line (mock wording).
+const String kEmptyAllTitle = 'All caught up';
+const String kEmptyAllBody = 'Nothing needs you right now.';
+const String kReadingOffLine =
+    'Reading M-Pesa messages is off, so no new messages will arrive. Items already here stay until you deal with them.';
+const String kTurnOnReading = 'Turn on reading M-Pesa messages';
+
+/// Every F3 string above, for the banned-phrase test.
+const List<String> kAutoReadPageCopyAll = <String>[
+  kEmptyAllTitle,
+  kEmptyAllBody,
+  kReadingOffLine,
+  kTurnOnReading,
+];
+
+// F6 additions: the Parse all bar and its question (mock wording), and the
+// paste sheet's close label.
+/// The bar on the Parse group: "Parse all (3)", "Parse all (99+)".
+String parseAllBarLabel(String cappedCount) => 'Parse all ($cappedCount)';
+
+/// Spoken name of the bar: the real number, not the cap. NOT IN MOCK.
+String parseAllBarSpoken(int n) => 'Parse all $n ${n == 1 ? "message" : "messages"}';
+
+/// The question above 3 ready messages; [n] is the real number.
+String parseAllTitle(int n) => 'Parse all $n messages?';
+const String kParseAllBody =
+    'Each message is read and moved to To categorize. Nothing is saved to your ledger until you categorize it.';
+const String kParseAllCancel = 'Cancel';
+const String kParseAllConfirm = 'Parse all';
+
+/// Close button of the paste sheet (mock aria-label "Close").
+const String kPasteClose = 'Close';
+
+/// Every F6 string above, for the banned-phrase test.
+List<String> allAutoReadActionsCopy() => [
+      parseAllBarLabel('3'),
+      parseAllBarLabel('99+'),
+      parseAllBarSpoken(1),
+      parseAllBarSpoken(12),
+      parseAllTitle(12),
+      kParseAllBody,
+      kParseAllCancel,
+      kParseAllConfirm,
+      kPasteClose,
+    ];

@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/autoread/held_window.dart';
 import 'package:mmogo/autoread/ui/notifications_autoread_copy.dart';
+import 'package:mmogo/autoread/ui/settings_autoread_copy.dart';
 
 void main() {
   const banned = [
@@ -19,11 +20,39 @@ void main() {
   ];
 
   test('no banned phrase in any auto-read string', () {
-    for (final s in allAutoReadCopy()) {
+    // F3 added kAutoReadPageCopyAll and F6 allAutoReadActionsCopy: scan them too (19-10-2026).
+    for (final s in [...allAutoReadCopy(), ...kAutoReadPageCopyAll, ...allAutoReadActionsCopy()]) {
       for (final b in banned) {
         expect(s.toLowerCase(), isNot(contains(b)), reason: '"$s" has "$b"');
       }
     }
+  });
+
+  test('no banned phrase in the Settings, consent and help strings (F10)', () {
+    // The Judge allows exactly two "never" sentences (condition 10); only those
+    // are removed before the scan, so any other "never" still fails.
+    for (final s in allSettingsAutoReadCopy()) {
+      final t = s
+          .toLowerCase()
+          .replaceAll(kOtherMessagesLine.toLowerCase(), '')
+          .replaceAll(kDeveloperLine.toLowerCase(), '');
+      for (final b in [...banned, 'private', 'compliance', 'complies', 'guarantee', 'always', 'no one', 'nobody']) {
+        expect(t, isNot(contains(b)), reason: '"$s" has "$b"');
+      }
+      expect(t, isNot(contains('@')), reason: 'no email: "$s"');
+    }
+  });
+
+  test('the Settings copy source types no hour count and names the person once', () {
+    final src = File('lib/autoread/ui/settings_autoread_copy.dart').readAsStringSync();
+    for (final n in ['24', '48', '36']) {
+      expect(src, isNot(contains(n)));
+    }
+    expect('Joshua Waga'.allMatches(src).length, 1);
+    expect(kResponsiblePerson, 'Joshua Waga');
+    expect(src, contains('PM read pending'));
+    expect(kConsentHeld, contains(kHeldWindowCopy));
+    expect(kConsentHeld, contains('${kHeldWindow.inHours} hours'));
   });
 
   test('the copy source types no 24, 48 or 36', () {

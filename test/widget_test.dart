@@ -107,7 +107,7 @@ void main() {
 
     await tester.tap(_navTab('Profile'));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Updates'), findsOneWidget);
+    expect(find.byKey(const ValueKey('bell-button')), findsOneWidget);
     expect(find.byTooltip('Back'), findsNothing);
     expect(find.byKey(const Key('primaryBottomNav')), findsOneWidget);
 

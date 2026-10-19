@@ -76,3 +76,9 @@ const kNotificationsCopyAll = <String>[
   kUpdateRowTitle,
   kWhatsNewRowTitle,
 ];
+
+// F3 additions: the page shell (shared by both flavors).
+const kNotificationsBackLabel = 'Back to Home';
+
+/// Every F3 string above, for the copy test.
+const kNotificationsPageCopyAll = <String>[kNotificationsBackLabel];

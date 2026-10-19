@@ -5,6 +5,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/static_scan.dart';
+
 Iterable<File> _dartFiles(String dir) =>
     Directory(dir).listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'));
 
@@ -29,5 +31,21 @@ void main() {
     final pubspec = File('pubspec.yaml').readAsStringSync();
     expect(RegExp(r'^\s{2}http\s*:', multiLine: true).hasMatch(pubspec), isFalse);
     expect(RegExp(r'^\s{2}url_launcher\w*\s*:', multiLine: true).hasMatch(pubspec), isFalse);
+  });
+
+  // Added 19-10-2026 (auto-read slice ST): the old checks only look for HttpClient(.
+  // No raw socket or web socket class may appear anywhere in lib/ (no exemption).
+  test('no Socket, WebSocket, RawSocket or ServerSocket anywhere in lib/', () {
+    final files = filesUnder('lib', {'.dart'});
+    expect(files.length, greaterThanOrEqualTo(200), reason: 'scanner found too few files in lib: ${files.length}');
+    final hits = scanFiles(files, kDartSocketRules);
+    expect(hits, isEmpty, reason: 'socket classes in lib (file:line):\n${hits.join('\n')}');
+  });
+
+  test('the socket detector flags each class and passes clean code (self-test)', () {
+    for (final c in ['Socket', 'WebSocket', 'RawSocket', 'ServerSocket']) {
+      expect(scanText('lib/x.dart', 'a\nfinal s = await $c.connect(h, 1);\n', kDartSocketRules), hasLength(1), reason: c);
+    }
+    expect(scanText('lib/x.dart', 'final blocket = 1;\nclass SocketLess {}\n', kDartSocketRules), isEmpty);
   });
 }

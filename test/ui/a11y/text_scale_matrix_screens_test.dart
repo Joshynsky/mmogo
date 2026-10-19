@@ -32,7 +32,7 @@ const _homeSeen = <String, Object>{'tour_seen_home': true};
 
 List<A11yAction> _primary() => [
   A11yAction('Add button', _k('primaryFab'), floating: true),
-  A11yAction('Updates bell', find.byTooltip('Updates')),
+  A11yAction('Notifications bell', find.byKey(const ValueKey('bell-button'))),
 ];
 
 void main() {

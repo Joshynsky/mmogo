@@ -3,8 +3,14 @@ import 'package:flutter/material.dart';
 
 import 'app_startup.dart';
 import 'autoread/autoread_feature.dart';
+import 'autoread/bridge/method_channel_autoread_bridge.dart';
+import 'autoread/model/waiting_repository.dart';
+import 'autoread/ui/empty_waiting_repository.dart';
+import 'autoread/ui/launch_router.dart';
 import 'autoread/ui/t1_test_host.dart';
+import 'autoread/ui/waiting_bell_numbers.dart';
 import 'data/db/startup_open.dart';
+import 'data/updates/updates_inbox.dart';
 import 'ui/restart_scope.dart';
 import 'ui/screens/add/add_screen.dart';
 import 'ui/screens/backup/backup_screen.dart';
@@ -17,6 +23,10 @@ import 'ui/screens/settings_screen.dart';
 import 'ui/screens/updates/updates_screen.dart';
 import 'ui/screens/welcome_screen.dart';
 import 'ui/shell/app_messenger.dart';
+import 'ui/shell/bell_counts.dart';
+import 'ui/shell/notifications_route.dart';
+import 'ui/shell/notifications_scope.dart';
+import 'ui/shell/updates_news_repository.dart';
 import 'ui/shell/primary_shell.dart';
 import 'ui/shell/routes.dart';
 import 'ui/startup_gate.dart';
@@ -24,9 +34,6 @@ import 'ui/startup_notice.dart';
 import 'ui/theme/app_colors.dart';
 import 'ui/theme/app_palette_scope.dart';
 import 'ui/theme/app_theme.dart';
-
-/// T1 test scaffolding (§AUTOREAD.T1): only used when autoread is compiled in a debug build.
-final GlobalKey<NavigatorState> _t1NavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,9 +84,44 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
   // ocean (AppPaletteController's own default) while the read is in flight.
   late final AppPaletteController _paletteController = widget.controller ?? AppPaletteController();
 
+  // F8: the data the bell and the Notifications page read. Until the
+  // integration slice these are the adapters named in their own files:
+  // UpdatesNewsRepository over the Updates inbox, and (autoread build) an
+  // empty waiting repository.
+  late final UpdatesNewsRepository _news = UpdatesNewsRepository(UpdatesInbox.instance);
+  AutoReadWaitingRepository? _waiting;
+  AutoReadLaunchRouter? _launchRouter;
+  BridgeLaunchSource? _launchSource;
+  late final BellCountsTracker _bell;
+
+  /// One bridge for the router and the T1 host (one platform handler per
+  /// channel). Built lazily, so the standard build never constructs it.
+  late final MethodChannelAutoReadBridge _bridge = MethodChannelAutoReadBridge(generation: () async => 0);
+
+  /// The navigator key of the autoread build (the T1 host and the launch router
+  /// share it). One per app instance, so a soft restart gets a NEW navigator.
+  final GlobalKey<NavigatorState> _autoReadNavigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
+    if (kAutoReadCompiled) {
+      _waiting = const EmptyWaitingRepository();
+    }
+    _bell = BellCountsTracker(
+      news: _news.watchNews(),
+      waiting: kAutoReadCompiled ? waitingBellNumbers(_waiting!, DateTime.now) : null,
+    );
+    if (kAutoReadCompiled) {
+      // F8: a tap on a phone notification opens the Notifications page.
+      _launchSource = BridgeLaunchSource(_bridge);
+      _launchRouter = AutoReadLaunchRouter(
+        source: _launchSource!,
+        navigatorKey: _autoReadNavigatorKey,
+        waiting: _waiting,
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) => _launchRouter?.start());
+    }
     if (widget.controller == null) _paletteController.load();
     // S9b-2 (A4): a start-up reset that did not finish gets one small notice.
     WidgetsBinding.instance.addPostFrameCallback((_) => StartupNotice.maybeShow());
@@ -87,6 +129,9 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
 
   @override
   void dispose() {
+    _launchRouter?.dispose();
+    _bell.dispose();
+    _news.dispose();
     if (widget.controller == null) _paletteController.dispose();
     super.dispose();
   }
@@ -95,9 +140,14 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
   Widget build(BuildContext context) {
     return AppPaletteScope(
       controller: _paletteController,
-      child: ListenableBuilder(
-        listenable: _paletteController,
-        builder: (context, _) => _app(),
+      child: NotificationsScope(
+        news: _news,
+        waiting: _waiting,
+        counts: _bell.value,
+        child: ListenableBuilder(
+          listenable: _paletteController,
+          builder: (context, _) => _app(),
+        ),
       ),
     );
   }
@@ -118,9 +168,14 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
         _ => ThemeMode.system,
       },
       debugShowCheckedModeBanner: false,
-      navigatorKey: kAutoReadCompiled && kDebugMode ? _t1NavigatorKey : null,
+      navigatorKey: kAutoReadCompiled ? _autoReadNavigatorKey : null,
+      navigatorObservers: [if (kAutoReadCompiled) _launchRouter!.observer],
       builder: (context, child) => (kAutoReadCompiled && kDebugMode)
-          ? T1TestHost(navigatorKey: _t1NavigatorKey, child: child ?? const SizedBox.shrink())
+          ? T1TestHost(
+              navigatorKey: _autoReadNavigatorKey,
+              controls: SharedBridgeT1Controls(_bridge, _launchSource!),
+              child: child ?? const SizedBox.shrink(),
+            )
           : child ?? const SizedBox.shrink(),
       // T27 — see app_messenger.dart's own doc comment.
       scaffoldMessengerKey: appMessengerKey,
@@ -142,6 +197,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
         Routes.recentlyDeleted: (_) => const RecentlyDeletedScreen(),
         Routes.backup: (_) => const BackupScreen(),
         Routes.updates: (_) => const UpdatesScreen(),
+        Routes.notifications: (_) => const NotificationsRoute(),
         Routes.privacy: (_) => const PrivacyScreen(),
         Routes.rememberedRecipients: (_) => const RememberedScreen(),
       },

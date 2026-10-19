@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
-import '../../data/updates/updates_inbox.dart';
 import '../theme/app_colors.dart';
-import 'chrome_widgets.dart';
+import 'bell_button.dart';
 import 'primary_shell.dart';
 import 'routes.dart';
 
@@ -130,41 +129,10 @@ class PrimaryScaffold extends StatelessWidget {
                 children: [
                   // B48: the bell is the only top-right button (the Help "?"
                   // moved into Profile; Profile is a bottom-nav tab).
-                  // B27: opens the Updates page; a red dot while any
-                  // update notice is unread.
-                  ValueListenableBuilder<int>(
-                    valueListenable: UpdatesInbox.instance.unreadCount,
-                    builder: (context, unread, _) => Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        IconCircleButton(
-                          icon: Icons.notifications_none_rounded,
-                          tooltip: unread > 0 ? 'Updates, $unread unread' : 'Updates',
-                          size: 36,
-                          background: palette.card,
-                          foreground: palette.ink,
-                          onTap: () => Navigator.of(context).pushNamed(Routes.updates),
-                        ),
-                        if (unread > 0)
-                          Positioned(
-                            top: 5,
-                            right: 6,
-                            child: IgnorePointer(
-                              child: Container(
-                                key: const Key('bellUnreadDot'),
-                                width: 9,
-                                height: 9,
-                                decoration: BoxDecoration(
-                                  color: palette.diffUp,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: palette.card, width: 2),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+                  // 0.1.2 F8: the bell shows the four signed icon states and
+                  // opens the Notifications page (Settings > Updates still
+                  // opens the Updates page).
+                  const BellButton(),
                 ],
               ),
             ),

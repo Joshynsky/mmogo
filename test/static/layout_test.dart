@@ -16,7 +16,20 @@ import 'package:flutter_test/flutter_test.dart';
 /// Files outside lib/autoread/ that may import it (E13). Paths are relative to
 /// lib/, forward slashes. main.dart: the T1 test host hook (T1a, 19-10-2026), guarded by
 /// `kAutoReadCompiled && kDebugMode`; removed when the real Notifications page lands.
-const kAutoReadHookFiles = <String>['main.dart'];
+/// ui/screens/notifications/notifications_page.dart: the shared Notifications page (F3, 19-10-2026);
+/// every auto-read use sits inside `if (kAutoReadCompiled)` so the standard build drops it.
+/// ui/shell/bell_button.dart: the bell's auto-read counts and spoken words, inside
+/// `if (kAutoReadCompiled)` (F8, 19-10-2026). ui/shell/notifications_scope.dart: types the
+/// waiting repository the page needs (F8, 19-10-2026).
+/// ui/screens/settings/settings_screen.dart: the Reading messages card, inside
+/// `if (kAutoReadCompiled)` (F10, 19-10-2026).
+const kAutoReadHookFiles = <String>[
+  'main.dart',
+  'ui/screens/notifications/notifications_page.dart',
+  'ui/shell/bell_button.dart',
+  'ui/shell/notifications_scope.dart',
+  'ui/screens/settings/settings_screen.dart',
+];
 
 const _codeMapPath = '../_pipeline/knowledge/code-map.md';
 
