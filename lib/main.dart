@@ -4,11 +4,15 @@ import 'package:flutter/material.dart';
 import 'app_startup.dart';
 import 'autoread/autoread_feature.dart';
 import 'autoread/bridge/method_channel_autoread_bridge.dart';
+import 'autoread/data/ingesting_launch_source.dart';
+import 'autoread/data/pending_items_store.dart';
+import 'autoread/data/real_waiting_repository.dart';
 import 'autoread/model/waiting_repository.dart';
-import 'autoread/ui/empty_waiting_repository.dart';
+import 'autoread/service/autoread_service.dart';
 import 'autoread/ui/launch_router.dart';
 import 'autoread/ui/t1_test_host.dart';
 import 'autoread/ui/waiting_bell_numbers.dart';
+import 'data/db/app_database.dart';
 import 'data/db/startup_open.dart';
 import 'data/updates/updates_inbox.dart';
 import 'ui/restart_scope.dart';
@@ -78,25 +82,30 @@ class MpesaTrackerApp extends StatefulWidget {
   State<MpesaTrackerApp> createState() => _MpesaTrackerAppState();
 }
 
-class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
+class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingObserver {
   // T23: the app-wide chosen palette (ocean | leaf | indigo), loaded from
   // AppPrefs once here and published down via AppPaletteScope. Starts at
   // ocean (AppPaletteController's own default) while the read is in flight.
   late final AppPaletteController _paletteController = widget.controller ?? AppPaletteController();
 
-  // F8: the data the bell and the Notifications page read. Until the
-  // integration slice these are the adapters named in their own files:
-  // UpdatesNewsRepository over the Updates inbox, and (autoread build) an
-  // empty waiting repository.
+  // F8/I1: the data the bell and the Notifications page read:
+  // UpdatesNewsRepository over the Updates inbox, and (autoread build) the real
+  // waiting repository over the per-item store, the parse service and the bridge.
   late final UpdatesNewsRepository _news = UpdatesNewsRepository(UpdatesInbox.instance);
   AutoReadWaitingRepository? _waiting;
+  RealWaitingRepository? _realWaiting;
   AutoReadLaunchRouter? _launchRouter;
   BridgeLaunchSource? _launchSource;
   late final BellCountsTracker _bell;
 
   /// One bridge for the router and the T1 host (one platform handler per
   /// channel). Built lazily, so the standard build never constructs it.
-  late final MethodChannelAutoReadBridge _bridge = MethodChannelAutoReadBridge(generation: () async => 0);
+  late final MethodChannelAutoReadBridge _bridge =
+      MethodChannelAutoReadBridge(generation: () => _pendingStore.readGeneration());
+
+  /// The per-item store of parsed waiting items. The bridge's generation is the
+  /// store's, so Off and Delete data (which bump it) make an older parse stale.
+  late final SharedPrefsPendingItemsStore _pendingStore = SharedPrefsPendingItemsStore();
 
   /// The navigator key of the autoread build (the T1 host and the launch router
   /// share it). One per app instance, so a soft restart gets a NEW navigator.
@@ -106,7 +115,20 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
   void initState() {
     super.initState();
     if (kAutoReadCompiled) {
-      _waiting = const EmptyWaitingRepository();
+      _realWaiting = RealWaitingRepository(
+        bridge: _bridge,
+        store: _pendingStore,
+        service: AutoReadService(
+          bridge: _bridge,
+          store: _pendingStore,
+          savedCodes: TransactionCodeLookup(() => AppDatabase.instance.database),
+          now: DateTime.now,
+        ),
+      );
+      _waiting = _realWaiting;
+      WidgetsBinding.instance.addObserver(this);
+      // Look at what is held once the first frame is up (on start).
+      WidgetsBinding.instance.addPostFrameCallback((_) => _realWaiting?.ingest());
     }
     _bell = BellCountsTracker(
       news: _news.watchNews(),
@@ -116,7 +138,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
       // F8: a tap on a phone notification opens the Notifications page.
       _launchSource = BridgeLaunchSource(_bridge);
       _launchRouter = AutoReadLaunchRouter(
-        source: _launchSource!,
+        source: IngestingLaunchSource(_launchSource!, _realWaiting!),
         navigatorKey: _autoReadNavigatorKey,
         waiting: _waiting,
       );
@@ -128,7 +150,18 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (kAutoReadCompiled && state == AppLifecycleState.resumed) {
+      _realWaiting?.ingest();
+    }
+  }
+
+  @override
   void dispose() {
+    if (kAutoReadCompiled) {
+      WidgetsBinding.instance.removeObserver(this);
+      _realWaiting?.dispose();
+    }
     _launchRouter?.dispose();
     _bell.dispose();
     _news.dispose();

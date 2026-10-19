@@ -44,6 +44,17 @@ abstract class CodeLookup {
 /// A parse function with the same shape as `SmsParser.parse`.
 typedef SmsParseFn = ParseResult Function(String rawMessage);
 
+/// What [AutoReadService.inspect] found.
+enum HeldLook { readable, unreadable, duplicate, gone, busy }
+
+class HeldInspection {
+  const HeldInspection(this.look, {this.heldAt});
+  final HeldLook look;
+
+  /// Set for [HeldLook.readable] and [HeldLook.unreadable].
+  final DateTime? heldAt;
+}
+
 class AutoReadService {
   AutoReadService({
     required AutoReadBridge bridge,
@@ -127,6 +138,39 @@ class AutoReadService {
         return _fail(ParseFailure.queueFull);
       case StoreResult.staleGeneration:
         return ParseOutcome.gone;
+    }
+  }
+
+  /// Looks at held message [id] WITHOUT storing anything: is it readable (the
+  /// app's parser accepts it), unreadable, already a saved payment (the held
+  /// copy is then acked and dropped, like a duplicate parse), gone, or being
+  /// handled by someone else ([HeldLook.busy])? Used when the app lists what
+  /// is held. The body is parsed and dropped; only the outcome and the
+  /// held time leave this method.
+  Future<HeldInspection> inspect(String id) async {
+    if (!isValidHeldId(id)) return const HeldInspection(HeldLook.gone);
+    if (!await _bridge.claim(id)) return const HeldInspection(HeldLook.busy);
+    try {
+      final held = await _bridge.peekHeld(id);
+      if (held == null) return const HeldInspection(HeldLook.gone);
+      if (held.body.length > kAutoReadMaxChars) {
+        return HeldInspection(HeldLook.unreadable, heldAt: held.heldAt);
+      }
+      final result = _parser(held.body);
+      final ParsedSmsFields? fields = switch (result) {
+        ParseSuccess(:final fields) => fields,
+        _ => null,
+      };
+      if (fields == null) return HeldInspection(HeldLook.unreadable, heldAt: held.heldAt);
+      final already = await _savedCodes.contains(fields.code) ||
+          (await _store.list()).any((i) => i.parsed == fields);
+      if (already) {
+        await _bridge.ackHeld(id, generation: await _bridge.readGeneration());
+        return const HeldInspection(HeldLook.duplicate);
+      }
+      return HeldInspection(HeldLook.readable, heldAt: held.heldAt);
+    } finally {
+      await _bridge.release(id);
     }
   }
 

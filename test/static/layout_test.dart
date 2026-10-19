@@ -23,11 +23,14 @@ import 'package:flutter_test/flutter_test.dart';
 /// waiting repository the page needs (F8, 19-10-2026).
 /// ui/screens/settings/settings_screen.dart: the Reading messages card, inside
 /// `if (kAutoReadCompiled)` (F10, 19-10-2026).
+/// ui/shell/notifications_route.dart: builds the real waiting actions, inside
+/// `if (kAutoReadCompiled)` (I1, 19-10-2026).
 const kAutoReadHookFiles = <String>[
   'main.dart',
   'ui/screens/notifications/notifications_page.dart',
   'ui/shell/bell_button.dart',
   'ui/shell/notifications_scope.dart',
+  'ui/shell/notifications_route.dart',
   'ui/screens/settings/settings_screen.dart',
 ];
 
