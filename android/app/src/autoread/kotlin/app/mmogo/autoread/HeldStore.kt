@@ -37,12 +37,17 @@ class HeldStore(
 
     private val claims = HashSet<String>()
 
-    /** New id, or null: empty body, body over [MAX_BODY_CHARS], store at [MAX_HELD], or no free id. */
+    /**
+     * New id, or null: empty body, body over [MAX_BODY_CHARS], no free id, or the store is full of
+     * claimed (in flight) items. When the store is at [MAX_HELD] the oldest unclaimed item is
+     * deleted to make room (PM decision 19-10-2026: a new message pushes the oldest away). Its
+     * notification, if any, is left alone: tapping it finds no held message.
+     */
     @Synchronized
     fun put(body: String, receivedAtMs: Long): String? {
         if (body.isEmpty() || body.length > MAX_BODY_CHARS) return null
         purgeExpired()
-        if (jsonIds().size >= MAX_HELD) return null
+        if (jsonIds().size >= MAX_HELD && !evictOldest()) return null
         val now = clock()
         val heldAt = if (receivedAtMs > now) now else receivedAtMs
         try {
@@ -143,6 +148,19 @@ class HeldStore(
     }
 
     // --- private ---
+
+    /** Deletes the oldest unclaimed item. False when every item is claimed, so no slot was freed. */
+    private fun evictOldest(): Boolean {
+        val items = ArrayList<Held>()
+        for (id in jsonIds()) {
+            if (id in claims) continue
+            val h = peek(id) ?: continue
+            items.add(h)
+        }
+        val oldest = items.minWithOrNull(compareBy<Held>({ it.receivedAtMs }, { it.id })) ?: return false
+        ack(oldest.id)
+        return jsonIds().size < MAX_HELD
+    }
 
     private fun fileOf(id: String, ext: String): File = File(dir, id + ext)
 
