@@ -110,6 +110,8 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
       // Settings controller and the Delete data wipe.
       _realWaiting = RealWaitingRepository(
         bridge: AutoReadRuntime.bridge,
+        // Home, Analytics and Paid to re-query after a Categorize save, as after Add.
+        onSaved: () => PrimaryShell.active?.dataChanged(),
         store: AutoReadRuntime.store,
         service: AutoReadService(
           bridge: AutoReadRuntime.bridge,
