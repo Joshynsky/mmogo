@@ -12,18 +12,18 @@ class AppInfo {
 
   /// Must equal `pubspec.yaml`'s `version:` value exactly (build-name +
   /// `+`build-number).
-  static const version = '0.1.1+2';
+  static const version = '0.1.2+3';
 
-  /// `0.1.1` — the user-facing build-name part of [version].
+  /// `0.1.2` — the user-facing build-name part of [version].
   static String get versionName => version.split('+').first;
 
-  /// `2` — the build-number part of [version], or `null` if absent.
+  /// `3` — the build-number part of [version], or `null` if absent.
   static String? get buildNumber {
     final parts = version.split('+');
     return parts.length > 1 ? parts[1] : null;
   }
 
-  /// `Version 0.1.1 (build 2)` — Profile's display string.
+  /// `Version 0.1.2 (build 3)` — Profile's display string.
   static String get displayVersion =>
       buildNumber == null ? 'Version $versionName' : 'Version $versionName (build $buildNumber)';
 }
