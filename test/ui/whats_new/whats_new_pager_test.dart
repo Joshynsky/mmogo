@@ -1,4 +1,4 @@
-// 0.1.2 S11a (WN1, PK2, CW2): the What's-new pager. Five cards in the signed
+// 0.1.2 S11a (WN1, PK2, CW2): the What's-new pager. Six cards in the signed
 // order, Next / Back / swipe, only the last card has Got it, the system Back
 // key, no outside-tap or drag close, the two injected route buttons, 44 px,
 // dark, text scale 1.3 and the announcements. Stub routes only: the real
@@ -97,26 +97,27 @@ String _titleText(WidgetTester tester) => tester.widget<Text>(find.byKey(_title)
 String _bodyText(WidgetTester tester) => tester.widget<Text>(find.byKey(_body)).data!;
 
 void main() {
-  group('the five cards, in the signed order', () {
-    testWidgets('titles and bodies are the named constants, card 1 to card 5', (tester) async {
+  group('the six cards, in the signed order', () {
+    testWidgets('titles and bodies are the named constants, card 1 to card 6', (tester) async {
       await _pump(tester);
       expect(find.text(kWhatsNewPagerTitle), findsOneWidget);
       expect(kWhatsNewPagerTitle, "What's new in mmogo 0.1.2");
       final titles = <String>[];
       final bodies = <String>[];
-      for (var i = 0; i < 5; i++) {
+      for (var i = 0; i < 6; i++) {
         titles.add(_titleText(tester));
         bodies.add(_bodyText(tester));
-        if (i < 4) await _tapNext(tester);
+        if (i < 5) await _tapNext(tester);
       }
       expect(titles, [
         'Withdrawals, airtime and Pochi',
         'Weeks',
         'Same phone number = one person',
         'Backups',
+        'Notifications',
         'Privacy',
       ]);
-      expect(bodies, [kWhatsNewCard1Body, kWhatsNewCard2Body, kWhatsNewCard3Body, kWhatsNewCard4Body, kWhatsNewCard5Body]);
+      expect(bodies, [kWhatsNewCard1Body, kWhatsNewCard2Body, kWhatsNewCard3Body, kWhatsNewCard4Body, kWhatsNewCardNotificationsBody, kWhatsNewCard5Body]);
     });
 
     testWidgets('card 1: the truthful placeholder, no Analytics claim, the short independence line', (tester) async {
@@ -202,9 +203,22 @@ void main() {
       h.dispose();
     });
 
-    testWidgets('card 5: the canonical sentence, W7, the sign-off, plain text with no expander', (tester) async {
+    testWidgets('card 5: Notifications says what the bell does and where Updates went, and says nothing about reading messages', (tester) async {
       await _pump(tester);
       await _tapNext(tester, 4);
+      expect(_titleText(tester), 'Notifications');
+      expect(_bodyText(tester), kWhatsNewCardNotificationsBody);
+      expect(_bodyText(tester), contains('The bell now opens Notifications.'));
+      expect(_bodyText(tester), contains('now in Settings, under About'));
+      for (final w in ['SMS', 'permission', 'read your', 'auto']) {
+        expect(_bodyText(tester).toLowerCase(), isNot(contains(w.toLowerCase())), reason: w);
+      }
+      expect(find.byKey(const Key('whatsNewSignOff')), findsNothing);
+    });
+
+    testWidgets('card 6: the canonical sentence, W7, the sign-off, plain text with no expander', (tester) async {
+      await _pump(tester);
+      await _tapNext(tester, 5);
       // R14 (F4): the canonical sentence, then only the second half of W7 (no repeated "used only to check for updates").
       expect(_bodyText(tester), '$kPrivacySentenceStandard $kNetworkSeenSentence');
       expect(
@@ -247,15 +261,15 @@ void main() {
       await tester.pumpAndSettle();
       expect(_titleText(tester), kWhatsNewCard1Title);
       expect(find.byKey(_pager), findsOneWidget);
-      await _tapNext(tester, 4);
+      await _tapNext(tester, 5);
       await tester.fling(find.byKey(_body), const Offset(-300, 0), 1200);
       await tester.pumpAndSettle();
       expect(_titleText(tester), kWhatsNewCard5Title);
     });
 
-    testWidgets('the dots show five and are not tappable', (tester) async {
+    testWidgets('the dots show six and are not tappable', (tester) async {
       await _pump(tester);
-      for (var i = 0; i < 5; i++) {
+      for (var i = 0; i < 6; i++) {
         expect(find.byKey(Key('whatsNewDot$i')), findsOneWidget);
       }
       await tester.tap(find.byKey(const Key('whatsNewDot3')), warnIfMissed: false);
@@ -265,7 +279,7 @@ void main() {
 
     testWidgets('only the last card has Got it; the others have Next', (tester) async {
       await _pump(tester);
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < 5; i++) {
         expect(find.byKey(_gotIt), findsNothing, reason: 'card ${i + 1}');
         expect(find.byKey(_next), findsOneWidget, reason: 'card ${i + 1}');
         expect(find.text('Got it'), findsNothing);
@@ -280,7 +294,7 @@ void main() {
   group('closing', () {
     testWidgets('Got it closes the pager and returns true to the page it was opened from', (tester) async {
       final host = await _pump(tester);
-      await _tapNext(tester, 4);
+      await _tapNext(tester, 5);
       await tester.tap(find.byKey(_gotIt));
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsNothing);
@@ -356,7 +370,7 @@ void main() {
 
   group('44 px, dark, text scale 1.3', () {
     Future<void> every44(WidgetTester tester) async {
-      for (var i = 0; i < 5; i++) {
+      for (var i = 0; i < 6; i++) {
         for (final k in [_next, _back, _gotIt, const Key('whatsNewCalSettings'), const Key('whatsNewOpenBackup')]) {
           final f = find.byKey(k);
           if (f.evaluate().isEmpty) continue;
@@ -364,7 +378,7 @@ void main() {
           expect(size.height, greaterThanOrEqualTo(44), reason: 'card ${i + 1} $k height');
           expect(size.width, greaterThanOrEqualTo(44), reason: 'card ${i + 1} $k width');
         }
-        if (i < 4) await _tapNext(tester);
+        if (i < 5) await _tapNext(tester);
       }
     }
 
@@ -375,15 +389,15 @@ void main() {
 
     testWidgets('dark and 1.3: the buttons stay pinned and on screen, the card scrolls', (tester) async {
       await _pump(tester, dark: true, scale: 1.3, size: const Size(360, 520));
-      for (var i = 0; i < 5; i++) {
-        final primary = find.byKey(i < 4 ? _next : _gotIt);
+      for (var i = 0; i < 6; i++) {
+        final primary = find.byKey(i < 5 ? _next : _gotIt);
         final rect = tester.getRect(primary);
         expect(rect.bottom, lessThanOrEqualTo(520), reason: 'card ${i + 1} button inside the screen');
         expect(rect.height, greaterThanOrEqualTo(44));
         expect(tester.takeException(), isNull, reason: 'card ${i + 1} no overflow');
-        if (i < 4) await _tapNext(tester);
+        if (i < 5) await _tapNext(tester);
       }
-      // Card 5 is long at 1.3 on a short screen: the scroll area has room to move, the buttons do not.
+      // Card 6 is long at 1.3 on a short screen: the scroll area has room to move, the buttons do not.
       final scroll = tester.state<ScrollableState>(find.descendant(of: find.byKey(const Key('backupSheetScroll')), matching: find.byType(Scrollable)));
       expect(scroll.position.maxScrollExtent, greaterThan(0));
       final before = tester.getRect(find.byKey(_gotIt));
@@ -406,16 +420,16 @@ void main() {
   });
 
   group('semantics and focus', () {
-    testWidgets('"Card N of 5" is announced as a live region and follows the card', (tester) async {
+    testWidgets('"Card N of 6" is announced as a live region and follows the card', (tester) async {
       final handle = tester.ensureSemantics();
       await _pump(tester);
       expect(find.bySemanticsLabel(whatsNewCardOfText(1)), findsOneWidget);
-      expect(whatsNewCardOfText(1), 'Card 1 of 5');
-      final node = tester.getSemantics(find.bySemanticsLabel('Card 1 of 5'));
+      expect(whatsNewCardOfText(1), 'Card 1 of 6');
+      final node = tester.getSemantics(find.bySemanticsLabel('Card 1 of 6'));
       expect(node.flagsCollection.isLiveRegion, isTrue);
       await _tapNext(tester, 2);
-      expect(find.bySemanticsLabel('Card 3 of 5'), findsOneWidget);
-      expect(find.bySemanticsLabel('Card 1 of 5'), findsNothing);
+      expect(find.bySemanticsLabel('Card 3 of 6'), findsOneWidget);
+      expect(find.bySemanticsLabel('Card 1 of 6'), findsNothing);
       handle.dispose();
     });
 

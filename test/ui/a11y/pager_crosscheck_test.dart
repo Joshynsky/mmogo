@@ -1,4 +1,4 @@
-// S11b CB5 cross-check: the What's new pager, card 1 to card 5, at 360 x 640,
+// S11b CB5 cross-check: the What's new pager, card 1 to card 6, at 360 x 640,
 // 1.3, light and dark: its buttons are pinned (found without scrolling the page,
 // on screen, hit-testable, 44 px, not overlapping). The pager's own tests are in
 // test/ui/whats_new/whats_new_pager_test.dart (S11a); this only runs the same
@@ -29,7 +29,7 @@ Widget _host() => Builder(
 void main() {
   tearDownAll(printA11yLog);
 
-  for (var card = 1; card <= 5; card++) {
+  for (var card = 1; card <= 6; card++) {
     a11ySubject(
       'What\'s new pager, card $card',
       before: () async => WhatsNewProcess.resetForTest(),
@@ -44,7 +44,7 @@ void main() {
       },
       actions: () => [
         if (card > 1) A11yAction('Back', _k('whatsNewBack')),
-        A11yAction(card == 5 ? 'Got it' : 'Next', _k(card == 5 ? 'whatsNewGotIt' : 'whatsNewNext')),
+        A11yAction(card == 6 ? 'Got it' : 'Next', _k(card == 6 ? 'whatsNewGotIt' : 'whatsNewNext')),
       ],
     );
   }

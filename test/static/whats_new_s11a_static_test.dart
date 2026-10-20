@@ -105,6 +105,8 @@ void main() {
       kWhatsNewCard3Extra,
       kWhatsNewCard4Title,
       kWhatsNewCard4Body,
+      kWhatsNewCardNotificationsTitle,
+      kWhatsNewCardNotificationsBody,
       kWhatsNewCard5Title,
       kWhatsNewCard5Body,
     ].join('\n').replaceAll(kUninstallErasesNotice, '').replaceAll(kPrivacySentenceStandard, '');

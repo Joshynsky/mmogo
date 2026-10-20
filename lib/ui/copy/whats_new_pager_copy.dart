@@ -22,7 +22,7 @@ const kWhatsNewEntryBody =
 /// for release notices, see the Updates footnote).
 const kWhatsNewEntryButton = "Read what's new";
 
-const kWhatsNewCardCount = 5;
+const kWhatsNewCardCount = 6;
 
 String whatsNewCardOfText(int number) => 'Card $number of $kWhatsNewCardCount';
 
@@ -70,7 +70,15 @@ const kWhatsNewCard4Title = 'Backups';
 const kWhatsNewCard4Body =
     'Backups from 0.1.1 still restore. $kBackupNotRestorableByOlder $kUninstallErasesNotice';
 
-// Card 5
+// Card 5 (PM 20-10-2026): the bell. It sits BEFORE Privacy so Privacy stays the closing card.
+// Standard build only: it says nothing about reading messages.
+const kWhatsNewCardNotificationsTitle = 'Notifications';
+const kWhatsNewCardNotificationsBody =
+    'The bell now opens Notifications. Updates and notices from mmogo appear there, '
+    'and anything new shows on the bell. '
+    'The Updates page, where you check for updates, is now in Settings, under About.';
+
+// Card 6 (the closing card; named Card5 before the bell card was added)
 const kWhatsNewCard5Title = 'Privacy';
 /// R14 (F4): the canonical sentence already says the internet is used only to
 /// check for updates, so only the second half of W7 follows it.

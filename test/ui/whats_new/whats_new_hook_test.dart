@@ -79,7 +79,7 @@ Widget _app(_Rig rig, {String home = 'HOME'}) => MaterialApp(
 );
 
 Future<void> _toLastCard(WidgetTester tester) async {
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i < 5; i++) {
     await tester.tap(find.byKey(const Key('whatsNewNext')));
     await tester.pumpAndSettle();
   }

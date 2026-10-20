@@ -6,8 +6,8 @@ import '../copy/whats_new_pager_copy.dart';
 import '../theme/app_colors.dart';
 import '../widgets/tap_target.dart';
 
-/// §UI.WHATSNEW.CARDS — the five cards of the What's-new pager (0.1.2 S11a,
-/// WN1). One card at a time: its title (the focus target when the card
+/// §UI.WHATSNEW.CARDS — the six cards of the What's-new pager (0.1.2 S11a,
+/// WN1; the Notifications card was added 20-10-2026). One card at a time: its title (the focus target when the card
 /// changes), the text, and the card's own extras (the picture, a link button,
 /// the sign-off). The pager owns the buttons and the page position.
 class WhatsNewCardView extends StatelessWidget {
@@ -20,7 +20,7 @@ class WhatsNewCardView extends StatelessWidget {
     this.onOpenBackup,
   });
 
-  /// 0..4.
+  /// 0..5.
   final int index;
   final AppPalette palette;
   final FocusNode titleFocus;
@@ -35,6 +35,7 @@ class WhatsNewCardView extends StatelessWidget {
     kWhatsNewCard2Title,
     kWhatsNewCard3Title,
     kWhatsNewCard4Title,
+    kWhatsNewCardNotificationsTitle,
     kWhatsNewCard5Title,
   ];
   static const _bodies = [
@@ -42,6 +43,7 @@ class WhatsNewCardView extends StatelessWidget {
     kWhatsNewCard2Body,
     kWhatsNewCard3Body,
     kWhatsNewCard4Body,
+    kWhatsNewCardNotificationsBody,
     kWhatsNewCard5Body,
   ];
 
@@ -85,7 +87,7 @@ class WhatsNewCardView extends StatelessWidget {
           Text(kWhatsNewCard3Extra, key: const Key('whatsNewCard3Extra'), style: body),
         ],
         if (index == 3) _button(const Key('whatsNewOpenBackup'), kWhatsNewOpenBackup, onOpenBackup),
-        if (index == 4) ...[
+        if (index == 5) ...[
           const SizedBox(height: 10),
           Text(
             kWhatsNewSignOff,

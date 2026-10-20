@@ -105,7 +105,7 @@ Map<String, Object?> _notice(String tag, {bool read = false}) => {
 };
 
 Future<void> _gotItFromCard1(WidgetTester tester) async {
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i < 5; i++) {
     await tester.tap(find.byKey(const Key('whatsNewNext')));
     await tester.pumpAndSettle();
   }
@@ -221,7 +221,7 @@ void main() {
   });
 
   group('Got it from the Updates entry', () {
-    testWidgets('Got it on card 5 returns to Updates, writes the installed version, clears the pill', (tester) async {
+    testWidgets('Got it on card 6 returns to Updates, writes the installed version, clears the pill', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1');
       await _openUpdates(tester);
       await _openPager(tester);
