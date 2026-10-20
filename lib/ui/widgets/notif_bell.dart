@@ -150,7 +150,7 @@ class NotifBell extends StatelessWidget {
                       key: const ValueKey('bell-circle'),
                       width: 36,
                       height: 36,
-                      decoration: BoxDecoration(color: palette.surface, shape: BoxShape.circle),
+                      decoration: BoxDecoration(color: palette.card, shape: BoxShape.circle),
                       child: Icon(Icons.notifications_outlined, size: 22, color: palette.ink),
                     ),
                     ...badges,
