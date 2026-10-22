@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="News about mmogo: releases and announcements.">
+<meta name="theme-color" content="#073B4C">
+<link rel="icon" type="image/png" href="img/icon.png">
+<title>News: mmogo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+html { color-scheme: light; }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="index.html"><img alt="" src="img/icon.png"> mmogo</a>
+    <nav class="nav" aria-label="Main"><a href="index.html#versions">Versions</a><a href="index.html#whats-new">What's new</a><a href="news.html" aria-current="page">News</a><a href="index.html#faq">FAQ</a></nav>
+    <button class="btn theme" id="theme" type="button" aria-label="Switch light or dark" title="Switch light or dark">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+    <a class="btn btn-sm" href="index.html#versions">Download</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="newshead">
+    <div class="wrap">
+      <p class="eyebrow">News</p>
+      <h1 style="font-size: clamp(2rem, 7vw, 2.8rem); font-weight: 800; letter-spacing: -0.015em;">News about mmogo</h1>
+      <p class="sec-lede">Releases and announcements, newest first.</p>
+
+      <article class="post" id="v0-1-2">
+        <time>22 October 2026</time>
+        <h2>mmogo 0.1.2 is out: two versions, and auto-read</h2>
+        <p>mmogo 0.1.2 comes in two versions. The standard version is the mmogo you know, now with support for withdrawals, airtime and Pochi messages, weeks that follow the calendar, and one person for one phone number however it is written.</p>
+        <p>The new auto-read version also notices a new M-Pesa message when it arrives and lets you parse it with one tap on a notification. It asks for SMS and notification permission and for your consent, and it is off until you switch it on. If you do not want to give SMS permission, the standard version works without it.</p>
+        <div class="links">
+          <a class="btn btn-sun" href="index.html#versions">Choose a version</a>
+          <a class="btn copy" href="index.html#whats-new">See what's new</a>
+        </div>
+      </article>
+
+      <article class="post" id="v0-1-1">
+        <time>0.1.1</time>
+        <h2>mmogo 0.1.1: backups and a privacy page</h2>
+        <p>Save your data to a backup file and restore it later, or let mmogo save a backup to a folder you pick. There is a new Privacy and your data page, a Profile tab with Settings inside, and a Send feedback row.</p>
+        <p>mmogo 0.1.1 did not understand every M-Pesa message. Pochi la Biashara payments, agent withdrawals and airtime purchases had to be added by hand. They are understood from 0.1.2.</p>
+        <div class="links"><a class="btn copy" href="https://github.com/Joshynsky/mmogo/releases/download/v0.1.1/mmogo.apk">Download 0.1.1</a></div>
+      </article>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><a href="index.html">Home</a> · <a href="https://github.com/Joshynsky/mmogo">GitHub</a> · <a href="https://github.com/Joshynsky/mmogo/blob/main/LICENSE">MIT licence</a> · <a href="https://github.com/Joshynsky/mmogo/releases">All releases</a></p>
+    <p>mmogo is an independent project. It is not made by, or connected to, Safaricom or M-Pesa.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  try { var t = localStorage.getItem('mmogo-theme'); if (t) root.setAttribute('data-theme', t); } catch (e) {}
+  document.getElementById('theme').addEventListener('click', function () {
+    var dark = root.getAttribute('data-theme') === 'dark' ||
+      (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    var next = dark ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('mmogo-theme', next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

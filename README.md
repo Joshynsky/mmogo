@@ -4,7 +4,7 @@
 [![Downloads](https://img.shields.io/github/downloads/Joshynsky/mmogo/total)](https://github.com/Joshynsky/mmogo/releases)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
 
-An Android app for seeing where your M-Pesa money goes (the name is short for "My Money Goes"). You paste an M-Pesa message and mmogo reads the amount, who you paid, the code, the date and the transaction cost, then fills in an entry for you to check. You can also type an entry or log a cash payment. It sorts, totals and charts what you've entered. Your entries stay on your phone: no account, no server, no tracking. The only thing mmogo uses the internet for is checking for updates (see [Privacy](#privacy)).
+An Android app for seeing where your money goes (the name is short for "My Money Goes"). You paste an M-Pesa message and mmogo reads the amount, who you paid, the code, the date and the transaction cost, then fills in an entry for you to check. You can also type an entry or log a cash payment. It sorts, totals and charts what you've entered. Your entries stay on your phone: no account, no server, no tracking. The only thing mmogo uses the internet for is checking for updates (see [Privacy](#privacy)).
 
 <p>
   <img src="docs/img/home.webp" alt="Home screen: this month's spending split by Send Money, Paybill, Buy Goods and Cash" width="30%">
