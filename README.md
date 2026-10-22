@@ -12,7 +12,7 @@ An Android app for seeing where your money goes (the name is short for "My Money
   <img src="docs/img/step4.webp" alt="Adding a cash payment and choosing a category" width="30%">
 </p>
 
-**[Download for Android](https://joshynsky.github.io/mmogo/)** from the website, or get `mmogo.apk` from the [latest release](https://github.com/Joshynsky/mmogo/releases/latest). It isn't on the Play Store, so see [Install](#install-android) for the few prompts Android shows.
+**[Download for Android](https://joshynsky.github.io/mmogo/)** from the website, or get `mmogo.apk` (standard) or `mmogo-autoread.apk` (auto-read) from the [latest release](https://github.com/Joshynsky/mmogo/releases/latest). Not sure which? See [Two versions](#two-versions). It isn't on the Play Store, so see [Install](#install-android) for the few prompts Android shows.
 
 mmogo is independent. Not made or approved by Safaricom. It is an early release built by one person, so expect some rough edges.
 
@@ -20,20 +20,26 @@ mmogo is independent. Not made or approved by Safaricom. It is an early release 
 
 I could never say where my money went. I'd have enough at the start of the month, and then somewhere in the middle I'd be in Fuliza with no clear idea how I got there. A friend had the same problem, so I started building something to answer that one question.
 
-I didn't research the space properly first. When I did, I found that M-Pesa trackers already exist, with plenty of users, and some do more than mmogo does today (Mpesa: Ledger and Monee, for example). They are also on the Play Store and mmogo isn't, so it starts behind. What mmogo offers is a different set of trade-offs: you paste the message yourself, so it needs no SMS permission; its only permission is internet, used only to check for updates, and you can switch that off; it keeps no balance and no account; and the code is open. If that suits you, try it. If another app suits you better, that's a fair choice too.
+I didn't research the space properly first. When I did, I found that M-Pesa trackers already exist, with plenty of users, and some do more than mmogo does today (Mpesa: Ledger and Monee, for example). They are also on the Play Store and mmogo isn't, so it starts behind. What mmogo offers is a different set of trade-offs: in the standard version you paste the message yourself, so it needs no SMS permission, and its only permission is internet, used only to check for updates (you can switch that off); the optional auto-read version does ask for SMS permission, which is why it is a separate download; it keeps no balance and no account; and the code is open. If that suits you, try it. If another app suits you better, that's a fair choice too.
 
 ## How it was built
 
 I decided what mmogo does and what it doesn't, and I tested each release on a real phone. Most of the code was written with Claude Code, an AI coding assistant, working from my instructions; the commit history shows it as co-author. I approved every screen and every piece of wording, set the privacy rules (your data stays on your phone, and nothing about your entries is sent anywhere), and checked every fix by hand before it shipped. It has thousands of automated tests, and each fix was proven by breaking it on purpose and watching a test fail. The app itself contains no AI, and it has not had an outside security audit.
 
+## Two versions
+
+- **Standard** (`mmogo.apk`): you paste each M-Pesa message yourself. It asks Android for one permission, internet, used only to check for updates.
+- **Auto-read** (`mmogo-autoread.apk`): everything in the standard version, plus it notices a new M-Pesa message when it arrives and lets you parse it with one tap on a notification. It asks for SMS and notification permission, and for your consent, when you switch reading on, and it is off until you do. If you do not want to give SMS permission, use the standard version.
+
 ## What you can do
 
-- **Add an entry three ways:** paste an M-Pesa message (Send Money, Paybill and Buy Goods are read for you), type it yourself, or log a cash payment. You always check an entry before it is saved.
+- **Add an entry three ways:** paste an M-Pesa message (Send Money, Paybill, Buy Goods, withdrawals, airtime and Pochi are read for you), type it yourself, or log a cash payment. You always check an entry before it is saved.
 - **Sort your spending:** give every entry a category such as Groceries, Rent or Transport, and make your own. Tick "Always use" and the next payment to the same person or paybill is filled in for you.
-- **See where it went:** Home shows this month (or today, this week and more) with a bar for each type of payment and the transaction costs. Analytics breaks it down by day, week, month, year or any range, with a chart you can tap and swipe.
-- **See who you pay most:** Paid to ranks the people, paybills and shops you pay, with search, filter and sort.
+- **See where it went:** Home shows this month (or today, this week and more) with a bar for each type of payment and the transaction costs. Analytics breaks it down by day, week, month, year or any range, with a chart you can tap and swipe. A week runs from the day you choose in Settings (Monday unless you change it). A withdrawal is money out but not money you spent, so it adds nothing to what you spent; its transaction cost is still tracked.
+- **See who you pay most:** Paid to ranks the people, paybills and shops you pay, with search, filter and sort. The same phone number written 0712 345 678 or +254 712 345 678 counts as one person.
 - **Fix mistakes:** swipe a row to edit or delete it, with Undo. Deleted entries wait in Recently deleted so you can restore them.
 - **Back up and restore:** save your data to a file you keep, restore it on this or a new phone (merge or replace), or let mmogo back up to a folder you pick after every few entries. Backup files are not encrypted, so keep them private.
+- **Notifications:** the bell opens Notifications, where updates and notices appear and anything new shows on the bell. In the auto-read version your M-Pesa messages wait there too.
 - **Hear about new versions:** mmogo can check for updates when you open the app, at most once a week, and tell you on the Updates page. You can switch the check off there.
 - **Make it yours:** three colour palettes (light and dark follow your phone), a short guided tip on each page, a name for the Home greeting, and **Export CSV** through the share sheet.
 
@@ -42,25 +48,26 @@ I decided what mmogo does and what it doesn't, and I tested each release on a re
 No permissions except internet, used only to check for updates (switchable off).
 
 - Your data is stored in a local SQLite database on the device. There are no accounts and no server.
-- mmogo reads **only the message you paste**. It picks out the amount, receiver, code, date and transaction cost. It has no access to your SMS inbox or any other message.
+- The standard version reads **only the message you paste**. It picks out the amount, receiver, code, date and transaction cost. It has no access to your SMS inbox or any other message.
 - It **never saves your M-Pesa balance**. The balance in the message is ignored: it isn't picked out, stored or shown. The message text isn't kept either, only the fields above.
-- The release app requests **one permission: `INTERNET`**, used only to check for updates, when you open the app and at most once a week after a successful check. GitHub sees your IP address and that the request comes from the mmogo app. No entries, names or messages are sent. The update check carries no identifier.
-- You can switch the update check off on the Updates page (Profile > Settings > Updates, or tap the bell). When it is off, mmogo makes no request at all.
+- The standard version requests **one permission: `INTERNET`**, used only to check for updates, when you open the app and at most once a week after a successful check. GitHub sees your IP address and that the request comes from the mmogo app. No entries, names or messages are sent. The update check carries no identifier.
+- The **auto-read version** also asks for SMS and notification permission, and for your consent, but only when you switch reading on in Settings; it is off until then. It keeps only messages from M-Pesa, holds them on your phone until you parse them or they expire (up to 24 hours), and its notification shows no amount and no name. Your messages are not sent anywhere.
+- You can switch the update check off on the Updates page (Profile > Settings > About > Updates). When it is off, mmogo makes no request at all.
 - Android's own backup is switched **off**, so Android does not copy your data to Google Drive, and there is no automatic restore on a new phone. Android's phone-to-phone transfer will not carry mmogo's data either. Uninstalling the app erases your data, so make a backup.
 - **Backup and restore** (Profile > Settings > Backup and restore): a backup is a JSON file that you make yourself. It is **not encrypted** and holds your transactions, including names and phone numbers, so keep it somewhere private. Restore can merge the file into what is on the phone or replace it. Optionally, mmogo can save a backup to a folder you pick after every few saved entries. If that folder syncs to a cloud service, your backup files go there too. mmogo itself never uploads a backup anywhere.
 - **Export CSV** is still there for taking your entries to a spreadsheet.
 
 ## Install (Android)
 
-Get `mmogo.apk` from the [website](https://joshynsky.github.io/mmogo/) or the latest [GitHub Release](https://github.com/Joshynsky/mmogo/releases/latest). mmogo isn't on the Play Store, so Android and Chrome ask you to confirm a few things. They are all expected:
+Get `mmogo.apk` (standard) or `mmogo-autoread.apk` (auto-read) from the [website](https://joshynsky.github.io/mmogo/) or the latest [GitHub Release](https://github.com/Joshynsky/mmogo/releases/latest). mmogo isn't on the Play Store, so Android and Chrome ask you to confirm a few things. They are all expected:
 
 1. **Chrome says "File might be harmful".** Tap **Download anyway**. Chrome says this about every APK.
 2. **Open the file from your file manager** (Files, then Downloads). Android asks to allow installs from unknown apps: allow it for the file manager, not for Chrome.
 3. **Play Protect may say "App blocked to protect your device".** It hasn't seen this developer before. Tap **More details**, then **Install anyway**.
 
-If the download freezes at 100%, cancel it and type `github.com/Joshynsky/mmogo/releases/latest/download/mmogo.apk` into Chrome's address bar. This happened on a phone that had the GitHub app installed: the app took over the link and the download never finished.
+If the download freezes at 100%, cancel it and type `github.com/Joshynsky/mmogo/releases/latest/download/mmogo.apk` (or `mmogo-autoread.apk`) into Chrome's address bar. This happened on a phone that had the GitHub app installed: the app took over the link and the download never finished.
 
-To check your download, compare its SHA-256 with the value published next to the release:
+To check your download, compare its SHA-256 with the value published next to the release (there is one for each file; use `mmogo-autoread.apk` in the commands for the auto-read version):
 
 ```
 sha256sum mmogo.apk        # Linux / macOS / Git Bash
@@ -75,7 +82,7 @@ Found a bug, or want something added? [Open an issue](https://github.com/Joshyns
 
 An early release, under the [MIT License](LICENSE). See the [releases page](https://github.com/Joshynsky/mmogo/releases) for the current version and what changed.
 
-Planned next: tracking money you receive and a lighter Add form. Reading M-Pesa messages automatically, without pasting, is something I want to look at after that, if it can be done without asking for broad SMS access.
+Planned next: tracking money you receive and a lighter Add form. Reading M-Pesa messages automatically, without pasting, is available as the auto-read version, new in 0.1.2 and still early.
 
 ---
 
@@ -94,9 +101,10 @@ flutter build apk --debug --flavor standard    # a debug APK
 flutter run -d windows                         # desktop check; no --flavor (flavors are Android-only here)
 flutter analyze
 flutter test -j 1          # run the tests one file at a time
+flutter test --dart-define=MMOGO_AUTOREAD=true -j 1   # the auto-read build's tests (one test, which asserts the flag is off, is expected to fail)
 ```
 
-The app has two Android flavors, `standard` (the shipping app, INTERNET only) and `autoread` (reserved for the opt-in auto-read build; it adds nothing yet). `standard` is the `default-flavor` in `pubspec.yaml`, but pass `--flavor` anyway on every Android `flutter run` and `flutter build`. A debug build installs as a separate app, **"mmogo next"** (`io.github.joshynsky.mmogo.next`), so it never replaces or shares data with a released mmogo on the same phone. Release builds keep `io.github.joshynsky.mmogo`.
+The app has two Android flavors: `standard` (the standard version, INTERNET only) and `autoread` (the auto-read version, which also declares SMS and notification permissions and is built with `--dart-define=MMOGO_AUTOREAD=true`). `standard` is the `default-flavor` in `pubspec.yaml`, but pass `--flavor` anyway on every Android `flutter run` and `flutter build`. A debug build installs as a separate app, **"mmogo next"** (`io.github.joshynsky.mmogo.next`), so it never replaces or shares data with a released mmogo on the same phone. Release builds keep `io.github.joshynsky.mmogo`.
 
 A debug build fills an empty database with sample entries so you can explore the screens without real messages. Release builds never do this.
 
@@ -112,8 +120,8 @@ Release builds are signed with a private key that lives **outside** this reposit
    powershell -File tool\build_apk.ps1 standard -StagingDir <folder>     # flutter build apk --release --flavor standard
    powershell -File tool\build_apk.ps1 autoread -StagingDir <folder>     # ... --flavor autoread --dart-define=MMOGO_AUTOREAD=true
    ```
-   The output is `build\app\outputs\flutter-apk\app-<flavor>-release.apk`. With `-StagingDir` it is copied as `mmogo.apk` (standard) or `mmogo-autoread.apk` (autoread); without it the copy command is only printed. Nothing is published. Then check it: `powershell -File tool\check_apk_manifest.ps1 <apk> standard` (permissions, no SMS/notification entries, no autoread code; prints applicationId, version and the signing-certificate SHA-256). Publish the SHA-256 of `mmogo.apk` next to it.
-5. Publish a GitHub Release with `mmogo.apk` attached. The website's download buttons use `releases/latest/download/mmogo.apk`, so they follow the newest release on their own. The version, size and SHA-256 text in `docs/index.html` is written by hand and must be updated to match.
+   The output is `build\app\outputs\flutter-apk\app-<flavor>-release.apk`. With `-StagingDir` it is copied as `mmogo.apk` (standard) or `mmogo-autoread.apk` (autoread); without it the copy command is only printed. Nothing is published. Then check it: `powershell -File tool\check_apk_manifest.ps1 <apk> standard` (or `autoread`; permissions, no SMS/notification entries, no autoread code; prints applicationId, version and the signing-certificate SHA-256). Publish the SHA-256 of each APK next to it.
+5. Publish a GitHub Release with `mmogo.apk` and `mmogo-autoread.apk` attached (those exact names). The website's download buttons use `releases/latest/download/<name>`, so they follow the newest release on their own. The version, sizes, SHA-256 values and news date in `docs/index.html` and `docs/news.html` are written by hand and must be updated to match.
 
 Without `android/key.properties` a release build is left unsigned; it never falls back to the debug key.
 
@@ -130,7 +138,7 @@ lib/
     widgets/   shared widgets (cards, chips, bottom sheet, the guided-tour overlay, pickers)
 test/          mirrors lib/
 assets/        onboarding walkthrough images and the app icon
-docs/          the landing page, served by GitHub Pages (index.html and img/)
+docs/          the landing page and News page, served by GitHub Pages (index.html, news.html, style.css and img/)
 brand/         icon sources and the script that builds them
 ```
 
