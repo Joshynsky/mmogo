@@ -104,12 +104,8 @@ Map<String, Object?> _notice(String tag, {bool read = false}) => {
   'read': read,
 };
 
-Future<void> _gotItFromCard1(WidgetTester tester) async {
-  for (var i = 0; i < 5; i++) {
-    await tester.tap(find.byKey(const Key('whatsNewNext')));
-    await tester.pumpAndSettle();
-  }
-  await tester.tap(find.byKey(const Key('whatsNewGotIt')));
+Future<void> _back(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('whatsNewBack')));
   await tester.pumpAndSettle();
 }
 
@@ -185,17 +181,18 @@ void main() {
       expect(find.byKey(_entry), findsOneWidget);
     });
 
-    testWidgets('opening Updates and opening the pager do not clear it', (tester) async {
-      await _pump(tester, seen: '0.1.1');
+    testWidgets('opening Updates does not clear it; opening the pages does (Back or the system Back key)', (tester) async {
+      final rig = await _pump(tester, seen: '0.1.1');
       await _openUpdates(tester);
       expect(find.byKey(_pill), findsOneWidget);
-      await _openPager(tester);
       expect(WhatsNewProcess.pillCleared, isFalse);
-      await tester.binding.handlePopRoute(); // first card Back: closed, unseen
+      await _openPager(tester);
+      expect(WhatsNewProcess.pillCleared, isTrue);
+      await tester.binding.handlePopRoute(); // the system Back key: closed
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsNothing);
-      expect(find.byKey(_pill), findsOneWidget);
-      expect(WhatsNewProcess.pillCleared, isFalse);
+      expect(find.byKey(_pill), findsNothing);
+      expect(rig.written, ['0.1.1']);
     });
 
     testWidgets('leaving Updates clears it for this process: it is gone when the page is opened again', (tester) async {
@@ -220,23 +217,25 @@ void main() {
     });
   });
 
-  group('Got it from the Updates entry', () {
-    testWidgets('Got it on card 6 returns to Updates, writes the installed version, clears the pill', (tester) async {
+  group('the pages opened from the Updates entry (read only)', () {
+    testWidgets('there is no Got it, only Back; Back returns to Updates, the version is stored, the pill is gone', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1');
       await _openUpdates(tester);
       await _openPager(tester);
-      await _gotItFromCard1(tester);
+      expect(find.byKey(const Key('whatsNewGotIt')), findsNothing);
+      expect(find.byKey(const Key('whatsNewBack')), findsOneWidget);
+      await _back(tester);
       expect(find.byKey(_pager), findsNothing);
       expect(find.byKey(_entry), findsOneWidget);
       expect(find.byKey(_pill), findsNothing);
       expect(rig.written, ['0.1.1']);
     });
 
-    testWidgets('Change in Settings pushes the stub route over the pager; Back returns to card 2; nothing is marked', (tester) async {
+    testWidgets('Change in Settings pushes the stub route over the page; Back returns to the open Weeks row; nothing more is marked', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1');
       await _openUpdates(tester);
       await _openPager(tester);
-      await tester.tap(find.byKey(const Key('whatsNewNext')));
+      await tester.tap(find.byKey(const Key('whatsNewItemHead-weeks')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('whatsNewCalSettings')));
       await tester.pumpAndSettle();
@@ -245,27 +244,27 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsOneWidget);
-      expect(tester.widget<Text>(find.byKey(const Key('whatsNewCardTitle'))).data, kWhatsNewCard2Title);
-      expect(rig.written, isEmpty);
-      expect(WhatsNewProcess.pillCleared, isFalse);
+      expect(find.byKey(const Key('whatsNewItemBody-weeks')), findsOneWidget);
+      expect(rig.written, ['0.1.1']); // opening the pages is what counted as seen, once
+      expect(WhatsNewProcess.pillCleared, isTrue);
     });
 
     testWidgets('Open Backup and restore pushes the stub Backup route and marks nothing', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1');
       await _openUpdates(tester);
       await _openPager(tester);
-      for (var i = 0; i < 3; i++) {
-        await tester.tap(find.byKey(const Key('whatsNewNext')));
-        await tester.pumpAndSettle();
-      }
+      await tester.ensureVisible(find.byKey(const Key('whatsNewItemHead-backups')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('whatsNewItemHead-backups')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('whatsNewOpenBackup')));
       await tester.pumpAndSettle();
       expect(find.text('BACKUP STUB'), findsOneWidget);
       expect(rig.opened, ['backup']);
       await tester.pageBack();
       await tester.pumpAndSettle();
-      expect(tester.widget<Text>(find.byKey(const Key('whatsNewCardTitle'))).data, kWhatsNewCard4Title);
-      expect(rig.written, isEmpty);
+      expect(find.byKey(const Key('whatsNewItemBody-backups')), findsOneWidget);
+      expect(rig.written, ['0.1.1']);
     });
   });
 }

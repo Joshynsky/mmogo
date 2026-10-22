@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../data/updates/untrusted_text.dart';
 import '../../../data/updates/updates_inbox.dart';
 import '../../copy/data_copy.dart';
+import '../../copy/other_version_copy.dart';
 import '../../theme/app_colors.dart';
 import '../backup/backup_format.dart';
 import 'notes_text.dart';
@@ -39,13 +40,17 @@ class _NoticeCardState extends State<NoticeCard> {
         ? kWelcomeNoticeTitle
         : n.backupPaused
             ? kBackupPausedNoticeTitle
-            : updateNoticeTitle(n.tag);
+            : n.otherVersion
+                ? kOtherVersionNoticeTitle
+                : updateNoticeTitle(n.tag);
     // The welcome and backup-paused wording lives in data_copy.dart, not in storage.
     final notes = n.welcome
         ? kWelcomeNoticeNotes
         : n.backupPaused
             ? kBackupPausedNoticeNotes
-            : plainReleaseNotes(n.notes);
+            : n.otherVersion
+                ? kOtherVersionNoticeBody
+                : plainReleaseNotes(n.notes);
     final notesStyle = TextStyle(fontSize: 13, height: 1.5, color: palette.softInk);
 
     return Container(
@@ -68,7 +73,7 @@ class _NoticeCardState extends State<NoticeCard> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(color: palette.tint, borderRadius: BorderRadius.circular(8)),
                 child: Text(
-                  n.backupPaused ? 'Backup' : n.tag,
+                  n.backupPaused ? 'Backup' : (n.otherVersion ? 'Other version' : n.tag),
                   style: TextStyle(fontSize: 11.5, fontFamily: 'monospace', color: palette.tintInk),
                 ),
               ),
@@ -165,7 +170,7 @@ class _NoticeCardState extends State<NoticeCard> {
                 key: const Key('noticeSeeWhatsNew'),
                 onPressed: widget.onSeeWhatsNew,
                 style: FilledButton.styleFrom(backgroundColor: palette.primary, foregroundColor: palette.onPrimary),
-                child: const Text(kUpdatesSeeWhatsNew),
+                child: Text(n.otherVersion ? kOtherVersionNoticeAction : kUpdatesSeeWhatsNew),
               ),
             ),
           ],

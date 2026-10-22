@@ -9,3 +9,6 @@ const kWhatsNewSignOff = '— Josh';
 
 const kWhatsNewOpenBackup = 'Open Backup and restore';
 const kWhatsNewGotIt = 'Got it';
+
+/// The bottom button of the page when it is opened to read (no Got it there).
+const kWhatsNewBack = 'Back';

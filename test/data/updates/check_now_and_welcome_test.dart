@@ -212,7 +212,7 @@ void main() {
         ]),
       });
       final r = _Rig(result: newer);
-      await startUpdates(inbox: r.inbox, service: r.service, now: t0);
+      await startUpdates(inbox: r.inbox, service: r.service, now: t0, otherVersionNotice: false);
       await Future<void>.delayed(Duration.zero);
       expect(r.inbox.unreadCount.value, 1, reason: 'the bell dot comes from the loaded inbox');
       expect(r.fake.calls, 0);

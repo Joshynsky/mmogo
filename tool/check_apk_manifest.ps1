@@ -168,10 +168,11 @@ Check 'manifest contains none of RECEIVE_SMS, READ_SMS, POST_NOTIFICATIONS, BIND
   $recvIdx = @(0..($nodes.Count - 1) | Where-Object { $nodes[$_].Type -eq 'receiver' })
   $svcIdx = @(0..($nodes.Count - 1) | Where-Object { $nodes[$_].Type -eq 'service' })
   $smsIdx = @($recvIdx | Where-Object { $nodes[$_].Attrs['android:name'] -eq 'app.mmogo.autoread.SmsReceiver' })
-  $otherRecv = @($recvIdx | Where-Object { $allowedReceivers -notcontains $nodes[$_].Attrs['android:name'] -and $nodes[$_].Attrs['android:name'] -ne 'app.mmogo.autoread.SmsReceiver' } | ForEach-Object { $nodes[$_].Attrs['android:name'] })
+  $otherRecv = @($recvIdx | Where-Object { $allowedReceivers -notcontains $nodes[$_].Attrs['android:name'] -and $nodes[$_].Attrs['android:name'] -ne 'app.mmogo.autoread.SmsReceiver' -and $nodes[$_].Attrs['android:name'] -ne 'app.mmogo.autoread.ParseActionReceiver' } | ForEach-Object { $nodes[$_].Attrs['android:name'] })
   $recvNames = ($recvIdx | ForEach-Object { $nodes[$_].Attrs['android:name'] }) -join ', '
   $unexpR = ''; if ($otherRecv.Count) { $unexpR = '  UNEXPECTED: ' + ($otherRecv -join ', ') }
-  Check 'receivers = the two 0.1.1 baseline plugin receivers plus exactly one SmsReceiver' (($otherRecv.Count -eq 0) -and ($smsIdx.Count -eq 1) -and ($recvIdx.Count -eq 3)) ("receivers: $recvNames" + $unexpR)
+  $parseIdx = @($recvIdx | Where-Object { $nodes[$_].Attrs['android:name'] -eq 'app.mmogo.autoread.ParseActionReceiver' })
+  Check 'receivers = the two 0.1.1 baseline plugin receivers plus exactly one SmsReceiver plus exactly one ParseActionReceiver (stage 2)' (($otherRecv.Count -eq 0) -and ($smsIdx.Count -eq 1) -and ($parseIdx.Count -eq 1) -and ($recvIdx.Count -eq 4)) ("receivers: $recvNames" + $unexpR)
   $svcText = 'none'; if ($svcIdx.Count) { $svcText = ($svcIdx | ForEach-Object { $nodes[$_].Attrs['android:name'] }) -join ', ' }
   Check 'no <service> element' ($svcIdx.Count -eq 0) ("services: $svcText")
   if ($smsIdx.Count -eq 1) {
@@ -191,6 +192,13 @@ Check 'manifest contains none of RECEIVE_SMS, READ_SMS, POST_NOTIFICATIONS, BIND
     $attrText = (($a.GetEnumerator() | Sort-Object Name | ForEach-Object { "$($_.Name)=$($_.Value)" }) -join '; ')
     Say ('      SmsReceiver block: ' + $attrText + ' | intent-filter actions: ' + ($actions -join ', '))
   } else { Check 'SmsReceiver present exactly once' $false "found $($smsIdx.Count)" }
+  if ($parseIdx.Count -eq 1) {
+    $pa = $nodes[$parseIdx[0]].Attrs
+    $pkids = @(Kids $nodes $parseIdx[0])
+    Check 'ParseActionReceiver: enabled=false (the switch enables it)' (($pa.ContainsKey('android:enabled')) -and -not (Bool $pa['android:enabled'])) ("enabled attr: " + $pa['android:enabled'])
+    Check 'ParseActionReceiver: exported=false' (($pa.ContainsKey('android:exported')) -and -not (Bool $pa['android:exported'])) ("exported attr: " + $pa['android:exported'])
+    Check 'ParseActionReceiver: no intent-filter and no child element' ($pkids.Count -eq 0) ("children: $($pkids.Count)")
+  } else { Check 'ParseActionReceiver present exactly once' $false "found $($parseIdx.Count)" }
   # providers: the 0.1.1 baseline has exactly these two
   $allowedProviders = @('dev.fluttercommunity.plus.share.ShareFileProvider', 'androidx.startup.InitializationProvider')
   $provIdx = @(0..($nodes.Count - 1) | Where-Object { $nodes[$_].Type -eq 'provider' })
@@ -257,7 +265,7 @@ try {
   $libs = @($zip.Entries | Where-Object { $_.FullName -match '^lib/[^/]+/libapp\.so$' })
   if ($libs.Count -eq 0) { Say 'SKIP  libapp.so sentinel check: no libapp.so in this APK (debug/JIT build); it runs on the signed release APK' }
   else {
-    $sent = @(); foreach ($l in $libs) { $lb = EntryBytes $l; foreach ($t in @('kAutoReadSentinel', 'app/mmogo/autoread')) { if (HasText $lb $t) { $sent += "$($l.FullName):$t" } } }
+    $sent = @(); foreach ($l in $libs) { $lb = EntryBytes $l; foreach ($t in @('kAutoReadSentinel', 'app/mmogo/autoread', 'autoread_bg', 'autoread/background/parse_entry')) { if (HasText $lb $t) { $sent += "$($l.FullName):$t" } } }
     $libNames = ($libs | ForEach-Object { $_.FullName }) -join ' '
     $sentText = "libapp.so scanned: $libNames"; if ($sent.Count) { $sentText = 'found: ' + ($sent -join ', ') }
     Check 'libapp.so has no autoread-only sentinel string (kAutoReadSentinel, app/mmogo/autoread)' ($sent.Count -eq 0) $sentText

@@ -7,6 +7,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/autoread/autoread_feature.dart';
+import 'package:mmogo/autoread/logic/waiting_logic.dart' show sortWaitingCategory;
 import 'package:mmogo/autoread/model/waiting_item.dart';
 import 'package:mmogo/autoread/ui/notifications_autoread_copy.dart';
 import 'package:mmogo/autoread/ui/waiting_section.dart';
@@ -168,6 +169,48 @@ void main() {
       expect(find.text(kEmptyParseTitle), findsOneWidget);
     });
 
+    testWidgets('focusId: a row far down the list is scrolled into view and outlined', (t) async {
+      _size(t, 360);
+      final items = waitingSet(WaitingDataSet.many, kFakeNow).items;
+      final last = sortWaitingCategory(items, kFakeNow).last;
+      await t.pumpWidget(_host(Scaffold(
+        body: SingleChildScrollView(
+          child: WaitingSection(
+            chip: NotifChip.categorize,
+            waiting: items,
+            news: const [],
+            now: kFakeNow,
+            newsRowBuilder: (n) => nr.NewsRow(n, kFakeNow),
+            focusId: last.id,
+          ),
+        ),
+      )));
+      await t.pump();
+      await t.pump();
+      final row = find.byKey(Key('waiting-row-${last.id}'));
+      expect(row, findsOneWidget);
+      expect(find.byKey(const Key('waiting-row-focused')), findsOneWidget);
+      expect(t.getTopLeft(row).dy, inInclusiveRange(0, 900), reason: 'row is on screen');
+    });
+
+    testWidgets('focusId not listed: no outline, no scrolling', (t) async {
+      _size(t, 360);
+      await t.pumpWidget(_section(NotifChip.parse, WaitingDataSet.typical, const []));
+      await t.pumpWidget(_host(Scaffold(
+        body: SingleChildScrollView(
+          child: WaitingSection(
+            chip: NotifChip.parse,
+            waiting: waitingSet(WaitingDataSet.typical, kFakeNow).items,
+            news: const [],
+            now: kFakeNow,
+            newsRowBuilder: (n) => nr.NewsRow(n, kFakeNow),
+            focusId: heldIdFor(9999),
+          ),
+        ),
+      )));
+      await t.pump();
+      expect(find.byKey(const Key('waiting-row-focused')), findsNothing);
+    });
     testWidgets('99+ cap on the group headings', (t) async {
       _size(t, 360);
       await t.pumpWidget(_section(NotifChip.categorize, WaitingDataSet.many, const []));

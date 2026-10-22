@@ -16,5 +16,13 @@
                 <action android:name="android.provider.Telephony.SMS_RECEIVED"/>
             </intent-filter>
         </receiver>
+        <!-- Stage 2 (Wave C): the Parse and Later buttons of the notification. Not exported, no
+             intent-filter, no permission: only our own immutable PendingIntents reach it. Disabled
+             until the user's "Parse from the notification" switch is on (ParseComponent). The one
+             new component of stage 2: no service, no new permission. -->
+        <receiver
+            android:name="app.mmogo.autoread.ParseActionReceiver"
+            android:enabled="false"
+            android:exported="false"/>
     </application>
 </manifest>

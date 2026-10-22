@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../../autoread/autoread_feature.dart' show kAutoReadCompiled;
+
 import '../../../data/db/app_database.dart';
 import '../../../data/db/debug_seed.dart';
 import '../../../data/db/home_dashboard_dao.dart';
@@ -175,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
     final starter = widget.startUpdates;
     final whatsNew = widget.showWhatsNew;
     if (starter != null || widget.db == null) {
-      unawaited(_startUpdatesThenWhatsNew(starter ?? startUpdates, whatsNew));
+      unawaited(_startUpdatesThenWhatsNew(starter ?? () => startUpdates(otherVersionNotice: !kAutoReadCompiled), whatsNew));
     } else if (whatsNew != null && mounted) {
       unawaited(whatsNew(context));
     }

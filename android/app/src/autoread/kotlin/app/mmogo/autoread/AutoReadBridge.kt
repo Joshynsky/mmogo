@@ -23,6 +23,10 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
         const val REQUEST_CODE = 7421
         private const val RECEIVER_CLASS = "app.mmogo.autoread.SmsReceiver"
 
+        // The MIUI / HyperOS Autostart screen (Xiaomi family only; falls back to the app's own settings page).
+        private const val AUTOSTART_PACKAGE = "com.miui.securitycenter"
+        private const val AUTOSTART_ACTIVITY = "com.miui.permcenter.autostart.AutoStartManagementActivity"
+
         @Volatile
         private var current: AutoReadBridge? = null
 
@@ -69,6 +73,8 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
                 "getState" -> result.success(
                     BridgeLogic.stateResult(
                         AutoReadSwitch.isOn(activity), smsGranted(), notifGranted(), store.count(),
+                        AutoReadSwitch.parseOn(activity), BridgeLogic.autostartHelp(Build.MANUFACTURER),
+                        AutoReadSwitch.consentVersion(activity),
                     ),
                 )
                 "setEnabled" -> {
@@ -84,8 +90,42 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
                     result.success(null)
                 }
                 "openAppSettings" -> {
-                    val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", activity.packageName, null))
-                    activity.startActivity(i)
+                    openOwnSettings()
+                    result.success(null)
+                }
+                "setConsent" -> {
+                    val v = BridgeLogic.versionArg(call.arguments)
+                    if (v == null) result.error(BridgeLogic.ERR_FAILED, "bad argument", null)
+                    else result.success(AutoReadSwitch.setConsentVersion(activity, v))
+                }
+                "setParseOn" -> {
+                    val on = BridgeLogic.onArg(call.arguments)
+                    if (on == null) result.error(BridgeLogic.ERR_FAILED, "bad argument", null)
+                    else {
+                        AutoReadSwitch.setParseOn(activity, on)
+                        // The Parse receiver exists only while the switch is on; turning it off also
+                        // removes notifications that still carry a Parse button (the messages stay held).
+                        ParseComponent.setEnabled(activity, AutoReadSwitch.parseOn(activity))
+                        if (!AutoReadSwitch.parseOn(activity)) Notifier.cancelAll(activity)
+                        result.success(AutoReadSwitch.parseOn(activity))
+                    }
+                }
+                "openAutostartSettings" -> {
+                    // Only on the user's tap. No new manifest permission, and never a battery exemption.
+                    // The MIUI component is tried only on a Xiaomi-family phone (the same check as
+                    // autostartHelp); elsewhere go straight to the app's own settings page.
+                    if (BridgeLogic.autostartTarget(Build.MANUFACTURER) == BridgeLogic.AUTOSTART_MIUI) {
+                        try {
+                            val i = Intent().apply {
+                                component = ComponentName(AUTOSTART_PACKAGE, AUTOSTART_ACTIVITY)
+                            }
+                            activity.startActivity(i)
+                        } catch (_: Throwable) {
+                            openOwnSettings()
+                        }
+                    } else {
+                        openOwnSettings()
+                    }
                     result.success(null)
                 }
                 else -> result.notImplemented()
@@ -96,6 +136,11 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
             } catch (_: Throwable) {
             }
         }
+    }
+
+    private fun openOwnSettings() {
+        val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", activity.packageName, null))
+        activity.startActivity(i)
     }
 
     private fun smsGranted(): Boolean =
@@ -114,6 +159,8 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
 
     private fun setEnabled(enabled: Boolean): Boolean {
         if (enabled) {
+            // Fail closed: no consent of the current version on this side, no capture.
+            if (!AutoReadSwitch.hasCurrentConsent(activity)) return AutoReadSwitch.isOn(activity)
             if (AutoReadSwitch.setEnabled(activity, true)) setComponent(true)
         } else {
             setComponent(false)

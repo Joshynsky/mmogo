@@ -230,4 +230,10 @@ class _OverFake implements ReadingBridge {
   Future<AutoReadPermissions> requestPermissions() => throw UnimplementedError();
   @override
   Future<void> openAppSettings() => throw UnimplementedError();
+  @override
+  Future<bool> setConsent(int version) => throw UnimplementedError();
+  @override
+  Future<bool> setParseOn(bool on) => throw UnimplementedError();
+  @override
+  Future<void> openAutostartSettings() => throw UnimplementedError();
 }

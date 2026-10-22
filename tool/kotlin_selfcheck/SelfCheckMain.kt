@@ -27,5 +27,10 @@ fun main() {
     println("BridgeLogic: " + (if (bridge.isEmpty()) "ALL PASS" else "FAILS=" + bridge.size))
     failed += bridge.size
 
+    val parse = ParseSelfCheck.runAll()
+    parse.forEach { println("  FAIL: $it") }
+    println("ParsePolicy (stage 2): " + (if (parse.isEmpty()) "ALL PASS" else "FAILS=" + parse.size))
+    failed += parse.size
+
     if (failed != 0) System.exit(1)
 }

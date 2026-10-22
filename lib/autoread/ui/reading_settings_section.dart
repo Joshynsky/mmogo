@@ -89,21 +89,28 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
         if (c == null) return;
         _message = null;
         if (wantOn) {
-          // Consent first, once; Agree is the only way to the system dialogs.
+          // Consent first; Allow (with Read on) is the only way to the system
+          // dialogs. Not now stores nothing and leaves the app as it was.
           if (!await c.hasConsent()) {
             if (!mounted) return;
-            final agreed = await showConsentSheet(context);
-            if (!agreed) return;
+            final choice = await showConsentSheet(
+              context,
+              autostartHelp: _state?.autostartHelp ?? false,
+              onOpenAutostart: _openAutostart,
+            );
+            if (choice == null) return;
             if (!await c.recordConsent()) {
               if (mounted) setState(() => _message = kReadFailed);
               return;
             }
+            // Switch 2 is kept in the auto-read prefs; default ON, as chosen.
+            if (!await c.setParse(choice.parse)) _message = kReadFailed;
           }
           final r = await c.turnOn();
           if (!mounted) return;
           switch (r.outcome) {
             case TurnOnOutcome.on:
-              _message = null;
+              break; // keeps a "could not save Parse" message, if any
             case TurnOnOutcome.denied:
               _message = _deniedText(r.denied!);
             case TurnOnOutcome.needsConsent:
@@ -120,6 +127,18 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
         }
         await _refresh();
       });
+
+  Future<void> _onParse(bool on) => _runBusy(() async {
+        final c = _c;
+        if (c == null) return;
+        _message = await c.setParse(on) ? null : kReadFailed;
+        await _refresh();
+      });
+
+  /// Only ever called from the user's tap on "Open Autostart settings".
+  Future<void> _openAutostart() async {
+    await _c?.openAutostartSettings();
+  }
 
   Future<void> _onFix() => _runBusy(() async {
         final c = _c;
@@ -199,6 +218,20 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
                 value: s.on,
                 onChanged: (!s.available || _busy) ? null : _onSwitch,
               ),
+              SettingsToggle(
+                key: const Key('parseSwitch'),
+                palette: palette,
+                icon: Icons.touch_app_outlined,
+                label: kParseLabel,
+                subtitle: s.on ? kConsentParseDesc : kParseGreyLine,
+                value: s.on && s.parseOn,
+                onChanged: (!s.available || !s.on || _busy) ? null : _onParse,
+              ),
+              if (s.autostartHelp)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
+                  child: AutostartBlock(key: const Key('settingsAutostart'), onOpen: _openAutostart),
+                ),
               if (s.broken)
                 SettingsLink(
                   key: const Key('readingFixRow'),

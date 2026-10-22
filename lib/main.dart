@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_startup.dart';
 import 'autoread/autoread_feature.dart';
+import 'autoread/background/parse_entry.dart' show parseEntry;
 import 'autoread/data/ingesting_launch_source.dart';
 import 'autoread/data/real_waiting_repository.dart';
 import 'autoread/model/waiting_repository.dart';
@@ -35,6 +36,15 @@ import 'ui/startup_notice.dart';
 import 'ui/theme/app_colors.dart';
 import 'ui/theme/app_palette_scope.dart';
 import 'ui/theme/app_theme.dart';
+
+/// Stage 2 ("Parse from the notification"): started BY NAME by the auto-read build's Kotlin in a short-lived
+/// headless engine; nothing in Dart calls it. The entry point has to live in this library. Where
+/// `kAutoReadCompiled` is false (the standard build) it returns at once and the background-parse code
+/// is tree-shaken away.
+@pragma('vm:entry-point')
+void parseFromNotificationEntry(List<String> args) {
+  if (kAutoReadCompiled) parseEntry(args);
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -124,8 +134,12 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
       WidgetsBinding.instance.addObserver(this);
       // Delete data rebuilds the rows through this once it has wiped.
       AutoReadRuntime.refresh = _realWaiting!.ingest;
-      // Look at what is held once the first frame is up (on start).
-      WidgetsBinding.instance.addPostFrameCallback((_) => _realWaiting?.ingest());
+      // Look at what is held once the first frame is up (on start), after the
+      // fail-closed check of the switch against the consent version.
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await AutoReadRuntime.reconcile();
+        await _realWaiting?.ingest();
+      });
     }
     _bell = BellCountsTracker(
       news: _news.watchNews(),
@@ -148,7 +162,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (kAutoReadCompiled && state == AppLifecycleState.resumed) {
-      _realWaiting?.ingest();
+      AutoReadRuntime.reconcile().then((_) => _realWaiting?.ingest());
     }
   }
 

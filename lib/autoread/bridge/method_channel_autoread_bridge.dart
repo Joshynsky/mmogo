@@ -28,11 +28,25 @@ class AutoReadState {
   final bool notifGranted;
   final int heldCount;
 
+  /// The "Parse from the notification" switch (Kotlin prefs); false when absent.
+  final bool parseOn;
+
+  /// Kotlin says this is a Xiaomi-family phone (Build.MANUFACTURER xiaomi,
+  /// redmi or poco): the Autostart row shows. False when absent.
+  final bool autostartHelp;
+
+  /// The consent version Kotlin holds (0 when none or absent). Dart trusts its
+  /// own consent key only together with this number (security re-look C1).
+  final int consentVersion;
+
   const AutoReadState({
     required this.enabled,
     required this.smsGranted,
     required this.notifGranted,
     required this.heldCount,
+    this.parseOn = false,
+    this.autostartHelp = false,
+    this.consentVersion = 0,
   });
 
   @override
@@ -145,7 +159,15 @@ class MethodChannelAutoReadBridge implements AutoReadBridge {
     if (r is Map) {
       final e = r['enabled'], s = r['smsGranted'], n = r['notifGranted'], h = r['heldCount'];
       if (e is bool && s is bool && n is bool && h is int) {
-        return AutoReadState(enabled: e, smsGranted: s, notifGranted: n, heldCount: h);
+        return AutoReadState(
+          enabled: e,
+          smsGranted: s,
+          notifGranted: n,
+          heldCount: h,
+          parseOn: r['parseOn'] == true,
+          autostartHelp: r['autostartHelp'] == true,
+          consentVersion: r['consentVersion'] is int ? r['consentVersion'] as int : 0,
+        );
       }
     }
     throw const AutoReadBridgeException('failed');
@@ -180,5 +202,25 @@ class MethodChannelAutoReadBridge implements AutoReadBridge {
 
   Future<void> openAppSettings() async {
     await _invoke('openAppSettings');
+  }
+
+  /// Hands the consent version to Kotlin, which keeps its own copy. True when
+  /// Kotlin now holds that version (it refuses any version but its own).
+  Future<bool> setConsent(int version) async {
+    final r = await _invoke('setConsent', {'version': version});
+    if (r is bool) return r;
+    throw const AutoReadBridgeException('failed');
+  }
+
+  /// Writes the "Parse from the notification" switch; answers the value now held.
+  Future<bool> setParseOn(bool on) async {
+    final r = await _invoke('setParseOn', {'on': on});
+    if (r is bool) return r;
+    throw const AutoReadBridgeException('failed');
+  }
+
+  /// Opens the Xiaomi Autostart screen, or the app's own settings page.
+  Future<void> openAutostartSettings() async {
+    await _invoke('openAutostartSettings');
   }
 }

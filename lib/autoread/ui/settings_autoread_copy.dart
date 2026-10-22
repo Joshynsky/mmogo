@@ -82,14 +82,48 @@ const String kHelpClose = 'Close';
 
 const String kConsentTitle = 'Read M-Pesa messages?';
 
-/// The one plain lead sentence (Judge condition 10).
-const String kConsentLead =
-    'mmogo keeps only messages from M-Pesa and drops the rest. It does not send any of it off your phone. Pasting still works, and you can turn this off at any time.';
+/// Switch 1 on the consent screen: the existing lead sentences (Judge condition
+/// 10), word for word from the PM-approved mock consent-reading.html. The old
+/// last clause "and you can turn this off at any time" now lives in
+/// [kConsentFooter].
+const String kConsentReadDesc =
+    'mmogo keeps only messages from M-Pesa and drops the rest. It does not send any of it off your phone. Pasting still works.';
+
+/// Switch 2, "Parse from the notification" (label shared with Settings). Per
+/// the mock: the first sentence is NEW, the second is reused from the lead.
+// NEW, needs PM signature: 'A Parse button on the phone notification parses a waiting message without opening mmogo.'
+const String kConsentParseDesc =
+    'A Parse button on the phone notification parses a waiting message without opening mmogo. It does not send any of it off your phone.';
+
+/// Shown under switch 2 while switch 1 is off (greyed-row line of the bell mock).
+const String kParseGreyLine = 'Turn on Read M-Pesa messages first.';
+
+/// The plain line that everything can be changed later.
+// NEW, needs PM signature (based on kConsentOff, now covering each switch).
+const String kConsentFooter = 'You can change or turn off each of these at any time in Settings.';
+
+/// Settings row and consent switch 2 (wording of the bell mock).
+const String kParseLabel = 'Parse from the notification';
+
+// ------------------------------------------------------- Autostart (Xiaomi)
+
+/// Xiaomi, Redmi and Poco phones only (PM 21-10-2026, Redmi spike: a swiped-away
+/// app is not started from a notification unless Autostart is on). Not a
+/// switch: an app cannot toggle another OS setting. The button is only ever
+/// tapped by the user; the app never opens the screen by itself.
+// NEW, needs PM signature (title).
+const String kAutostartLabel = 'Autostart for mmogo';
+// NEW, needs PM signature (body).
+const String kAutostartBody =
+    'Parse from the notification works only if Autostart is on for mmogo on this phone. If it is off, the message stays held and you can parse it by opening mmogo.';
+// NEW, needs PM signature (button).
+const String kAutostartButton = 'Open Autostart settings';
 const String kConsentMore = 'More details';
 const String kConsentLess = 'Hide details';
 
 const String kConsentWhatIsRead =
     'What is read: messages whose sender is M-Pesa. mmogo works out the details on this phone and shows them to you to check.';
+// moved to first screen, PM 22-10-2026 (shown before Allow / Not now, not behind More details)
 const String kConsentAndroidPrompt =
     'Android will ask to “send and view SMS”. That prompt is broader than what mmogo uses: the filter for M-Pesa is in mmogo’s own code.';
 const String kConsentOthers = kOtherMessagesLine;
@@ -105,16 +139,17 @@ const String kConsentOff =
     'You can turn this off at any time in Settings. Turning it off stops new messages from being read. Messages already held stay until you delete them or they expire. The originals stay in your phone’s Messages.';
 String get kConsentResponsible => 'Responsible for this feature: $kResponsiblePerson.';
 
-const String kConsentAgree = 'Agree';
+// NEW, needs PM signature (the app says Agree today; the mock says Allow).
+const String kConsentAllow = 'Allow';
 const String kConsentNotNow = 'Not now';
 
-/// Shown behind "More details", in order.
+/// Shown behind "More details", in order. [kConsentAndroidPrompt] is not here:
+/// it moved to the first screen (PM 22-10-2026).
 List<String> get kConsentDetailLines => [
       kConsentWhatIsRead,
       kConsentNotification,
       kConsentWhereItStays,
       kConsentOthers,
-      kConsentAndroidPrompt,
       kConsentHeld,
       kConsentForged,
       kConsentDeveloper,
@@ -159,10 +194,17 @@ List<String> allSettingsAutoReadCopy() => [
       kHelpOpen,
       kHelpClose,
       kConsentTitle,
-      kConsentLead,
+      kConsentReadDesc,
+      kConsentParseDesc,
+      kParseGreyLine,
+      kConsentFooter,
+      kParseLabel,
+      kAutostartLabel,
+      kAutostartBody,
+      kAutostartButton,
       kConsentMore,
       kConsentLess,
       ...kConsentDetailLines,
-      kConsentAgree,
+      kConsentAllow,
       kConsentNotNow,
     ];

@@ -15,31 +15,37 @@ import '../../tool/whats_new_block.dart';
 String _changelog() => normaliseNewlines(File('CHANGELOG.md').readAsStringSync());
 
 void main() {
-  group('(i) renderer reproduces the committed 0.1.1 block', () {
-    late String committed;
-    setUp(() => committed = extractBlock(File('docs/index.html').readAsStringSync())!);
+  // The landing page's What's new is now a hand-built carousel (the list this renderer
+  // produced was replaced), so the renderer is proven on a block it generated itself.
+  group('(i) renderer reproduces its own block', () {
+    late String generated;
+    setUp(() => generated = generateBlock(_changelog())!);
 
     test('parse the block back into items, render them: byte equal', () {
-      final items = parseBlock(committed);
-      expect(items, hasLength(7));
-      expect(blockVersion(committed), '0.1.1');
-      expect(renderBlock(blockVersion(committed)!, items), committed);
+      final items = parseBlock(generated);
+      expect(items, isNotEmpty);
+      expect(blockVersion(generated), '0.1.2');
+      expect(renderBlock(blockVersion(generated)!, items), generated);
     });
 
     test('negative: a changed character in a copy is not reproduced', () {
-      final items = parseBlock(committed);
-      final altered = committed.replaceFirst('Send feedback', 'Send feedbacK');
-      expect(renderBlock('0.1.1', items), isNot(altered));
+      final items = parseBlock(generated);
+      final altered = generated.replaceFirst('<b>', '<b>X');
+      expect(renderBlock('0.1.2', items), isNot(altered));
       // and a changed svg stroke width would differ from the render
-      final svgAltered = committed.replaceFirst('stroke-width="2.4"', 'stroke-width="2.5"');
-      expect(renderBlock('0.1.1', items), isNot(svgAltered));
+      final svgAltered = generated.replaceFirst('stroke-width="2.4"', 'stroke-width="2.5"');
+      expect(renderBlock('0.1.2', items), isNot(svgAltered));
       // altered text parses to different items, so it cannot equal the original render
-      expect(renderBlock('0.1.1', parseBlock(altered)), isNot(renderBlock('0.1.1', items)));
+      expect(renderBlock('0.1.2', parseBlock(altered)), isNot(renderBlock('0.1.2', items)));
     });
 
-    test('the 0.1.1 text is NOT derivable from the 0.1.1 CHANGELOG (pinned, so nobody claims it)', () {
-      final fromLog = generateBlock(_changelog(), '0.1.1')!;
-      expect(fromLog, isNot(committed));
+    test('the landing page block is the 0.1.2 carousel: markers once, six cards, no list', () {
+      final page = File('docs/index.html').readAsStringSync();
+      final block = extractBlock(page)!;
+      expect("<h2>What's new in 0.1.2</h2>".allMatches(block), hasLength(1));
+      expect('class="slide wn"'.allMatches(block), hasLength(6));
+      expect(block, isNot(contains('<li>')));
+      expect('<!-- whats-new:start -->'.allMatches(page), hasLength(1));
     });
   });
 

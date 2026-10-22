@@ -36,6 +36,9 @@ class AutoReadWipe {
     try {
       if (await c.turnOff() != TurnOffResult.off) return false;
       if (!await c.deleteHeld()) return false;
+      // PM 22-10-2026: Delete data leaves the auto-read prefs as they are, so the
+      // Kotlin-side consent version and the Parse switch are NOT cleared here. Only
+      // the Dart consent key goes; hasConsent() then asks again (it needs both sides).
       await _prefs.remove(kReadingConsentKey);
       if ((await _prefs.keys()).contains(kReadingConsentKey)) return false;
       final s = await c.state();

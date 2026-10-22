@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="autoread_channel_name">M-Pesa messages</string>
-    <string name="autoread_channel_description">Tells you a new M-Pesa message is ready to read in mmogo.</string>
-    <string name="autoread_notification_title">mmogo</string>
-    <string name="autoread_notification_text">An M-Pesa message is ready to read in mmogo</string>
+    <string name="autoread_channel_description">Tells you a new M-Pesa message is waiting in mmogo.</string>
+    <string name="autoread_notification_title">M-Pesa message received</string>
+    <string name="autoread_notification_text">An M-Pesa message is waiting. Tap to parse it.</string>
+    <!-- Stage 2 (Wave C). "Parse": existing copy (kActionParse). "Categorize now" and "Later": the signed
+         notification mock (bell.html). "Parsed. N waiting for a category": the mock shows N = 1; the form
+         for other N is NEW, needs PM signature. The last line is existing copy (kCouldNotRead). -->
+    <string name="autoread_action_parse">Parse</string>
+    <string name="autoread_action_categorize">Categorize now</string>
+    <string name="autoread_action_later">Later</string>
+    <string name="autoread_parsed_text">Parsed. %1$d waiting for a category</string>
+    <string name="autoread_could_not_read">Could not read this one. Paste it instead.</string>
 </resources>

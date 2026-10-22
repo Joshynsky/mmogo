@@ -26,6 +26,8 @@ object Notifier {
     /** Returns false (and does nothing) for an invalid id or when notifications are not allowed. */
     fun post(context: Context, heldId: String): Boolean {
         if (!HeldId.isValid(heldId)) return false
+        // Never post without current consent (held on this side) and the SMS permission.
+        if (!CaptureGuard.mayCapture(context)) return false
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             ?: return false
         if (!nm.areNotificationsEnabled()) return false
@@ -74,6 +76,12 @@ object Notifier {
             .setPublicVersion(publicBuilder.build())
             .setContentIntent(tap)
 
+        // Stage 2: the Parse button, only while the Parse switch is on (consent and permission were checked above).
+        if (ParseGuard.mayParse(context)) {
+            ParseComponent.ensureEnabled(context)
+            builder.addAction(ParseNotifier.parseAction(context, heldId))
+        }
+
         nm.notify(id, builder.build())
         return true
     }
@@ -108,7 +116,7 @@ object Notifier {
         })
     }
 
-    private fun ensureChannel(context: Context, nm: NotificationManager) {
+    internal fun ensureChannel(context: Context, nm: NotificationManager) {
         if (Build.VERSION.SDK_INT < 26) return
         if (nm.getNotificationChannel(CHANNEL_ID) != null) return
         val channel = NotificationChannel(

@@ -63,10 +63,12 @@ void main() {
     expect(kWelcomeNoticeTitle, 'Hello, and welcome to mmogo');
   });
 
-  test('R14: card 5 does not say "used only to check for updates" twice, and the Privacy page keeps both sentences', () {
-    expect('used only to check for updates'.allMatches(kWhatsNewCard5Body), hasLength(1));
-    expect(kWhatsNewCard5Body, startsWith(kPrivacySentenceStandard));
-    expect(kWhatsNewCard5Body, endsWith(kNetworkSeenSentence));
+  test('R14: the Privacy item does not say "used only to check for updates" twice, and the Privacy page keeps both sentences', () {
+    // A5a: the page shows the two sentences as two paragraphs (signed sentence in bold, then the second half of W7).
+    const shown = '$kWhatsNewCard5Body $kWhatsNewCard5Network';
+    expect('used only to check for updates'.allMatches(shown), hasLength(1));
+    expect(kWhatsNewCard5Body, kPrivacySentenceStandard);
+    expect(kWhatsNewCard5Network, kNetworkSeenSentence);
     // The full W7 is unchanged (value), so the Privacy page and the Updates page keep both sentences.
     expect(
       kNetworkSentence,

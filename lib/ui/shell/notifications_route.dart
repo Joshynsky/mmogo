@@ -9,8 +9,10 @@ import '../../autoread/autoread_feature.dart';
 import '../../autoread/data/real_waiting_actions.dart';
 import '../../autoread/data/real_waiting_repository.dart';
 import '../../autoread/ui/waiting_section.dart' show WaitingActions;
+import '../../domain/notifications/news_item.dart';
 import '../../domain/notifications/notif_chip.dart';
 import '../screens/notifications/notifications_page.dart';
+import '../whats_new/whats_new_hook.dart' show openWhatsNewToRead;
 import 'notifications_scope.dart';
 import 'routes.dart';
 
@@ -32,9 +34,16 @@ class NotificationsRoute extends StatelessWidget {
       waiting: scope.waiting,
       waitingActions: actions,
       initialChip: args is NotificationsRouteArgs ? args.chip : NotifChip.all,
+      focusId: args is NotificationsRouteArgs ? args.focusId : null,
       // A tap on a notice or update row opens the existing Updates page, which
-      // holds the full text.
-      onOpenNews: (_) => Navigator.of(context).pushNamed(Routes.updates),
+      // holds the full text; the What's new row opens the pages to read.
+      onOpenNews: (n) {
+        if (n.kind == NewsKind.whatsNew) {
+          openWhatsNewToRead(context);
+          return;
+        }
+        Navigator.of(context).pushNamed(Routes.updates);
+      },
     );
   }
 }

@@ -51,6 +51,7 @@ class WaitingSection extends StatelessWidget {
     required this.now,
     required this.newsRowBuilder,
     this.actions = const WaitingActions(),
+    this.focusId,
   }) : assert(chip != NotifChip.news);
 
   final NotifChip chip;
@@ -60,22 +61,28 @@ class WaitingSection extends StatelessWidget {
   final Widget Function(NewsItem item) newsRowBuilder;
   final WaitingActions actions;
 
+  /// A row to scroll into view and highlight when it is listed (a phone-notification tap).
+  final String? focusId;
+
   Widget _row(BuildContext context, WaitingItem w) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: WaitingRow(
-          w,
-          now,
-          key: Key('waiting-row-${w.id}'),
-          onParse: actions.onParse == null ? null : () => actions.onParse!(w),
-          onCategorize: actions.onCategorize == null ? null : () => actions.onCategorize!(w),
-          onPaste: actions.onPaste == null
-              ? null
-              : () => showPasteSheet(context, onContinueToAdd: () => actions.onPaste!(w)),
-          onRemove: actions.onRemove == null
-              ? null
-              : () async {
-                  if (await showRemoveConfirm(context, item: w)) actions.onRemove!(w);
-                },
+        child: _Focus(
+          on: w.id == focusId,
+          child: WaitingRow(
+            w,
+            now,
+            key: Key('waiting-row-${w.id}'),
+            onParse: actions.onParse == null ? null : () => actions.onParse!(w),
+            onCategorize: actions.onCategorize == null ? null : () => actions.onCategorize!(w),
+            onPaste: actions.onPaste == null
+                ? null
+                : () => showPasteSheet(context, onContinueToAdd: () => actions.onPaste!(w)),
+            onRemove: actions.onRemove == null
+                ? null
+                : () async {
+                    if (await showRemoveConfirm(context, item: w)) actions.onRemove!(w);
+                  },
+          ),
         ),
       );
 
@@ -135,6 +142,43 @@ class WaitingSection extends StatelessWidget {
         break;
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
+  }
+}
+
+/// Wraps the focused row: after the first frame it scrolls into view and keeps
+/// a primary outline so the user can see which message the tap was about.
+class _Focus extends StatefulWidget {
+  const _Focus({required this.on, required this.child});
+  final bool on;
+  final Widget child;
+
+  @override
+  State<_Focus> createState() => _FocusState();
+}
+
+class _FocusState extends State<_Focus> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.on) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Scrollable.ensureVisible(context, alignment: 0.3);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.on) return widget.child;
+    return DecoratedBox(
+      key: const Key('waiting-row-focused'),
+      position: DecorationPosition.foreground,
+      decoration: BoxDecoration(
+        border: Border.all(color: AppPalette.of(context).primary, width: 2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: widget.child,
+    );
   }
 }
 

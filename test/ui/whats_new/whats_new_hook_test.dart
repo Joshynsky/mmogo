@@ -78,16 +78,17 @@ Widget _app(_Rig rig, {String home = 'HOME'}) => MaterialApp(
   ),
 );
 
-Future<void> _toLastCard(WidgetTester tester) async {
-  for (var i = 0; i < 5; i++) {
-    await tester.tap(find.byKey(const Key('whatsNewNext')));
-    await tester.pumpAndSettle();
-  }
+Future<void> _openRow(WidgetTester tester, String id) async {
+  final head = find.byKey(Key('whatsNewItemHead-$id'));
+  await tester.ensureVisible(head);
+  await tester.pumpAndSettle();
+  await tester.tap(head);
+  await tester.pumpAndSettle();
 }
 
 void main() {
   group('who sees the pop-up', () {
-    testWidgets('an upgrade (older version stored, onboarding done) sees the pager on card 1', (tester) async {
+    testWidgets('an upgrade (older version stored, onboarding done) sees the full-screen page, first row open', (tester) async {
       await _pump(tester, seen: '0.1.1');
       expect(find.byKey(_pager), findsOneWidget);
       expect(find.text(kWhatsNewPagerTitle), findsOneWidget);
@@ -124,7 +125,7 @@ void main() {
 
     testWidgets('Home starting twice in one process shows no second pager', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1');
-      await tester.binding.handlePopRoute(); // first card Back: closes, unseen
+      await tester.binding.handlePopRoute(); // Back: closes, unseen
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsNothing);
       // A restart scope rebuilds Home: the hook runs again.
@@ -140,7 +141,6 @@ void main() {
   group('closing', () {
     testWidgets('Got it writes the installed version once and returns to Home', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1');
-      await _toLastCard(tester);
       await tester.tap(find.byKey(const Key('whatsNewGotIt')));
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsNothing);
@@ -152,7 +152,6 @@ void main() {
     testWidgets('Got it does not wait for the write: a write that never finishes still closes', (tester) async {
       final never = Completer<void>();
       await _pump(tester, seen: '0.1.1', write: (_) => never.future);
-      await _toLastCard(tester);
       await tester.tap(find.byKey(const Key('whatsNewGotIt')));
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsNothing);
@@ -163,7 +162,6 @@ void main() {
 
     testWidgets('a write that throws is silent and leaves it unseen', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1', write: (_) async => throw StateError('disk full'));
-      await _toLastCard(tester);
       await tester.tap(find.byKey(const Key('whatsNewGotIt')));
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsNothing);
@@ -171,7 +169,7 @@ void main() {
       expect(rig.written, isEmpty);
     });
 
-    testWidgets('the first-card Back closes WITHOUT marking it seen', (tester) async {
+    testWidgets('Back closes the page WITHOUT marking it seen', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1');
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
@@ -190,8 +188,7 @@ void main() {
 
     testWidgets('the two route buttons open their routes and mark nothing seen', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1');
-      await tester.tap(find.byKey(const Key('whatsNewNext')));
-      await tester.pumpAndSettle();
+      await _openRow(tester, 'weeks');
       await tester.tap(find.byKey(const Key('whatsNewCalSettings')));
       await tester.pumpAndSettle();
       expect(rig.opened, ['settings']);
@@ -199,10 +196,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsOneWidget);
       expect(rig.written, isEmpty);
-      await tester.tap(find.byKey(const Key('whatsNewNext')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('whatsNewNext')));
-      await tester.pumpAndSettle();
+      await _openRow(tester, 'backups');
       await tester.tap(find.byKey(const Key('whatsNewOpenBackup')));
       await tester.pumpAndSettle();
       expect(rig.opened, ['settings', 'backup']);

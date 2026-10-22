@@ -2,10 +2,12 @@
 /// phone notification (cold start through `takeLaunchId`, running app through
 /// the `tapped` stream; contract `interface-K4-bridge-channel.md`).
 ///
-/// Stage 1 destination: the Categorize chip; the Parse chip when the item is
-/// unreadable. An unknown or gone id goes to Categorize. It never reads or
-/// shows message content: only the 32-hex id is used, and a malformed id is
-/// ignored.
+/// Destination: the Parse chip for a held message still waiting to be parsed or
+/// one that is unreadable, the Categorize chip for one already parsed, in both
+/// cases with that row scrolled into view and highlighted (the id goes to the
+/// page as ocusId). An unknown or gone id goes to Categorize with no row.
+/// It never reads or shows message content: only the 32-hex id and the item's
+/// kind are used, and a malformed id is ignored.
 ///
 /// A cold start (or a tap while the app is still on Welcome or Onboarding)
 /// waits until Home is on screen, because Welcome replaces its own route and
@@ -69,7 +71,7 @@ class AutoReadLaunchRouter {
   StreamSubscription<String>? _sub;
   bool _started = false;
   bool _homeShown = false;
-  NotifChip? _pending;
+  _Target? _pending;
 
   /// Starts listening and reads the launch id once. A second call does nothing.
   Future<void> start() async {
@@ -92,28 +94,29 @@ class AutoReadLaunchRouter {
   void _onRoute(Route<dynamic>? route) {
     if (route?.settings.name != Routes.home) return;
     _homeShown = true;
-    final chip = _pending;
-    if (chip != null) {
+    final target = _pending;
+    if (target != null) {
       _pending = null;
       Future<void>.microtask(
-        () => _open(chip),
+        () => _open(target),
       ); // not inside the navigator's own callback
     }
   }
 
   Future<void> _handle(String id) async {
     if (!isValidHeldId(id)) return;
-    final chip = await _chipFor(id);
+    final target = await _targetFor(id);
     if (!_homeShown) {
-      _pending = chip; // newest tap wins
+      _pending = target; // newest tap wins
       return;
     }
-    _open(chip);
+    _open(target);
   }
 
-  Future<NotifChip> _chipFor(String id) async {
+  Future<_Target> _targetFor(String id) async {
+    const fallback = _Target(NotifChip.categorize, null);
     final repo = waiting;
-    if (repo == null) return NotifChip.categorize;
+    if (repo == null) return fallback;
     StreamSubscription<List<WaitingItem>>? sub;
     try {
       final first = Completer<List<WaitingItem>>();
@@ -123,9 +126,11 @@ class AutoReadLaunchRouter {
       final items = await first.future.timeout(lookupTimeout);
       for (final i in items) {
         if (i.id == id) {
-          return effectiveKind(i, _now()) == WaitingKind.unreadable
-              ? NotifChip.parse
-              : NotifChip.categorize;
+          return switch (effectiveKind(i, _now())) {
+            WaitingKind.readyToParse || WaitingKind.unreadable => _Target(NotifChip.parse, id),
+            WaitingKind.waitingCategory => _Target(NotifChip.categorize, id),
+            WaitingKind.gone => fallback,
+          };
         }
       }
     } catch (_) {
@@ -133,17 +138,24 @@ class AutoReadLaunchRouter {
     } finally {
       unawaited(sub?.cancel());
     }
-    return NotifChip.categorize;
+    return fallback;
   }
 
-  void _open(NotifChip chip) {
+  void _open(_Target target) {
     final nav = navigatorKey.currentState;
     if (nav == null) return;
     nav.pushNamed(
       Routes.notifications,
-      arguments: NotificationsRouteArgs(chip: chip),
+      arguments: NotificationsRouteArgs(chip: target.chip, focusId: target.focusId),
     );
   }
+}
+
+/// Where a tap goes: the chip, and the row to bring into view (null = none).
+class _Target {
+  const _Target(this.chip, this.focusId);
+  final NotifChip chip;
+  final String? focusId;
 }
 
 class _HomeObserver extends NavigatorObserver {

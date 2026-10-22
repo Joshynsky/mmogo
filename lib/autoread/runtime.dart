@@ -8,6 +8,7 @@
 library;
 
 import '../data/maintenance/reset_resume.dart' show ResetEnv;
+
 import 'bridge/method_channel_autoread_bridge.dart';
 import 'data/autoread_wipe.dart';
 import 'data/pending_items_store.dart';
@@ -23,8 +24,17 @@ class AutoReadRuntime {
   static final MethodChannelAutoReadBridge bridge =
       MethodChannelAutoReadBridge(generation: () => store.readGeneration());
 
+
   /// Set by the running app: rebuilds the waiting rows after Delete data.
   static Future<void> Function()? refresh;
+
+  /// Launch and resume: the switch is forced off when consent is not current
+  /// (see `ReadingController.reconcile`). Never throws.
+  static Future<void> reconcile() async {
+    try {
+      await ReadingControllerHolder.instance?.reconcile();
+    } catch (_) {}
+  }
 
   /// Sets the controller and the Delete data hook. Safe to call twice.
   static void install() {

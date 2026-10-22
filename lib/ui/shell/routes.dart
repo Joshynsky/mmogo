@@ -66,6 +66,9 @@ class Routes {
 /// Route arguments of [Routes.notifications]: the chip to open on. A chip that
 /// is not available in this flavor opens News (the page decides).
 class NotificationsRouteArgs {
-  const NotificationsRouteArgs({this.chip = NotifChip.all});
+  const NotificationsRouteArgs({this.chip = NotifChip.all, this.focusId});
   final NotifChip chip;
+
+  /// Id of a row to bring into view and highlight; null or not listed = none.
+  final String? focusId;
 }

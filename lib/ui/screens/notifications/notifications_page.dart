@@ -22,7 +22,10 @@ import '../../../domain/notifications/news_item.dart';
 import '../../../domain/notifications/news_logic.dart';
 import '../../../domain/notifications/notif_chip.dart';
 import '../../../domain/notifications/notifications_repository.dart';
+import '../../../app_constants.dart';
+import '../../../platform/storage_bridge.dart';
 import '../../copy/notifications_copy.dart';
+import '../../copy/other_version_copy.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/tap_target.dart';
 import 'news_heading_bar.dart';
@@ -35,6 +38,7 @@ class NotificationsPage extends StatefulWidget {
     required this.news,
     this.waiting,
     this.initialChip = NotifChip.all,
+    this.focusId,
     this.clock,
     this.onBack,
     this.onOpenNews,
@@ -51,6 +55,9 @@ class NotificationsPage extends StatefulWidget {
 
   /// The chip to open on. A chip that is not available in this flavor opens News.
   final NotifChip initialChip;
+
+  /// A waiting row to scroll to and highlight (autoread build only).
+  final String? focusId;
 
   /// "Now" for ages, expiry and the 30-day read window. Default: the real clock.
   final DateTime Function()? clock;
@@ -110,11 +117,25 @@ class _NotificationsPageState extends State<NotificationsPage> {
     m?.showSnackBar(SnackBar(content: Text(text)));
   }
 
+  /// The permanent other-version item: opens the mmogo page (a constant) and
+  /// counts as read, so the bell never lights for it again.
+  Future<void> _seeMore(NewsItem n) async {
+    var opened = false;
+    try {
+      opened = await StorageBridge.instance.openUrl(AppConstants.siteUrl);
+    } catch (_) {}
+    if (!opened && mounted) _toast(kOtherVersionCouldNotOpen);
+    await widget.news.markRead(n.id, _now());
+  }
+
   Widget _newsRow(NewsItem n, DateTime now) => NewsRow(
         n,
         now,
         onOpen: widget.onOpenNews == null ? null : () => widget.onOpenNews!(n),
-        onRead: () => widget.news.markRead(n.id, _now()),
+        onRead: () => n.kind == NewsKind.whatsNew && widget.onOpenNews != null
+            ? widget.onOpenNews!(n)
+            : widget.news.markRead(n.id, _now()),
+        onSeeMore: n.permanent ? () => _seeMore(n) : null,
         onUpdate: () => widget.onUpdate != null ? widget.onUpdate!(n) : widget.news.completeUpdate(n.id),
         onDismiss: () {
           widget.news.remove(n.id);
@@ -160,6 +181,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
           now: now,
           newsRowBuilder: (n) => _newsRow(n, now),
           actions: widget.waitingActions,
+          focusId: widget.focusId,
         ),
       ];
     }

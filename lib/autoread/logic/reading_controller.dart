@@ -22,7 +22,9 @@ import '../data/pending_items_store.dart';
 const String kReadingConsentKey = 'autoread_consent_version_v1';
 
 /// Bump when the consent text changes in meaning; everyone is asked again.
-const int kReadingConsentVersion = 1;
+/// 2 (0.1.2): one consent screen with a switch per consent. The Kotlin side
+/// holds the same number (`ConsentGate.CONSENT_VERSION`); a test pins them.
+const int kReadingConsentVersion = 2;
 
 /// What the Settings rows need from the platform bridge. The real
 /// implementation wraps `MethodChannelAutoReadBridge`; tests use a fake.
@@ -32,6 +34,17 @@ abstract class ReadingBridge {
   Future<AutoReadPermissions> requestPermissions();
   Future<void> deleteAllHeld();
   Future<void> openAppSettings();
+
+  /// Tells the Kotlin side which consent version the user agreed to. Kotlin
+  /// keeps its own copy and accepts only its own current version.
+  Future<bool> setConsent(int version);
+
+  /// The "Parse from the notification" switch, kept in the auto-read prefs.
+  Future<bool> setParseOn(bool on);
+
+  /// Opens the phone's Autostart screen (Xiaomi family) or, failing that,
+  /// the app's own page in Android settings. Never called automatically.
+  Future<void> openAutostartSettings();
 }
 
 /// The real bridge adapter.
@@ -49,6 +62,12 @@ class ChannelReadingBridge implements ReadingBridge {
   Future<void> deleteAllHeld() => _bridge.deleteAllHeld();
   @override
   Future<void> openAppSettings() => _bridge.openAppSettings();
+  @override
+  Future<bool> setConsent(int version) => _bridge.setConsent(version);
+  @override
+  Future<bool> setParseOn(bool on) => _bridge.setParseOn(on);
+  @override
+  Future<void> openAutostartSettings() => _bridge.openAutostartSettings();
 }
 
 /// The few preference operations the controller needs (fresh reads).
@@ -120,12 +139,20 @@ class ReadingState {
   final bool notificationsAllowed;
   final int heldCount;
 
+  /// The "Parse from the notification" switch (kept on the Kotlin side).
+  final bool parseOn;
+
+  /// True on a Xiaomi-family phone (decided in Kotlin): the Autostart row shows.
+  final bool autostartHelp;
+
   const ReadingState({
     required this.available,
     required this.on,
     required this.smsAllowed,
     required this.notificationsAllowed,
     required this.heldCount,
+    this.parseOn = false,
+    this.autostartHelp = false,
   });
 
   /// The platform could not be asked: treated as off and not available.
@@ -168,24 +195,32 @@ class ReadingController {
         smsAllowed: s.smsGranted,
         notificationsAllowed: s.notifGranted,
         heldCount: s.heldCount,
+        parseOn: s.parseOn,
+        autostartHelp: s.autostartHelp,
       );
     } catch (_) {
       return ReadingState.unavailable;
     }
   }
 
-  /// True when the user agreed to the CURRENT consent text.
+  /// True when the user agreed to the CURRENT consent text. Both sides must hold
+  /// the current version: if Kotlin holds a different number (including 0) the
+  /// answer is NOT current, so the consent screen is shown again and Allow
+  /// stores both (security re-look C1, PM 22-10-2026).
   Future<bool> hasConsent() async {
     try {
-      return await _prefs.readInt(kReadingConsentKey) == kReadingConsentVersion;
+      if (await _prefs.readInt(kReadingConsentKey) != kReadingConsentVersion) return false;
+      return (await _bridge.getState()).consentVersion == kReadingConsentVersion;
     } catch (_) {
       return false;
     }
   }
 
-  /// Remembers the agreement; read back. False when it could not be stored.
+  /// Remembers the agreement (Kotlin side first, then the app's preferences);
+  /// read back. False when it could not be stored.
   Future<bool> recordConsent() async {
     try {
+      if (!await _bridge.setConsent(kReadingConsentVersion)) return false;
       if (!await _prefs.writeInt(kReadingConsentKey, kReadingConsentVersion)) return false;
       return await _prefs.readInt(kReadingConsentKey) == kReadingConsentVersion;
     } catch (_) {
@@ -226,6 +261,24 @@ class ReadingController {
       return await _bridge.setEnabled(false) ? TurnOffResult.stillOn : TurnOffResult.off;
     } catch (_) {
       return TurnOffResult.stillOn;
+    }
+  }
+
+  /// Fail closed on every launch and resume (SEC-R M10): the platform switch may
+  /// stay on only while the user's consent answer is the CURRENT consent
+  /// version. If it is on without that (the text changed, or the answer is
+  /// gone, for example after a restore), it is forced off. Held and waiting
+  /// messages are kept. True when nothing needed forcing or the force worked;
+  /// false when the switch could not be forced off. A missing permission is not
+  /// forced: the "Capture is on but not working: fix" row shows it.
+  Future<bool> reconcile() async {
+    try {
+      final s = await _bridge.getState();
+      if (!s.enabled) return true;
+      if (await hasConsent()) return true;
+      return !await _bridge.setEnabled(false);
+    } catch (_) {
+      return false;
     }
   }
 
@@ -271,6 +324,27 @@ class ReadingController {
     }
     final cleared = await clearWaiting();
     return await _heldIsEmpty() && cleared;
+  }
+
+  /// Sets the "Parse from the notification" switch. False when it could not be
+  /// stored (the switch then reads back as it was).
+  Future<bool> setParse(bool on) async {
+    try {
+      return await _bridge.setParseOn(on) == on;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Opens the Autostart screen (or the app's own settings page). False on a
+  /// platform error. Only ever called from a button the user taps.
+  Future<bool> openAutostartSettings() async {
+    try {
+      await _bridge.openAutostartSettings();
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Opens the app's own page in Android settings. False on a platform error.

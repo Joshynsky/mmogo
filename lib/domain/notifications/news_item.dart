@@ -17,6 +17,8 @@ class NewsItem {
     required this.createdAt,
     this.readAt,
     this.payload,
+    this.body,
+    this.permanent = false,
   });
 
   final String id;
@@ -28,6 +30,13 @@ class NewsItem {
   final DateTime? readAt;
   final Object? payload;
 
+  /// An optional line of text under the title (the other-version notice).
+  final String? body;
+
+  /// True for an item that stays for good: it cannot be dismissed or removed,
+  /// is not dropped after the read-retention days, and sorts last once read.
+  final bool permanent;
+
   bool get isUnread => readAt == null;
 
   NewsItem copyWith({DateTime? readAt, bool clearReadAt = false}) => NewsItem(
@@ -37,5 +46,7 @@ class NewsItem {
         createdAt: createdAt,
         readAt: clearReadAt ? null : (readAt ?? this.readAt),
         payload: payload,
+        body: body,
+        permanent: permanent,
       );
 }

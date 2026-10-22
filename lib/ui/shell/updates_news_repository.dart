@@ -7,7 +7,8 @@
 /// real unread state, and removing a notice.
 ///
 /// What it does NOT cover (integration must replace it):
-/// - What's new rows are never produced; [completeUpdate] only removes the
+/// - What's new rows come only from the "What's new in mmogo X" inbox notice
+///   (opening it shows the pages, read-only); [completeUpdate] only removes the
 ///   update row (no swap to a What's new row).
 /// - Marking ONE row read is kept in memory only (the inbox can only mark all
 ///   read); it is saved when every row is read, and lost on a restart otherwise.
@@ -20,6 +21,8 @@ import '../../data/updates/updates_inbox.dart';
 import '../../domain/notifications/news_item.dart';
 import '../../domain/notifications/notifications_repository.dart';
 import '../copy/data_copy.dart';
+import '../copy/other_version_copy.dart';
+import '../copy/whats_new_pager_copy.dart' show kWhatsNewPagerTitle;
 
 class UpdatesNewsRepository implements NotificationsRepository {
   /// [loadOnWatch] false: never start the inbox load (the bell's fallback
@@ -42,12 +45,22 @@ class UpdatesNewsRepository implements NotificationsRepository {
         for (final n in _inbox.notices)
           NewsItem(
             id: n.tag,
-            kind: (n.welcome || n.backupPaused) ? NewsKind.notice : NewsKind.update,
+            kind: n.whatsNew
+                ? NewsKind.whatsNew
+                : (n.welcome || n.backupPaused || n.otherVersion)
+                    ? NewsKind.notice
+                    : NewsKind.update,
             title: n.welcome
                 ? kWelcomeNoticeTitle
                 : n.backupPaused
                     ? kBackupPausedNoticeTitle
-                    : updateNoticeTitle(n.tag),
+                    : n.otherVersion
+                        ? kOtherVersionNoticeTitle
+                        : n.whatsNew
+                            ? kWhatsNewPagerTitle
+                            : updateNoticeTitle(n.tag),
+            body: n.otherVersion ? kOtherVersionNoticeBody : null,
+            permanent: n.otherVersion,
             createdAt: n.receivedAt,
             readAt: (n.read || _readHere.contains(n.tag)) ? n.receivedAt : null,
             payload: n,
@@ -73,6 +86,8 @@ class UpdatesNewsRepository implements NotificationsRepository {
   Future<void> markRead(String id, DateTime at) async {
     if (!_inbox.notices.any((n) => n.tag == id)) return;
     _readHere.add(id);
+    // The permanent notice and the What's new item are saved read at once, so a restart never lights the bell for them again.
+    if (id == Notice.otherVersionTag || id.startsWith(Notice.whatsNewTagPrefix)) await _inbox.markRead(id);
     if (_inbox.notices.every((n) => n.read || _readHere.contains(n.tag))) {
       await _inbox.markAllRead();
     }
@@ -81,6 +96,7 @@ class UpdatesNewsRepository implements NotificationsRepository {
 
   @override
   Future<void> remove(String id) async {
+    if (id == Notice.otherVersionTag) return; // permanent: never removed
     await _inbox.remove(id);
     _readHere.remove(id);
     _emit();

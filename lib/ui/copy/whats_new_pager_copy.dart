@@ -1,14 +1,18 @@
-/// 0.1.2 S11a (WN1, PK2, CW2): the What's-new pager's words. The card texts
-/// follow the signed mock `_pipeline/ui-rework/pages/wording.html` (lines
-/// 129-137); the fixed sentences come from their one source constant and are
-/// never retyped here. PM placeholders are listed in `s11a-deviations.md`.
+/// 0.1.2 A5a (WN1, PK2, CW2): the What's-new page's words (the page replaced the
+/// six-card sheet). The item texts follow the signed mock
+/// `_pipeline/ui-rework/whats-new-page.html` (its COPY object), the partner's
+/// wording file of 20-10-2026 and the signed sentences of `pages/wording.html`;
+/// the fixed sentences come from their one source constant and are never
+/// retyped here. This file holds the standard build's words only; the other
+/// build's own words are in `lib/autoread/ui/whats_new_autoread_copy.dart`. PM
+/// placeholders are listed in `s11a-deviations.md`.
 library;
 
 import 'data_copy.dart';
 import 'privacy_copy.dart';
 
-/// The version the pager is about. A FIXED constant (not `AppInfo`): the app
-/// version is bumped at the release step, but the pager's title and the
+/// The version the page is about. A FIXED constant (not `AppInfo`): the app
+/// version is bumped at the release step, but the page's title and the
 /// Updates entry say 0.1.2 now.
 const kWhatsNewPagerVersion = '0.1.2';
 
@@ -22,23 +26,38 @@ const kWhatsNewEntryBody =
 /// for release notices, see the Updates footnote).
 const kWhatsNewEntryButton = "Read what's new";
 
-const kWhatsNewCardCount = 6;
+/// The line under the title (standard build: six items).
+const kWhatsNewIntro = 'Six things changed. Tap one to read it. Tap Got it when you are done.';
 
-String whatsNewCardOfText(int number) => 'Card $number of $kWhatsNewCardCount';
+/// The banner at the very top of the standard build's page. It never uses the
+/// words of the other version's name: it only says what the second version
+/// does.
+const kWhatsNewBannerHead = 'This is the standard version of mmogo';
+const kWhatsNewBannerBody =
+    'There is a second version that can read and parse your M\u2011Pesa messages for you. '
+    'It puts them on a waiting list for you to categorize and review. '
+    'It asks for SMS permission, so it is separate and optional.';
+const kWhatsNewBannerLink = 'Open the mmogo page';
 
-// Card 1
+// Item 1
 const kWhatsNewCard1Title = 'Withdrawals, airtime and Pochi';
+const kWhatsNewCard1Summary =
+    'mmogo now understands these M\u2011Pesa messages. Withdrawals are not counted as spending.';
 
-/// PLACEHOLDER for the PM: the mock's "Analytics shows how many you made and
-/// what they cost" is not true in the app, so the second part says what the
-/// app really shows.
+/// PLACEHOLDER for the PM: the mock's "Paid to and Analytics show how many" is
+/// not confirmed for Analytics; the partner's wording names only Paid to.
 const kWhatsNewCard1Body =
     'mmogo now understands these M\u2011Pesa messages. '
-    'Home and Paid to show how many you made and what they cost. '
-    'A withdrawal adds 0 to what you spent; only its Transaction cost counts toward costs.';
+    'Paid to shows how many payments you made and what they cost.';
+const kWhatsNewCard1Body2 =
+    'A withdrawal is money out, but it is not money you spent, so it adds nothing to what you spent. '
+    'Its transaction cost is still tracked. '
+    'A withdrawal counts as spending only when you spend that cash and record it as a Cash entry. '
+    'mmogo tracks spending.';
 
-// Card 2
+// Item 2
 const kWhatsNewCard2Title = 'Weeks';
+const kWhatsNewCard2Summary = 'A week now runs from the day you choose, Monday unless you change it.';
 const kWhatsNewCard2Body =
     'Before, a week meant the last 7 days: today and the 6 days before it. '
     'That did not match the calendar, so we corrected it. '
@@ -46,8 +65,9 @@ const kWhatsNewCard2Body =
     'Past weekly figures are regrouped to match; nothing saved changes.';
 const kWhatsNewChangeInSettings = 'Change in Settings';
 
-// Card 3 (invented example name and numbers, as in the mock)
+// Item 3 (invented example name and numbers, as in the mock)
 const kWhatsNewCard3Title = 'Same phone number = one person';
+const kWhatsNewCard3Summary = 'The same number written two ways now counts as one person.';
 const kWhatsNewCard3Body =
     'Earlier versions counted one number as two people when it was written two ways, for example '
     '0712 345 678 and +254 712 345 678 (07 and 01 numbers alike). '
@@ -65,21 +85,30 @@ const kWhatsNewPicLabel =
     'Before, version 0.1.1: 0712 345 678, Ksh 1,200, and +254 712 345 678, Ksh 300, as two people. '
     'Now, version 0.1.2: Jane Sample, Ksh 1,500, as one person.';
 
-// Card 4
+// Item 4
 const kWhatsNewCard4Title = 'Backups';
+const kWhatsNewCard4Summary = 'Backups from 0.1.1 still restore.';
 const kWhatsNewCard4Body =
     'Backups from 0.1.1 still restore. $kBackupNotRestorableByOlder $kUninstallErasesNotice';
 
-// Card 5 (PM 20-10-2026): the bell. It sits BEFORE Privacy so Privacy stays the closing card.
-// Standard build only: it says nothing about reading messages.
+// Item 5 (PM 20-10-2026): the bell. It sits BEFORE Privacy so Privacy stays the closing item.
+// Standard build: it says nothing about reading messages here (the banner at the top does).
 const kWhatsNewCardNotificationsTitle = 'Notifications';
+const kWhatsNewCardNotificationsSummary =
+    'The bell now opens Notifications. Updates is now in Settings, under About.';
 const kWhatsNewCardNotificationsBody =
     'The bell now opens Notifications. Updates and notices from mmogo appear there, '
     'and anything new shows on the bell. '
     'The Updates page, where you check for updates, is now in Settings, under About.';
 
-// Card 6 (the closing card; named Card5 before the bell card was added)
+// Item 6 (the closing item)
 const kWhatsNewCard5Title = 'Privacy';
+/// The closed line: the signed sentence without its parenthetical, derived (not retyped).
+final kWhatsNewCard5Summary = kPrivacySentenceStandard.replaceFirst(' (switchable off)', '');
+
+/// The signed canonical sentence (standard build), shown first and in bold.
+const kWhatsNewCard5Body = kPrivacySentenceStandard;
+
 /// R14 (F4): the canonical sentence already says the internet is used only to
 /// check for updates, so only the second half of W7 follows it.
-const kWhatsNewCard5Body = '$kPrivacySentenceStandard $kNetworkSeenSentence';
+const kWhatsNewCard5Network = kNetworkSeenSentence;

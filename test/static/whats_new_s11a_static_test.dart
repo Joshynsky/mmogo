@@ -8,6 +8,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/autoread/ui/whats_new_autoread_copy.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
 import 'package:mmogo/ui/copy/privacy_copy.dart';
 import 'package:mmogo/ui/copy/whats_new_pager_copy.dart';
@@ -30,6 +31,7 @@ List<String> staleCheckNowOff(Map<String, String> files) => [
 const _newCopyFiles = [
   'lib/ui/copy/whats_new_pager_copy.dart',
   'lib/ui/copy/whats_new_copy.dart',
+  'lib/autoread/ui/whats_new_autoread_copy.dart',
   'lib/ui/whats_new/whats_new_cards.dart',
   'lib/ui/whats_new/whats_new_pager.dart',
   'lib/ui/whats_new/whats_new_entry.dart',
@@ -91,42 +93,88 @@ void main() {
     }
   });
 
-  test('the words the pager really shows have no banned phrase either', () {
+  test('the words the page really shows have no banned phrase either', () {
     final shown = [
       kWhatsNewPagerTitle,
       kWhatsNewEntryBody,
       kWhatsNewEntryButton,
+      kWhatsNewIntro,
+      kWhatsNewBannerHead,
+      kWhatsNewBannerBody,
+      kWhatsNewBannerLink,
       kWhatsNewCard1Title,
+      kWhatsNewCard1Summary,
       kWhatsNewCard1Body,
+      kWhatsNewCard1Body2,
       kWhatsNewCard2Title,
+      kWhatsNewCard2Summary,
       kWhatsNewCard2Body,
       kWhatsNewCard3Title,
+      kWhatsNewCard3Summary,
       kWhatsNewCard3Body,
       kWhatsNewCard3Extra,
       kWhatsNewCard4Title,
+      kWhatsNewCard4Summary,
       kWhatsNewCard4Body,
       kWhatsNewCardNotificationsTitle,
+      kWhatsNewCardNotificationsSummary,
       kWhatsNewCardNotificationsBody,
       kWhatsNewCard5Title,
+      kWhatsNewCard5Summary,
       kWhatsNewCard5Body,
-    ].join('\n').replaceAll(kUninstallErasesNotice, '').replaceAll(kPrivacySentenceStandard, '');
+      kWhatsNewCard5Network,
+      // The auto-read build's words (and the provisional Privacy pair) follow the same rules.
+      kWhatsNewAutoBannerHead,
+      kWhatsNewAutoBannerBody,
+      kWhatsNewAutoIntro,
+      kWhatsNewReadingTitle,
+      kWhatsNewReadingSummary,
+      kWhatsNewReadingBody,
+      kWhatsNewReadingBody2,
+      kWhatsNewAutoNotificationsSummary,
+      kWhatsNewAutoNotificationsBody,
+      kWhatsNewPrivacyAutoReadSummaryProvisional,
+      kWhatsNewPrivacyAutoReadBodyProvisional,
+    ].join('\n').replaceAll(kUninstallErasesNotice, '').replaceAll(kPrivacySentenceStandard, '').replaceAll(kWhatsNewCard5Summary, '');
     expect(bannedHits(shown), isEmpty);
-    // "erases" appears only through W3 (uninstalling), on card 4.
+    // "erases" appears only through W3 (uninstalling), in Backups.
     expect(kWhatsNewCard4Body, contains(kUninstallErasesNotice));
   });
 
+  test('the standard banner and intro never use the auto-read word or identifier', () {
+    for (final s in [kWhatsNewBannerHead, kWhatsNewBannerBody, kWhatsNewBannerLink, kWhatsNewIntro]) {
+      expect(s.toLowerCase(), isNot(contains('auto-read')), reason: s);
+      expect(s.toLowerCase(), isNot(contains('autoread')), reason: s);
+    }
+    final shared = _lib()['lib/ui/copy/whats_new_pager_copy.dart']!;
+    expect(shared.toLowerCase(), isNot(contains('auto-read')) , reason: 'the shared copy file holds the standard words only');
+  });
+
+  test('the closed Privacy line is the signed sentence without its parenthetical', () {
+    expect(kWhatsNewCard5Summary, 'No permissions except internet, used only to check for updates.');
+    expect(kPrivacySentenceStandard, startsWith(kWhatsNewCard5Summary.substring(0, kWhatsNewCard5Summary.length - 1)));
+    // The auto-read build never shows the standard sentence: its Privacy words are the provisional pair.
+    expect(kWhatsNewPrivacyAutoReadBodyProvisional, isNot(contains('No permissions')));
+    expect(kWhatsNewPrivacyAutoReadSummaryProvisional, isNot(contains('No permissions')));
+  });
+  test('the auto-read What\'s new text says Parse from the notification starts on and can be turned off', () {
+    expect(
+      kWhatsNewReadingBody2,
+      contains('Parse from the notification starts on after you allow it, and you can turn it off in Settings.'),
+    );
+  });
   test('the banned-phrase check catches a planted phrase', () {
     expect(bannedHits('This app has zero permissions.'), ['zero permissions']);
     expect(bannedHits('Delete data erases your entries.'), ['erases']);
   });
 
-  test('the pager copy never retypes a fixed sentence: it uses the named constants', () {
+  test('the page copy never retypes a fixed sentence: it uses the named constants', () {
     final src = _noLineComments(_lib()['lib/ui/copy/whats_new_pager_copy.dart']!);
     expect(src, contains(r'$kBackupNotRestorableByOlder'));
     expect(src, contains(r'$kUninstallErasesNotice'));
-    expect(src, contains(r'$kNetworkSeenSentence'), reason: 'card 5 (F4 R14): only the second half of W7');
+    expect(src, contains('kNetworkSeenSentence'), reason: 'privacy (F4 R14): only the second half of W7');
     expect(src, isNot(contains(r'$kNetworkSentence')), reason: 'the full W7 would repeat the canonical sentence');
-    expect(src, contains(r'$kPrivacySentenceStandard'));
+    expect(src, contains('kPrivacySentenceStandard'));
     expect(src, isNot(contains(r'$kFirstDayRegrouped')), reason: 'F4 R4: card 2 has its own text; the line is for the First day dialog');
     expect(src, isNot(contains('GitHub sees your IP')));
     expect(src, isNot(contains('cannot be restored by')));

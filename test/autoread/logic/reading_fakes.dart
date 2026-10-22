@@ -12,7 +12,20 @@ class FakeReadingBridge implements ReadingBridge {
     this.smsGranted = false,
     this.notifGranted = false,
     this.heldCount = 0,
+    this.parseOn = false,
+    this.autostartHelp = false,
   });
+
+  /// The "Parse from the notification" switch (Kotlin prefs) and whether Kotlin
+  /// says this is a Xiaomi-family phone.
+  bool parseOn;
+  bool autostartHelp;
+
+  /// The consent version Kotlin holds (0 = none). Like the real side, it keeps
+  /// only its own current version.
+  int kotlinConsent = 0;
+  Object? setConsentError;
+  bool setParseIgnored = false;
 
   bool enabled;
   bool smsGranted;
@@ -36,7 +49,35 @@ class FakeReadingBridge implements ReadingBridge {
   Future<AutoReadState> getState() async {
     calls.add('getState');
     if (stateError != null) throw stateError!;
-    return AutoReadState(enabled: enabled, smsGranted: smsGranted, notifGranted: notifGranted, heldCount: heldCount);
+    return AutoReadState(
+      enabled: enabled,
+      smsGranted: smsGranted,
+      notifGranted: notifGranted,
+      heldCount: heldCount,
+      parseOn: parseOn,
+      autostartHelp: autostartHelp,
+      consentVersion: kotlinConsent,
+    );
+  }
+
+  @override
+  Future<bool> setConsent(int version) async {
+    calls.add('setConsent:$version');
+    if (setConsentError != null) throw setConsentError!;
+    if (version == kReadingConsentVersion) kotlinConsent = version;
+    return kotlinConsent == kReadingConsentVersion;
+  }
+
+  @override
+  Future<bool> setParseOn(bool on) async {
+    calls.add('setParseOn:$on');
+    if (!setParseIgnored) parseOn = on;
+    return parseOn;
+  }
+
+  @override
+  Future<void> openAutostartSettings() async {
+    calls.add('openAutostartSettings');
   }
 
   @override

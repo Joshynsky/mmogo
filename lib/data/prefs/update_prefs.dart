@@ -74,6 +74,27 @@ class UpdatePrefs {
     if (await readWhatsNewSeenVersion() == null) await writeWhatsNewSeenVersion(versionName);
   }
 
+  /// Set once the "other version of mmogo" notice has been added to the inbox
+  /// (standard build). It is the once-only guard: the notice is never added
+  /// again, whatever happens to the inbox. Device-local, never in a backup.
+  static const keyOtherVersionNoticeAdded = 'other_version_notice_added';
+
+  static Future<bool> readOtherVersionNoticeAdded() async {
+    try {
+      return (await _prefs()).getBool(keyOtherVersionNoticeAdded) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> writeOtherVersionNoticeAdded() async {
+    try {
+      return await (await _prefs()).setBool(keyOtherVersionNoticeAdded, true).timeout(_prefsTimeout);
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<bool> writeLastCheckAt(DateTime at) async {
     try {
       return await (await _prefs())

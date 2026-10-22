@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import '../../../domain/notifications/news_item.dart';
 import '../../copy/notifications_copy.dart';
+import '../../copy/other_version_copy.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/notif_colors.dart';
 import '../../widgets/notif_shape_icon.dart';
@@ -307,6 +308,7 @@ class NewsRow extends StatelessWidget {
     this.onDismiss,
     this.onRemove,
     this.onRead,
+    this.onSeeMore,
   });
 
   final NewsItem item;
@@ -317,6 +319,9 @@ class NewsRow extends StatelessWidget {
   final VoidCallback? onRemove;
   final VoidCallback? onRead;
 
+  /// The action of a permanent item (opens the mmogo page).
+  final VoidCallback? onSeeMore;
+
   @override
   Widget build(BuildContext context) {
     final p = AppPalette.of(context);
@@ -326,7 +331,16 @@ class NewsRow extends StatelessWidget {
 
     final NotifRowAction? action;
     NotifRowAction? link;
-    if (!item.isUnread) {
+    if (item.permanent) {
+      // Never dismissed or removed: no pill, only the link under the text (the
+      // long body needs the full width).
+      action = null;
+      link = NotifRowAction(
+        label: kOtherVersionNoticeAction,
+        semantics: kOtherVersionNoticeActionSpoken,
+        onTap: onSeeMore,
+      );
+    } else if (!item.isUnread) {
       action = NotifRowAction(
         label: kNewsActionRemove,
         semantics: '$kNewsActionRemove: ${item.title}',
@@ -361,6 +375,7 @@ class NewsRow extends StatelessWidget {
         size: shape == NotifShape.star ? 24 : 26,
       ),
       title: item.title,
+      subtitle: item.body,
       boldTitle: style.boldTitle,
       showUnreadDot: style.showUnreadDot,
       dimmed: style.dimmed,
@@ -368,7 +383,7 @@ class NewsRow extends StatelessWidget {
       action: action,
       link: link,
       onOpen: onOpen,
-      spokenLabel: '${style.spokenPrefix}. ${item.title}. ${spokenTime(age)}.',
+      spokenLabel: '${style.spokenPrefix}. ${item.title}. ${item.body == null ? '' : '${item.body} '}${spokenTime(age)}.',
     );
   }
 }

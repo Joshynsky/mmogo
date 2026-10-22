@@ -25,6 +25,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// `if (kAutoReadCompiled)` (F10, 19-10-2026).
 /// ui/shell/notifications_route.dart: builds the real waiting actions, inside
 /// `if (kAutoReadCompiled)` (I1, 19-10-2026).
+/// ui/screens/settings/about_section.dart and ui/screens/home/home_screen.dart: only read the
+/// flag, to leave out the standard build's Other version of mmogo row and notice (A5b, 21-10-2026).
+/// ui/whats_new/whats_new_cards.dart: the What's-new page's auto-read banner, intro and items,
+/// inside `if (kAutoReadCompiled)` (A5a, 21-10-2026).
 const kAutoReadHookFiles = <String>[
   'main.dart',
   'ui/screens/notifications/notifications_page.dart',
@@ -32,6 +36,9 @@ const kAutoReadHookFiles = <String>[
   'ui/shell/notifications_scope.dart',
   'ui/shell/notifications_route.dart',
   'ui/screens/settings/settings_screen.dart',
+  'ui/screens/settings/about_section.dart',
+  'ui/screens/home/home_screen.dart',
+  'ui/whats_new/whats_new_cards.dart',
 ];
 
 const _codeMapPath = '../_pipeline/knowledge/code-map.md';

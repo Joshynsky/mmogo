@@ -124,15 +124,20 @@ void main() {
     'Indigo light': AppPalette.indigoLight,
     'Indigo dark': AppPalette.indigoDark,
   }.entries) {
-    testWidgets('F8 pager button border >= 3:1 vs sheet: ${e.key}', (tester) async {
+    testWidgets('F8 Whats-new button border >= 3:1 vs the row: ${e.key}', (tester) async {
       final p = e.value;
-      final focus = FocusNode();
-      addTearDown(focus.dispose);
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.forPalette(p),
           home: Scaffold(
-            body: WhatsNewCardView(index: 1, palette: p, titleFocus: focus, onOpenSettings: () {}),
+            body: WhatsNewItemView(
+              item: whatsNewItems().firstWhere((i) => i.id == 'weeks'),
+              number: 2,
+              open: true,
+              palette: p,
+              onToggle: () {},
+              onOpenSettings: () {},
+            ),
           ),
         ),
       );

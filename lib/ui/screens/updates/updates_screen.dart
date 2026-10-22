@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../app_constants.dart';
-import '../../../app_info.dart';
 import '../../../data/prefs/update_prefs.dart';
 import '../../../data/updates/update_check_service.dart';
 import '../../../data/updates/updates_inbox.dart';
@@ -16,6 +15,7 @@ import '../../theme/app_colors.dart';
 import '../backup/backup_format.dart';
 import '../settings/settings_widgets.dart';
 import '../../whats_new/whats_new_entry.dart';
+import '../../whats_new/whats_new_hook.dart' show openWhatsNewToRead;
 import '../../whats_new/whats_new_pager.dart';
 import 'notice_card.dart';
 
@@ -109,15 +109,15 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
   bool get _showNew => _seenLoaded && !WhatsNewProcess.pillCleared && _seen != kWhatsNewPagerVersion;
 
   Future<void> _openPager() async {
-    final installed = widget.installedVersionName ?? AppInfo.versionName;
-    final gotIt = await showWhatsNewPager(
+    // Opened to read: no Got it; opening it counts as seen (pill, stored version, bell item).
+    await openWhatsNewToRead(
       context,
-      onOpenSettings: widget.openSettings ?? () => Navigator.of(context).pushNamed(Routes.settings),
-      onOpenBackup: widget.openBackup ?? () => Navigator.of(context).pushNamed(Routes.backup),
+      installedVersionName: widget.installedVersionName,
+      writeSeenVersion: widget.writeSeenVersion,
+      openSettings: widget.openSettings ?? () => Navigator.of(context).pushNamed(Routes.settings),
+      openBackup: widget.openBackup ?? () => Navigator.of(context).pushNamed(Routes.backup),
+      inbox: _inbox,
     );
-    if (!gotIt) return;
-    WhatsNewProcess.pillCleared = true;
-    writeSeenQuietly(widget.writeSeenVersion ?? (v) async => await UpdatePrefs.writeWhatsNewSeenVersion(v), installed);
     if (mounted) setState(() {});
   }
 
@@ -164,7 +164,8 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    final notices = _inbox.notices;
+    // The What's-new bell item is not an update message; it opens the pages, which this page already offers.
+    final notices = _inbox.notices.where((n) => !n.whatsNew).toList();
     return SecondaryScaffold(
       title: kUpdatesTitle,
       followPalette: true,

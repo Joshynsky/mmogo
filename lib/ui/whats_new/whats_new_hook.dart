@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../app_info.dart';
 import '../../data/prefs/app_prefs.dart';
 import '../../data/prefs/update_prefs.dart';
+import '../../data/updates/updates_inbox.dart';
+import '../../data/updates/whats_new_notice.dart';
 import '../../domain/whats_new/whats_new_gate.dart';
 import '../shell/routes.dart';
 import '../startup_notice.dart';
@@ -21,8 +25,13 @@ import 'whats_new_pager.dart';
 /// the next start); a fresh install never gets the pop-up (Welcome marks the
 /// version seen).
 ///
+/// When the page is due, the bell also gets its "What's new in mmogo X" item
+/// (once per version). "Got it" does NOT mark it read: the bell stays lit until
+/// the item is opened from Notifications (PM, 22-10-2026).
+///
 /// Test seams: [installedVersionName], [readSeenVersion], [writeSeenVersion],
-/// [readOnboardingComplete], [startupNoticeShown], [openSettings], [openBackup].
+/// [readOnboardingComplete], [startupNoticeShown], [openSettings], [openBackup],
+/// [inbox].
 Future<void> maybeShowWhatsNew(
   BuildContext context, {
   String? installedVersionName,
@@ -32,8 +41,10 @@ Future<void> maybeShowWhatsNew(
   bool Function()? startupNoticeShown,
   VoidCallback? openSettings,
   VoidCallback? openBackup,
+  UpdatesInbox? inbox,
 }) async {
   final installed = installedVersionName ?? AppInfo.versionName;
+  final box = inbox ?? UpdatesInbox.instance;
   try {
     if (WhatsNewProcess.autoShown || WhatsNewProcess.isOpen) return;
     final seen = await (readSeenVersion ?? UpdatePrefs.readWhatsNewSeenVersion)();
@@ -44,7 +55,9 @@ Future<void> maybeShowWhatsNew(
       onboardingComplete: onboarded,
       hasContentFor: hasWhatsNewContentFor,
     );
-    if (!show || !context.mounted) return;
+    if (!show) return;
+    unawaited(WhatsNewNotice.addIfDue(box, installed)); // the bell item; never holds the page back
+    if (!context.mounted) return;
     if ((startupNoticeShown ?? () => StartupNotice.shown)()) return;
     if (WhatsNewProcess.autoShown || WhatsNewProcess.isOpen) return;
     WhatsNewProcess.autoShown = true;
@@ -60,6 +73,34 @@ Future<void> maybeShowWhatsNew(
         installed,
       );
     }
+  } catch (_) {}
+}
+
+/// Opens the What's-new page to READ (the Updates entry, and its Notifications
+/// row): no "Got it", Back only. Opening it is what counts as seen: the NEW
+/// pill clears, the installed version is stored as seen and the bell item is
+/// marked read. Does nothing while a page is already open. Never throws.
+Future<void> openWhatsNewToRead(
+  BuildContext context, {
+  String? installedVersionName,
+  Future<void> Function(String versionName)? writeSeenVersion,
+  VoidCallback? openSettings,
+  VoidCallback? openBackup,
+  UpdatesInbox? inbox,
+}) async {
+  if (WhatsNewProcess.isOpen) return;
+  final installed = installedVersionName ?? AppInfo.versionName;
+  try {
+    WhatsNewProcess.pillCleared = true;
+    writeSeenQuietly(writeSeenVersion ?? (v) async => await UpdatePrefs.writeWhatsNewSeenVersion(v), installed);
+    unawaited((inbox ?? UpdatesInbox.instance).markRead(Notice.whatsNewTagFor(installed)));
+    if (!context.mounted) return;
+    await showWhatsNewPager(
+      context,
+      readOnly: true,
+      onOpenSettings: openSettings ?? () => _push(context, Routes.settings),
+      onOpenBackup: openBackup ?? () => _push(context, Routes.backup),
+    );
   } catch (_) {}
 }
 

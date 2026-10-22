@@ -1,10 +1,19 @@
-// 0.1.2 S11a (WN1, PK2, CW2): the What's-new pager. Six cards in the signed
-// order, Next / Back / swipe, only the last card has Got it, the system Back
-// key, no outside-tap or drag close, the two injected route buttons, 44 px,
-// dark, text scale 1.3 and the announcements. Stub routes only: the real
-// Settings and Backup pages are never built; nothing touches prefs or network.
+// 0.1.2 A5a (WN1, PK2, CW2): the full-screen What's-new page. A banner at the
+// top, the title, the intro, six expandable rows (first open, several can be
+// open), one pinned Got it, the system Back key (closes, marks nothing), the
+// two injected route buttons, the banner link, 44 px, dark, text scale 1.3 and
+// the row semantics. Stub routes only: the real Settings and Backup pages are
+// never built; nothing touches prefs or network.
+//
+// The standard build (the default) is tested in the main groups. The
+// auto-read build is a compile-time flag: its group runs only with
+// `--dart-define=MMOGO_AUTOREAD=true` (and is skipped otherwise).
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/autoread/autoread_feature.dart';
+import 'package:mmogo/autoread/ui/whats_new_autoread_copy.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
 import 'package:mmogo/ui/copy/privacy_copy.dart';
 import 'package:mmogo/ui/copy/whats_new_copy.dart';
@@ -20,12 +29,15 @@ class _Host {
   final opened = <String>[];
 }
 
-const _next = Key('whatsNewNext');
-const _back = Key('whatsNewBack');
 const _gotIt = Key('whatsNewGotIt');
 const _pager = Key('whatsNewPager');
-const _title = Key('whatsNewCardTitle');
-const _body = Key('whatsNewCardBody');
+const _scroll = Key('whatsNewScroll');
+
+Key _head(String id) => Key('whatsNewItemHead-$id');
+Key _body(String id) => Key('whatsNewItemBody-$id');
+Key _summary(String id) => Key('whatsNewItemSummary-$id');
+
+const _ids = ['withdrawals', 'weeks', 'phone', 'backups', 'notifications', 'privacy'];
 
 Future<_Host> _pump(
   WidgetTester tester, {
@@ -33,6 +45,7 @@ Future<_Host> _pump(
   double scale = 1.0,
   Size size = const Size(400, 900),
   bool open = true,
+  VoidCallback? onOpenSite,
 }) async {
   SharedPreferences.setMockInitialValues({});
   WhatsNewProcess.resetForTest();
@@ -70,6 +83,7 @@ Future<_Host> _pump(
                     host.opened.add('backup');
                     Navigator.of(context).pushNamed('/backup');
                   },
+                  onOpenSite: onOpenSite ?? () => host.opened.add('site'),
                 );
               },
               child: const Text('HOME'),
@@ -86,28 +100,44 @@ Future<_Host> _pump(
   return host;
 }
 
-Future<void> _tapNext(WidgetTester tester, [int times = 1]) async {
-  for (var i = 0; i < times; i++) {
-    await tester.tap(find.byKey(_next));
-    await tester.pumpAndSettle();
-  }
+/// Opens a row (scrolling to it first); a closed row's header is tapped.
+Future<void> _toggle(WidgetTester tester, String id) async {
+  await tester.ensureVisible(find.byKey(_head(id)));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(_head(id)));
+  await tester.pumpAndSettle();
 }
 
-String _titleText(WidgetTester tester) => tester.widget<Text>(find.byKey(_title)).data!;
-String _bodyText(WidgetTester tester) => tester.widget<Text>(find.byKey(_body)).data!;
+Future<void> _openRow(WidgetTester tester, String id) async {
+  if (find.byKey(_body(id)).evaluate().isEmpty) await _toggle(tester, id);
+}
+
+String _text(WidgetTester tester, Key k) => tester.widget<Text>(find.byKey(k)).data!;
 
 void main() {
-  group('the six cards, in the signed order', () {
-    testWidgets('titles and bodies are the named constants, card 1 to card 6', (tester) async {
+  const standardOnly = kAutoReadCompiled ? 'standard build only' : null;
+  const autoreadOnly = kAutoReadCompiled ? null : 'run with --dart-define=MMOGO_AUTOREAD=true';
+
+  group('the page, in the signed order (standard build)', () {
+    testWidgets('banner, title, intro and six rows, with the mock\'s words', (tester) async {
       await _pump(tester);
-      expect(find.text(kWhatsNewPagerTitle), findsOneWidget);
-      expect(kWhatsNewPagerTitle, "What's new in mmogo 0.1.2");
+      expect(find.byKey(_pager), findsOneWidget);
+      expect(_text(tester, const Key('whatsNewPagerTitle')), "What's new in mmogo 0.1.2");
+      expect(_text(tester, const Key('whatsNewIntro')), 'Six things changed. Tap one to read it. Tap Got it when you are done.');
+      // The banner is above the title.
+      expect(tester.getTopLeft(find.byKey(const Key('whatsNewBanner'))).dy, lessThan(tester.getTopLeft(find.byKey(const Key('whatsNewPagerTitle'))).dy));
+      expect(_text(tester, const Key('whatsNewBannerHead')), 'This is the standard version of mmogo');
+      expect(
+        _text(tester, const Key('whatsNewBannerBody')),
+        'There is a second version that can read and parse your M\u2011Pesa messages for you. '
+        'It puts them on a waiting list for you to categorize and review. '
+        'It asks for SMS permission, so it is separate and optional.',
+      );
+      expect(find.text('Open the mmogo page'), findsOneWidget);
       final titles = <String>[];
-      final bodies = <String>[];
-      for (var i = 0; i < 6; i++) {
-        titles.add(_titleText(tester));
-        bodies.add(_bodyText(tester));
-        if (i < 5) await _tapNext(tester);
+      for (final id in _ids) {
+        await tester.ensureVisible(find.byKey(Key('whatsNewItemTitle-$id')));
+        titles.add(_text(tester, Key('whatsNewItemTitle-$id')));
       }
       expect(titles, [
         'Withdrawals, airtime and Pochi',
@@ -117,37 +147,82 @@ void main() {
         'Notifications',
         'Privacy',
       ]);
-      expect(bodies, [kWhatsNewCard1Body, kWhatsNewCard2Body, kWhatsNewCard3Body, kWhatsNewCard4Body, kWhatsNewCardNotificationsBody, kWhatsNewCard5Body]);
-    });
+      expect(find.byType(WhatsNewItemView), findsNWidgets(6));
+    }, skip: standardOnly != null);
 
-    testWidgets('card 1: the truthful placeholder, no Analytics claim, the short independence line', (tester) async {
+    testWidgets('the standard banner says nothing of auto-read, even in its spoken words', (tester) async {
+      final h = tester.ensureSemantics();
       await _pump(tester);
-      final body = _bodyText(tester);
-      expect(body, contains('Home and Paid to show how many you made and what they cost.'));
-      expect(body, contains('A withdrawal adds 0 to what you spent; only its Transaction cost counts toward costs.'));
-      expect(body, isNot(contains('Analytics shows how many')));
-      expect(tester.widget<Text>(find.byKey(const Key('whatsNewIndependence'))).data, kIndependenceShort);
-    });
+      final all = [_text(tester, const Key('whatsNewBannerHead')), _text(tester, const Key('whatsNewBannerBody')), kWhatsNewBannerLink, kWhatsNewIntro];
+      for (final t in all) {
+        expect(t.toLowerCase(), isNot(contains('auto-read')), reason: t);
+        expect(t.toLowerCase(), isNot(contains('autoread')), reason: t);
+      }
+      h.dispose();
+    }, skip: standardOnly != null);
 
-    testWidgets('card 2: Weeks text with the regrouped sentence and the Change in Settings button', (tester) async {
+    testWidgets('the first row starts open, the others closed; each closed row shows its one-line summary', (tester) async {
       await _pump(tester);
-      await _tapNext(tester);
-      expect(_bodyText(tester), contains('A week now runs from the day you choose in Settings (Monday unless you change it).'));
-      expect(_bodyText(tester), contains('Before, a week meant the last 7 days: today and the 6 days before it.'));
-      expect(_bodyText(tester), contains('Past weekly figures are regrouped to match; nothing saved changes.'));
+      expect(find.byKey(_body('withdrawals')), findsOneWidget);
+      expect(find.byKey(_summary('withdrawals')), findsNothing, reason: 'open: the summary is not repeated');
+      for (final id in _ids.skip(1)) {
+        expect(find.byKey(_body(id)), findsNothing, reason: id);
+        await tester.ensureVisible(find.byKey(_summary(id)));
+        expect(find.byKey(_summary(id)), findsOneWidget, reason: id);
+      }
+      expect(_text(tester, _summary('weeks')), 'A week now runs from the day you choose, Monday unless you change it.');
+      expect(_text(tester, _summary('phone')), 'The same number written two ways now counts as one person.');
+      expect(_text(tester, _summary('backups')), 'Backups from 0.1.1 still restore.');
+      expect(_text(tester, _summary('notifications')), 'The bell now opens Notifications. Updates is now in Settings, under About.');
+      expect(_text(tester, _summary('privacy')), 'No permissions except internet, used only to check for updates.');
+    }, skip: standardOnly != null);
+
+    testWidgets('a tap opens a row and a second tap closes it; several can be open at once', (tester) async {
+      await _pump(tester);
+      await _toggle(tester, 'weeks');
+      expect(find.byKey(_body('weeks')), findsOneWidget);
+      expect(find.byKey(_body('withdrawals')), findsOneWidget, reason: 'the first stays open');
+      await _toggle(tester, 'backups');
+      expect(find.byKey(_body('backups')), findsOneWidget);
+      expect(find.byKey(_body('weeks')), findsOneWidget);
+      await _toggle(tester, 'weeks');
+      expect(find.byKey(_body('weeks')), findsNothing);
+      expect(find.byKey(_summary('weeks')), findsOneWidget);
+      await _toggle(tester, 'withdrawals');
+      expect(find.byKey(_body('withdrawals')), findsNothing);
+    }, skip: standardOnly != null);
+
+    testWidgets('item 1: the placeholder wording (Paid to, not Analytics) and the withdrawal text', (tester) async {
+      await _pump(tester);
+      final first = _text(tester, const Key('whatsNewPara-withdrawals-0'));
+      expect(first, contains('Paid to shows how many payments you made and what they cost.'));
+      expect(first, isNot(contains('Analytics')));
+      expect(first, contains('M\u2011Pesa'));
+      final second = _text(tester, const Key('whatsNewPara-withdrawals-1'));
+      expect(second, contains('it adds nothing to what you spent. Its transaction cost is still tracked.'));
+      expect(second, endsWith('mmogo tracks spending.'));
+    }, skip: standardOnly != null);
+
+    testWidgets('item 2: Weeks text with the regrouped sentence and the Change in Settings button', (tester) async {
+      await _pump(tester);
+      await _openRow(tester, 'weeks');
+      final body = _text(tester, const Key('whatsNewPara-weeks-0'));
+      expect(body, kWhatsNewCard2Body);
+      expect(body, contains('A week now runs from the day you choose in Settings (Monday unless you change it).'));
+      expect(body, contains('Before, a week meant the last 7 days: today and the 6 days before it.'));
+      expect(body, contains('Past weekly figures are regrouped to match; nothing saved changes.'));
       expect(find.byKey(const Key('whatsNewCalSettings')), findsOneWidget);
       expect(find.text('Change in Settings'), findsOneWidget);
-    });
+    }, skip: standardOnly != null);
 
-    testWidgets('card 3: before / after picture with an invented name, names both the 07 and 01 forms, the softer wording (F4 R10), no setting', (tester) async {
+    testWidgets('item 3: picture, the signed extra paragraph, names both forms, no setting', (tester) async {
       await _pump(tester);
-      await _tapNext(tester, 2);
-      final body = _bodyText(tester);
+      await _openRow(tester, 'phone');
+      final body = _text(tester, const Key('whatsNewPara-phone-0'));
       expect(body, contains('(07 and 01 numbers alike)'));
       expect(body, contains('We have corrected that: they now count as one person on Paid to,'));
       expect(body, isNot(contains('mistake')));
       expect(body, contains('0712 345 678 and +254 712 345 678'));
-      expect(body, contains('totals are added together'));
       expect(body, contains('The numbers saved on your entries do not change.'));
       expect(find.text(kWhatsNewCard3Extra), findsOneWidget);
       expect(
@@ -157,31 +232,31 @@ void main() {
         'A 07 number and a 01 number are different numbers and stay separate.',
       );
       expect(find.byKey(const Key('whatsNewPicture')), findsOneWidget);
-      // The picture is read as one image with the mock's description.
       final handle = tester.ensureSemantics();
       expect(find.bySemanticsLabel(kWhatsNewPicLabel), findsOneWidget);
       handle.dispose();
-      // No setting and no Off state on this card.
       expect(find.byType(Switch), findsNothing);
-      expect(find.textContaining('Off'), findsNothing);
-      expect(find.byKey(const Key('whatsNewCalSettings')), findsNothing);
-    });
+    }, skip: standardOnly != null);
 
-    testWidgets('card 4: Backups with the 0.1.1 sentence, the D7 constant, W3 and the Open Backup button', (tester) async {
+    testWidgets('item 4: Backups with the 0.1.1 sentence, the D7 constant, W3 and the Open Backup button', (tester) async {
       await _pump(tester);
-      await _tapNext(tester, 3);
-      final body = _bodyText(tester);
+      await _openRow(tester, 'backups');
+      final body = _text(tester, const Key('whatsNewPara-backups-0'));
       expect(body, contains('Backups from 0.1.1 still restore.'));
       expect(body, contains(kBackupNotRestorableByOlder));
       expect(body, contains(kUninstallErasesNotice));
       expect(find.byKey(const Key('whatsNewOpenBackup')), findsOneWidget);
       expect(find.text(kWhatsNewOpenBackup), findsOneWidget);
-    });
+    }, skip: standardOnly != null);
 
     testWidgets('R13 (F4): "Change in Settings" and "Open Backup and restore" are real buttons of one style, 44 px high', (tester) async {
       final h = tester.ensureSemantics();
       await _pump(tester);
+      await _openRow(tester, 'weeks');
+      await _openRow(tester, 'backups');
       Future<(Size, Color?, TextDecoration?)> look(Key k, String label) async {
+        await tester.ensureVisible(find.byKey(k));
+        await tester.pumpAndSettle();
         final b = tester.widget<FilledButton>(find.byKey(k));
         final text = tester.widget<Text>(find.descendant(of: find.byKey(k), matching: find.text(label)));
         final sem = tester.getSemantics(find.byKey(k));
@@ -190,111 +265,77 @@ void main() {
         return (tester.getSize(find.byKey(k)), b.style?.backgroundColor?.resolve({}), text.style?.decoration);
       }
 
-      await _tapNext(tester);
       final settings = await look(const Key('whatsNewCalSettings'), 'Change in Settings');
-      await _tapNext(tester, 2);
       final backup = await look(const Key('whatsNewOpenBackup'), 'Open Backup and restore');
       expect(settings.$1.height, greaterThanOrEqualTo(44));
       expect(backup.$1.height, greaterThanOrEqualTo(44));
       expect(backup.$2, isNotNull);
-      expect(backup.$2, settings.$2, reason: 'same fill on cards 2 and 4');
+      expect(backup.$2, settings.$2, reason: 'same fill on both');
       expect(backup.$3, isNull, reason: 'no underline: not a link');
-      expect(find.byType(TextButton), findsNothing);
       h.dispose();
     });
 
-    testWidgets('card 5: Notifications says what the bell does and where Updates went, and says nothing about reading messages', (tester) async {
+    testWidgets('item 5: Notifications says what the bell does and where Updates went; no reading words', (tester) async {
       await _pump(tester);
-      await _tapNext(tester, 4);
-      expect(_titleText(tester), 'Notifications');
-      expect(_bodyText(tester), kWhatsNewCardNotificationsBody);
-      expect(_bodyText(tester), contains('The bell now opens Notifications.'));
-      expect(_bodyText(tester), contains('now in Settings, under About'));
+      await _openRow(tester, 'notifications');
+      final body = _text(tester, const Key('whatsNewPara-notifications-0'));
+      expect(body, kWhatsNewCardNotificationsBody);
+      expect(body, contains('The bell now opens Notifications.'));
+      expect(body, contains('now in Settings, under About'));
       for (final w in ['SMS', 'permission', 'read your', 'auto']) {
-        expect(_bodyText(tester).toLowerCase(), isNot(contains(w.toLowerCase())), reason: w);
+        expect(body.toLowerCase(), isNot(contains(w.toLowerCase())), reason: w);
       }
-      expect(find.byKey(const Key('whatsNewSignOff')), findsNothing);
-    });
+    }, skip: standardOnly != null);
 
-    testWidgets('card 6: the canonical sentence, W7, the sign-off, plain text with no expander', (tester) async {
+    testWidgets('item 6: the signed sentence in bold, then W7\'s second half; sign-off last; no expander', (tester) async {
       await _pump(tester);
-      await _tapNext(tester, 5);
-      // R14 (F4): the canonical sentence, then only the second half of W7 (no repeated "used only to check for updates").
-      expect(_bodyText(tester), '$kPrivacySentenceStandard $kNetworkSeenSentence');
+      await _openRow(tester, 'privacy');
+      expect(_text(tester, const Key('whatsNewPara-privacy-0')), kPrivacySentenceStandard);
       expect(
-        _bodyText(tester),
-        'No permissions except internet, used only to check for updates (switchable off). '
-        'GitHub sees your IP address and that the request comes from the mmogo app. '
-        'No entries, names or messages are sent.',
+        _text(tester, const Key('whatsNewPara-privacy-0')),
+        'No permissions except internet, used only to check for updates (switchable off).',
       );
-      expect('used only to check for updates'.allMatches(_bodyText(tester)), hasLength(1));
-      expect(tester.widget<Text>(find.byKey(const Key('whatsNewSignOff'))).data, kWhatsNewSignOff);
+      expect(_text(tester, const Key('whatsNewPara-privacy-1')), kNetworkSeenSentence);
+      expect(
+        _text(tester, const Key('whatsNewPara-privacy-1')),
+        'GitHub sees your IP address and that the request comes from the mmogo app. No entries, names or messages are sent.',
+      );
+      expect(tester.widget<Text>(find.byKey(const Key('whatsNewPara-privacy-0'))).style!.fontWeight, FontWeight.w700);
+      await tester.ensureVisible(find.byKey(const Key('whatsNewSignOff')));
+      expect(_text(tester, const Key('whatsNewSignOff')), kWhatsNewSignOff);
       expect(kWhatsNewSignOff, '— Josh');
       expect(find.byType(ExpansionTile), findsNothing);
-      expect(find.byIcon(Icons.expand_more_rounded), findsNothing);
-      // The full independence sentence belongs to the Privacy page, not here.
       expect(find.textContaining(kIndependenceFull), findsNothing);
-    });
+    }, skip: standardOnly != null);
   });
 
-  group('moving between cards', () {
-    testWidgets('Next and Back move one card; there is no Back on the first card', (tester) async {
-      await _pump(tester);
-      expect(find.byKey(_back), findsNothing);
-      await _tapNext(tester, 2);
-      expect(_titleText(tester), kWhatsNewCard3Title);
-      expect(find.byKey(_back), findsOneWidget);
-      await tester.tap(find.byKey(_back));
+  group('the banner link', () {
+    testWidgets('"Open the mmogo page" calls the site opener, is a 44 px button, and marks nothing', (tester) async {
+      final host = await _pump(tester);
+      final size = tester.getSize(find.byKey(const Key('whatsNewBannerLink')));
+      expect(size.height, greaterThanOrEqualTo(44));
+      expect(size.width, greaterThanOrEqualTo(44));
+      await tester.tap(find.byKey(const Key('whatsNewBannerLink')));
       await tester.pumpAndSettle();
-      expect(_titleText(tester), kWhatsNewCard2Title);
-    });
-
-    testWidgets('a swipe left goes forward, a swipe right goes back, and the ends do not wrap', (tester) async {
-      await _pump(tester);
-      await tester.fling(find.byKey(_body), const Offset(-300, 0), 1200);
-      await tester.pumpAndSettle();
-      expect(_titleText(tester), kWhatsNewCard2Title);
-      await tester.fling(find.byKey(_body), const Offset(300, 0), 1200);
-      await tester.pumpAndSettle();
-      expect(_titleText(tester), kWhatsNewCard1Title);
-      await tester.fling(find.byKey(_body), const Offset(300, 0), 1200);
-      await tester.pumpAndSettle();
-      expect(_titleText(tester), kWhatsNewCard1Title);
+      expect(host.opened, ['site']);
       expect(find.byKey(_pager), findsOneWidget);
-      await _tapNext(tester, 5);
-      await tester.fling(find.byKey(_body), const Offset(-300, 0), 1200);
-      await tester.pumpAndSettle();
-      expect(_titleText(tester), kWhatsNewCard5Title);
-    });
-
-    testWidgets('the dots show six and are not tappable', (tester) async {
-      await _pump(tester);
-      for (var i = 0; i < 6; i++) {
-        expect(find.byKey(Key('whatsNewDot$i')), findsOneWidget);
-      }
-      await tester.tap(find.byKey(const Key('whatsNewDot3')), warnIfMissed: false);
-      await tester.pumpAndSettle();
-      expect(_titleText(tester), kWhatsNewCard1Title);
-    });
-
-    testWidgets('only the last card has Got it; the others have Next', (tester) async {
-      await _pump(tester);
-      for (var i = 0; i < 5; i++) {
-        expect(find.byKey(_gotIt), findsNothing, reason: 'card ${i + 1}');
-        expect(find.byKey(_next), findsOneWidget, reason: 'card ${i + 1}');
-        expect(find.text('Got it'), findsNothing);
-        await _tapNext(tester);
-      }
-      expect(find.byKey(_gotIt), findsOneWidget);
-      expect(find.byKey(_next), findsNothing);
-      expect(find.text('Got it'), findsOneWidget);
-    });
+      expect(host.result, isNull);
+    }, skip: standardOnly != null);
   });
 
   group('closing', () {
-    testWidgets('Got it closes the pager and returns true to the page it was opened from', (tester) async {
+    testWidgets('Got it is pinned: on screen at the top of the page and after scrolling to the end', (tester) async {
+      await _pump(tester, size: const Size(360, 640), scale: 1.3);
+      final before = tester.getRect(find.byKey(_gotIt));
+      expect(before.bottom, lessThanOrEqualTo(640));
+      await tester.drag(find.byKey(_scroll), const Offset(0, -2000));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byKey(_gotIt)), before);
+      expect(find.text('Got it'), findsOneWidget);
+    });
+
+    testWidgets('Got it closes the page and returns true to the page it was opened from', (tester) async {
       final host = await _pump(tester);
-      await _tapNext(tester, 5);
       await tester.tap(find.byKey(_gotIt));
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsNothing);
@@ -302,34 +343,16 @@ void main() {
       expect(host.result, isTrue);
     });
 
-    testWidgets('system Back steps back one card; on the first card it closes and returns false (unseen)', (tester) async {
+    testWidgets('system Back closes the page and returns false (unseen), at any scroll position', (tester) async {
       final host = await _pump(tester);
-      await _tapNext(tester, 2);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(_titleText(tester), kWhatsNewCard2Title);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(_titleText(tester), kWhatsNewCard1Title);
-      expect(host.result, isNull);
+      await _toggle(tester, 'weeks');
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsNothing);
       expect(host.result, isFalse);
     });
 
-    testWidgets('an outside tap and a downward drag do nothing', (tester) async {
-      final host = await _pump(tester);
-      await tester.tapAt(const Offset(10, 10));
-      await tester.pumpAndSettle();
-      expect(find.byKey(_pager), findsOneWidget);
-      await tester.drag(find.byKey(const Key('whatsNewPagerTitle')), const Offset(0, 600));
-      await tester.pumpAndSettle();
-      expect(find.byKey(_pager), findsOneWidget);
-      expect(host.result, isNull);
-    });
-
-    testWidgets('a second pager cannot be opened while one is on screen', (tester) async {
+    testWidgets('a second page cannot be opened while one is on screen', (tester) async {
       await _pump(tester);
       final ctx = tester.element(find.byKey(_pager));
       final second = await showWhatsNewPager(ctx, onOpenSettings: () {}, onOpenBackup: () {});
@@ -337,12 +360,20 @@ void main() {
       expect(second, isFalse);
       expect(find.byKey(_pager), findsOneWidget);
     });
+
+    testWidgets('the page is a full-screen route (not a sheet): no sheet shell, its own Scaffold', (tester) async {
+      await _pump(tester);
+      expect(find.byKey(const Key('backupSheetScroll')), findsNothing);
+      expect(find.byType(BottomSheet), findsNothing);
+      final size = tester.getSize(find.byKey(_pager));
+      expect(size, const Size(400, 900));
+    });
   });
 
-  group('the two route buttons (injected, pushed over the pager)', () {
-    testWidgets('Change in Settings opens the stub route; Back returns to the same card; nothing closes or is marked', (tester) async {
+  group('the two route buttons (injected, pushed over the page)', () {
+    testWidgets('Change in Settings opens the stub route; Back returns to the same page and rows; nothing is marked', (tester) async {
       final host = await _pump(tester);
-      await _tapNext(tester);
+      await _openRow(tester, 'weeks');
       await tester.tap(find.byKey(const Key('whatsNewCalSettings')));
       await tester.pumpAndSettle();
       expect(host.opened, ['settings']);
@@ -350,116 +381,137 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsOneWidget);
-      expect(_titleText(tester), kWhatsNewCard2Title);
+      expect(find.byKey(_body('weeks')), findsOneWidget);
       expect(host.result, isNull);
-    });
+    }, skip: standardOnly != null);
 
-    testWidgets('Open Backup and restore opens the stub route; Back returns to card 4', (tester) async {
+    testWidgets('Open Backup and restore opens the stub route; Back returns to the open Backups row', (tester) async {
       final host = await _pump(tester);
-      await _tapNext(tester, 3);
+      await _openRow(tester, 'backups');
       await tester.tap(find.byKey(const Key('whatsNewOpenBackup')));
       await tester.pumpAndSettle();
       expect(host.opened, ['backup']);
       expect(find.text('BACKUP STUB'), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
-      expect(_titleText(tester), kWhatsNewCard4Title);
+      expect(find.byKey(_body('backups')), findsOneWidget);
       expect(host.result, isNull);
-    });
+    }, skip: standardOnly != null);
   });
 
   group('44 px, dark, text scale 1.3', () {
-    Future<void> every44(WidgetTester tester) async {
-      for (var i = 0; i < 6; i++) {
-        for (final k in [_next, _back, _gotIt, const Key('whatsNewCalSettings'), const Key('whatsNewOpenBackup')]) {
-          final f = find.byKey(k);
-          if (f.evaluate().isEmpty) continue;
-          final size = tester.getSize(f);
-          expect(size.height, greaterThanOrEqualTo(44), reason: 'card ${i + 1} $k height');
-          expect(size.width, greaterThanOrEqualTo(44), reason: 'card ${i + 1} $k width');
-        }
-        if (i < 5) await _tapNext(tester);
-      }
-    }
-
-    testWidgets('every button is at least 44 x 44', (tester) async {
+    testWidgets('every row header is at least 56 high and every button at least 44 x 44', (tester) async {
       await _pump(tester);
-      await every44(tester);
-    });
-
-    testWidgets('dark and 1.3: the buttons stay pinned and on screen, the card scrolls', (tester) async {
-      await _pump(tester, dark: true, scale: 1.3, size: const Size(360, 520));
-      for (var i = 0; i < 6; i++) {
-        final primary = find.byKey(i < 5 ? _next : _gotIt);
-        final rect = tester.getRect(primary);
-        expect(rect.bottom, lessThanOrEqualTo(520), reason: 'card ${i + 1} button inside the screen');
-        expect(rect.height, greaterThanOrEqualTo(44));
-        expect(tester.takeException(), isNull, reason: 'card ${i + 1} no overflow');
-        if (i < 5) await _tapNext(tester);
+      for (final id in _ids) {
+        await _openRow(tester, id);
       }
-      // Card 6 is long at 1.3 on a short screen: the scroll area has room to move, the buttons do not.
-      final scroll = tester.state<ScrollableState>(find.descendant(of: find.byKey(const Key('backupSheetScroll')), matching: find.byType(Scrollable)));
-      expect(scroll.position.maxScrollExtent, greaterThan(0));
-      final before = tester.getRect(find.byKey(_gotIt));
-      await tester.drag(find.byKey(const Key('backupSheetScroll')), const Offset(0, -200));
-      await tester.pumpAndSettle();
-      expect(tester.getRect(find.byKey(_gotIt)), before);
+      for (final id in _ids) {
+        await tester.ensureVisible(find.byKey(_head(id)));
+        expect(tester.getSize(find.byKey(_head(id))).height, greaterThanOrEqualTo(56), reason: id);
+      }
+      for (final k in [_gotIt, const Key('whatsNewCalSettings'), const Key('whatsNewOpenBackup'), const Key('whatsNewBannerLink')]) {
+        final f = find.byKey(k);
+        if (f.evaluate().isEmpty) continue;
+        await tester.ensureVisible(f);
+        final size = tester.getSize(f);
+        expect(size.height, greaterThanOrEqualTo(44), reason: '$k height');
+        expect(size.width, greaterThanOrEqualTo(44), reason: '$k width');
+      }
     });
 
-    testWidgets('dark: the card text contrasts with the sheet surface', (tester) async {
+    testWidgets('dark and 1.3 at 360 x 640: no overflow with every row open; Got it stays pinned on screen', (tester) async {
+      await _pump(tester, dark: true, scale: 1.3, size: const Size(360, 640));
+      for (final id in _ids) {
+        await _openRow(tester, id);
+        expect(tester.takeException(), isNull, reason: 'row $id');
+      }
+      final rect = tester.getRect(find.byKey(_gotIt));
+      expect(rect.bottom, lessThanOrEqualTo(640));
+      expect(rect.height, greaterThanOrEqualTo(44));
+      final scroll = tester.state<ScrollableState>(find.descendant(of: find.byKey(_scroll), matching: find.byType(Scrollable)));
+      expect(scroll.position.maxScrollExtent, greaterThan(0));
+    });
+
+    testWidgets('dark: the row text contrasts with the row surface (4.5:1)', (tester) async {
       await _pump(tester, dark: true);
-      final ctx = tester.element(find.byKey(_title));
-      final palette = AppPalette.of(ctx);
+      await _openRow(tester, 'withdrawals');
+      final palette = AppPalette.of(tester.element(find.byKey(_pager)));
       expect(palette.brightness, Brightness.dark);
-      final ink = tester.widget<Text>(find.byKey(_body)).style!.color!;
-      final a = palette.card.computeLuminance();
-      final b = ink.computeLuminance();
-      final ratio = (a > b ? a + 0.05 : b + 0.05) / (a > b ? b + 0.05 : a + 0.05);
-      expect(ratio, greaterThan(4.5));
+      double ratio(Color a, Color b) {
+        final x = a.computeLuminance();
+        final y = b.computeLuminance();
+        return (x > y ? x + 0.05 : y + 0.05) / (x > y ? y + 0.05 : x + 0.05);
+      }
+
+      final body = tester.widget<Text>(find.byKey(const Key('whatsNewPara-withdrawals-0'))).style!.color!;
+      final title = tester.widget<Text>(find.byKey(const Key('whatsNewItemTitle-withdrawals'))).style!.color!;
+      expect(ratio(palette.card, body), greaterThan(4.5));
+      expect(ratio(palette.card, title), greaterThan(4.5));
+      final bannerInk = tester.widget<Text>(find.byKey(const Key('whatsNewBannerBody'))).style!.color!;
+      expect(ratio(palette.tint, bannerInk), greaterThan(4.5));
     });
   });
 
   group('semantics and focus', () {
-    testWidgets('"Card N of 6" is announced as a live region and follows the card', (tester) async {
+    testWidgets('each row header is a button that says whether it is expanded, and follows a tap', (tester) async {
       final handle = tester.ensureSemantics();
       await _pump(tester);
-      expect(find.bySemanticsLabel(whatsNewCardOfText(1)), findsOneWidget);
-      expect(whatsNewCardOfText(1), 'Card 1 of 6');
-      final node = tester.getSemantics(find.bySemanticsLabel('Card 1 of 6'));
-      expect(node.flagsCollection.isLiveRegion, isTrue);
-      await _tapNext(tester, 2);
-      expect(find.bySemanticsLabel('Card 3 of 6'), findsOneWidget);
-      expect(find.bySemanticsLabel('Card 1 of 6'), findsNothing);
+      expect(tester.getSemantics(find.byKey(_head('withdrawals'))).flagsCollection.isExpanded, ui.Tristate.isTrue);
+      await tester.ensureVisible(find.byKey(_head('weeks')));
+      final closed = tester.getSemantics(find.byKey(_head('weeks')));
+      expect(closed.flagsCollection.isButton, isTrue);
+      expect(closed.flagsCollection.isExpanded, ui.Tristate.isFalse);
+      expect(closed.label, contains('Weeks'));
+      expect(closed.label, contains(kWhatsNewCard2Summary));
+      await _toggle(tester, 'weeks');
+      expect(tester.getSemantics(find.byKey(_head('weeks'))).flagsCollection.isExpanded, ui.Tristate.isTrue);
+      handle.dispose();
+    }, skip: standardOnly != null);
+
+    testWidgets('the title is a header; focus starts on it', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pump(tester);
+      expect(tester.getSemantics(find.byKey(const Key('whatsNewPagerTitle'))).flagsCollection.isHeader, isTrue);
+      expect(tester.widget<Focus>(find.byKey(const Key('whatsNewTitleFocus'))).focusNode!.hasPrimaryFocus, isTrue);
       handle.dispose();
     });
 
-    testWidgets('focus goes to the card title when the card opens and on every change', (tester) async {
-      await _pump(tester);
-      bool titleFocused() => tester.widget<Focus>(find.byKey(const Key('whatsNewCardTitleFocus'))).focusNode!.hasPrimaryFocus;
-      expect(titleFocused(), isTrue);
-      FocusManager.instance.primaryFocus?.unfocus();
-      await tester.pump();
-      expect(titleFocused(), isFalse);
-      await _tapNext(tester);
-      expect(titleFocused(), isTrue);
-      FocusManager.instance.primaryFocus?.unfocus();
-      await tester.pump();
-      await tester.tap(find.byKey(_back));
-      await tester.pumpAndSettle();
-      expect(titleFocused(), isTrue);
-    });
-
-    testWidgets('the card title is a header and the sheet is named by the pager title', (tester) async {
+    testWidgets('the number badge and the chevron are not spoken', (tester) async {
       final handle = tester.ensureSemantics();
       await _pump(tester);
-      expect(tester.getSemantics(find.byKey(_title)).flagsCollection.isHeader, isTrue);
-      expect(find.bySemanticsLabel(kWhatsNewPagerTitle), findsWidgets);
+      await tester.ensureVisible(find.byKey(_head('weeks')));
+      final label = tester.getSemantics(find.byKey(_head('weeks'))).label;
+      expect(label, isNot(contains('2')));
       handle.dispose();
     });
 
     test('the title is a fixed constant, not the app version', () {
       expect(kWhatsNewPagerVersion, '0.1.2');
-      expect(WhatsNewCardView.titleOf(0), kWhatsNewCard1Title);
     });
+  });
+
+  group('the auto-read build (flag on)', () {
+    testWidgets('banner, seven items with Auto-read first, its Notifications and its provisional Privacy', (tester) async {
+      await _pump(tester);
+      expect(_text(tester, const Key('whatsNewBannerHead')), 'This is the auto-read version of mmogo');
+      expect(
+        _text(tester, const Key('whatsNewBannerBody')),
+        'It reads your M\u2011Pesa messages and puts them on a waiting list for you to categorize and review. '
+        'If you do not want SMS permission, the standard version works without it.',
+      );
+      expect(find.byKey(const Key('whatsNewBannerLink')), findsNothing, reason: 'no link on this banner');
+      expect(_text(tester, const Key('whatsNewIntro')), startsWith('Seven things changed.'));
+      expect(find.byType(WhatsNewItemView), findsNWidgets(7));
+      expect(_text(tester, const Key('whatsNewItemTitle-reading')), 'Auto-read');
+      expect(find.byKey(_body('reading')), findsOneWidget, reason: 'the first row starts open');
+      expect(_text(tester, const Key('whatsNewPara-reading-1')), contains('(kept up to 24 hours)'));
+      await _openRow(tester, 'notifications');
+      expect(_text(tester, const Key('whatsNewPara-notifications-0')), kWhatsNewAutoNotificationsBody);
+      await _openRow(tester, 'privacy');
+      final privacy = _text(tester, const Key('whatsNewPara-privacy-0'));
+      expect(privacy, kWhatsNewPrivacyAutoReadBodyProvisional);
+      expect(privacy, isNot(contains(kPrivacySentenceStandard)));
+      expect(find.byKey(const Key('whatsNewPara-privacy-1')), findsNothing);
+    }, skip: autoreadOnly != null);
   });
 }
