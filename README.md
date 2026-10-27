@@ -45,7 +45,7 @@ I decided what mmogo does and what it doesn't, and I tested each release on a re
 
 ## Privacy
 
-No permissions except internet, used only to check for updates (switchable off).
+The standard version asks only for internet, used only to check for updates (switchable off). The auto-read version also asks for SMS and notification permission, only if you switch reading on.
 
 - Your data is stored in a local SQLite database on the device. There are no accounts and no server.
 - The standard version reads **only the message you paste**. It picks out the amount, receiver, code, date and transaction cost. It has no access to your SMS inbox or any other message.
