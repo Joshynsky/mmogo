@@ -28,12 +28,16 @@ img { max-width: 100%; }
 <header class="bar">
   <div class="wrap">
     <a class="brand" href="#top"><img alt="" src="img/icon.png"> mmogo</a>
-    <nav class="nav" aria-label="Main"><a href="#versions" class="opt">Versions</a><a href="#whats-new" class="opt">What's new</a><a href="news.html">News</a><a href="#faq" class="opt">FAQ</a></nav>
+    <nav class="nav" aria-label="Main"><a href="#versions" class="opt">Versions</a><a href="#whats-new" class="opt">What's new</a><a href="news.html">News</a><a href="#faq" class="opt">FAQ</a><a href="#reviews" class="opt">Reviews</a></nav>
     <button class="btn theme" id="theme" type="button" aria-label="Switch light or dark" title="Switch light or dark">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
     </button>
+    <button class="btn menu-btn" id="menu-btn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu" title="Menu">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
     <a class="btn btn-sm" href="#versions">Download</a>
   </div>
+  <nav class="menu" id="menu" aria-label="Menu" hidden><a href="#versions">Versions</a><a href="#whats-new">What's new</a><a href="news.html">News</a><a href="#faq">FAQ</a><a href="#reviews">Reviews</a></nav>
 </header>
 
 <main id="top">
@@ -73,7 +77,7 @@ img { max-width: 100%; }
           <p class="for">For you if you like to paste each message yourself, or do not want to give SMS permission.</p>
           <ul><li>Asks Android for internet only, to check for updates</li><li>No SMS permission</li></ul>
           <a class="btn btn-sun dl" data-build="std" href="https://github.com/Joshynsky/mmogo/releases/latest/download/mmogo.apk">Download standard</a>
-          <p class="vmeta">Version 0.1.2 · 60 MB</p>
+          <p class="vmeta">Version 0.1.2 · 63 MB</p>
         </div>
         <div class="vcard">
           <p class="tag">Auto-read</p>
@@ -82,7 +86,7 @@ img { max-width: 100%; }
           <p class="for">For you if you want mmogo to notice each M-Pesa message and let you parse it with one tap.</p>
           <ul><li>Asks for SMS and notification permission, and your consent, when you switch reading on</li><li>Off until you turn it on</li></ul>
           <a class="btn btn-sun dl" data-build="auto" href="https://github.com/Joshynsky/mmogo/releases/latest/download/mmogo-autoread.apk">Download auto-read</a>
-          <p class="vmeta">Version 0.1.2 · 60 MB</p>
+          <p class="vmeta">Version 0.1.2 · 63 MB</p>
         </div>
       </div>
       <p class="heads-up"><b>Not on the Play Store.</b> Chrome and Android will ask you to confirm the install. Tap Download and a short guide shows you each step first.</p>
@@ -246,7 +250,7 @@ img { max-width: 100%; }
       <p class="eyebrow">Install</p>
       <h2>Three steps, about a minute.</h2>
       <ol class="steps">
-        <li><div><b>Choose a version and download it</b><span>Pick standard or auto-read in the Two versions section above. Each is about 60 MB and works on 32-bit and 64-bit Android phones. Chrome will say "File might be harmful" because the app isn't from the Play Store. Tap Download anyway.</span></div></li>
+        <li><div><b>Choose a version and download it</b><span>Pick standard or auto-read in the Two versions section above. Each is about 63 MB and works on 32-bit and 64-bit Android phones. Chrome will say "File might be harmful" because the app isn't from the Play Store. Tap Download anyway.</span></div></li>
         <li><div><b>Open it from your file manager and allow "Install unknown apps"</b><span>When the download finishes, open your file manager app (Files, or the one that came with your phone), go to Downloads and tap the mmogo file you downloaded. Android will ask you to allow installs from unknown apps. Allow it for the file manager, not for Chrome or your browser. Play Protect may block it with "App blocked to protect your device". Tap More details, then Install anyway. It hasn't seen this developer before, which is expected for a new app shared directly.</span></div></li>
         <li><div><b>Open mmogo</b><span>A short Welcome and a four-step walkthrough start the first time. You can skip them.</span></div></li>
       </ol>
@@ -280,6 +284,39 @@ img { max-width: 100%; }
     </div>
   </section>
 
+  <section id="reviews" style="padding-top:0">
+    <div class="wrap">
+      <p class="eyebrow">Reviews</p>
+      <h2>Tried mmogo? Tell me what you think.</h2>
+      <p class="sec-lede">Leave a rating and a few words. Writing it here opens an email to me, ready to send.</p>
+      <div class="fb">
+        <form class="fb-form" id="rv-form" novalidate>
+          <fieldset class="types">
+            <legend>Your rating <span class="hint">(1 is poor, 5 is great; optional for an issue)</span></legend>
+            <label><input type="radio" name="rating" value="1"><span>1</span></label>
+            <label><input type="radio" name="rating" value="2"><span>2</span></label>
+            <label><input type="radio" name="rating" value="3"><span>3</span></label>
+            <label><input type="radio" name="rating" value="4"><span>4</span></label>
+            <label><input type="radio" name="rating" value="5"><span>5</span></label>
+          </fieldset>
+          <fieldset class="types">
+            <legend>What kind of review? <span class="hint">(fills in a starter you can change)</span></legend>
+            <label><input type="radio" name="kind" value="Recommendation"><span>Recommendation</span></label>
+            <label><input type="radio" name="kind" value="Suggestion"><span>Suggestion</span></label>
+            <label><input type="radio" name="kind" value="Issue"><span>Issue</span></label>
+            <label><input type="radio" name="kind" value="Other"><span>Something else</span></label>
+          </fieldset>
+          <div class="field"><label for="rv-name">Your name <span class="opt">(optional)</span></label><input id="rv-name" name="name" maxlength="40" autocomplete="nickname"></div>
+          <div class="field"><label for="rv-text">Your review</label><textarea id="rv-text" name="text" maxlength="600"></textarea></div>
+          <p class="fb-err" id="rv-err" role="alert" hidden></p>
+          <div class="fb-actions"><button class="btn btn-sun" id="rv-send" type="submit">Write my review</button></div>
+          <p class="fb-ok" id="rv-ok" role="status" hidden>Your email app should open with your review ready. Press Send there to finish. Nothing opened? Email <a href="mailto:joshuawaga021@gmail.com" style="color:var(--primary)">joshuawaga021@gmail.com</a> directly.</p>
+        </form>
+        <p class="fb-note">This page does not collect or store your review. It only prepares an email, which you send from your own email app. Do not put your phone number or M-Pesa details in it. I may quote a review on this page, with your name only if you gave one; say so in your email if you would rather I did not. To have a review removed, or to reach me directly: <a href="mailto:joshuawaga021@gmail.com" style="color:var(--primary)">joshuawaga021@gmail.com</a>.</p>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <footer>
@@ -302,7 +339,7 @@ img { max-width: 100%; }
     <a class="btn btn-sun" id="dlg-go" href="https://github.com/Joshynsky/mmogo/releases/latest/download/mmogo.apk">Download mmogo.apk</a>
     <button class="btn copy" id="dlg-x" type="button">Cancel</button>
   </div>
-  <p class="size" id="dlg-size">Version 0.1.2 · 60 MB · Android only</p>
+  <p class="size" id="dlg-size">Version 0.1.2 · 63 MB · Android only</p>
 </dialog>
 
 <script>
@@ -316,6 +353,14 @@ img { max-width: 100%; }
     root.setAttribute('data-theme', next);
     try { localStorage.setItem('mmogo-theme', next); } catch (e) {}
   });
+
+  /* Menu on small screens: opens under the header, closes on a tap on a link, outside it, or Escape. */
+  var menuBtn = document.getElementById('menu-btn'), menu = document.getElementById('menu');
+  function setMenu(open) { menu.hidden = !open; menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+  menuBtn.addEventListener('click', function (e) { e.stopPropagation(); setMenu(menu.hidden); });
+  menu.addEventListener('click', function (e) { if (e.target.tagName === 'A') setMenu(false); });
+  document.addEventListener('click', function (e) { if (!menu.hidden && !menu.contains(e.target)) setMenu(false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !menu.hidden) { setMenu(false); menuBtn.focus(); } });
 
   function carousel(ids) {
     var track = document.getElementById(ids[0]);
@@ -398,8 +443,8 @@ img { max-width: 100%; }
   /* Download buttons open the "Before you download" dialog; its own button is the real link.
      Without dialog support or JavaScript the buttons go straight to the file. */
   var BUILDS = {
-    std: { file: 'mmogo.apk', size: '60 MB' },
-    auto: { file: 'mmogo-autoread.apk', size: '60 MB' }
+    std: { file: 'mmogo.apk', size: '63 MB' },
+    auto: { file: 'mmogo-autoread.apk', size: '63 MB' }
   };
   var BASE = 'https://github.com/Joshynsky/mmogo/releases/latest/download/';
   var dlg = document.getElementById('dlg');
@@ -437,6 +482,41 @@ img { max-width: 100%; }
         navigator.clipboard.writeText(text).then(ok, sel);
       } else { sel(); }
     });
+  });
+
+  /* Reviews: the form builds an email to the author's Gmail in the visitor's own mail app; nothing is sent from this page. */
+  var REVIEW_MAIL = 'joshuawaga021@gmail.com';
+  var rvForm = document.getElementById('rv-form');
+  var RV_TEMPLATES = {
+    Recommendation: 'I would recommend mmogo to:\nBecause:\nWhat I like most:',
+    Suggestion: 'I would like mmogo to:\nIt would help me because:',
+    Issue: 'What happened:\nWhat I expected:\nMy phone and mmogo version (standard or auto-read):',
+    Other: ''
+  };
+  var rvLast = '';
+  rvForm.querySelectorAll('input[name="kind"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      var box = rvForm.text;
+      /* Replace the box only if it is empty or still holds an untouched starter. */
+      if (!box.value.trim() || box.value === rvLast) { rvLast = RV_TEMPLATES[r.value]; box.value = rvLast; }
+    });
+  });
+  rvForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var err = document.getElementById('rv-err');
+    var rating = rvForm.querySelector('input[name="rating"]:checked');
+    var text = rvForm.text.value.trim();
+    err.hidden = true;
+    var kind0 = rvForm.querySelector('input[name="kind"]:checked');
+    if (!rating && !(kind0 && kind0.value === 'Issue')) { err.textContent = 'Please choose a rating from 1 to 5.'; err.hidden = false; return; }
+    if (text.length < 5 || text === rvLast.trim()) { err.textContent = 'Please write a few words of your own.'; err.hidden = false; return; }
+    var stars = rating ? rating.value + '/5' : 'no rating';
+    var label = kind0 ? kind0.value : 'Other';
+    var subject = 'mmogo review: ' + label + ' (' + stars + ')';
+    var body = text + '\n\nFrom: ' + (rvForm.name.value.trim() || 'Anonymous') + '\nRating: ' + stars;
+    var ok = document.getElementById('rv-ok');
+    ok.hidden = false; ok.scrollIntoView({ block: 'nearest' });
+    location.href = 'mailto:' + REVIEW_MAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
   });
 
   /* The built-in browser of another app usually cannot download an app file: say so there, with a copyable link. */

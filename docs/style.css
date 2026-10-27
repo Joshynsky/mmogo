@@ -131,7 +131,7 @@ h2 { font-size: clamp(1.7rem, 6vw, 2.3rem); font-weight: 800; letter-spacing: -0
 .types legend { font-size: 0.9rem; font-weight: 600; color: var(--soft); padding: 0; margin-bottom: 10px; }
 .types label { cursor: pointer; }
 .types input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.types span { display: inline-block; padding: 10px 20px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg); font-weight: 600; }
+.types label span { display: inline-block; padding: 10px 20px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg); font-weight: 600; }
 .types input:checked + span { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
 .types input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 3px; }
 .field { display: grid; gap: 6px; }
@@ -288,3 +288,23 @@ footer a { color: var(--primary); }
   .brand { margin-right: auto; font-size: 20px; }
   .btn-sm { padding: 9px 14px; }
 }
+
+/* Reviews */
+.rv-list { display: grid; gap: 14px; margin: 0 0 24px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.rv { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+.rv p { margin: 0 0 8px; }
+.rv-stars { color: var(--primary); letter-spacing: 2px; font-size: 1.1rem; }
+.rv-name { color: var(--muted); font-size: 0.9rem; margin-bottom: 0 !important; }
+.fb-ok { margin: 0; color: var(--primary); font-weight: 600; }
+.rv p:not(.rv-stars):not(.rv-name) { white-space: pre-line; }
+.types legend .hint { font-weight: 400; color: var(--muted); }
+
+/* Menu (small screens): replaces the link row, which is hidden at this width */
+.menu-btn { display: none; width: 38px; height: 38px; padding: 0; background: var(--tint); color: var(--ink); }
+.menu { position: absolute; left: 0; right: 0; top: 100%; background: var(--bg); border-bottom: 1px solid var(--line); box-shadow: 0 12px 24px rgba(7, 59, 76, 0.14); padding: 4px 0 10px; }
+.menu a { display: block; padding: 14px 24px; font-weight: 600; font-size: 1.05rem; text-decoration: none; color: var(--ink); }
+.menu a:hover, .menu a:focus-visible { background: var(--tint); }
+.menu a[aria-current="page"] { color: var(--primary); }
+@media (min-width: 481px) { .menu, .menu-btn { display: none !important; } }
+@media (max-width: 480px) { .nav { display: none; } .menu-btn { display: inline-flex; } }
+main section[id], #top { scroll-margin-top: 72px; }
