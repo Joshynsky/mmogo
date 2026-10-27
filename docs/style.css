@@ -252,6 +252,7 @@ footer a { color: var(--primary); }
   .cmp thead { display: none; }
   .cmp tr { display: block; border-bottom: 1px solid var(--line); padding: 8px 0; }
   .cmp th, .cmp td { display: block; border: 0; padding: 4px 14px; width: auto; }
+  .cmp tbody th { width: auto; }
   .cmp td::before { content: attr(data-v) ": "; font-weight: 600; color: var(--primary); }
 }
 
