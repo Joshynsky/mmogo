@@ -19,7 +19,7 @@ void main() {
   // produced was replaced), so the renderer is proven on a block it generated itself.
   group('(i) renderer reproduces its own block', () {
     late String generated;
-    setUp(() => generated = generateBlock(_changelog())!);
+    setUp(() => generated = generateBlock(_changelog(), '0.1.2')!);
 
     test('parse the block back into items, render them: byte equal', () {
       final items = parseBlock(generated);
@@ -52,7 +52,7 @@ void main() {
   group('(ii) 0.1.2 from the CHANGELOG', () {
     test('h2, markers, one li per bullet of the selected sections, no skipped bullets', () {
       final log = _changelog();
-      final section = changelogSection(log)!; // newest = first heading
+      final section = changelogSection(log, '0.1.2')!; // the published version; 0.1.3 sits above it, unreleased
       // Count the bullets of the selected sections independently of the parser.
       var selected = false;
       var bullets = 0;
@@ -63,7 +63,7 @@ void main() {
       expect(bullets, greaterThan(0));
       final parsed = parseChangelogItems(section);
       expect(parsed.skipped, isEmpty);
-      final block = generateBlock(log)!;
+      final block = generateBlock(log, '0.1.2')!;
       expect(block, startsWith('<!-- whats-new:start -->\n'));
       expect(block, endsWith('\n<!-- whats-new:end -->'));
       expect('<!-- whats-new:start -->'.allMatches(block), hasLength(1));
@@ -75,7 +75,6 @@ void main() {
     });
 
     test('default is the first heading; "(date set at release)" and "(2 October 2026)" both give a version', () {
-      expect(changelogVersions(_changelog()).first, '0.1.2');
       expect(changelogVersions(_changelog()), containsAllInOrder(['0.1.2', '0.1.1', '0.1.0']));
       expect(generateBlock('# C\n\n## 9.9.9 (any text, here)\n\n### Added\n- **A.** b\n'), contains('What\'s new in 9.9.9'));
       expect(generateBlock('# C\n\n## 9.9.9\n\n### Added\n- **A.** b\n'), contains('What\'s new in 9.9.9'));
@@ -85,16 +84,16 @@ void main() {
     test('Fixed is not in the block; the section list is a constant', () {
       expect(kBlockSections, ['Added', 'Changed', 'Good to know']);
       final log = _changelog();
-      final fixedTitle = RegExp(r'### Fixed\n- \*\*(.+?)\*\*').firstMatch(log.substring(0, log.indexOf('## 0.1.1')))![1]!;
-      expect(generateBlock(log)!, isNot(contains('<b>${fixedTitle.replaceAll(RegExp(r'\.$'), '')}</b>')));
-      final withFixed = parseChangelogItems(changelogSection(log)!, sections: [...kBlockSections, 'Fixed']).items;
-      expect(withFixed.length, parseChangelogItems(changelogSection(log)!).items.length + 1);
+      final fixedTitle = RegExp(r'### Fixed\n- \*\*(.+?)\*\*').firstMatch(log.substring(log.indexOf('## 0.1.2'), log.indexOf('## 0.1.1')))![1]!;
+      expect(generateBlock(log, '0.1.2')!, isNot(contains('<b>${fixedTitle.replaceAll(RegExp(r'\.$'), '')}</b>')));
+      final withFixed = parseChangelogItems(changelogSection(log, '0.1.2')!, sections: [...kBlockSections, 'Fixed']).items;
+      expect(withFixed.length, parseChangelogItems(changelogSection(log, '0.1.2')!).items.length + 1);
     });
 
     test('ASCII: the output holds no non-ASCII character the section itself does not hold (no U+2011)', () {
       final log = _changelog();
-      final block = generateBlock(log)!;
-      final inSection = changelogSection(log)!.join('\n').runes.where((r) => r > 127).toSet();
+      final block = generateBlock(log, '0.1.2')!;
+      final inSection = changelogSection(log, '0.1.2')!.join('\n').runes.where((r) => r > 127).toSet();
       expect(block.runes.where((r) => r > 127).toSet().difference(inSection), isEmpty);
       expect(block, isNot(contains('‑')));
       expect(block.contains('M-Pesa'), isTrue);

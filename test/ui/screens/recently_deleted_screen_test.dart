@@ -129,14 +129,14 @@ Future<void> _settle(WidgetTester tester) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('empty state shows "Nothing here right now." and the coming-soon row', (tester) async {
+  testWidgets('empty state shows "Nothing here right now." and no companion-web-page row (0.1.3 F2)', (tester) async {
     final db = _FakeDb(transactions: []);
     await tester.pumpWidget(_harness(db));
     await _settle(tester);
 
     expect(find.text('Nothing here right now.'), findsOneWidget);
-    expect(find.text('View & restore from the companion web page'), findsOneWidget);
-    expect(find.text('Coming soon'), findsOneWidget);
+    expect(find.textContaining('companion web page'), findsNothing);
+    expect(find.text('Coming soon'), findsNothing);
   });
 
   testWidgets(

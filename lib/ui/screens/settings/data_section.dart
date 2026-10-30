@@ -82,7 +82,7 @@ class DataSection extends StatelessWidget {
                   palette: palette,
                   icon: Icons.restore_from_trash_outlined,
                   label: 'Recently deleted',
-                  subtitle: 'Restore transactions you removed',
+                  subtitle: 'Restore a transaction you removed, within 1 hour',
                   onTap: () => Navigator.of(context).pushNamed(Routes.recentlyDeleted),
                 ),
                 // S9b-2: the Delete data row is the LAST row of the card.

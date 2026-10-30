@@ -149,9 +149,37 @@ class PaidToHero {
   final int withdrawalCostCents;
 }
 
+/// 0.1.3 F3: the airtime bought in the period (no recipient, so one summary).
+class PaidToAirtime {
+  const PaidToAirtime(this.count, this.totalCents, this.feeCents);
+
+  static const none = PaidToAirtime(0, 0, 0);
+
+  final int count;
+  final int totalCents;
+  final int feeCents;
+}
+
+/// The airtime payments among [payments] (anything else is ignored).
+PaidToAirtime paidToAirtimeSummary(Iterable<PaidToPayment> payments) {
+  var count = 0, total = 0, fee = 0;
+  for (final p in payments) {
+    if (p.sourceType != paidToAirtime) continue;
+    count++;
+    total += p.amountCents;
+    fee += p.feeCents;
+  }
+  return PaidToAirtime(count, total, fee);
+}
+
 /// Hero numbers over [payments] (one period's, no category, no search).
-/// [withdrawn] = the W view.
-PaidToHero paidToHero(Iterable<PaidToPayment> payments, {bool withdrawn = false}) {
+/// [withdrawn] = the W view. [airtime] (0.1.3 F3) adds the period's airtime to the
+/// "Paid out" total, cost and payment count; the W view never includes it.
+PaidToHero paidToHero(
+  Iterable<PaidToPayment> payments, {
+  bool withdrawn = false,
+  PaidToAirtime airtime = PaidToAirtime.none,
+}) {
   final list = payments.toList();
   final type = withdrawn ? paidToWithdrawal : null;
   bool inScope(String t) => withdrawn ? t == paidToWithdrawal : t != paidToWithdrawal;
@@ -164,9 +192,11 @@ PaidToHero paidToHero(Iterable<PaidToPayment> payments, {bool withdrawn = false}
   final wNotRecorded = withdrawn ? 0 : paidToNotRecorded(list, type: paidToWithdrawal).feeCents;
   return PaidToHero(
     agentView: withdrawn,
-    totalCents: groups.fold(0, (s, g) => s + g.totalCents) + notRecorded.fold(0, (s, n) => s + n.totalCents),
-    costCents: groups.fold(0, (s, g) => s + g.feeCents) + notRecorded.fold(0, (s, n) => s + n.feeCents),
-    payments: groups.fold(0, (s, g) => s + g.count) + notRecorded.fold(0, (s, n) => s + n.count),
+    totalCents:
+        groups.fold<int>(0, (s, g) => s + g.totalCents) + notRecorded.fold<int>(0, (s, n) => s + n.totalCents) + (withdrawn ? 0 : airtime.totalCents),
+    costCents:
+        groups.fold<int>(0, (s, g) => s + g.feeCents) + notRecorded.fold<int>(0, (s, n) => s + n.feeCents) + (withdrawn ? 0 : airtime.feeCents),
+    payments: groups.fold<int>(0, (s, g) => s + g.count) + notRecorded.fold<int>(0, (s, n) => s + n.count) + (withdrawn ? 0 : airtime.count),
     recipients: groups.length,
     agents: paidToCounts(list).ag,
     withdrawalCostCents: wGroups.fold(0, (s, g) => s + g.feeCents) + wNotRecorded,

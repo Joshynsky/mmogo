@@ -9,6 +9,7 @@ import 'package:mmogo/data/backup/backup_counts.dart';
 import 'package:mmogo/platform/storage_bridge.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
 import 'package:mmogo/ui/copy/privacy_copy.dart';
+import 'package:mmogo/ui/copy/settings_copy.dart' show kCaptureReceiverLabel;
 import 'package:mmogo/ui/screens/backup/backup_screen.dart';
 import 'package:mmogo/ui/screens/backup/backup_widgets.dart';
 import 'package:mmogo/ui/screens/privacy/privacy_screen.dart';
@@ -105,13 +106,29 @@ void main() {
       expect(text, isNot(contains('zero permissions')));
     });
 
+    testWidgets('0.1.3 F1: the auto-read build names SMS and notification permission and not the standard-only sentence', (
+      tester,
+    ) async {
+      await _pumpPage(tester, const PrivacyScreen(autoRead: true));
+      expect(find.text(kPrivacySentenceAutoRead), findsOneWidget);
+      expect(find.text(kPrivacySentenceStandard), findsNothing);
+      expect(kPrivacySentenceAutoRead, contains('SMS and notification permission'));
+      expect(_allText(tester).toLowerCase(), isNot(contains('no permissions')));
+    });
+
+    testWidgets('0.1.3 F1: the standard build still says internet only', (tester) async {
+      await _pumpPage(tester, const PrivacyScreen(autoRead: false));
+      expect(find.text(kPrivacySentenceStandard), findsOneWidget);
+      expect(find.text(kPrivacySentenceAutoRead), findsNothing);
+    });
+
     testWidgets('S1 P-Privacy-08: canonical sentence is first, exact, once; independence full sentence present', (tester) async {
       await _pumpPage(tester, const PrivacyScreen());
       expect(kPrivacySentenceStandard, 'No permissions except internet, used only to check for updates (switchable off).');
       expect(find.text(kPrivacySentenceStandard), findsOneWidget);
-      expect(find.byKey(const Key('privacySentenceStandard')), findsOneWidget);
+      expect(find.byKey(const Key('privacySentence')), findsOneWidget);
       expect(
-        tester.getTopLeft(find.byKey(const Key('privacySentenceStandard'))).dy,
+        tester.getTopLeft(find.byKey(const Key('privacySentence'))).dy,
         lessThan(tester.getTopLeft(find.text(kPrivacyStoredTitle)).dy),
       );
       expect(find.text(kIndependenceFull), findsOneWidget);
@@ -129,6 +146,14 @@ void main() {
       expect(kPrivacyStoredRememberedAnswers, contains('not in backups and not shared'));
       expect(kPrivacyStoredRememberedAnswers, contains('only when the tick is on'));
       expect(kPrivacyStoredReceiverDetails, contains('names and phone numbers'));
+      expect(kPrivacyStoredReceiverDetails, contains('waiting to be categorized'));
+      expect(kPrivacyStoredReceiverDetails, isNot(contains('receiver-details tick')));
+    });
+
+    testWidgets('SEC-02: the Privacy page names the exact Settings switch label', (tester) async {
+      await _pumpPage(tester, const PrivacyScreen());
+      expect(kCaptureReceiverLabel, 'Record receiver details');
+      expect(_allText(tester), contains('"$kCaptureReceiverLabel"'));
     });
 
     test('COPY AHEAD OF FEATURE: only the S3 agent-number sentence is left; the S8 remembered-answers sentence went live in S8c-2', () {

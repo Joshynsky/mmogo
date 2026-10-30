@@ -26,7 +26,7 @@ bool _saveEnabled(WidgetTester tester) =>
     tester.widget<FilledButton>(find.byKey(const Key('editSaveButton'))).onPressed != null;
 
 Future<void> _drain(WidgetTester tester) async {
-  await tester.pump(const Duration(seconds: 6));
+  await tester.pump(const Duration(seconds: 9));
   await tester.pumpAndSettle();
 }
 

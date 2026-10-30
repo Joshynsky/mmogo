@@ -19,8 +19,13 @@ import '../parsing/parsed_sms_fields.dart';
 const paidToPochi = 'POCHI_LA_BIASHARA';
 const paidToWithdrawal = 'AGENT_WITHDRAWAL';
 
+/// Airtime has no recipient, so it is never one of the five types below. 0.1.3 F3:
+/// Paid to still loads it, and shows it as ONE summary line and inside the hero total,
+/// so "Paid out" agrees with Home's "This month".
+const paidToAirtime = 'AIRTIME';
+
 /// The five types Paid to loads and draws, in section / pill order (mock
-/// `CODES`). Airtime and Cash never reach Paid to.
+/// `CODES`). Airtime is summarised separately (above); Cash never reaches Paid to.
 const paidToAllTypes = ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS', paidToPochi, paidToWithdrawal];
 
 enum PaidToSort { amount, timesPaid, recent, fees }

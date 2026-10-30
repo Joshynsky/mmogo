@@ -45,9 +45,9 @@ Color? _rowColor(WidgetTester tester, String name) {
   return (c.decoration as BoxDecoration?)?.color;
 }
 
-/// Lets the toast (5 s) and highlight (1.8 s) timers run out.
+/// Lets the toast (8 s) and highlight (1.8 s) timers run out.
 Future<void> _drain(WidgetTester tester) async {
-  await tester.pump(const Duration(seconds: 6));
+  await tester.pump(const Duration(seconds: 9));
   await tester.pumpAndSettle();
 }
 
@@ -212,7 +212,7 @@ void main() {
       await _drain(tester);
     });
 
-    testWidgets('the toast goes away by itself after about 5 s; the delete stays', (tester) async {
+    testWidgets('the toast goes away by itself after about 8 s; the delete stays', (tester) async {
       final db = await _pump(tester);
       await tester.drag(find.byKey(const Key('analyticsRow-2')), const Offset(-90, 0));
       await tester.pumpAndSettle();
@@ -220,7 +220,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('analyticsToast')), findsOneWidget);
       // pumpAndSettle above already ran the row animations (< 1 s).
-      await tester.pump(const Duration(milliseconds: 3500));
+      await tester.pump(const Duration(milliseconds: 6500));
       expect(find.byKey(const Key('analyticsToast')), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 1600));
       expect(find.byKey(const Key('analyticsToast')), findsNothing);

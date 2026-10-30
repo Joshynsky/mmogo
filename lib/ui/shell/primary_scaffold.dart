@@ -192,8 +192,13 @@ class _PrimaryBottomNav extends StatelessWidget {
     // still lays out at [_boxHeight], but its hit area reaches up over the
     // FAB's overhang, so the whole visible FAB and ring take the tap instead
     // of letting it fall through to the row underneath.
+    // 0.1.3 NAV: the app draws edge to edge (target SDK 36), so with 3-button
+    // navigation the phone's own buttons sit over the bottom of the screen.
+    // The bar grows by that inset and keeps its items above it; with gesture
+    // navigation the inset is small and the bar just ends a little lower.
+    final inset = MediaQuery.viewPaddingOf(context).bottom;
     return _OverhangHitBox(
-      height: _boxHeight,
+      height: _boxHeight + inset,
       overhang: _fabOverhang,
       child: Stack(
         clipBehavior: Clip.none,
@@ -201,7 +206,8 @@ class _PrimaryBottomNav extends StatelessWidget {
         children: [
           Container(
             key: const Key('primaryBottomNav'),
-            height: _navHeight,
+            height: _navHeight + inset,
+            padding: EdgeInsets.only(bottom: inset),
             decoration: BoxDecoration(
               color: palette.card,
               border: Border(top: BorderSide(color: palette.line)),
@@ -229,7 +235,7 @@ class _PrimaryBottomNav extends StatelessWidget {
           // its 5px ring 29px above; the ring's bottom is then 31px above
           // the nav's bottom edge (66 - (64 - 29)).
           Positioned(
-            bottom: _navHeight - (64 - 29),
+            bottom: _navHeight - (64 - 29) + inset,
             child: KeyedSubtree(
               key: fabTourKey,
               child: _Fab(palette: palette, active: activeIndex == 2, onTap: () => onTap(2)),

@@ -12,6 +12,7 @@ import '../../../autoread/ui/reading_settings_section.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/db/export_dao.dart';
 import '../../../data/maintenance/delete_data_service.dart';
+import '../../../data/maintenance/export_temp_sweep.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../../data/prefs/backup_prefs.dart';
 import '../../../domain/analytics/chart_blocks.dart' show MonthChartStyle, WhereItWentStyle, YearViewAmounts;
@@ -89,6 +90,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // documented default (ON) so the switch doesn't visibly flip from
   // off->on once the real read resolves in the common case.
   bool _autoRecognize = true;
+  // Same remembered value as the Add screen's receiver tick (default ON).
+  bool _captureReceiver = true;
   // The Look values, read in _bootstrap (the prefs' own defaults until then).
   int _firstDay = AppPrefs.defaultFirstDayOfWeek;
   MonthChartStyle _monthStyle = MonthChartStyle.weeks;
@@ -140,6 +143,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
     final count = await ExportDao.activeTransactionCount(db);
     final autoRecognize = await AppPrefs.readAutoRecognizeClassifications();
+    final captureReceiver = await AppPrefs.readCaptureIdentityPreference();
     final backupSubtitle = await _readBackupSubtitle();
     await _readLook();
     if (!mounted) return;
@@ -147,6 +151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _db = db;
       _activeCount = count;
       _autoRecognize = autoRecognize;
+      _captureReceiver = captureReceiver;
       _backupSubtitle = backupSubtitle;
       _loading = false;
     });
@@ -244,12 +249,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final db = _db;
     final count = db == null ? _activeCount : await ExportDao.activeTransactionCount(db);
     final autoRecognize = await AppPrefs.readAutoRecognizeClassifications();
+    final captureReceiver = await AppPrefs.readCaptureIdentityPreference();
     final subtitle = await _readBackupSubtitle();
     await _readLook();
     if (!mounted) return;
     setState(() {
       _activeCount = count;
       _autoRecognize = autoRecognize;
+      _captureReceiver = captureReceiver;
       _backupSubtitle = subtitle;
     });
   }
@@ -264,21 +271,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     AppPrefs.writeAutoRecognizeClassifications(value);
   }
 
+  void _handleCaptureReceiverChanged(bool value) {
+    setState(() => _captureReceiver = value);
+    AppPrefs.writeCaptureIdentityPreference(value);
+  }
+
   /// Real (non-test) share-sheet implementation: writes the CSV to a temp
   /// file (needed because `share_plus`'s `ShareParams.files` wraps
   /// `Intent.ACTION_SEND` with a file attachment, not raw text) then hands
   /// it to the OS share sheet (the settled mechanism for export).
   static Future<void> _defaultExportCsv(String csvContent, int transactionCount) async {
     final dir = await getTemporaryDirectory();
-    final fileName = 'mmogo-export-${DateTime.now().millisecondsSinceEpoch}.csv';
+    // 0.1.3 SEC-03: an export left by an older version goes first; ours and the plugin's copy go
+    // as soon as the share returns (the backup flow deletes its temp file the same way).
+    await sweepExportTemp(dir);
+    final fileName = '$kExportTempPrefix${DateTime.now().millisecondsSinceEpoch}.csv';
     final path = p.join(dir.path, fileName);
-    await File(path).writeAsString(csvContent);
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(path, mimeType: 'text/csv', name: fileName)],
-        subject: 'mmogo CSV export',
-      ),
-    );
+    try {
+      await File(path).writeAsString(csvContent);
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(path, mimeType: 'text/csv', name: fileName)],
+          subject: 'mmogo CSV export',
+        ),
+      );
+    } finally {
+      await sweepExportTemp(dir);
+    }
   }
 
   Future<void> _handleExport() async {
@@ -376,6 +395,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               tourKey: _addingTourKey,
               autoRecognize: _autoRecognize,
               onAutoRecognizeChanged: _loading ? null : _handleAutoRecognizeChanged,
+              captureReceiver: _captureReceiver,
+              onCaptureReceiverChanged: _loading ? null : _handleCaptureReceiverChanged,
             ),
             const SizedBox(height: 14),
             DataSection(

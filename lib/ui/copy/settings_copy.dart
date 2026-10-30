@@ -55,6 +55,9 @@ const kLookNote = 'Appearance is saved on this phone only. The other choices her
 // ---- Adding entries ----
 const kAutoRecognizeLabel = 'Auto-recognize categories';
 const kAutoRecognizeSubtitle = 'Suggest a category for repeat senders and receivers while you add';
+const kCaptureReceiverLabel = 'Record receiver details';
+const kCaptureReceiverSubtitle =
+    'Keep the name, phone, business or account of who you paid. Off: payments are saved without them.';
 const kManageCategoriesLabel = 'Manage categories';
 const kManageCategoriesSubtitle = 'Create, rename, delete and restore';
 const kRememberedRowLabel = 'Remembered recipients';

@@ -71,6 +71,9 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
 
   /// The loaded period's payments (the period they belong to is [_shown]).
   List<PaidToPayment>? _payments;
+
+  /// 0.1.3 F3: the period's airtime (no recipient): one line and part of the hero total.
+  PaidToAirtime _airtime = PaidToAirtime.none;
   AnalyticsPeriod? _shown;
   DateTime? _first;
   int _loadSeq = 0;
@@ -140,14 +143,29 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
       db,
       startMs: startMs,
       endMs: endMs,
-      types: paidToAllTypes.toSet(),
+      types: {...paidToAllTypes, paidToAirtime},
     );
     if (!mounted || seq != _loadSeq) return;
+    final all = [
+      for (final r in rows)
+        PaidToPayment(
+          sourceType: r.sourceType,
+          amountCents: r.amountCents,
+          feeCents: r.transactionCostCents ?? 0,
+          occurredAt: r.occurredAt,
+          classificationName: r.classificationName,
+          label: r.counterpartyLabel,
+          phone: r.counterpartyPhone,
+          account: r.paybillAccountNumber,
+          agentNumber: r.agentNumber,
+        ),
+    ];
     setState(() {
       _first = first;
       _shown = period;
+      _airtime = paidToAirtimeSummary(all);
       _payments = [
-        for (final r in rows)
+        for (final r in rows.where((r) => r.sourceType != paidToAirtime))
           PaidToPayment(
             sourceType: r.sourceType,
             amountCents: r.amountCents,
@@ -374,7 +392,7 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
       pad(
         PaidToHeroCard(
           palette: palette,
-          hero: paidToHero(payments, withdrawn: _tab == paidToWithdrawal),
+          hero: paidToHero(payments, withdrawn: _tab == paidToWithdrawal, airtime: _airtime),
           shown: shown,
           first: _first,
           today: dateOnly(_now()),
@@ -439,7 +457,9 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
     PaidToNotRecorded nrOf(String type) => _tab == null || _tab == type
         ? paidToNotRecorded(payments, type: type, classification: _cls, term: term)
         : const PaidToNotRecorded(0, 0, 0);
-    if (list.isEmpty && !paidToAllTypes.any((t) => nrOf(t).count > 0)) {
+    // 0.1.3 F3: the Airtime line shows in the overview only (no search, no category: airtime has none).
+    final showAirtime = _tab == null && _cls == null && term.isEmpty && _airtime.count > 0;
+    if (list.isEmpty && !showAirtime && !paidToAllTypes.any((t) => nrOf(t).count > 0)) {
       return [
         AppCard(
           palette: palette,
@@ -515,6 +535,9 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
       );
       firstSection = false;
       if (nr.count > 0) out.add(nrLine(withType: false));
+    }
+    if (showAirtime) {
+      out.add(PaidToAirtimeLine(key: const Key('paidToAirtimeLine'), palette: palette, summary: _airtime));
     }
     return out;
   }

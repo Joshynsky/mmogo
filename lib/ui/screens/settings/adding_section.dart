@@ -6,7 +6,7 @@ import '../../theme/app_colors.dart';
 import 'settings_widgets.dart';
 
 /// Settings ADDING ENTRIES card (0.1.2 S9a, mock M9): the Auto-recognize
-/// switch, Manage categories (was "Manage classifications") and Remembered
+/// switch, the Record receiver details switch (the Add screen's remembered tick), Manage categories (was "Manage classifications") and Remembered
 /// recipients. State and handlers are owned by the Settings shell; [tourKey]
 /// is its coach-tour anchor.
 class AddingSection extends StatelessWidget {
@@ -16,12 +16,16 @@ class AddingSection extends StatelessWidget {
     required this.tourKey,
     required this.autoRecognize,
     required this.onAutoRecognizeChanged,
+    required this.captureReceiver,
+    required this.onCaptureReceiverChanged,
   });
 
   final AppPalette palette;
   final GlobalKey tourKey;
   final bool autoRecognize;
   final ValueChanged<bool>? onAutoRecognizeChanged;
+  final bool captureReceiver;
+  final ValueChanged<bool>? onCaptureReceiverChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +48,15 @@ class AddingSection extends StatelessWidget {
                   first: true,
                   value: autoRecognize,
                   onChanged: onAutoRecognizeChanged,
+                ),
+                SettingsToggle(
+                  key: const Key('settingsCaptureReceiver'),
+                  palette: palette,
+                  icon: Icons.person_outline,
+                  label: kCaptureReceiverLabel,
+                  subtitle: kCaptureReceiverSubtitle,
+                  value: captureReceiver,
+                  onChanged: onCaptureReceiverChanged,
                 ),
                 SettingsLink(
                   key: const Key('settingsManageCategories'),

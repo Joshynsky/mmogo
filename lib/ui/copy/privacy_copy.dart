@@ -7,6 +7,7 @@
 library;
 
 import 'data_copy.dart';
+import 'settings_copy.dart' show kCaptureReceiverLabel;
 
 const kPrivacyTitle = 'Privacy and your data';
 
@@ -27,9 +28,12 @@ const kPrivacyStoredBody =
     "All of it stays on this phone. Android's own backup is switched off for mmogo, "
     'so Android does not copy your data to Google.';
 
-/// C-B12: receiver names and phone numbers are stored only with the tick on.
+/// C-B12 / SEC-02 (PM yes 29-10-2026): receiver details are stored only with the
+/// "Record receiver details" switch on; in the auto-read build a waiting message holds them too.
+/// The switch name comes from [kCaptureReceiverLabel], so this page cannot drift from Settings.
 const kPrivacyStoredReceiverDetails =
-    'Receiver names and phone numbers are kept only when the receiver-details tick is on.';
+    'Receiver names and phone numbers are kept on saved entries only when "$kCaptureReceiverLabel" is on. '
+    "In the auto-read version, a message waiting to be categorized also holds the receiver's name and number until you categorize or remove it.";
 
 /// C-B12, COPY AHEAD OF FEATURE: the agent number exists from slice S3 (AG1).
 const kPrivacyStoredAgentNumber = "An agent number is kept beside the receiver's phone number.";
@@ -45,6 +49,18 @@ const kPrivacyCopyAheadOfFeature = [kPrivacyStoredAgentNumber];
 
 /// Canonical privacy line (Judge P5-8, E8 STANDARD build): exact, one constant.
 const kPrivacySentenceStandard = 'No permissions except internet, used only to check for updates (switchable off).';
+
+/// 0.1.3 F1: the Privacy page of the AUTO-READ build. That build also asks for
+/// SMS and notification permission, so it must not show
+/// [kPrivacySentenceStandard] (true only for the standard build).
+const kPrivacySentenceAutoRead =
+    'This version asks for internet, used only to check for updates (switchable off), '
+    'and for SMS and notification permission, only if you switch reading on.';
+
+/// 0.1.3 F1: the pair the README and the website say about both versions
+/// (commit 34e792a, 27-10-2026). A test checks both files carry them word for word.
+const kPrivacyPublicStandard = 'The standard version asks only for internet, used only to check for updates (switchable off).';
+const kPrivacyPublicAutoRead = 'The auto-read version also asks for SMS and notification permission, only if you switch reading on.';
 
 /// Independence line: the full sentence on the Privacy page (C-B10e), the short
 /// form wherever the app prose describes the products.

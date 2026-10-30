@@ -80,7 +80,7 @@ class LookSection extends StatelessWidget {
               CompactSettingRow(
                 key: const Key('settingsAppearanceRow'),
                 palette: palette,
-                icon: Icons.dark_mode_outlined,
+                icon: AppearanceModeControl.iconFor(appearance), // 0.1.3 F4: follows the mode, not always a moon
                 title: kAppearanceTitle,
                 line: appearanceCaption(appearance),
                 lineKey: const Key('settingsAppearanceCaption'),
@@ -191,6 +191,9 @@ class AppearanceModeControl extends StatelessWidget {
     ('light', 'Light', Icons.light_mode_outlined),
     ('dark', 'Dark', Icons.dark_mode_outlined),
   ];
+
+  /// The row's leading icon: the chosen mode's own icon (an unknown value reads as System).
+  static IconData iconFor(String mode) => modes.firstWhere((m) => m.$1 == mode, orElse: () => modes.first).$3;
 
   @override
   Widget build(BuildContext context) {

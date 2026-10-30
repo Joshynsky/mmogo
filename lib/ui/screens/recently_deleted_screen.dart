@@ -16,9 +16,10 @@ import '../theme/app_colors.dart';
 /// Analytics, PM direct decision, 2026-09-17): soft-deleted transactions
 /// still within their 1-hour restore grace window, most-recently-deleted
 /// first, each with a live per-row relative countdown ("42m 15s left",
-/// ticking every second) and a Restore action. The disabled "Coming soon"
-/// companion-web-page placeholder row and the empty state's exact copy are
-/// both carried over verbatim from the earlier prototype.
+/// ticking every second) and a Restore action. The empty state's exact copy is
+/// carried over verbatim from the earlier prototype. 0.1.3 (F2): the disabled
+/// "Coming soon" companion-web-page placeholder row is gone, because that web
+/// page does not exist.
 ///
 /// Purge-sweep judgment call (disclosed in this dispatch's FLAGS): this
 /// page ALSO runs `TransactionDao.purgeExpiredSoftDeletes` on its own
@@ -173,7 +174,6 @@ class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
           style: TextStyle(fontSize: 12, color: palette.mutedInk),
         ),
         const SizedBox(height: 12),
-        _comingSoonRow(palette),
         if (_rows.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -185,30 +185,6 @@ class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
         else
           for (final row in _rows) _deletedRow(row, palette),
       ],
-    );
-  }
-
-  Widget _comingSoonRow(AppPalette palette) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: palette.background,
-        border: Border.all(color: palette.line, style: BorderStyle.solid),
-        borderRadius: const BorderRadius.all(Radius.circular(10)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Text(
-              'View & restore from the companion web page',
-              style: TextStyle(fontSize: 12, color: palette.mutedInk),
-            ),
-          ),
-          Text('Coming soon', style: TextStyle(fontSize: 12, color: palette.mutedInk)),
-        ],
-      ),
     );
   }
 

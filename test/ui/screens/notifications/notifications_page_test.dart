@@ -156,6 +156,12 @@ void main() {
       expect(find.byKey(const Key('news-row-gone')), findsNothing);
     });
 
+    testWidgets('0.1.3 F4: the back arrow and title sit where the other screens put them (12 and 72 dp)', (t) async {
+      await _open(t, typicalNews());
+      expect(t.getTopLeft(find.byKey(const Key('notif-back'))).dx, 12);
+      expect(t.getTopLeft(find.text(kNotificationsTitle)).dx, 72);
+    });
+
     for (final w in [360.0, 390.0]) {
       testWidgets('layout at ${w.toInt()} px, text 1.3: no overflow, 44 px targets, labels', (t) async {
         await _open(t, typicalNews(), width: w, scale: 1.3);

@@ -294,6 +294,28 @@ void main() {
     });
   });
 
+  group('0.1.3 F4: the Appearance row icon follows the mode', () {
+    IconData leading(WidgetTester t) => t
+        .widgetList<Icon>(find.descendant(of: find.byKey(const Key('settingsAppearanceRow')), matching: find.byType(Icon)))
+        .first
+        .icon!;
+
+    for (final m in const [
+      ('system', Icons.smartphone_outlined),
+      ('light', Icons.light_mode_outlined),
+      ('dark', Icons.dark_mode_outlined),
+    ]) {
+      testWidgets('mode ${m.$1} shows its own icon, not always a moon', (tester) async {
+        await _pump(tester, mode: m.$1);
+        expect(leading(tester), m.$2);
+      });
+    }
+
+    test('an unknown mode reads as System', () {
+      expect(AppearanceModeControl.iconFor('nonsense'), Icons.smartphone_outlined);
+    });
+  });
+
   group('A5/A6: First day of the week', () {
     testWidgets('the row is title, current day, chevron: the regrouped line is NOT on the page', (tester) async {
       await _pump(tester, width: 800);

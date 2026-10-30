@@ -12,9 +12,6 @@
 <meta property="og:image" content="https://joshynsky.github.io/mmogo/img/home.webp">
 <meta property="og:url" content="https://joshynsky.github.io/mmogo/">
 <title>mmogo: see where your money goes</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="style.css?v=20261028a">
 
 <style>
@@ -97,7 +94,7 @@ img { max-width: 100%; }
         <tbody>
           <tr><th scope="row">How a message gets in</th><td data-v="Standard">You paste it</td><td data-v="Auto-read">It is noticed when it arrives; you tap the notification to parse it</td></tr>
           <tr><th scope="row">Permissions</th><td data-v="Standard">Internet only, to check for updates</td><td data-v="Auto-read">Internet, plus SMS and notifications when you switch reading on</td></tr>
-          <tr><th scope="row">What it reads</th><td data-v="Standard">Only what you paste</td><td data-v="Auto-read">Only messages from M-Pesa, kept on your phone</td></tr>
+          <tr><th scope="row">What it reads</th><td data-v="Standard">Only what you paste</td><td data-v="Auto-read">Only messages from a sender named MPESA, kept on your phone until you parse them or they expire.</td></tr>
         </tbody>
       </table>
       <p class="direct">Direct links: <a href="https://github.com/Joshynsky/mmogo/releases/latest/download/mmogo.apk">standard</a> · <a href="https://github.com/Joshynsky/mmogo/releases/latest/download/mmogo-autoread.apk">auto-read</a> · <a href="#install">How to install</a></p>
@@ -123,7 +120,7 @@ img { max-width: 100%; }
 
       <div class="show" id="show" aria-roledescription="carousel" aria-label="mmogo screenshots">
         <div class="stage">
-          <div class="track" id="track" tabindex="0">
+          <div class="track" id="track" tabindex="0" aria-label="Screenshots">
             <article class="slide" aria-roledescription="slide" aria-label="1 of 8">
               <img alt="An M-Pesa confirmation SMS for Ksh 1,200.00 sent to Grace Muthoni." src="img/step1.webp">
               <div><span class="n">1 of 8</span><h3>Copy the M-Pesa SMS</h3><p>Long-press the confirmation message in your messages app and copy it. The standard version can't see your inbox, so it only ever works with the message you paste.</p></div>
@@ -154,7 +151,7 @@ img { max-width: 100%; }
             </article>
             <article class="slide" aria-roledescription="slide" aria-label="8 of 8">
               <img alt="The Read M-Pesa messages sheet in the auto-read version, with switches for reading messages and for parsing from the notification, and Allow and Not now buttons." src="img/consent.webp">
-              <div><span class="n">8 of 8</span><h3>Auto-read asks first</h3><p>In the auto-read version mmogo asks before it reads anything. It keeps only messages from M-Pesa and does not send any of it off your phone. Reading is off until you switch it on, and you can turn it off again in Settings.</p></div>
+              <div><span class="n">8 of 8</span><h3>Auto-read asks first</h3><p>In the auto-read version mmogo asks before it reads anything. It keeps only messages from a sender named MPESA and does not send any of it off your phone. A sender name can be copied by someone else, so a forged message can look genuine; check what mmogo reads before you save it. Reading is off until you switch it on, and you can turn it off again in Settings.</p></div>
             </article>
           </div>
         </div>
@@ -174,7 +171,7 @@ img { max-width: 100%; }
       <h2>What's new in 0.1.2</h2>
       <p class="sec-lede">Six things changed. Swipe through, or read them all on the <a href="news.html#v0-1-2" style="color:var(--primary)">News page</a>.</p>
       <div class="show" id="show2" aria-roledescription="carousel" aria-label="What's new in 0.1.2">
-        <div class="stage"><div class="track" id="track2" tabindex="0">
+        <div class="stage"><div class="track" id="track2" tabindex="0" aria-label="What's new">
             <article class="slide wn" aria-roledescription="slide" aria-label="1 of 6">
               <div><span class="n">New</span><h3>A second version: auto-read</h3><p>mmogo auto-read reads your M-Pesa messages as they arrive and puts them on a waiting list. A notification tells you one is ready; it shows no amount and no name. Tap it to parse, then categorize. It asks for SMS permission and your consent, and it is off until you switch it on. The standard version works without any of it.</p></div>
             </article>
@@ -236,11 +233,11 @@ img { max-width: 100%; }
         <h2>Your money stays yours.</h2>
         <ul class="checks">
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>No account, no server</b><span>Entries live in a database on your phone. mmogo sends none of them anywhere.</span></div></li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Internet only to check for updates</b><span>The standard version asks Android for one permission, internet, used only to check for updates. The auto-read version also asks for SMS and notification permissions, but only if you switch reading on. The update check runs when you open the app and at most once a week after a successful check. GitHub sees your IP address and that the request comes from the mmogo app. No entries, names or messages are sent. You can switch it off on the Updates page (Profile, Settings, About, Updates); when it is off, mmogo makes no request.</span></div></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Internet only to check for updates</b><span>The standard version asks Android for one permission, internet, used only to check for updates. The auto-read version also asks for SMS and notification permissions, but only if you switch reading on. The update check runs when you open the app and at most once a week after a successful check. GitHub sees your IP address and that the request comes from the mmogo app. No entries, names or messages are sent. You can switch it off on the Updates page (Profile, Settings, About, Updates); when it is off, mmogo makes no request, except when you tap Check for updates now.</span></div></li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Standard version: reads only the message you paste</b><span>mmogo reads the SMS you paste and picks out the amount, receiver, code, date and cost. It has no access to your inbox or any other message.</span></div></li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Auto-read version: only M-Pesa messages, only on this phone</b><span>If you choose the auto-read version and switch reading on, it asks for SMS and notification permission and for your consent. It keeps only messages from M-Pesa, holds them on your phone until you parse them or they expire (up to 24 hours), and its notification shows no amount and no name. Your messages are not sent anywhere.</span></div></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Auto-read version: only M-Pesa messages, only on this phone</b><span>If you choose the auto-read version and switch reading on, it asks for SMS and notification permission and for your consent. It keeps only messages from a sender named MPESA. A sender name can be copied by someone else, so a forged message can look genuine; check what mmogo reads before you save it. It holds them on your phone until you parse them or they expire. They expire after 24 hours, but the check happens when a new message arrives or you open mmogo, so a message can stay a little longer if neither happens. Its notification shows no amount and no name. Your messages are not sent anywhere.</span></div></li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Other people's names and numbers</b><span>M-Pesa messages contain the names and phone numbers of people you send money to or receive it from. mmogo handles them only on your phone, and nothing leaves it.</span></div></li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Never saves your M-Pesa balance</b><span>The balance in the message is ignored. It isn't picked out, saved or shown anywhere, and the message text itself isn't kept either.</span></div></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg><div><b>Your M-Pesa balance is never used.</b><span>The balance in the message is ignored. It isn't picked out, saved or shown anywhere. In the standard version the message text isn't kept. In the auto-read version a message waiting to be parsed is held on your phone, as it arrived, until you parse it or it expires.</span></div></li>
         </ul>
       </div>
     </div>
@@ -275,7 +272,7 @@ img { max-width: 100%; }
       <h2>Before you install.</h2>
       <div class="faq">
         <details><summary>Which version should I pick?</summary><p>Pick the standard version if you are happy to paste each M-Pesa message yourself. Pick the auto-read version if you want mmogo to notice new M-Pesa messages as they arrive and let you parse them with one tap on a notification. The auto-read version asks for SMS and notification permission and your consent, and it is off until you switch it on in Settings. If you do not want to give SMS permission, use the standard version.</p></details>
-        <details><summary>Is it safe to install?</summary><p>The standard version asks Android for one permission, internet, used only to check for updates (you can switch that off in the app). The auto-read version also asks for SMS and notification permissions, only if you switch reading on, and keeps only messages from M-Pesa on your phone. The source code is public on GitHub. Because it's not on the Play Store, check that your download matches the SHA-256 above.</p></details>
+        <details><summary>Is it safe to install?</summary><p>The standard version asks Android for one permission, internet, used only to check for updates (you can switch that off in the app). The auto-read version also asks for SMS and notification permissions, only if you switch reading on, and keeps only messages from a sender named MPESA on your phone. A sender name can be copied by someone else, so a forged message can look genuine; check what mmogo reads before you save it. The source code is public on GitHub. Because it's not on the Play Store, check that your download matches the SHA-256 above.</p></details>
         <details><summary>The download will not start from WhatsApp, Facebook or another app</summary><p>The built-in browser inside other apps usually cannot download an app file. Open this page in Chrome instead: tap the menu (the three dots or the share icon) and choose "Open in Chrome" or "Open in browser", or copy the page link and paste it into Chrome.</p></details>
         <details><summary>Can I switch between the two versions?</summary><p>Yes. Both versions are signed the same way, so you can install either one over the other and your entries stay on the phone. Making a backup first (Profile, Settings, Backup and restore) is a good habit before any install.</p></details>
         <details><summary>What if I lose my phone or uninstall the app?</summary><p>Your data is only on your phone, and uninstalling the app erases it. Android's own backup is off, and Android's phone-to-phone transfer will not carry mmogo's data. Since version 0.1.1 you can make a backup file yourself (Profile, Settings, Backup and restore) and restore it later, merging it in or replacing what is on the phone. The file is not encrypted and holds names and phone numbers, so keep it somewhere private. mmogo can also save a backup to a folder you pick after every few entries.</p></details>
@@ -486,7 +483,7 @@ img { max-width: 100%; }
     });
   });
 
-  /* Reviews: the form builds an email to the author's Gmail in the visitor's own mail app; nothing is sent from this page. */
+  /* Reviews: the form builds an email to the author's Gmail in the visitor's own mail app; this page itself sends no data. */
   var REVIEW_MAIL = 'joshuawaga021@gmail.com';
   var rvForm = document.getElementById('rv-form');
   var RV_TEMPLATES = {

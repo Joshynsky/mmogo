@@ -122,6 +122,8 @@ void main() {
     semanticsTest('the expander is announced collapsed, then expanded, then collapsed', (t) async {
       await _pumpPrivacy(t);
       await t.scrollUntilVisible(_k('privacyLeavesToggle'), 300);
+      await t.ensureVisible(_k('privacyLeavesToggle'));
+      await t.pump();
       Tristate state() => t.getSemantics(_k('privacyLeavesToggle')).flagsCollection.isExpanded;
       expect(state(), Tristate.isFalse);
       await t.tap(_k('privacyLeavesToggle'));
@@ -136,6 +138,8 @@ void main() {
       await _pumpPrivacy(t);
       expect(unlabelledTappables(t), isEmpty);
       await t.scrollUntilVisible(_k('privacyLeavesToggle'), 300);
+      await t.ensureVisible(_k('privacyLeavesToggle'));
+      await t.pump();
       await t.tap(_k('privacyLeavesToggle'));
       await a11ySettle(t);
       expect(unlabelledTappables(t), isEmpty);
@@ -214,6 +218,8 @@ void main() {
     routes: _routes,
     open: (t) async {
       await t.scrollUntilVisible(_k('privacyLeavesToggle'), 300);
+      await t.ensureVisible(_k('privacyLeavesToggle'));
+      await t.pump();
       await t.tap(_k('privacyLeavesToggle'));
       await a11ySettle(t);
     },

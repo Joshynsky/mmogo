@@ -363,7 +363,7 @@ void main() {
     }
 
     Future<void> drain(WidgetTester t) async {
-      await t.pump(const Duration(seconds: 6));
+      await t.pump(const Duration(seconds: 9));
       await t.pumpAndSettle();
     }
 

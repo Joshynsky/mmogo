@@ -2,15 +2,33 @@
 
 What changed in each version of mmogo, newest first. Written for the people who use the app, so it says what you will notice, not how it was built. Dates are when the version was released.
 
-## 0.1.2 (date set at release)
+## 0.1.3 (not released)
+
+0.1.3 was a fix-and-verify version. It was built and checked on phones as "mmogo next" but never published as an APK. Everything below is carried into 0.2.0.
+
+### Fixed
+- **Bottom bar.** On phones with three-button navigation the bar now sits fully above the system buttons.
+- **Paid to now matches Home.** Airtime purchases are counted in "Paid out", so the total agrees with "This month" on Home.
+- **Settings.** The Appearance row shows the icon for the mode you picked (phone, sun or moon). The Notifications back arrow lines up with the one in Settings.
+- **Recently deleted.** A Settings row restores a transaction you removed, within 1 hour. The "companion web page" row that led nowhere is gone.
+- **Privacy page.** It now lists exactly what the version you installed asks for, and says a message waiting to be categorized in the auto-read version also holds the receiver's name and number until you categorize or remove it.
+- **Export CSV.** The temporary file made for sharing is removed after you share, and Delete data removes any left over.
+- **Wording.** The README and website now say that in the auto-read version a message waiting to be parsed is held on your phone as it arrived, that it keeps only messages from a sender named MPESA (a sender name can be copied), and that "Check for updates now" is the one request made when update checks are off.
 
 ### Added
+- **Record receiver details.** A Settings switch (Adding entries) controls whether the name, phone and account of who you paid are kept. It is the same choice as the tick on the Add screen.
+
+## 0.1.2 (22 October 2026)
+
+### Added
+- **A second version: auto-read.** mmogo auto-read (mmogo-autoread.apk) reads your M-Pesa messages as they arrive and puts them on a waiting list. A notification tells you one is ready; it shows no amount and no name. Tap it to parse the message, then categorize it. Nothing counts in your totals until you categorize it. You can still paste messages as before. It asks for SMS permission and your consent, it is off until you switch it on, and the standard version (mmogo.apk) works without any of it.
+- **Notifications.** The bell now opens Notifications, where updates and notices appear and anything new shows on the bell. In the auto-read version your M-Pesa messages wait there too. The Updates page is now in Settings, under About.
 - **Withdrawals, airtime and Pochi.** mmogo now understands these M-Pesa messages. Home and Paid to show how many you made and what they cost. A withdrawal adds 0 to what you spent; only its Transaction cost counts toward costs. Airtime bought for another number is read as airtime, and the other number is not kept.
 - **Messages with a name but no phone number.** mmogo asks once whether it is Pochi or Send Money, and can remember your answer if you tick the box. Remembered recipients are listed in Settings, where you can forget them, and they are not part of a backup.
 - **Weeks.** Home and Analytics group days into calendar weeks, starting on the day you choose in Settings. Past weeks are regrouped to match. No transactions change.
 - **Manage categories.** In Settings: create, rename, delete and restore your categories.
 - **Delete data.** In Settings, with two levels: delete your transactions, or reset the app to first launch. You type DELETE to confirm, and backup files you saved earlier are not touched.
-- **What's new.** A short set of cards, opened from the Updates page, about what changed in this version.
+- **What's new.** A short set of cards about what changed in this version, shown when you first open the app after an update and available later from Notifications and the Updates page.
 - **A screen for when mmogo cannot open.** It says so, offers Try again, and lists what to do next.
 
 ### Changed
@@ -23,7 +41,7 @@ What changed in each version of mmogo, newest first. Written for the people who 
 
 ### Good to know
 - **Backups.** Backups from 0.1.1 still restore. A backup made with 0.1.2 cannot be restored by 0.1.1 or older. Uninstalling mmogo erases your data from this phone. Only a backup you saved can bring it back.
-- **Privacy.** No permissions except internet, used only to check for updates (switchable off). The internet is used only to check for updates. GitHub sees your IP address and that the request comes from the mmogo app. No entries, names or messages are sent.
+- **Privacy.** No permissions except internet, used only to check for updates (switchable off). The internet is used only to check for updates. GitHub sees your IP address and that the request comes from the mmogo app. No entries, names or messages are sent. The auto-read version also asks for SMS and notification permission, only if you switch reading on, and keeps only messages from a sender named MPESA on your phone. A sender name can be copied by someone else, so a forged message can look genuine; check what mmogo reads before you save it.
 
 ## 0.1.1 (2 October 2026)
 

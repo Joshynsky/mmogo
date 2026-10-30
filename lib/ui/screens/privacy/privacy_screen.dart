@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../autoread/autoread_feature.dart';
 import '../../copy/data_copy.dart';
 import '../../copy/privacy_copy.dart';
 import '../../shell/routes.dart';
@@ -13,7 +14,11 @@ import '../settings/settings_widgets.dart';
 /// it, the backup-file warning (W1), the cloud-sync warning (W2) and a link
 /// row to Backup and restore. All wording is in `ui/copy/`.
 class PrivacyScreen extends StatelessWidget {
-  const PrivacyScreen({super.key});
+  /// [autoRead] is true in the auto-read build (0.1.3 F1): its Privacy sentence
+  /// names the SMS and notification permission. Tests pass it explicitly.
+  const PrivacyScreen({super.key, this.autoRead = kAutoReadCompiled});
+
+  final bool autoRead;
 
   @override
   Widget build(BuildContext context) {
@@ -28,8 +33,8 @@ class PrivacyScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(2, 0, 2, 12),
             child: Text(
-              kPrivacySentenceStandard,
-              key: const Key('privacySentenceStandard'),
+              autoRead ? kPrivacySentenceAutoRead : kPrivacySentenceStandard,
+              key: const Key('privacySentence'),
               style: TextStyle(fontSize: 15, height: 1.4, fontWeight: FontWeight.w800, color: palette.ink),
             ),
           ),

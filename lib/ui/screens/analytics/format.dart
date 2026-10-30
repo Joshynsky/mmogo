@@ -10,4 +10,4 @@ String analyticsHhmm(DateTime d) => '${d.hour.toString().padLeft(2, '0')}:${d.mi
 const analyticsHighlightDuration = Duration(milliseconds: 1800);
 
 /// How long the "moved to Recently Deleted" toast (with Undo) stays up.
-const analyticsToastDuration = Duration(seconds: 5);
+const analyticsToastDuration = Duration(seconds: 8);

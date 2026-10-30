@@ -456,6 +456,27 @@ void main() {
       expect(t['counterparty_phone'], isNull);
     });
 
+    test('identity switch off, every type: no label, phone, agent number or paybill account is stored; fee and amount stay', () async {
+      env = await _env(capture: false);
+      await parsedItem(kSampleWithdrawal);
+      await parsedItem(kSamplePaybill, n: 2);
+      await parsedItem(kSampleBuyGoods, n: 3);
+      final wd = (await env.db.rawQuery("SELECT id FROM classifications WHERE seed_key = 'AGENT_WITHDRAWAL:cash_withdrawal'"))
+          .first['id'] as int;
+      await env.repo.saveCategory(_id(1), '$wd');
+      await env.repo.saveCategory(_id(2), '${await env.classId('Transport', 'PAYBILL')}');
+      await env.repo.saveCategory(_id(3), '${await env.classId('Transport', 'BUY_GOODS')}');
+      final rows = await env.transactions();
+      expect(rows, hasLength(3));
+      for (final r in rows) {
+        for (final col in ['counterparty_label', 'counterparty_phone', 'agent_number', 'paybill_account_number']) {
+          expect(r[col], isNull, reason: '${r['display_code']} $col');
+        }
+      }
+      final byCode = {for (final r in rows) r['display_code'] as String: r};
+      expect(byCode['ABC1D2E3F4']!['transaction_cost_cents'], 2900);
+    });
+
     test('withdrawal keeps the agent number and fee; buy goods and paybill keep their fields', () async {
       env = await _env();
       await parsedItem(kSampleWithdrawal);

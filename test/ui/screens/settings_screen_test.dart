@@ -150,6 +150,50 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  group('Record receiver details switch (0.1.3)', () {
+    Finder switchFinder() =>
+        find.descendant(of: find.byKey(const Key('settingsCaptureReceiver')), matching: find.byType(Switch));
+
+    Future<void> open(WidgetTester tester) async {
+      await tester.pumpWidget(_wrap(SettingsScreen(db: _FakeDb(transactions: []), exportCsv: (_, _) async {})));
+      await _settle(tester);
+      await Scrollable.ensureVisible(tester.element(switchFinder()), alignment: 0.5);
+      await tester.pump();
+    }
+
+    testWidgets('is ON by default, with the agreed wording', (tester) async {
+      await open(tester);
+
+      expect(tester.widget<Switch>(switchFinder()).value, isTrue);
+      expect(find.text('Record receiver details'), findsOneWidget);
+      expect(
+        find.text('Keep the name, phone, business or account of who you paid. Off: payments are saved without them.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('shows the value the Add screen tick stored', (tester) async {
+      SharedPreferences.setMockInitialValues({'capture_identity_preference': false});
+      await open(tester);
+
+      expect(tester.widget<Switch>(switchFinder()).value, isFalse);
+    });
+
+    testWidgets('tapping it flips at once and writes the same key the Add tick reads', (tester) async {
+      await open(tester);
+
+      await tester.tap(switchFinder());
+      await tester.pump();
+      expect(tester.widget<Switch>(switchFinder()).value, isFalse);
+      expect(await AppPrefs.readCaptureIdentityPreference(), isFalse);
+
+      await tester.tap(switchFinder());
+      await tester.pump();
+      expect(tester.widget<Switch>(switchFinder()).value, isTrue);
+      expect(await AppPrefs.readCaptureIdentityPreference(), isTrue);
+    });
+  });
+
   group('Auto-recognize classifications toggle (T18)', () {
     testWidgets('reflects the real persisted default (ON) when no value is stored', (tester) async {
       final db = _FakeDb(transactions: []);

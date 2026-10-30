@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../data/maintenance/delete_data_service.dart';
+import '../../../data/maintenance/export_temp_sweep.dart';
 import '../../copy/delete_data_copy.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/bottom_sheet_shell.dart';
@@ -76,6 +79,9 @@ class _DeleteRunSheetState extends State<DeleteRunSheet> {
     if (!mounted) return;
     switch (r.outcome) {
       case DeleteDataOutcome.done:
+        // 0.1.3 SEC-03: a CSV export left in the temp folder goes with the data. Not awaited: a
+        // reset must reach `restart` before any await (A9).
+        unawaited(sweepExportTempOnDevice());
         if (_level1) {
           setState(() => _phase = _Phase.done);
           return;

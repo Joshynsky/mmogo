@@ -91,6 +91,26 @@ void main() {
       expect(_barMaterial(tester).elevation, 0);
     });
 
+    testWidgets('0.1.3 NAV: the bar grows by the system bottom inset and keeps its items clear of it', (tester) async {
+      // 3-button navigation draws the phone's buttons over the bottom 48 logical px.
+      final dpr = tester.view.devicePixelRatio;
+      tester.view.viewPadding = FakeViewPadding(bottom: 48 * dpr);
+      tester.view.padding = FakeViewPadding(bottom: 48 * dpr);
+      addTearDown(tester.view.resetViewPadding);
+      addTearDown(tester.view.resetPadding);
+      await tester.pumpWidget(_settingsLike());
+      await tester.pumpAndSettle();
+      final nav = find.byKey(const Key('primaryBottomNav'));
+      final navRect = tester.getRect(nav);
+      expect(navRect.height, 66 + 48);
+      final clearLine = navRect.bottom - 48;
+      for (final l in ['Home', 'Analytics', 'Paid to', 'Profile']) {
+        final r = tester.getRect(find.descendant(of: nav, matching: find.text(l)));
+        expect(r.bottom, lessThanOrEqualTo(clearLine), reason: '$l sits above the system buttons');
+      }
+      expect(tester.getRect(find.byKey(const Key('primaryFab'))).bottom, lessThanOrEqualTo(navRect.bottom));
+    });
+
     testWidgets('B48: the bottom bar reads Home, Analytics, + (FAB), Paid to, Profile with the person icon', (
       tester,
     ) async {

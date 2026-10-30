@@ -73,6 +73,15 @@ String _topSection(String changelog) {
   return lines.sublist(start, end < 0 ? lines.length : end).join('\n');
 }
 
+/// The `## ` section whose heading starts with `## <version>` (the published one
+/// while a later version sits above it, unreleased).
+String _versionSection(String changelog, String version) {
+  final lines = changelog.split('\n');
+  final start = lines.indexWhere((l) => l.startsWith('## $version'));
+  final end = lines.indexWhere((l) => l.startsWith('## '), start + 1);
+  return lines.sublist(start, end < 0 ? lines.length : end).join('\n');
+}
+
 /// C5: every sentence (split on ". " and line breaks) with "erases" must also
 /// say "uninstall". Returns the offending sentences.
 List<String> _erasesWithoutUninstall(String text) {
@@ -158,9 +167,24 @@ void main() {
     expect(defs.single, endsWith('ui/copy/privacy_copy.dart'));
   });
 
-  test('Q7 (a): the canonical sentence is word for word in README, the release notes and CHANGELOG 0.1.2', () {
-    expect(_read('README.md'), contains(kPrivacySentenceStandard), reason: 'README.md');
-    expect(_topSection(_read('CHANGELOG.md')), contains(kPrivacySentenceStandard), reason: 'CHANGELOG top section');
+  test('0.1.3 F1: README and the website say which version asks for which permission, word for word', () {
+    for (final path in ['README.md', 'docs/index.html']) {
+      final text = _read(path);
+      expect(text, contains(kPrivacyPublicStandard), reason: path);
+      expect(text, contains(kPrivacyPublicAutoRead), reason: path);
+    }
+  });
+
+  test('0.1.3 F1: the Privacy page chooses its sentence by build (an SMS build never shows the standard-only one)', () {
+    final src = _read('lib/ui/screens/privacy/privacy_screen.dart');
+    expect(src, contains('kAutoReadCompiled'));
+    expect(src, contains('kPrivacySentenceAutoRead'));
+    expect(src, contains('kPrivacySentenceStandard'));
+    expect(kPrivacySentenceAutoRead, isNot(contains('No permissions')));
+  });
+
+  test('Q7 (a): the canonical sentence is word for word in the release notes and CHANGELOG 0.1.2 (as published)', () {
+    expect(_versionSection(_read('CHANGELOG.md'), '0.1.2'), contains(kPrivacySentenceStandard), reason: 'CHANGELOG 0.1.2 section');
     final rn = _releaseNotes();
     if (rn == null) {
       markTestSkipped('$_releaseNotesPath not found: release-notes half of rule (a) not checked');
@@ -170,7 +194,7 @@ void main() {
   });
 
   test('Q7 (b): the D7 sentence is word for word in CHANGELOG 0.1.2 and the release notes', () {
-    expect(_topSection(_read('CHANGELOG.md')), contains(kBackupNotRestorableByOlder), reason: 'CHANGELOG top section');
+    expect(_versionSection(_read('CHANGELOG.md'), '0.1.2'), contains(kBackupNotRestorableByOlder), reason: 'CHANGELOG 0.1.2 section');
     final rn = _releaseNotes();
     if (rn == null) {
       markTestSkipped('$_releaseNotesPath not found: release-notes half of rule (b) not checked');

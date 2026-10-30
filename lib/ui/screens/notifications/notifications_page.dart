@@ -242,7 +242,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+              // 0.1.3 F4: left 12 and a 16 gap put the arrow and title where SecondaryScaffold puts them
+              // (12 + 44 + 16 = the 72 dp title start).
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
               child: Row(
                 children: [
                   Semantics(
@@ -268,7 +270,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Semantics(
                       header: true,

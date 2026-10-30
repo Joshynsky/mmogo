@@ -1,3 +1,7 @@
+/* Self-hosted fonts (SIL OFL 1.1, see fonts/OFL.txt). Latin subset, variable files. */
+@font-face { font-family: "Bricolage Grotesque"; font-style: normal; font-weight: 600 800; font-stretch: 100%; font-display: swap; src: url(fonts/bricolage-grotesque-latin.woff2) format("woff2"); }
+@font-face { font-family: "Figtree"; font-style: normal; font-weight: 400 600; font-display: swap; src: url(fonts/figtree-latin.woff2) format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400 500; font-display: swap; src: url(fonts/jetbrains-mono-latin.woff2) format("woff2"); }
 /* Layout: one centred column (max 720px) of sections on a quiet ground; the deep-ocean hero is the single bold moment, the screenshot overlaps its lower edge. */
 :root {
   --bg: #F4F8F9;
@@ -309,3 +313,21 @@ footer a { color: var(--primary); }
 @media (min-width: 481px) { .menu, .menu-btn { display: none !important; } }
 @media (max-width: 480px) { .nav { display: none; } .menu-btn { display: inline-flex; } }
 main section[id], #top { scroll-margin-top: 72px; }
+
+/* Wide screens (laptops and desktops, 960 px and up). Phones and tablets are unchanged. */
+@media (min-width: 960px) {
+  .wrap { max-width: 1080px; padding-inline: 24px; }
+  .hero { padding-top: 76px; }
+  .hero .wrap { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); column-gap: 56px; align-items: center; }
+  .hero h1 { font-size: clamp(3rem, 4.6vw, 4.2rem); }
+  .hero .lede { font-size: 1.25rem; }
+  .shot-hero { margin: 0 auto -90px; width: min(340px, 100%); }
+  .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .checks { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 40px; }
+  .private { padding: 44px 40px; }
+  .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+  .slide { grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 32px; padding: 24px; }
+  .slide.wn p { max-width: 46em; }
+  .faq, #reviews .fb, #reviews .sec-lede { max-width: 760px; }
+  .newshead .wrap { max-width: 760px; }
+}

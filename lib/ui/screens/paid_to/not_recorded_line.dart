@@ -6,6 +6,30 @@ import '../../../domain/paid_to/paid_to.dart';
 import '../../../domain/paid_to/paid_to_counts.dart';
 import '../../theme/app_colors.dart';
 
+/// 0.1.3 F3: the ONE muted Airtime line ("Airtime · 2 purchases · Ksh 120"). Airtime has no
+/// recipient, so there is no tap and no sheet; its money is inside the hero's "Paid out".
+class PaidToAirtimeLine extends StatelessWidget {
+  const PaidToAirtimeLine({super.key, required this.palette, required this.summary});
+
+  final AppPalette palette;
+  final PaidToAirtime summary;
+
+  /// The line's words (also what a test pins).
+  static String text(PaidToAirtime s) =>
+      'Airtime · ${s.count} ${s.count == 1 ? 'purchase' : 'purchases'} · ${kshTrim(s.totalCents)}';
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: Text(
+        text(summary),
+        style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: palette.softInk),
+      ),
+    );
+  }
+}
+
 /// §PAIDTO.NOT_RECORDED — the ONE muted line per type section (mock `nrLine`):
 /// "Not recorded · N payments · Ksh X" (with the type name first, "Send Money · Not recorded ...",
 /// in the overview and for a type that has no recipients; plain in a type view that has some).

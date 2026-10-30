@@ -212,17 +212,18 @@ void main() {
     expect(_text(tester, const Key('paidToNotRecorded-$_pochi')), 'Not recorded · 1 payment · Ksh 100');
     expect(_text(tester, const Key('paidToNotRecorded-$_wd')), 'Not recorded · 1 withdrawal · Ksh 500');
     expect(find.byKey(const Key('paidToNotRecorded-PAYBILL')), findsNothing, reason: 'nothing unrecorded there');
-    expect(find.textContaining('Airtime'), findsNothing);
+    // 0.1.3 F3: airtime has no recipient, so it is ONE muted summary line (no tap, no sheet).
+    expect(_text(tester, const Key('paidToAirtimeLine')), 'Airtime · 1 purchase · Ksh 100');
     expect(find.textContaining('Cash'), findsNothing);
   });
 
   testWidgets('the hero: Paid out with its cost lines, agents apart; the W pill reads Withdrawn', (tester) async {
     await _pump(tester);
     expect(_text(tester, const Key('paidToHeroLabel')), 'Paid out');
-    expect(tester.widget<Text>(find.byKey(const Key('paidToTotal'))).data, '5,000.00'); // Not recorded money included
+    expect(tester.widget<Text>(find.byKey(const Key('paidToTotal'))).data, '5,100.00'); // Not recorded money and the airtime (Ksh 100) included (0.1.3 F3)
     expect(_rich('Transaction cost Ksh 62.00'), findsOneWidget);
     expect(_rich('to 6 recipients'), findsOneWidget); // Not recorded payments are not recipients
-    expect(_rich('10 payments'), findsOneWidget);
+    expect(_rich('11 payments'), findsOneWidget); // 10 + the airtime purchase
     expect(_rich('+ 2 agents (cash out, not counted)'), findsOneWidget);
     expect(_rich('Transaction cost of withdrawals Ksh 120.00 (not in the figures above)'), findsOneWidget);
 
@@ -656,9 +657,19 @@ void main() {
     expect(args.period!.granularity.name, 'month');
   });
 
-  testWidgets('Airtime and Cash are never loaded: not listed, not counted, not in the hero', (tester) async {
+  testWidgets('0.1.3 F3: Cash is never loaded; airtime is one summary line and part of the hero total', (tester) async {
     await _pump(tester, rows: [_tx(1, 'AIRTIME', 3, 100), _tx(2, 'CASH', 4, 50)]);
+    expect(find.text('No payments in this period.'), findsNothing);
+    expect(_text(tester, const Key('paidToAirtimeLine')), 'Airtime · 1 purchase · Ksh 100');
+    expect(tester.widget<Text>(find.byKey(const Key('paidToTotal'))).data, '100.00'); // airtime only; Cash stays out
+    expect(_rich('1 payment'), findsOneWidget);
+    expect(_rich('to 0 recipients'), findsOneWidget);
+  });
+
+  testWidgets('0.1.3 F3: only Cash in the period still reads "No payments in this period."', (tester) async {
+    await _pump(tester, rows: [_tx(2, 'CASH', 4, 50)]);
     expect(find.text('No payments in this period.'), findsOneWidget);
+    expect(find.byKey(const Key('paidToAirtimeLine')), findsNothing);
     expect(tester.widget<Text>(find.byKey(const Key('paidToTotal'))).data, '0.00');
   });
 

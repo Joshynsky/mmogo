@@ -29,6 +29,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// flag, to leave out the standard build's Other version of mmogo row and notice (A5b, 21-10-2026).
 /// ui/whats_new/whats_new_cards.dart: the What's-new page's auto-read banner, intro and items,
 /// inside `if (kAutoReadCompiled)` (A5a, 21-10-2026).
+/// ui/screens/privacy/privacy_screen.dart: only reads the flag, to choose the Privacy page's
+/// build-specific sentence (0.1.3 F1, 29-10-2026).
 const kAutoReadHookFiles = <String>[
   'main.dart',
   'ui/screens/notifications/notifications_page.dart',
@@ -39,6 +41,7 @@ const kAutoReadHookFiles = <String>[
   'ui/screens/settings/about_section.dart',
   'ui/screens/home/home_screen.dart',
   'ui/whats_new/whats_new_cards.dart',
+  'ui/screens/privacy/privacy_screen.dart',
 ];
 
 const _codeMapPath = '../_pipeline/knowledge/code-map.md';
