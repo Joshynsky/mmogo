@@ -168,14 +168,14 @@ void main() {
   });
 
   group('the NEW pill', () {
-    testWidgets('shown while the seen version is not 0.1.2', (tester) async {
+    testWidgets('shown while the seen version is not 0.1.3', (tester) async {
       await _pump(tester, seen: '0.1.1');
       await _openUpdates(tester);
       expect(find.byKey(_pill), findsOneWidget);
     });
 
-    testWidgets('not shown once 0.1.2 is stored as seen', (tester) async {
-      await _pump(tester, seen: '0.1.2');
+    testWidgets('not shown once 0.1.3 is stored as seen', (tester) async {
+      await _pump(tester, seen: '0.1.3');
       await _openUpdates(tester);
       expect(find.byKey(_pill), findsNothing);
       expect(find.byKey(_entry), findsOneWidget);

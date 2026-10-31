@@ -11,10 +11,11 @@ library;
 import 'data_copy.dart';
 import 'privacy_copy.dart';
 
-/// The version the page is about. A FIXED constant (not `AppInfo`): the app
-/// version is bumped at the release step, but the page's title and the
-/// Updates entry say 0.1.2 now.
-const kWhatsNewPagerVersion = '0.1.2';
+/// The version the page is about. A FIXED constant (not `AppInfo`): the page's
+/// title and the Updates entry say 0.1.3 (PM 31-10-2026: they must match the
+/// build). NOTE: the six items below still describe the 0.1.2 changes; they
+/// need rewriting for 0.1.3 before any public release.
+const kWhatsNewPagerVersion = '0.1.3';
 
 const kWhatsNewPagerTitle = "What's new in mmogo $kWhatsNewPagerVersion";
 

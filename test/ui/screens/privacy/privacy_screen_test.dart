@@ -139,7 +139,8 @@ void main() {
       await _pumpPage(tester, const PrivacyScreen());
       final text = _allText(tester);
       expect(text, contains('your categories'));
-      expect(text, contains(kPrivacyStoredReceiverDetails));
+      expect(text, contains(kPrivacyStoredReceiverDetailsStandard));
+      expect(text, isNot(contains('auto-read')), reason: 'the standard build must not name a feature it does not have');
       expect(text, contains('learned'));
       expect(text, contains(kPrivacyStoredAgentNumber));
       expect(text, contains(kPrivacyStoredRememberedAnswers));
@@ -148,6 +149,11 @@ void main() {
       expect(kPrivacyStoredReceiverDetails, contains('names and phone numbers'));
       expect(kPrivacyStoredReceiverDetails, contains('waiting to be categorized'));
       expect(kPrivacyStoredReceiverDetails, isNot(contains('receiver-details tick')));
+    });
+
+    testWidgets('the auto-read build keeps its waiting-message sentence', (tester) async {
+      await _pumpPage(tester, const PrivacyScreen(autoRead: true));
+      expect(_allText(tester), contains(kPrivacyStoredReceiverDetails));
     });
 
     testWidgets('SEC-02: the Privacy page names the exact Settings switch label', (tester) async {

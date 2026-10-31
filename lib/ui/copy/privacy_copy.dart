@@ -35,6 +35,11 @@ const kPrivacyStoredReceiverDetails =
     'Receiver names and phone numbers are kept on saved entries only when "$kCaptureReceiverLabel" is on. '
     "In the auto-read version, a message waiting to be categorized also holds the receiver's name and number until you categorize or remove it.";
 
+/// The standard build has no waiting list, so its Privacy page says nothing about the auto-read
+/// version (PM 31-10-2026: the standard app must not name a feature it does not have).
+const kPrivacyStoredReceiverDetailsStandard =
+    'Receiver names and phone numbers are kept on saved entries only when "$kCaptureReceiverLabel" is on.';
+
 /// C-B12, COPY AHEAD OF FEATURE: the agent number exists from slice S3 (AG1).
 const kPrivacyStoredAgentNumber = "An agent number is kept beside the receiver's phone number.";
 

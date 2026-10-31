@@ -122,7 +122,7 @@ void main() {
     testWidgets('banner, title, intro and six rows, with the mock\'s words', (tester) async {
       await _pump(tester);
       expect(find.byKey(_pager), findsOneWidget);
-      expect(_text(tester, const Key('whatsNewPagerTitle')), "What's new in mmogo 0.1.2");
+      expect(_text(tester, const Key('whatsNewPagerTitle')), "What's new in mmogo 0.1.3");
       expect(_text(tester, const Key('whatsNewIntro')), 'Six things changed. Tap one to read it. Tap Got it when you are done.');
       // The banner is above the title.
       expect(tester.getTopLeft(find.byKey(const Key('whatsNewBanner'))).dy, lessThan(tester.getTopLeft(find.byKey(const Key('whatsNewPagerTitle'))).dy));
@@ -486,7 +486,7 @@ void main() {
     });
 
     test('the title is a fixed constant, not the app version', () {
-      expect(kWhatsNewPagerVersion, '0.1.2');
+      expect(kWhatsNewPagerVersion, '0.1.3');
     });
   });
 
