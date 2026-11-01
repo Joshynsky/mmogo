@@ -131,7 +131,7 @@ void main() {
           theme: AppTheme.forPalette(p),
           home: Scaffold(
             body: WhatsNewItemView(
-              item: whatsNewItems().firstWhere((i) => i.id == 'weeks'),
+              item: whatsNewItems().firstWhere((i) => i.id == 'receiver'),
               number: 2,
               open: true,
               palette: p,

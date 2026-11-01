@@ -29,7 +29,7 @@ Widget _host() => Builder(
   ),
 );
 
-const _rows = ['withdrawals', 'weeks', 'phone', 'backups', 'notifications', 'privacy'];
+const _rows = ['nav', 'airtime', 'receiver', 'deleted', 'exports', 'privacy'];
 
 void main() {
   tearDownAll(printA11yLog);
@@ -66,31 +66,23 @@ void main() {
     actions: () => [
       A11yAction('Got it', _k('whatsNewGotIt')),
       A11yAction('Change in Settings', _k('whatsNewCalSettings')),
-      A11yAction('Open Backup and restore', _k('whatsNewOpenBackup')),
       if (!kAutoReadCompiled) A11yAction('Open the mmogo page', _k('whatsNewBannerLink')),
     ],
   );
 
-  testWidgets('B3: item 1 at 360 px and 1.3 never breaks inside M-Pesa (non-breaking hyphen)', (t) async {
+  testWidgets('B3: the banner at 360 px and 1.3 never breaks inside M-Pesa (non-breaking hyphen)', (t) async {
     addTearDown(t.view.reset);
     WhatsNewProcess.resetForTest();
     await pumpA11y(t, _host(), variant: kA11yVariants[1]);
     await t.tap(_k('openPager'));
     await a11ySettle(t);
-    if (_k('whatsNewPara-withdrawals-0').evaluate().isEmpty) {
-      await t.ensureVisible(_k('whatsNewItemHead-withdrawals'));
-      await a11ySettle(t);
-      await t.tap(_k('whatsNewItemHead-withdrawals'));
-      await a11ySettle(t);
-    }
-    final body = t.widget<Text>(_k('whatsNewPara-withdrawals-0')).data!;
+    final body = t.widget<Text>(_k('whatsNewBannerBody')).data!;
     expect(body, contains('M\u2011Pesa'));
     expect(body.contains('M-Pesa'), isFalse);
     final i = body.indexOf('M\u2011Pesa');
-    final paragraph = t.renderObject<RenderParagraph>(_k('whatsNewPara-withdrawals-0'));
+    final paragraph = t.renderObject<RenderParagraph>(_k('whatsNewBannerBody'));
     final boxes = paragraph.getBoxesForSelection(TextSelection(baseOffset: i, extentOffset: i + 'M\u2011Pesa'.length));
     expect({for (final b in boxes) b.top.round()}.length, 1, reason: 'the word is on one line: $boxes');
-    expect(kWhatsNewCard1Body.contains('M\u2011Pesa'), isTrue);
     expect(kWhatsNewBannerBody.contains('M\u2011Pesa'), isTrue);
   });
 }

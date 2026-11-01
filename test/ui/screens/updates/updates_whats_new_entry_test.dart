@@ -231,11 +231,11 @@ void main() {
       expect(rig.written, ['0.1.1']);
     });
 
-    testWidgets('Change in Settings pushes the stub route over the page; Back returns to the open Weeks row; nothing more is marked', (tester) async {
+    testWidgets('Change in Settings pushes the stub route over the page; Back returns to the open Receiver details row; nothing more is marked', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1');
       await _openUpdates(tester);
       await _openPager(tester);
-      await tester.tap(find.byKey(const Key('whatsNewItemHead-weeks')));
+      await tester.tap(find.byKey(const Key('whatsNewItemHead-receiver')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('whatsNewCalSettings')));
       await tester.pumpAndSettle();
@@ -244,27 +244,9 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsOneWidget);
-      expect(find.byKey(const Key('whatsNewItemBody-weeks')), findsOneWidget);
+      expect(find.byKey(const Key('whatsNewItemBody-receiver')), findsOneWidget);
       expect(rig.written, ['0.1.1']); // opening the pages is what counted as seen, once
       expect(WhatsNewProcess.pillCleared, isTrue);
-    });
-
-    testWidgets('Open Backup and restore pushes the stub Backup route and marks nothing', (tester) async {
-      final rig = await _pump(tester, seen: '0.1.1');
-      await _openUpdates(tester);
-      await _openPager(tester);
-      await tester.ensureVisible(find.byKey(const Key('whatsNewItemHead-backups')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('whatsNewItemHead-backups')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('whatsNewOpenBackup')));
-      await tester.pumpAndSettle();
-      expect(find.text('BACKUP STUB'), findsOneWidget);
-      expect(rig.opened, ['backup']);
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('whatsNewItemBody-backups')), findsOneWidget);
-      expect(rig.written, ['0.1.1']);
     });
   });
 }

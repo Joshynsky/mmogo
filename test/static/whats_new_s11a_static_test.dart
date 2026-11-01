@@ -102,43 +102,35 @@ void main() {
       kWhatsNewBannerHead,
       kWhatsNewBannerBody,
       kWhatsNewBannerLink,
-      kWhatsNewCard1Title,
-      kWhatsNewCard1Summary,
-      kWhatsNewCard1Body,
-      kWhatsNewCard1Body2,
-      kWhatsNewCard2Title,
-      kWhatsNewCard2Summary,
-      kWhatsNewCard2Body,
-      kWhatsNewCard3Title,
-      kWhatsNewCard3Summary,
-      kWhatsNewCard3Body,
-      kWhatsNewCard3Extra,
-      kWhatsNewCard4Title,
-      kWhatsNewCard4Summary,
-      kWhatsNewCard4Body,
-      kWhatsNewCardNotificationsTitle,
-      kWhatsNewCardNotificationsSummary,
-      kWhatsNewCardNotificationsBody,
+      kWhatsNewNavTitle,
+      kWhatsNewNavSummary,
+      kWhatsNewNavBody,
+      kWhatsNewAirtimeTitle,
+      kWhatsNewAirtimeSummary,
+      kWhatsNewAirtimeBody,
+      kWhatsNewReceiverTitle,
+      kWhatsNewReceiverSummary,
+      kWhatsNewReceiverBody,
+      kWhatsNewDeletedTitle,
+      kWhatsNewDeletedSummary,
+      kWhatsNewDeletedBody,
+      kWhatsNewExportsTitle,
+      kWhatsNewExportsSummary,
+      kWhatsNewExportsBody,
       kWhatsNewCard5Title,
       kWhatsNewCard5Summary,
       kWhatsNewCard5Body,
       kWhatsNewCard5Network,
+      kWhatsNewCard5Receiver,
       // The auto-read build's words (and the provisional Privacy pair) follow the same rules.
       kWhatsNewAutoBannerHead,
       kWhatsNewAutoBannerBody,
       kWhatsNewAutoIntro,
-      kWhatsNewReadingTitle,
-      kWhatsNewReadingSummary,
-      kWhatsNewReadingBody,
-      kWhatsNewReadingBody2,
-      kWhatsNewAutoNotificationsSummary,
-      kWhatsNewAutoNotificationsBody,
       kWhatsNewPrivacyAutoReadSummaryProvisional,
       kWhatsNewPrivacyAutoReadBodyProvisional,
+      kWhatsNewPrivacyAutoReadReceiverNote,
     ].join('\n').replaceAll(kUninstallErasesNotice, '').replaceAll(kPrivacySentenceStandard, '').replaceAll(kWhatsNewCard5Summary, '');
     expect(bannedHits(shown), isEmpty);
-    // "erases" appears only through W3 (uninstalling), in Backups.
-    expect(kWhatsNewCard4Body, contains(kUninstallErasesNotice));
   });
 
   test('the standard banner and intro never use the auto-read word or identifier', () {
@@ -157,12 +149,6 @@ void main() {
     expect(kWhatsNewPrivacyAutoReadBodyProvisional, isNot(contains('No permissions')));
     expect(kWhatsNewPrivacyAutoReadSummaryProvisional, isNot(contains('No permissions')));
   });
-  test('the auto-read What\'s new text says Parse from the notification starts on and can be turned off', () {
-    expect(
-      kWhatsNewReadingBody2,
-      contains('Parse from the notification starts on after you allow it, and you can turn it off in Settings.'),
-    );
-  });
   test('the banned-phrase check catches a planted phrase', () {
     expect(bannedHits('This app has zero permissions.'), ['zero permissions']);
     expect(bannedHits('Delete data erases your entries.'), ['erases']);
@@ -170,8 +156,6 @@ void main() {
 
   test('the page copy never retypes a fixed sentence: it uses the named constants', () {
     final src = _noLineComments(_lib()['lib/ui/copy/whats_new_pager_copy.dart']!);
-    expect(src, contains(r'$kBackupNotRestorableByOlder'));
-    expect(src, contains(r'$kUninstallErasesNotice'));
     expect(src, contains('kNetworkSeenSentence'), reason: 'privacy (F4 R14): only the second half of W7');
     expect(src, isNot(contains(r'$kNetworkSentence')), reason: 'the full W7 would repeat the canonical sentence');
     expect(src, contains('kPrivacySentenceStandard'));

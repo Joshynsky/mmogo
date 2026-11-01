@@ -1,7 +1,7 @@
 // 0.1.2 A5a (WN1, PK2, CW2): the full-screen What's-new page. A banner at the
 // top, the title, the intro, six expandable rows (first open, several can be
 // open), one pinned Got it, the system Back key (closes, marks nothing), the
-// two injected route buttons, the banner link, 44 px, dark, text scale 1.3 and
+// injected Settings route button, the banner link, 44 px, dark, text scale 1.3 and
 // the row semantics. Stub routes only: the real Settings and Backup pages are
 // never built; nothing touches prefs or network.
 //
@@ -37,7 +37,7 @@ Key _head(String id) => Key('whatsNewItemHead-$id');
 Key _body(String id) => Key('whatsNewItemBody-$id');
 Key _summary(String id) => Key('whatsNewItemSummary-$id');
 
-const _ids = ['withdrawals', 'weeks', 'phone', 'backups', 'notifications', 'privacy'];
+const _ids = ['nav', 'airtime', 'receiver', 'deleted', 'exports', 'privacy'];
 
 Future<_Host> _pump(
   WidgetTester tester, {
@@ -123,7 +123,7 @@ void main() {
       await _pump(tester);
       expect(find.byKey(_pager), findsOneWidget);
       expect(_text(tester, const Key('whatsNewPagerTitle')), "What's new in mmogo 0.1.3");
-      expect(_text(tester, const Key('whatsNewIntro')), 'Six things changed. Tap one to read it. Tap Got it when you are done.');
+      expect(_text(tester, const Key('whatsNewIntro')), 'Six small things changed. Tap one to read it. Tap Got it when you are done.');
       // The banner is above the title.
       expect(tester.getTopLeft(find.byKey(const Key('whatsNewBanner'))).dy, lessThan(tester.getTopLeft(find.byKey(const Key('whatsNewPagerTitle'))).dy));
       expect(_text(tester, const Key('whatsNewBannerHead')), 'This is the standard version of mmogo');
@@ -140,11 +140,11 @@ void main() {
         titles.add(_text(tester, Key('whatsNewItemTitle-$id')));
       }
       expect(titles, [
-        'Withdrawals, airtime and Pochi',
-        'Weeks',
-        'Same phone number = one person',
-        'Backups',
-        'Notifications',
+        'Navigation bar',
+        'Airtime on Paid to',
+        'Receiver details',
+        'Recently deleted',
+        'Exports',
         'Privacy',
       ]);
       expect(find.byType(WhatsNewItemView), findsNWidgets(6));
@@ -163,129 +163,99 @@ void main() {
 
     testWidgets('the first row starts open, the others closed; each closed row shows its one-line summary', (tester) async {
       await _pump(tester);
-      expect(find.byKey(_body('withdrawals')), findsOneWidget);
-      expect(find.byKey(_summary('withdrawals')), findsNothing, reason: 'open: the summary is not repeated');
+      expect(find.byKey(_body('nav')), findsOneWidget);
+      expect(find.byKey(_summary('nav')), findsNothing, reason: 'open: the summary is not repeated');
       for (final id in _ids.skip(1)) {
         expect(find.byKey(_body(id)), findsNothing, reason: id);
         await tester.ensureVisible(find.byKey(_summary(id)));
         expect(find.byKey(_summary(id)), findsOneWidget, reason: id);
       }
-      expect(_text(tester, _summary('weeks')), 'A week now runs from the day you choose, Monday unless you change it.');
-      expect(_text(tester, _summary('phone')), 'The same number written two ways now counts as one person.');
-      expect(_text(tester, _summary('backups')), 'Backups from 0.1.1 still restore.');
-      expect(_text(tester, _summary('notifications')), 'The bell now opens Notifications. Updates is now in Settings, under About.');
+      expect(_text(tester, _summary('airtime')), 'Paid to now counts airtime.');
+      expect(_text(tester, _summary('receiver')), 'You choose whether receiver names and numbers are kept.');
+      expect(_text(tester, _summary('deleted')), 'Recently deleted says how long you can restore.');
+      expect(_text(tester, _summary('exports')), 'Exports no longer leave copies behind.');
       expect(_text(tester, _summary('privacy')), 'No permissions except internet, used only to check for updates.');
     }, skip: standardOnly != null);
 
     testWidgets('a tap opens a row and a second tap closes it; several can be open at once', (tester) async {
       await _pump(tester);
-      await _toggle(tester, 'weeks');
-      expect(find.byKey(_body('weeks')), findsOneWidget);
-      expect(find.byKey(_body('withdrawals')), findsOneWidget, reason: 'the first stays open');
-      await _toggle(tester, 'backups');
-      expect(find.byKey(_body('backups')), findsOneWidget);
-      expect(find.byKey(_body('weeks')), findsOneWidget);
-      await _toggle(tester, 'weeks');
-      expect(find.byKey(_body('weeks')), findsNothing);
-      expect(find.byKey(_summary('weeks')), findsOneWidget);
-      await _toggle(tester, 'withdrawals');
-      expect(find.byKey(_body('withdrawals')), findsNothing);
+      await _toggle(tester, 'receiver');
+      expect(find.byKey(_body('receiver')), findsOneWidget);
+      expect(find.byKey(_body('nav')), findsOneWidget, reason: 'the first stays open');
+      await _toggle(tester, 'exports');
+      expect(find.byKey(_body('exports')), findsOneWidget);
+      expect(find.byKey(_body('receiver')), findsOneWidget);
+      await _toggle(tester, 'receiver');
+      expect(find.byKey(_body('receiver')), findsNothing);
+      expect(find.byKey(_summary('receiver')), findsOneWidget);
+      await _toggle(tester, 'nav');
+      expect(find.byKey(_body('nav')), findsNothing);
     }, skip: standardOnly != null);
 
-    testWidgets('item 1: the placeholder wording (Paid to, not Analytics) and the withdrawal text', (tester) async {
+    testWidgets('item 1: the bottom bar text', (tester) async {
       await _pump(tester);
-      final first = _text(tester, const Key('whatsNewPara-withdrawals-0'));
-      expect(first, contains('Paid to shows how many payments you made and what they cost.'));
-      expect(first, isNot(contains('Analytics')));
-      expect(first, contains('M\u2011Pesa'));
-      final second = _text(tester, const Key('whatsNewPara-withdrawals-1'));
-      expect(second, contains('it adds nothing to what you spent. Its transaction cost is still tracked.'));
-      expect(second, endsWith('mmogo tracks spending.'));
+      final body = _text(tester, const Key('whatsNewPara-nav-0'));
+      expect(body, kWhatsNewNavBody);
+      expect(body, contains('the Home, Analytics, Paid to and Profile tabs were covered'));
+      expect(body, contains('They now sit above the buttons.'));
     }, skip: standardOnly != null);
 
-    testWidgets('item 2: Weeks text with the regrouped sentence and the Change in Settings button', (tester) async {
+    testWidgets('item 2: airtime on Paid to, the overview line and when it is hidden', (tester) async {
       await _pump(tester);
-      await _openRow(tester, 'weeks');
-      final body = _text(tester, const Key('whatsNewPara-weeks-0'));
-      expect(body, kWhatsNewCard2Body);
-      expect(body, contains('A week now runs from the day you choose in Settings (Monday unless you change it).'));
-      expect(body, contains('Before, a week meant the last 7 days: today and the 6 days before it.'));
-      expect(body, contains('Past weekly figures are regrouped to match; nothing saved changes.'));
+      await _openRow(tester, 'airtime');
+      final body = _text(tester, const Key('whatsNewPara-airtime-0'));
+      expect(body, kWhatsNewAirtimeBody);
+      expect(body, contains('Paid out on Paid to now matches This month on Home.'));
+      expect(body, contains('It is hidden while you search or filter by category.'));
+    }, skip: standardOnly != null);
+
+    testWidgets('item 3: receiver details text and the Change in Settings button', (tester) async {
+      await _pump(tester);
+      await _openRow(tester, 'receiver');
+      final body = _text(tester, const Key('whatsNewPara-receiver-0'));
+      expect(body, kWhatsNewReceiverBody);
+      expect(body, contains('In Settings, Record receiver details is on or off.'));
+      expect(body, contains('Entries you already saved are not changed.'));
       expect(find.byKey(const Key('whatsNewCalSettings')), findsOneWidget);
       expect(find.text('Change in Settings'), findsOneWidget);
-    }, skip: standardOnly != null);
-
-    testWidgets('item 3: picture, the signed extra paragraph, names both forms, no setting', (tester) async {
-      await _pump(tester);
-      await _openRow(tester, 'phone');
-      final body = _text(tester, const Key('whatsNewPara-phone-0'));
-      expect(body, contains('(07 and 01 numbers alike)'));
-      expect(body, contains('We have corrected that: they now count as one person on Paid to,'));
-      expect(body, isNot(contains('mistake')));
-      expect(body, contains('0712 345 678 and +254 712 345 678'));
-      expect(body, contains('The numbers saved on your entries do not change.'));
-      expect(find.text(kWhatsNewCard3Extra), findsOneWidget);
-      expect(
-        kWhatsNewCard3Extra,
-        'A number written 07... or +254 7... is the same number, so it joins. '
-        'The same goes for 01... and +254 1.... '
-        'A 07 number and a 01 number are different numbers and stay separate.',
-      );
-      expect(find.byKey(const Key('whatsNewPicture')), findsOneWidget);
-      final handle = tester.ensureSemantics();
-      expect(find.bySemanticsLabel(kWhatsNewPicLabel), findsOneWidget);
-      handle.dispose();
       expect(find.byType(Switch), findsNothing);
     }, skip: standardOnly != null);
 
-    testWidgets('item 4: Backups with the 0.1.1 sentence, the D7 constant, W3 and the Open Backup button', (tester) async {
+    testWidgets('item 4: Recently deleted says 1 hour and that the web row is gone', (tester) async {
       await _pump(tester);
-      await _openRow(tester, 'backups');
-      final body = _text(tester, const Key('whatsNewPara-backups-0'));
-      expect(body, contains('Backups from 0.1.1 still restore.'));
-      expect(body, contains(kBackupNotRestorableByOlder));
-      expect(body, contains(kUninstallErasesNotice));
-      expect(find.byKey(const Key('whatsNewOpenBackup')), findsOneWidget);
-      expect(find.text(kWhatsNewOpenBackup), findsOneWidget);
+      await _openRow(tester, 'deleted');
+      final body = _text(tester, const Key('whatsNewPara-deleted-0'));
+      expect(body, kWhatsNewDeletedBody);
+      expect(body, contains('You can restore a deleted entry for 1 hour.'));
     }, skip: standardOnly != null);
 
-    testWidgets('R13 (F4): "Change in Settings" and "Open Backup and restore" are real buttons of one style, 44 px high', (tester) async {
+    testWidgets('item 5: exports say the temporary copies are removed, and Delete data clears old ones', (tester) async {
+      await _pump(tester);
+      await _openRow(tester, 'exports');
+      final body = _text(tester, const Key('whatsNewPara-exports-0'));
+      expect(body, kWhatsNewExportsBody);
+      expect(body, contains('the temporary copies mmogo made are removed'));
+      expect(body, contains('Delete data also removes any left over from an earlier version.'));
+    }, skip: standardOnly != null);
+
+    testWidgets('R13 (F4): "Change in Settings" is a real button, 44 px high, not a link', (tester) async {
       final h = tester.ensureSemantics();
       await _pump(tester);
-      await _openRow(tester, 'weeks');
-      await _openRow(tester, 'backups');
-      Future<(Size, Color?, TextDecoration?)> look(Key k, String label) async {
-        await tester.ensureVisible(find.byKey(k));
-        await tester.pumpAndSettle();
-        final b = tester.widget<FilledButton>(find.byKey(k));
-        final text = tester.widget<Text>(find.descendant(of: find.byKey(k), matching: find.text(label)));
-        final sem = tester.getSemantics(find.byKey(k));
-        expect(sem.flagsCollection.isButton, isTrue, reason: label);
-        expect(sem.label, label);
-        return (tester.getSize(find.byKey(k)), b.style?.backgroundColor?.resolve({}), text.style?.decoration);
-      }
-
-      final settings = await look(const Key('whatsNewCalSettings'), 'Change in Settings');
-      final backup = await look(const Key('whatsNewOpenBackup'), 'Open Backup and restore');
-      expect(settings.$1.height, greaterThanOrEqualTo(44));
-      expect(backup.$1.height, greaterThanOrEqualTo(44));
-      expect(backup.$2, isNotNull);
-      expect(backup.$2, settings.$2, reason: 'same fill on both');
-      expect(backup.$3, isNull, reason: 'no underline: not a link');
+      await _openRow(tester, 'receiver');
+      const k = Key('whatsNewCalSettings');
+      await tester.ensureVisible(find.byKey(k));
+      await tester.pumpAndSettle();
+      final b = tester.widget<FilledButton>(find.byKey(k));
+      final text = tester.widget<Text>(find.descendant(of: find.byKey(k), matching: find.text('Change in Settings')));
+      final sem = tester.getSemantics(find.byKey(k));
+      expect(sem.flagsCollection.isButton, isTrue);
+      expect(sem.label, 'Change in Settings');
+      expect(tester.getSize(find.byKey(k)).height, greaterThanOrEqualTo(44));
+      expect(b.style?.backgroundColor?.resolve({}), isNotNull);
+      expect(text.style?.decoration, isNull, reason: 'no underline: not a link');
+      expect(find.byKey(const Key('whatsNewOpenBackup')), findsNothing, reason: 'no item has the Backup button in 0.1.3');
       h.dispose();
     });
-
-    testWidgets('item 5: Notifications says what the bell does and where Updates went; no reading words', (tester) async {
-      await _pump(tester);
-      await _openRow(tester, 'notifications');
-      final body = _text(tester, const Key('whatsNewPara-notifications-0'));
-      expect(body, kWhatsNewCardNotificationsBody);
-      expect(body, contains('The bell now opens Notifications.'));
-      expect(body, contains('now in Settings, under About'));
-      for (final w in ['SMS', 'permission', 'read your', 'auto']) {
-        expect(body.toLowerCase(), isNot(contains(w.toLowerCase())), reason: w);
-      }
-    }, skip: standardOnly != null);
 
     testWidgets('item 6: the signed sentence in bold, then W7\'s second half; sign-off last; no expander', (tester) async {
       await _pump(tester);
@@ -300,6 +270,7 @@ void main() {
         _text(tester, const Key('whatsNewPara-privacy-1')),
         'GitHub sees your IP address and that the request comes from the mmogo app. No entries, names or messages are sent.',
       );
+      expect(_text(tester, const Key('whatsNewPara-privacy-2')), kWhatsNewCard5Receiver);
       expect(tester.widget<Text>(find.byKey(const Key('whatsNewPara-privacy-0'))).style!.fontWeight, FontWeight.w700);
       await tester.ensureVisible(find.byKey(const Key('whatsNewSignOff')));
       expect(_text(tester, const Key('whatsNewSignOff')), kWhatsNewSignOff);
@@ -345,7 +316,7 @@ void main() {
 
     testWidgets('system Back closes the page and returns false (unseen), at any scroll position', (tester) async {
       final host = await _pump(tester);
-      await _toggle(tester, 'weeks');
+      await _toggle(tester, 'receiver');
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsNothing);
@@ -370,10 +341,10 @@ void main() {
     });
   });
 
-  group('the two route buttons (injected, pushed over the page)', () {
+  group('the Settings route button (injected, pushed over the page)', () {
     testWidgets('Change in Settings opens the stub route; Back returns to the same page and rows; nothing is marked', (tester) async {
       final host = await _pump(tester);
-      await _openRow(tester, 'weeks');
+      await _openRow(tester, 'receiver');
       await tester.tap(find.byKey(const Key('whatsNewCalSettings')));
       await tester.pumpAndSettle();
       expect(host.opened, ['settings']);
@@ -381,20 +352,7 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsOneWidget);
-      expect(find.byKey(_body('weeks')), findsOneWidget);
-      expect(host.result, isNull);
-    }, skip: standardOnly != null);
-
-    testWidgets('Open Backup and restore opens the stub route; Back returns to the open Backups row', (tester) async {
-      final host = await _pump(tester);
-      await _openRow(tester, 'backups');
-      await tester.tap(find.byKey(const Key('whatsNewOpenBackup')));
-      await tester.pumpAndSettle();
-      expect(host.opened, ['backup']);
-      expect(find.text('BACKUP STUB'), findsOneWidget);
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      expect(find.byKey(_body('backups')), findsOneWidget);
+      expect(find.byKey(_body('receiver')), findsOneWidget);
       expect(host.result, isNull);
     }, skip: standardOnly != null);
   });
@@ -434,7 +392,7 @@ void main() {
 
     testWidgets('dark: the row text contrasts with the row surface (4.5:1)', (tester) async {
       await _pump(tester, dark: true);
-      await _openRow(tester, 'withdrawals');
+      await _openRow(tester, 'nav');
       final palette = AppPalette.of(tester.element(find.byKey(_pager)));
       expect(palette.brightness, Brightness.dark);
       double ratio(Color a, Color b) {
@@ -443,8 +401,8 @@ void main() {
         return (x > y ? x + 0.05 : y + 0.05) / (x > y ? y + 0.05 : x + 0.05);
       }
 
-      final body = tester.widget<Text>(find.byKey(const Key('whatsNewPara-withdrawals-0'))).style!.color!;
-      final title = tester.widget<Text>(find.byKey(const Key('whatsNewItemTitle-withdrawals'))).style!.color!;
+      final body = tester.widget<Text>(find.byKey(const Key('whatsNewPara-nav-0'))).style!.color!;
+      final title = tester.widget<Text>(find.byKey(const Key('whatsNewItemTitle-nav'))).style!.color!;
       expect(ratio(palette.card, body), greaterThan(4.5));
       expect(ratio(palette.card, title), greaterThan(4.5));
       final bannerInk = tester.widget<Text>(find.byKey(const Key('whatsNewBannerBody'))).style!.color!;
@@ -456,15 +414,15 @@ void main() {
     testWidgets('each row header is a button that says whether it is expanded, and follows a tap', (tester) async {
       final handle = tester.ensureSemantics();
       await _pump(tester);
-      expect(tester.getSemantics(find.byKey(_head('withdrawals'))).flagsCollection.isExpanded, ui.Tristate.isTrue);
-      await tester.ensureVisible(find.byKey(_head('weeks')));
-      final closed = tester.getSemantics(find.byKey(_head('weeks')));
+      expect(tester.getSemantics(find.byKey(_head('nav'))).flagsCollection.isExpanded, ui.Tristate.isTrue);
+      await tester.ensureVisible(find.byKey(_head('receiver')));
+      final closed = tester.getSemantics(find.byKey(_head('receiver')));
       expect(closed.flagsCollection.isButton, isTrue);
       expect(closed.flagsCollection.isExpanded, ui.Tristate.isFalse);
-      expect(closed.label, contains('Weeks'));
-      expect(closed.label, contains(kWhatsNewCard2Summary));
-      await _toggle(tester, 'weeks');
-      expect(tester.getSemantics(find.byKey(_head('weeks'))).flagsCollection.isExpanded, ui.Tristate.isTrue);
+      expect(closed.label, contains('Receiver details'));
+      expect(closed.label, contains(kWhatsNewReceiverSummary));
+      await _toggle(tester, 'receiver');
+      expect(tester.getSemantics(find.byKey(_head('receiver'))).flagsCollection.isExpanded, ui.Tristate.isTrue);
       handle.dispose();
     }, skip: standardOnly != null);
 
@@ -479,9 +437,9 @@ void main() {
     testWidgets('the number badge and the chevron are not spoken', (tester) async {
       final handle = tester.ensureSemantics();
       await _pump(tester);
-      await tester.ensureVisible(find.byKey(_head('weeks')));
-      final label = tester.getSemantics(find.byKey(_head('weeks'))).label;
-      expect(label, isNot(contains('2')));
+      await tester.ensureVisible(find.byKey(_head('receiver')));
+      final label = tester.getSemantics(find.byKey(_head('receiver'))).label;
+      expect(label, isNot(contains('3')));
       handle.dispose();
     });
 
@@ -491,7 +449,7 @@ void main() {
   });
 
   group('the auto-read build (flag on)', () {
-    testWidgets('banner, seven items with Auto-read first, its Notifications and its provisional Privacy', (tester) async {
+    testWidgets('banner, six items (the standard six), and its provisional Privacy item', (tester) async {
       await _pump(tester);
       expect(_text(tester, const Key('whatsNewBannerHead')), 'This is the auto-read version of mmogo');
       expect(
@@ -500,18 +458,16 @@ void main() {
         'If you do not want SMS permission, the standard version works without it.',
       );
       expect(find.byKey(const Key('whatsNewBannerLink')), findsNothing, reason: 'no link on this banner');
-      expect(_text(tester, const Key('whatsNewIntro')), startsWith('Seven things changed.'));
-      expect(find.byType(WhatsNewItemView), findsNWidgets(7));
-      expect(_text(tester, const Key('whatsNewItemTitle-reading')), 'Auto-read');
-      expect(find.byKey(_body('reading')), findsOneWidget, reason: 'the first row starts open');
-      expect(_text(tester, const Key('whatsNewPara-reading-1')), contains('(kept up to 24 hours)'));
-      await _openRow(tester, 'notifications');
-      expect(_text(tester, const Key('whatsNewPara-notifications-0')), kWhatsNewAutoNotificationsBody);
+      expect(_text(tester, const Key('whatsNewIntro')), startsWith('Six small things changed.'));
+      expect(find.byType(WhatsNewItemView), findsNWidgets(6));
+      expect(find.byKey(const Key('whatsNewItemTitle-reading')), findsNothing);
+      expect(find.byKey(_body('nav')), findsOneWidget, reason: 'the first row starts open');
       await _openRow(tester, 'privacy');
       final privacy = _text(tester, const Key('whatsNewPara-privacy-0'));
       expect(privacy, kWhatsNewPrivacyAutoReadBodyProvisional);
       expect(privacy, isNot(contains(kPrivacySentenceStandard)));
-      expect(find.byKey(const Key('whatsNewPara-privacy-1')), findsNothing);
+      expect(_text(tester, const Key('whatsNewPara-privacy-1')), kWhatsNewPrivacyAutoReadReceiverNote);
+      expect(find.byKey(const Key('whatsNewPara-privacy-2')), findsNothing);
     }, skip: autoreadOnly != null);
   });
 }

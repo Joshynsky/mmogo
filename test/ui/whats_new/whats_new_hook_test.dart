@@ -92,7 +92,7 @@ void main() {
       await _pump(tester, seen: '0.1.1');
       expect(find.byKey(_pager), findsOneWidget);
       expect(find.text(kWhatsNewPagerTitle), findsOneWidget);
-      expect(find.text(kWhatsNewCard1Title), findsOneWidget);
+      expect(find.text(kWhatsNewNavTitle), findsOneWidget);
     });
 
     testWidgets('an upgrade from 0.1.0 (nothing stored, onboarding done) sees it', (tester) async {
@@ -186,20 +186,12 @@ void main() {
       expect(rig.written, isEmpty);
     });
 
-    testWidgets('the two route buttons open their routes and mark nothing seen', (tester) async {
+    testWidgets('the Settings route button opens its route and marks nothing seen', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1');
-      await _openRow(tester, 'weeks');
+      await _openRow(tester, 'receiver');
       await tester.tap(find.byKey(const Key('whatsNewCalSettings')));
       await tester.pumpAndSettle();
       expect(rig.opened, ['settings']);
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      expect(find.byKey(_pager), findsOneWidget);
-      expect(rig.written, isEmpty);
-      await _openRow(tester, 'backups');
-      await tester.tap(find.byKey(const Key('whatsNewOpenBackup')));
-      await tester.pumpAndSettle();
-      expect(rig.opened, ['settings', 'backup']);
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsOneWidget);

@@ -35,16 +35,12 @@ List<String> classificationProse(String src) {
 }
 
 void main() {
-  group('R10: card 3 and the CHANGELOG say the same thing, 01 numbers included', () {
+  group('R10: the CHANGELOG 0.1.2 bullet keeps the approved sentence, 01 numbers included', () {
     const sentence =
         'Earlier versions counted one number as two people when it was written two ways, for example '
         '0712 345 678 and +254 712 345 678 (07 and 01 numbers alike). '
         'We have corrected that: they now count as one person on Paid to, '
         'and their totals are added together. The numbers saved on your entries do not change.';
-
-    test('card 3 body is the approved sentence', () {
-      expect(kWhatsNewCard3Body, sentence);
-    });
 
     test('the CHANGELOG 0.1.2 bullet holds the same sentence and the title', () {
       final log = File('CHANGELOG.md').readAsStringSync().replaceAll('\r\n', '\n');
@@ -52,10 +48,6 @@ void main() {
       expect(section, contains('- **Same phone number, one person.** $sentence\n'));
       expect(section, contains('(07 and 01 numbers alike)'));
       expect(section, isNot(contains('That was a mistake')));
-    });
-
-    test('no public file keeps "That was a mistake" for the 0.1.2 correction', () {
-      expect(kWhatsNewCard3Body, isNot(contains('mistake')));
     });
   });
 

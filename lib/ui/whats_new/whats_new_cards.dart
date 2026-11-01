@@ -15,16 +15,14 @@ import '../widgets/tap_target.dart';
 /// One item = a closed row (number, title, one-line summary) that opens to its
 /// full text. The page owns which rows are open.
 
-/// What one item says. [paragraphs] come first; [picture] and [afterPicture]
-/// (item 3), the two route buttons and the privacy emphasis are item extras.
+/// What one item says. [paragraphs] come first; the two route buttons and the
+/// privacy emphasis are item extras.
 class WhatsNewItem {
   const WhatsNewItem({
     required this.id,
     required this.title,
     required this.summary,
     this.paragraphs = const [],
-    this.picture = false,
-    this.afterPicture,
     this.settingsButton = false,
     this.backupButton = false,
     this.boldFirst = false,
@@ -34,8 +32,6 @@ class WhatsNewItem {
   final String title;
   final String summary;
   final List<String> paragraphs;
-  final bool picture;
-  final String? afterPicture;
   final bool settingsButton;
   final bool backupButton;
 
@@ -43,65 +39,46 @@ class WhatsNewItem {
   final bool boldFirst;
 }
 
-/// The page's items for this build: six in the standard build; the auto-read
-/// build adds its own item first and says its own words in Notifications and
-/// Privacy.
+/// The page's items for this build: six, the same in both builds except the
+/// closing Privacy item, which says each build's own words.
 List<WhatsNewItem> whatsNewItems() => [
-  if (kAutoReadCompiled)
-    WhatsNewItem(
-      id: 'reading',
-      title: kWhatsNewReadingTitle,
-      summary: kWhatsNewReadingSummary,
-      paragraphs: [kWhatsNewReadingBody, kWhatsNewReadingBody2],
-    ),
   const WhatsNewItem(
-    id: 'withdrawals',
-    title: kWhatsNewCard1Title,
-    summary: kWhatsNewCard1Summary,
-    paragraphs: [kWhatsNewCard1Body, kWhatsNewCard1Body2],
+    id: 'nav',
+    title: kWhatsNewNavTitle,
+    summary: kWhatsNewNavSummary,
+    paragraphs: [kWhatsNewNavBody],
   ),
   const WhatsNewItem(
-    id: 'weeks',
-    title: kWhatsNewCard2Title,
-    summary: kWhatsNewCard2Summary,
-    paragraphs: [kWhatsNewCard2Body],
+    id: 'airtime',
+    title: kWhatsNewAirtimeTitle,
+    summary: kWhatsNewAirtimeSummary,
+    paragraphs: [kWhatsNewAirtimeBody],
+  ),
+  const WhatsNewItem(
+    id: 'receiver',
+    title: kWhatsNewReceiverTitle,
+    summary: kWhatsNewReceiverSummary,
+    paragraphs: [kWhatsNewReceiverBody],
     settingsButton: true,
   ),
   const WhatsNewItem(
-    id: 'phone',
-    title: kWhatsNewCard3Title,
-    summary: kWhatsNewCard3Summary,
-    paragraphs: [kWhatsNewCard3Body],
-    picture: true,
-    afterPicture: kWhatsNewCard3Extra,
+    id: 'deleted',
+    title: kWhatsNewDeletedTitle,
+    summary: kWhatsNewDeletedSummary,
+    paragraphs: [kWhatsNewDeletedBody],
   ),
   const WhatsNewItem(
-    id: 'backups',
-    title: kWhatsNewCard4Title,
-    summary: kWhatsNewCard4Summary,
-    paragraphs: [kWhatsNewCard4Body],
-    backupButton: true,
+    id: 'exports',
+    title: kWhatsNewExportsTitle,
+    summary: kWhatsNewExportsSummary,
+    paragraphs: [kWhatsNewExportsBody],
   ),
-  if (kAutoReadCompiled)
-    const WhatsNewItem(
-      id: 'notifications',
-      title: kWhatsNewCardNotificationsTitle,
-      summary: kWhatsNewAutoNotificationsSummary,
-      paragraphs: [kWhatsNewAutoNotificationsBody],
-    )
-  else
-    const WhatsNewItem(
-      id: 'notifications',
-      title: kWhatsNewCardNotificationsTitle,
-      summary: kWhatsNewCardNotificationsSummary,
-      paragraphs: [kWhatsNewCardNotificationsBody],
-    ),
   if (kAutoReadCompiled)
     const WhatsNewItem(
       id: 'privacy',
       title: kWhatsNewCard5Title,
       summary: kWhatsNewPrivacyAutoReadSummaryProvisional,
-      paragraphs: [kWhatsNewPrivacyAutoReadBodyProvisional],
+      paragraphs: [kWhatsNewPrivacyAutoReadBodyProvisional, kWhatsNewPrivacyAutoReadReceiverNote],
       boldFirst: true,
     )
   else
@@ -109,7 +86,7 @@ List<WhatsNewItem> whatsNewItems() => [
       id: 'privacy',
       title: kWhatsNewCard5Title,
       summary: kWhatsNewCard5Summary,
-      paragraphs: [kWhatsNewCard5Body, kWhatsNewCard5Network],
+      paragraphs: [kWhatsNewCard5Body, kWhatsNewCard5Network, kWhatsNewCard5Receiver],
       boldFirst: true,
     ),
 ];
@@ -298,11 +275,6 @@ class WhatsNewItemView extends StatelessWidget {
             if (i > 0) const SizedBox(height: 10),
             Text(item.paragraphs[i], key: Key('whatsNewPara-$id-$i'), style: i == 0 && item.boldFirst ? strong : body),
           ],
-          if (item.picture) ...[const SizedBox(height: 10), WhatsNewPicture(palette: palette)],
-          if (item.afterPicture != null) ...[
-            const SizedBox(height: 10),
-            Text(item.afterPicture!, key: const Key('whatsNewCard3Extra'), style: body),
-          ],
           if (item.settingsButton)
             _button(const Key('whatsNewCalSettings'), kWhatsNewChangeInSettings, onOpenSettings),
           if (item.backupButton) _button(const Key('whatsNewOpenBackup'), kWhatsNewOpenBackup, onOpenBackup),
@@ -332,59 +304,4 @@ class WhatsNewItemView extends StatelessWidget {
       ),
     ),
   );
-}
-
-/// Item 3's picture: two numbers written two ways become one person. Invented
-/// name and amounts (from the mock). One semantics label describes it all.
-class WhatsNewPicture extends StatelessWidget {
-  const WhatsNewPicture({super.key, required this.palette});
-
-  final AppPalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    final small = TextStyle(fontSize: 12.5, color: palette.ink);
-    final bold = TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: palette.ink);
-    Widget head(String t) => Text(
-      t.toUpperCase(),
-      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: palette.mutedInk),
-    );
-    Widget row(String name, String amount, {bool strong = false}) => Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Flexible(child: Text(name, style: strong ? bold : small)),
-        const SizedBox(width: 8),
-        Text(amount, style: bold),
-      ],
-    );
-    return Semantics(
-      container: true,
-      label: kWhatsNewPicLabel,
-      image: true,
-      excludeSemantics: true,
-      child: Container(
-        key: const Key('whatsNewPicture'),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(color: palette.tint, borderRadius: BorderRadius.circular(12)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            head(kWhatsNewPicBefore),
-            const SizedBox(height: 4),
-            row('0712 345 678', 'Ksh 1,200'),
-            const SizedBox(height: 4),
-            row('+254 712 345 678', 'Ksh 300'),
-            const SizedBox(height: 4),
-            Center(
-              child: Text(kWhatsNewPicBecomes, style: TextStyle(fontWeight: FontWeight.w800, color: palette.mutedInk)),
-            ),
-            const SizedBox(height: 4),
-            head(kWhatsNewPicNow),
-            const SizedBox(height: 4),
-            row('Jane Sample', 'Ksh 1,500', strong: true),
-          ],
-        ),
-      ),
-    );
-  }
 }
