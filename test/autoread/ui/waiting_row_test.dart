@@ -102,9 +102,12 @@ void main() {
 
   testWidgets('ready to parse: expires-in text at 20 h, under 1 h and exactly 1 h', (t) async {
     await t.pumpWidget(host(WaitingRow(held(WaitingKind.readyToParse, left: const Duration(hours: 20)), _now)));
-    expect(find.textContaining(expiresInLine(hours: 20, underOneHour: false)), findsOneWidget);
+    expect(find.textContaining('expires in 20 h'), findsOneWidget);
     await t.pumpWidget(host(WaitingRow(held(WaitingKind.readyToParse, left: const Duration(minutes: 40)), _now)));
-    expect(find.textContaining('expires in under 1 h'), findsOneWidget);
+    expect(find.textContaining('expires in 40 min'), findsOneWidget);
+    await t.pumpWidget(host(WaitingRow(held(WaitingKind.readyToParse, left: const Duration(hours: 3, minutes: 20)), _now)));
+    expect(find.textContaining('expires in 3 h 20 min'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp(r'expires in 3 hours 20 minutes\.$')), findsOneWidget);
     await t.pumpWidget(host(WaitingRow(held(WaitingKind.readyToParse, left: const Duration(hours: 1)), _now)));
     expect(find.textContaining('expires in 1 h'), findsOneWidget);
     expect(find.textContaining('under 1 h'), findsNothing);
@@ -243,6 +246,32 @@ void main() {
       }
     });
   }
+
+  group('Details link (0.2.0 S4)', () {
+    for (final k in [WaitingKind.readyToParse, WaitingKind.unreadable, WaitingKind.gone]) {
+      testWidgets('$k: Details shown and tapped; Remove still there where it was', (t) async {
+        size360(t);
+        var taps = 0;
+        await t.pumpWidget(host(WaitingRow(held(k), _now, onDetails: () => taps++, onRemove: () {})));
+        expect(find.text('Details'), findsOneWidget);
+        expect(find.text('Remove'), k == WaitingKind.readyToParse ? findsNothing : findsOneWidget);
+        await t.tap(find.text('Details'));
+        expect(taps, 1);
+      });
+    }
+    testWidgets('a footer (the Auto-record airtime card) is drawn and does not add the flag words', (t) async {
+      size360(t);
+      final it = WaitingItem(id: heldIdFor(77), kind: WaitingKind.waitingCategory, heldAt: _now, parsed: fields(type: SmsSourceType.airtime));
+      await t.pumpWidget(host(WaitingRow(it, _now, footer: const Text('FOOTER-X'))));
+      expect(find.text('FOOTER-X'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('same code, different details')), findsNothing);
+    });
+    testWidgets('no onDetails: no link (rows of unwired pages are unchanged)', (t) async {
+      size360(t);
+      await t.pumpWidget(host(WaitingRow(held(WaitingKind.readyToParse), _now)));
+      expect(find.text('Details'), findsNothing);
+    });
+  });
 
   group('contrast of waiting row text on the row surface', () {
     final sets = <String, AppPalette>{

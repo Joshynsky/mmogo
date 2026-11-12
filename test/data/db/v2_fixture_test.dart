@@ -95,9 +95,9 @@ void main() {
     expect(AppSchemaV2.seedClassifications, hasLength(12));
   });
 
-  test('the frozen list equals the fixture list and the FIRST 12 of the live 17, entry by entry', () {
+  test('the frozen list equals the fixture list and the FIRST 12 of the live 18, entry by entry', () {
     expect(AppMigrations.v2SeedClassifications, AppSchemaV2.seedClassifications);
-    expect(AppSchema.seedClassifications, hasLength(17));
+    expect(AppSchema.seedClassifications, hasLength(18));
     expect(AppMigrations.v2SeedClassifications, AppSchema.seedClassifications.take(12).toList());
     expect(AppMigrations.v2SeedClassifications.map((s) => s.seedKey).toSet(), hasLength(12));
   });

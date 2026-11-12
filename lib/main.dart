@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'app_startup.dart';
 import 'autoread/autoread_feature.dart';
 import 'autoread/background/parse_entry.dart' show parseEntry;
+import 'autoread/data/fuliza_event_saver.dart';
+import 'data/db/sqlite_fuliza_repository.dart' show LazySqliteFulizaRepository;
 import 'autoread/data/ingesting_launch_source.dart';
 import 'autoread/data/real_waiting_repository.dart';
 import 'autoread/model/waiting_repository.dart';
@@ -11,6 +13,10 @@ import 'autoread/service/autoread_service.dart';
 import 'autoread/ui/launch_router.dart';
 import 'autoread/ui/waiting_bell_numbers.dart';
 import 'data/db/app_database.dart';
+import 'domain/paid_to/paid_to.dart' show PaidToGrouping;
+import 'ui/screens/analytics/edit_lock_parts.dart' show EditLockSwitch;
+import 'domain/fuliza/fuliza_rebuild.dart' show FulizaRebuild;
+import 'ui/screens/fuliza/fuliza_source.dart' show FulizaSource;
 import 'data/db/startup_open.dart';
 import 'data/updates/updates_inbox.dart';
 import 'ui/restart_scope.dart';
@@ -52,6 +58,13 @@ Future<void> main() async {
   // are set BEFORE the reset resume so a cut-short Delete data is finished with
   // the auto-read wipe too.
   if (kAutoReadCompiled) AutoReadRuntime.install();
+  // 0.2.0 S8: Paid to groups a named Paybill by name (accounts paged in its sheet) in the debug flavor only.
+  PaidToGrouping.paybillByName = kAutoReadCompiled;
+  // 0.2.0 S9: the edit sheet shows a message row's own figures read-only, debug flavor only.
+  EditLockSwitch.messageRowsReadOnly = kAutoReadCompiled;
+  // 0.2.0 S9: invented Fuliza events for the UI check, only with --dart-define=MMOGO_FULIZA_DEMO=true (debug). No-op otherwise.
+  await FulizaSource.installDemoIfOn(DateTime.now());
+  FulizaSource.installReal(); // S12 D: the stored events (no-op when the demo installed its own)
   // S9b-1: a "Reset app" that was cut short is finished FIRST (before the
   // palette load and before anything opens the database), then S9a (AP1):
   // the palette and the Appearance are read BEFORE the first frame, so a dark
@@ -129,11 +142,17 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
           savedCodes: TransactionCodeLookup(() => AppDatabase.instance.database),
           now: DateTime.now,
         ),
+        fulizaSaver: FulizaEventSaver(
+            () async => LazySqliteFulizaRepository(() => AppDatabase.instance.database)),
       );
       _waiting = _realWaiting;
+      FulizaRebuild.hook = _realWaiting!.rebuildFromHeld; // S12: the Rebuild button on the Fuliza page
       WidgetsBinding.instance.addObserver(this);
       // Delete data rebuilds the rows through this once it has wiped.
-      AutoReadRuntime.refresh = _realWaiting!.ingest;
+      AutoReadRuntime.refresh = () async {
+        _realWaiting!.airtime.clearTrail(); // the in-memory auto-record trail goes with the data
+        await _realWaiting!.ingest();
+      };
       // Look at what is held once the first frame is up (on start), after the
       // fail-closed check of the switch against the consent version.
       WidgetsBinding.instance.addPostFrameCallback((_) async {

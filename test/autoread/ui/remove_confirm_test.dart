@@ -119,6 +119,8 @@ void main() {
       _size(t, w);
       final h = t.ensureSemantics();
       await t.pumpWidget(_section(waitingSet(WaitingDataSet.typical, kFakeNow).items, [], scale: 1.3));
+      await t.ensureVisible(_removeLink()); // the list is longer with its own Could not read heading
+      await t.pumpAndSettle();
       await t.tap(_removeLink());
       await t.pumpAndSettle();
       expect(t.takeException(), isNull);

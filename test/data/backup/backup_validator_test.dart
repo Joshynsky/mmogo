@@ -116,7 +116,7 @@ void main() {
     });
 
     test('reject_newer_schema_version', () {
-      for (final v in [4, 5, 99, 2147483647]) {
+      for (final v in [6, 7, 99, 2147483647]) {
         _rejectJson(validBackupJson()..['schema_version'] = v,
             RestoreRejectReason.newer, field: 'schema_version');
       }
@@ -144,7 +144,7 @@ void main() {
     });
 
     test('top-level keys must be exactly the documented set', () {
-      for (final k in kBackupTopLevelKeys.where((k) => k != 'app')) {
+      for (final k in kBackupTopLevelKeysV3.where((k) => k != 'app')) {
         final missing = validBackupJson()..remove(k);
         _rejectJson(missing, RestoreRejectReason.corrupt);
       }
@@ -844,7 +844,7 @@ void main() {
     });
 
     test('runs in Isolate.run: a rejection crosses back with its reason', () async {
-      final bytes = bytesOf(validBackupJson()..['schema_version'] = 4);
+      final bytes = bytesOf(validBackupJson()..['schema_version'] = 6);
       await expectLater(
         Isolate.run(() => BackupValidator.validate(bytes)),
         throwsA(isA<RestoreRejected>()

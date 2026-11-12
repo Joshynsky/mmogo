@@ -26,6 +26,11 @@ const String kReadingConsentKey = 'autoread_consent_version_v1';
 /// holds the same number (`ConsentGate.CONSENT_VERSION`); a test pins them.
 const int kReadingConsentVersion = 2;
 
+/// "What alerts show" default (0.2.0 S10): Generic. Do NOT change to true until
+/// the Judge/Security note J1 and the privacy sentences are signed; a test pins
+/// this and the Kotlin `AlertText.DEFAULT_SHOW_DETAILS`.
+const bool kAlertDetailsDefault = false;
+
 /// What the Settings rows need from the platform bridge. The real
 /// implementation wraps `MethodChannelAutoReadBridge`; tests use a fake.
 abstract class ReadingBridge {
@@ -41,6 +46,10 @@ abstract class ReadingBridge {
 
   /// The "Parse from the notification" switch, kept in the auto-read prefs.
   Future<bool> setParseOn(bool on);
+
+  /// "What alerts show": true = Show details, false = Generic (kept in the
+  /// auto-read prefs on the Kotlin side). Answers the value now held.
+  Future<bool> setAlertDetails(bool on);
 
   /// Opens the phone's Autostart screen (Xiaomi family) or, failing that,
   /// the app's own page in Android settings. Never called automatically.
@@ -66,6 +75,8 @@ class ChannelReadingBridge implements ReadingBridge {
   Future<bool> setConsent(int version) => _bridge.setConsent(version);
   @override
   Future<bool> setParseOn(bool on) => _bridge.setParseOn(on);
+  @override
+  Future<bool> setAlertDetails(bool on) => _bridge.setAlertDetails(on);
   @override
   Future<void> openAutostartSettings() => _bridge.openAutostartSettings();
 }
@@ -145,6 +156,10 @@ class ReadingState {
   /// True on a Xiaomi-family phone (decided in Kotlin): the Autostart row shows.
   final bool autostartHelp;
 
+  /// "What alerts show": true = Show details. The default is Generic
+  /// ([kAlertDetailsDefault]).
+  final bool alertDetails;
+
   const ReadingState({
     required this.available,
     required this.on,
@@ -153,6 +168,7 @@ class ReadingState {
     required this.heldCount,
     this.parseOn = false,
     this.autostartHelp = false,
+    this.alertDetails = kAlertDetailsDefault,
   });
 
   /// The platform could not be asked: treated as off and not available.
@@ -197,6 +213,7 @@ class ReadingController {
         heldCount: s.heldCount,
         parseOn: s.parseOn,
         autostartHelp: s.autostartHelp,
+        alertDetails: s.alertDetails,
       );
     } catch (_) {
       return ReadingState.unavailable;
@@ -331,6 +348,16 @@ class ReadingController {
   Future<bool> setParse(bool on) async {
     try {
       return await _bridge.setParseOn(on) == on;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Sets "What alerts show". False when it could not be stored (the row then
+  /// reads back as it was).
+  Future<bool> setAlertDetails(bool on) async {
+    try {
+      return await _bridge.setAlertDetails(on) == on;
     } catch (_) {
       return false;
     }

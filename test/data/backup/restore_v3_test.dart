@@ -223,9 +223,9 @@ void main() {
       final codes = [for (final r in await db.rawQuery('SELECT display_code FROM transactions')) r['display_code']];
       expect(codes, ['OLD1111111']);
       expect(await sendMap(db), ['0700000001|SEND_MONEY:family_friends|1|$f0']);
-      // All 17 built-ins are still there (the v2 copy named 12 of them).
+      // All 18 built-ins are still there (the v2 copy named 12 of them).
       expect((await db.rawQuery('SELECT COUNT(*) AS n FROM classifications WHERE seed_key IS NOT NULL')).first['n'],
-          17);
+          18);
       expect(await s.canUndo(), isFalse);
       await db.close();
     });
@@ -257,14 +257,14 @@ void main() {
       final r = await svc(db).restore(fixture, RestoreMode.replace);
       expect(r.classifications, const TableCounts(added: 2, skipped: 12));
 
-      // 17 built-ins stay, plus the file's 2 user classifications; NOT the
+      // 18 built-ins stay, plus the file's 2 user classifications; NOT the
       // file's count of 14 (that check would have rolled every v2 Replace back).
       final n = await classCount(db);
-      expect(n, 19);
+      expect(n, 20);
       expect(n, isNot(file.classifications.length));
       expect(n,
           RestoreWriter.expectedReplaceClassCount(
-              fileClassifications: 14, dbSeedRows: 17, fileSeedRows: 12, mergedIntoExisting: 0));
+              fileClassifications: 14, dbSeedRows: 18, fileSeedRows: 12, mergedIntoExisting: 0));
       expect(await newSeedRows(db), fiveBefore, reason: 'the five new built-ins are untouched');
       expect(await db.rawQuery('PRAGMA foreign_key_check'), isEmpty);
       // The file's rows arrived: 8 transactions; the 5 map rows combined to 4.
@@ -285,7 +285,7 @@ void main() {
       // 12 built-ins + "Transport"(Pochi) matched onto the Pochi built-in = 13
       // skipped; only "Chama" is inserted.
       expect(r.classifications, const TableCounts(added: 1, skipped: 13));
-      expect(await classCount(db), 18);
+      expect(await classCount(db), 19);
       expect(await newSeedRows(db), fiveBefore);
       final onSeed = await db.rawQuery(
           "SELECT c.seed_key FROM transactions t JOIN classifications c ON c.id = t.classification_id "
@@ -315,7 +315,7 @@ void main() {
         ));
         final r = await svc(db).restore(bytes, mode);
         expect(r.classifications, const TableCounts(added: 0, skipped: 15), reason: mode.name);
-        expect(await classCount(db), 17, reason: '${mode.name}: nothing inserted, nothing lost');
+        expect(await classCount(db), 18, reason: '${mode.name}: nothing inserted, nothing lost');
         expect(await newSeedRows(db), fiveBefore, reason: mode.name);
         final seeds = [
           for (final x in await db.rawQuery(

@@ -12,9 +12,12 @@ import '../../domain/notifications/news_logic.dart' show capCount, unreadNewsCou
 import '../../domain/notifications/notif_chip.dart';
 import '../../ui/copy/notifications_copy.dart';
 import '../../ui/theme/app_colors.dart';
+import '../logic/airtime_auto.dart';
 import '../logic/all_view_logic.dart' as all;
 import '../logic/waiting_logic.dart';
 import '../model/waiting_item.dart';
+import 'airtime_kind_copy.dart';
+import 'auto_airtime_card.dart';
 import 'notifications_autoread_copy.dart';
 import 'parse_all_bar.dart';
 import 'paste_sheet.dart';
@@ -25,12 +28,18 @@ import 'waiting_row.dart';
 /// no-op (slice F6 wires them; an UNREADABLE row is shown with Paste and
 /// Remove either way).
 class WaitingActions {
-  const WaitingActions({this.onParse, this.onCategorize, this.onPaste, this.onRemove, this.onParseAll});
+  const WaitingActions({this.onParse, this.onCategorize, this.onPaste, this.onRemove, this.onParseAll, this.onDetails, this.airtime});
 
   final void Function(WaitingItem item)? onParse;
   final void Function(WaitingItem item)? onCategorize;
   final void Function(WaitingItem item)? onPaste;
   final void Function(WaitingItem item)? onRemove;
+
+  /// Opens the Details sheet of a row. Null: rows show no Details link.
+  final void Function(WaitingItem item)? onDetails;
+
+  /// The Auto-record airtime switch and trail (J2). Null: no switch, no trail.
+  final AirtimeAutoController? airtime;
 
   /// Called with the readable ready items when Parse all runs (after the
   /// question, when there are more than 3). Null: the bar is not shown.
@@ -77,6 +86,8 @@ class WaitingSection extends StatelessWidget {
             onPaste: actions.onPaste == null
                 ? null
                 : () => showPasteSheet(context, onContinueToAdd: () => actions.onPaste!(w)),
+            onDetails: actions.onDetails == null ? null : () => actions.onDetails!(w),
+            footer: actions.airtime != null && isParsedAirtime(w) ? _SwitchBuilder(actions.airtime!) : null,
             onRemove: actions.onRemove == null
                 ? null
                 : () async {
@@ -97,15 +108,27 @@ class WaitingSection extends StatelessWidget {
     final toCategorize = sortWaitingCategory(waiting, now);
     final children = <Widget>[];
 
+    // The heading count must equal the rows under it (0.2.0 loose end: it said
+    // "To parse (0)" over unreadable rows). Readable rows sit under To parse;
+    // unreadable and gone rows sit under their own heading, last.
+    bool isReadable(WaitingItem w) => effectiveKind(w, now) == WaitingKind.readyToParse;
     void parseGroup() {
       if (toParse.isEmpty) return;
-      children.add(_Heading(
-        '$kHeadingToParse (${capCount(parseCount(waiting, now))})',
-        trailing: actions.onParseAll == null
-            ? null
-            : ParseAllBar(waiting: waiting, now: now, onParseAll: actions.onParseAll!),
-      ));
-      children.addAll(toParse.map((w) => _row(context, w)));
+      final readable = toParse.where(isReadable).toList();
+      final unreadable = toParse.where((w) => !isReadable(w)).toList();
+      if (readable.isNotEmpty) {
+        children.add(_Heading(
+          '$kHeadingToParse (${capCount(readable.length)})',
+          trailing: actions.onParseAll == null
+              ? null
+              : ParseAllBar(waiting: waiting, now: now, onParseAll: actions.onParseAll!),
+        ));
+        children.addAll(readable.map((w) => _row(context, w)));
+      }
+      if (unreadable.isNotEmpty) {
+        children.add(_Heading('$kHeadingCouldNotRead (${capCount(unreadable.length)})'));
+        children.addAll(unreadable.map((w) => _row(context, w)));
+      }
     }
 
     void categorizeGroup() {
@@ -115,6 +138,11 @@ class WaitingSection extends StatelessWidget {
       children.addAll(toCategorize.map((w) => _row(context, w)));
     }
 
+    void autoGroup() {
+      final c = actions.airtime;
+      if (c != null) children.add(_AutoGroup(c, now, hasParsedAirtime: waiting.any(isParsedAirtime)));
+    }
+
     switch (chip) {
       case NotifChip.parse:
         parseGroup();
@@ -122,6 +150,7 @@ class WaitingSection extends StatelessWidget {
       case NotifChip.categorize:
         categorizeGroup();
         if (children.isEmpty) children.add(const _Empty(kEmptyCategorizeTitle, kEmptyCategorizeBody));
+        autoGroup();
       case NotifChip.all:
         final rows = all.allViewOrder(waiting, news, now);
         if (rows.isEmpty) {
@@ -138,11 +167,72 @@ class WaitingSection extends StatelessWidget {
             children.addAll(unread.map(_newsRow));
           }
         }
+        autoGroup();
       case NotifChip.news:
         break;
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
   }
+}
+
+/// The switch card, rebuilt when the switch or trail changes. Taps toast.
+class _SwitchBuilder extends StatelessWidget {
+  const _SwitchBuilder(this.c);
+  final AirtimeAutoController c;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: c,
+        builder: (context, _) => AutoAirtimeSwitchCard(
+          on: c.on,
+          onChanged: (v) async {
+            final m = ScaffoldMessenger.maybeOf(context);
+            await c.onSwitch(v);
+            m?.hideCurrentSnackBar();
+            m?.showSnackBar(SnackBar(content: Text(v ? kAirKindMyselfOnToast : kAirKindMyselfOffToast)));
+          },
+          onOther: c.onOther,
+          onChangedOther: (v) async {
+            final m = ScaffoldMessenger.maybeOf(context);
+            await c.onSwitchOther?.call(v);
+            m?.hideCurrentSnackBar();
+            m?.showSnackBar(SnackBar(content: Text(v ? kAirKindOtherOnToast : kAirKindOtherOffToast)));
+          },
+        ),
+      );
+}
+
+/// "Recorded automatically": the trail rows (newest first) and, when no parsed
+/// Airtime row carries it, the switch card. Hidden while the switch is OFF and
+/// the trail is empty.
+class _AutoGroup extends StatelessWidget {
+  const _AutoGroup(this.c, this.now, {required this.hasParsedAirtime});
+  final AirtimeAutoController c;
+  final DateTime now;
+  final bool hasParsedAirtime;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: c,
+        builder: (context, _) {
+          final trail = c.trailNewestFirst;
+          if (trail.isEmpty && !c.on && !c.onOther) return const SizedBox.shrink();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (trail.isNotEmpty) ...[
+                const _Heading(kAutoRecordedHeading),
+                for (final e in trail)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: AutoRecordedRow(entry: e, now: now, onUndo: () => c.onUndo(e)),
+                  ),
+              ],
+              if (!hasParsedAirtime) Padding(padding: const EdgeInsets.only(bottom: 8), child: _SwitchBuilder(c)),
+            ],
+          );
+        },
+      );
 }
 
 /// Wraps the focused row: after the first frame it scrolls into view and keeps

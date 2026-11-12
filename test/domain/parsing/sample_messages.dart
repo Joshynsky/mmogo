@@ -31,6 +31,13 @@ const String kSampleAirtimeOther =
     'TEJ4VG53X1 Confirmed. You bought Ksh104.00 of airtime on 21/5/24 at '
     '5:57 AM for 254712345678. New M-PESA balance is Ksh166,373.00.';
 
+/// Real shape seen 11-11-2026 (invented code, number and balance): the other
+/// number sits before "on", and the balance line says "New  balance".
+const String kSampleAirtimeOtherReal =
+    'AB1CD2EF3G confirmed.You bought Ksh5.00 of airtime for 0712345678 on '
+    '11/11/26 at 5:13 PM.New  balance is Ksh100.00. Transaction cost, '
+    'Ksh0.00. Amount you can transact within the day is 499,525.00.';
+
 const String kSampleNameOnly =
     'POI1U2Y3T4 Confirmed. Ksh150.00 sent to Sample Person on 8/10/26 at '
     '4:45 PM. New M-PESA balance is Ksh800.00. Transaction cost, Ksh0.00.';

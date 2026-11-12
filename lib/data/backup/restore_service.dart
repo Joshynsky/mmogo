@@ -106,6 +106,9 @@ class RestoreService {
             'SELECT COUNT(*) AS n FROM counterparty_classification_map'),
         phoneRecentlyDeleted: await count(
             'SELECT COUNT(*) AS n FROM transactions WHERE deleted_at IS NOT NULL'),
+        fileFulizaEvents: file.fulizaEvents.length,
+        newFulizaEvents: plan.newFulizaEvents.length,
+        phoneFulizaEvents: await count('SELECT COUNT(*) AS n FROM fuliza_events'),
       );
     });
   }
@@ -298,6 +301,7 @@ class RestoreService {
       transactions: id.transactions.included,
       classifications: id.classifications.included,
       counterpartyMap: id.counterpartyMap.included,
+      fulizaEvents: export.fulizaEvents,
     );
     try {
       await _safety.write(export.bytes, expect: included, enabledGroupCodes: groups);
@@ -309,6 +313,7 @@ class RestoreService {
         transactions: id.transactions.included + id.transactions.skipped,
         classifications: id.classifications.included + id.classifications.skipped,
         counterpartyMap: id.counterpartyMap.included + id.counterpartyMap.skipped,
+        fulizaEvents: export.fulizaLive,
       ),
       lost: export.notIncluded,
       identity: id,

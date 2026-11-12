@@ -60,6 +60,7 @@ class ValidatedBackup {
     required this.transactions,
     required this.counterpartyMap,
     required this.prefs,
+    this.fulizaEvents = const [],
   });
 
   final int formatVersion;
@@ -74,6 +75,14 @@ class ValidatedBackup {
 
   /// Keys per `kBackupMapKeys`.
   final List<Map<String, Object?>> counterpartyMap;
+
+  /// Keys per `kBackupFulizaKeys`. Empty for a schema < 4 file (which has no
+  /// such section); use [hasFulizaSection] to tell "none" from "not in file".
+  final List<Map<String, Object?>> fulizaEvents;
+
+  /// True when the file's schema carries the `fuliza_events` section (>= 4).
+  /// A Replace from a file without it leaves the phone's Fuliza ledger alone.
+  bool get hasFulizaSection => schemaVersion >= kBackupFirstSchemaWithFuliza;
 
   /// Only allowlisted settings (unknown keys are dropped), each already
   /// checked; safe to hand to `BackupSettings.applyAfterCommit`.
@@ -170,7 +179,8 @@ class BackupValidator {
       _fail(RestoreRejectReason.corrupt, field: 'schema_version');
     }
 
-    if (!_hasExactKeys(root, kBackupTopLevelKeys)) {
+    final v4 = schemaVersion >= kBackupFirstSchemaWithFuliza;
+    if (!_hasExactKeys(root, v4 ? kBackupTopLevelKeys : kBackupTopLevelKeysV3)) {
       _fail(RestoreRejectReason.corrupt, field: '(keys)');
     }
     final createdAt = root['created_at'];
@@ -187,6 +197,8 @@ class BackupValidator {
     if (classRows is! List) _fail(RestoreRejectReason.corrupt, field: 'classifications');
     if (txRows is! List) _fail(RestoreRejectReason.corrupt, field: 'transactions');
     if (mapRows is! List) _fail(RestoreRejectReason.corrupt, field: 'counterparty_map');
+    final fulizaRows = v4 ? root['fuliza_events'] : const [];
+    if (fulizaRows is! List) _fail(RestoreRejectReason.corrupt, field: 'fuliza_events');
 
     // --- caps, then counts equal array lengths (catches truncation).
     if (classRows.length > kBackupMaxClassifications) {
@@ -198,8 +210,12 @@ class BackupValidator {
     if (mapRows.length > kBackupMaxMapRows) {
       _fail(RestoreRejectReason.tooMany, table: 'counterparty_map');
     }
+    if (fulizaRows.length > kBackupMaxFulizaEvents) {
+      _fail(RestoreRejectReason.tooMany, table: 'fuliza_events');
+    }
     final counts = root['counts'];
-    if (counts is! Map || !_hasExactKeys(counts, kBackupCountsKeys)) {
+    if (counts is! Map ||
+        !_hasExactKeys(counts, v4 ? kBackupCountsKeys : kBackupCountsKeysV3)) {
       _fail(RestoreRejectReason.corrupt, field: 'counts');
     }
     if (counts['classifications'] is! int ||
@@ -207,7 +223,8 @@ class BackupValidator {
         counts['transactions'] is! int ||
         counts['transactions'] != txRows.length ||
         counts['counterparty_map'] is! int ||
-        counts['counterparty_map'] != mapRows.length) {
+        counts['counterparty_map'] != mapRows.length ||
+        (v4 && (counts['fuliza_events'] is! int || counts['fuliza_events'] != fulizaRows.length))) {
       _fail(RestoreRejectReason.corrupt, field: 'counts');
     }
 
@@ -218,7 +235,8 @@ class BackupValidator {
     final transactions =
         _transactions(txRows, classGroupById, enabledGroupCodes, schemaVersion);
     final counterpartyMap = _map(mapRows, classGroupById);
-    final prefs = _prefs(root['prefs']);
+    final fulizaEvents = _fulizaEvents(fulizaRows);
+    final prefs = _prefs(root['prefs'], schemaVersion);
 
     return ValidatedBackup(
       formatVersion: formatVersion,
@@ -228,6 +246,7 @@ class BackupValidator {
       transactions: transactions,
       counterpartyMap: counterpartyMap,
       prefs: prefs,
+      fulizaEvents: fulizaEvents,
     );
   }
 
@@ -243,7 +262,9 @@ class BackupValidator {
     // New group codes and seed keys are valid only in a schema >= 3 file.
     final v3 = schemaVersion >= kBackupFirstSchemaWithAgentAndAirtime;
     final groupCodes = v3 ? kBackupGroupCodes : kBackupGroupCodesV2;
-    final seedKeys = v3 ? kBackupSeedKeys : kBackupSeedKeysV2;
+    final seedKeys = schemaVersion >= kBackupFirstSchemaWithAirtimeKinds
+        ? kBackupSeedKeys
+        : (v3 ? kBackupSeedKeysV3V4 : kBackupSeedKeysV2);
     final out = <Map<String, Object?>>[];
     final seedKeysSeen = <String>{};
     final activeNames = <String>{};
@@ -417,11 +438,44 @@ class BackupValidator {
   }
 
   // ---------------------------------------------------------------------------
+  // fuliza_events (schema >= 4)
+
+  /// Mirrors the table's CHECKs and its UNIQUE (kind, code): kind is an enum
+  /// name, amount > 0, fee >= 0, printed total null or >= 0, code non-empty
+  /// clean text, time in the epoch range. Money is capped like transactions.
+  static List<Map<String, Object?>> _fulizaEvents(List rows) {
+    const t = 'fuliza_events';
+    final out = <Map<String, Object?>>[];
+    final seen = <String>{};
+    for (var i = 0; i < rows.length; i++) {
+      final row = _row(rows[i], kBackupFulizaKeys, t, i);
+      final kind = _enum(row['kind'], kBackupFulizaKinds, t, i, 'kind');
+      final code = _text(row['code'], 1, kBackupMaxFulizaCodeLength, t, i, 'code');
+      _int(row['occurred_at'], kBackupMinEpochMs, kBackupMaxEpochMs - 1, t, i, 'occurred_at');
+      _int(row['amount_cents'], 1, kBackupMaxFulizaCents, t, i, 'amount_cents');
+      _int(row['fee_cents'], 0, kBackupMaxFulizaCents, t, i, 'fee_cents');
+      final printed = row['printed_total_cents'];
+      if (printed != null) {
+        _int(printed, 0, kBackupMaxFulizaCents, t, i, 'printed_total_cents');
+      }
+      // The same message twice in one file, like a repeated transaction code.
+      if (!seen.add('$kind $code')) {
+        _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'code');
+      }
+      out.add(Map<String, Object?>.from(row));
+    }
+    return out;
+  }
+
+  // ---------------------------------------------------------------------------
   // prefs
 
   /// Unknown keys are dropped (never applied, never an error); an allowlisted
   /// key with a wrong type or range rejects the whole file.
-  static Map<String, Object?> _prefs(Object? raw) {
+  ///
+  /// The Fuliza limit is a schema >= 4 setting: an older file never carries it,
+  /// so it is dropped (not applied) if one does.
+  static Map<String, Object?> _prefs(Object? raw, int schemaVersion) {
     if (raw is! Map) _fail(RestoreRejectReason.corrupt, field: 'prefs');
     if (raw.length > kBackupMaxPrefsKeys) {
       _fail(RestoreRejectReason.invalidRow, table: 'prefs', field: '(keys)');
@@ -432,6 +486,7 @@ class BackupValidator {
       if (key is! String) _fail(RestoreRejectReason.invalidRow, table: 'prefs', field: '(keys)');
       final spec = backupSettingSpecFor(key);
       if (spec == null) continue;
+      if (key == kFulizaLimitFileKey && schemaVersion < kBackupFirstSchemaWithFuliza) continue;
       if (!spec.accepts(entry.value)) {
         _fail(RestoreRejectReason.invalidRow, table: 'prefs', field: key);
       }

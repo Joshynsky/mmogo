@@ -17,8 +17,16 @@ class AppInfo {
   /// `0.1.3` — the user-facing build-name part of [version].
   static String get versionName => version.split('+').first;
 
-  /// `4` — the build-number part of [version], or `null` if absent.
+  /// T2 (0.2.0): a debug build made with `flutter build apk --build-number N`
+  /// has versionCode N, but the constant above still says the pubspec number.
+  /// Pass `--dart-define=MMOGO_BUILD_NUMBER=N` with it and Profile shows N.
+  /// Unset (every release build) = the pubspec number, as before.
+  static const _buildNumberOverride = String.fromEnvironment('MMOGO_BUILD_NUMBER');
+
+  /// `4` — the build-number part of [version], or `null` if absent. The
+  /// `MMOGO_BUILD_NUMBER` define, when set, wins (see above).
   static String? get buildNumber {
+    if (_buildNumberOverride.isNotEmpty) return _buildNumberOverride;
     final parts = version.split('+');
     return parts.length > 1 ? parts[1] : null;
   }

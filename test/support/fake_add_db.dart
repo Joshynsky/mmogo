@@ -37,6 +37,7 @@ class FakeAddDb implements Database {
     {'id': 110, 'group_id': 4, 'name': 'Church', 'active': 1},
     {'id': 120, 'group_id': 5, 'name': 'Withdrawal', 'active': 1, 'seed_key': 'AGENT_WITHDRAWAL:cash_withdrawal'},
     {'id': 121, 'group_id': 6, 'name': 'Airtime', 'active': 1, 'seed_key': 'AIRTIME:airtime'},
+    {'id': 122, 'group_id': 6, 'name': 'For another number', 'active': 1, 'seed_key': 'AIRTIME:for_another_number'},
   ];
 
   /// `counterparty_classification_map` rows.

@@ -8,6 +8,10 @@ import '../theme/app_colors.dart';
 import '../widgets/error_notes.dart';
 import '../widgets/palette_alert_dialog.dart';
 
+/// 0.2.0 row 17: the muted line on the Airtime tab (PM pick B, 12-11-2026).
+const kManageAirtimeLockedLine =
+    'Airtime has two built-in categories: For myself and For another number. mmogo picks the right one from the message, so you cannot rename, delete or switch them.';
+
 /// R31: the one sentence that ends the Delete category dialog (in use or not).
 const kDeleteCategoryTail = 'It moves to Inactive (deleted) and you can restore it any time. Past entries keep it.';
 
@@ -29,7 +33,8 @@ const Set<String> manageLockedGroupCodes = {'AGENT_WITHDRAWAL', 'AIRTIME'};
 /// list per group, create / rename / soft-delete (with a real
 /// `COUNT(*)`-by-category delete confirmation) and restore.
 ///
-/// Withdrawal and Airtime each have one built-in category: it is locked (tag
+/// Withdrawal has one built-in category and Airtime has two (For myself, For
+/// another number): each is locked (tag
 /// "Built in", no Rename, no Delete) and the group has no create row; a muted
 /// line says so. The other four groups keep the create row. Errors are error
 /// pattern A (red text with the warning icon, no timer): a name that already
@@ -301,7 +306,9 @@ class _ManageClassificationsScreenState extends State<ManageClassificationsScree
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Text(
-        '${_selectedGroup!.displayName} entries always use this category.',
+        _selectedGroup!.code == 'AIRTIME'
+            ? kManageAirtimeLockedLine
+            : '${_selectedGroup!.displayName} entries always use this category.',
         key: const Key('manageLockedLine'),
         style: TextStyle(fontSize: 12.5, height: 1.4, fontWeight: FontWeight.w600, color: palette.mutedInk),
       ),

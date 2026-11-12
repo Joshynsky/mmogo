@@ -31,6 +31,7 @@ String rowAgeText(DateTime from, DateTime now) {
 /// The spoken form of a short time text ("1 h" is "1 hour", "4 h" is "4 hours").
 String spokenTime(String s) => s
     .replaceAllMapped(RegExp(r'\b1 h\b'), (_) => '1 hour')
+    .replaceAllMapped(RegExp(r'\b1 min\b'), (_) => '1 minute')
     .replaceAllMapped(RegExp(r' h\b'), (_) => ' hours')
     .replaceAllMapped(RegExp(r' min\b'), (_) => ' minutes');
 
@@ -66,6 +67,7 @@ class NotifRowShell extends StatelessWidget {
     this.footText,
     this.action,
     this.link,
+    this.leadLink,
     this.extra,
     this.dimmed = false,
     this.onOpen,
@@ -86,6 +88,9 @@ class NotifRowShell extends StatelessWidget {
 
   /// The quiet link at the end of the age line (Dismiss, Remove).
   final NotifRowAction? link;
+
+  /// A second quiet link placed before [link] (a Details link).
+  final NotifRowAction? leadLink;
 
   /// Extra content under the row (the flagged line).
   final Widget? extra;
@@ -185,7 +190,9 @@ class NotifRowShell extends StatelessWidget {
                   Expanded(
                     child: ExcludeSemantics(
                       child: Padding(
-                        padding: EdgeInsets.only(bottom: link == null ? 8 : 0, top: link == null ? 4 : 0),
+                        padding: EdgeInsets.only(
+                            bottom: link == null && leadLink == null ? 8 : 0,
+                            top: link == null && leadLink == null ? 4 : 0),
                         child: Text(
                           footText!,
                           style: TextStyle(color: p.mutedInk, fontSize: 12, fontWeight: FontWeight.w600, height: 1.3),
@@ -195,6 +202,7 @@ class NotifRowShell extends StatelessWidget {
                   )
                 else
                   const Spacer(),
+                if (leadLink != null) _LinkButton(action: leadLink!, palette: p),
                 if (link != null) _LinkButton(action: link!, palette: p),
               ],
             ),

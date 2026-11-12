@@ -209,7 +209,7 @@ class TransactionDao {
   }) async {
     final rows = await db.query(
       'transactions',
-      columns: ['source_type'],
+      columns: ['source_type', 'classification_id'],
       where: 'id = ?',
       whereArgs: [id],
       limit: 1,
@@ -218,6 +218,11 @@ class TransactionDao {
       throw StateError('TransactionDao.update: no transaction with id $id');
     }
     final sourceType = rows.first['source_type'] as String;
+    // Row 17: the kind of an Airtime entry is its category and cannot change.
+    // Refused here, before the database trigger (trg_airtime_kind_locked) is reached.
+    if (sourceType == 'AIRTIME' && rows.first['classification_id'] != classificationId) {
+      throw ArgumentError.value(classificationId, 'classificationId', 'the category of an airtime entry cannot change');
+    }
     // S6a: a Withdrawal row's agent number is written with its other fields
     // (digits only, 1 to 20, null clears it); on any other type a number is refused.
     checkAgentNumber(sourceType: sourceType, agentNumber: agentNumber);

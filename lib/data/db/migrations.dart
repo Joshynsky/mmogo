@@ -1,16 +1,22 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'migration_v3.dart';
+import 'migration_v5.dart';
+import 'schema.dart' show kFulizaEventsStatements;
 
 /// The database version this build creates and expects.
 ///
 /// 1 = the 0.1.0 schema. 2 = adds `classifications.seed_key` (0.1.1).
 /// 3 = 0.1.2: 7 source types, `transactions.agent_number`, 6 groups, 17
 /// built-ins, canonical phone keys (`migration_v3.dart`).
-/// Adding v4 later means: add its step, register it in [AppMigrations.steps],
+/// 4 = 0.2.0: adds the `fuliza_events` table (additive, `_toV4`).
+/// 5 = 0.2.0 (row 17): Airtime has two built-in categories ("For myself" =
+/// the renamed `AIRTIME:airtime`, "For another number" added) and the kind-lock
+/// trigger; data only, no table change (`migration_v5.dart`).
+/// Adding v6 later means: add its step, register it in [AppMigrations.steps],
 /// bump this constant, and update `AppSchema.createSchema` to the latest
 /// shape in the same change.
-const int kDbVersion = 3;
+const int kDbVersion = 5;
 
 /// The `onUpgrade` ladder.
 ///
@@ -20,7 +26,7 @@ const int kDbVersion = 3;
 ///    previous `user_version` if anything throws), so a step uses the
 ///    [DatabaseExecutor] it is given and never opens a nested transaction or
 ///    touches `AppDatabase.instance`;
-///  - idempotent; `_toV2` is additive only. `_toV3` REBUILDS tables, so it
+///  - idempotent; `_toV2` and `_toV4` are additive only. `_toV3` REBUILDS tables, so it
 ///    needs `PRAGMA foreign_keys = OFF` (set by `openMmogoDatabase`), drops and
 ///    recreates the guard triggers and indexes itself, and checks its work.
 class AppMigrations {
@@ -38,6 +44,8 @@ class AppMigrations {
   static final Map<int, Future<void> Function(DatabaseExecutor db)> steps = {
     2: _toV2,
     3: migrateToV3, // `_toV3`, see migration_v3.dart
+    4: _toV4,
+    5: migrateToV5, // `_toV5`, see migration_v5.dart
   };
 
   /// Wired as `openDatabase(onUpgrade: AppMigrations.migrate)`.
@@ -57,6 +65,15 @@ class AppMigrations {
       final step = ladder[v];
       if (step == null) throw StateError('No migration step for version $v');
       await step(db);
+    }
+  }
+
+  /// v3 -> v4: the Fuliza events table and its unique index. Creates only; no
+  /// existing table is altered or rebuilt. The DDL is the same constant a fresh
+  /// install uses (`kFulizaEventsStatements`).
+  static Future<void> _toV4(DatabaseExecutor db) async {
+    for (final sql in kFulizaEventsStatements) {
+      await db.execute(sql);
     }
   }
 

@@ -39,6 +39,10 @@ class AutoReadState {
   /// own consent key only together with this number (security re-look C1).
   final int consentVersion;
 
+  /// "What alerts show": true = Show details. Absent or false = Generic (the
+  /// default until the Judge note J1 is signed, 0.2.0 S10).
+  final bool alertDetails;
+
   const AutoReadState({
     required this.enabled,
     required this.smsGranted,
@@ -47,6 +51,7 @@ class AutoReadState {
     this.parseOn = false,
     this.autostartHelp = false,
     this.consentVersion = 0,
+    this.alertDetails = false,
   });
 
   @override
@@ -167,6 +172,7 @@ class MethodChannelAutoReadBridge implements AutoReadBridge {
           parseOn: r['parseOn'] == true,
           autostartHelp: r['autostartHelp'] == true,
           consentVersion: r['consentVersion'] is int ? r['consentVersion'] as int : 0,
+          alertDetails: r['alertDetails'] == true,
         );
       }
     }
@@ -215,6 +221,13 @@ class MethodChannelAutoReadBridge implements AutoReadBridge {
   /// Writes the "Parse from the notification" switch; answers the value now held.
   Future<bool> setParseOn(bool on) async {
     final r = await _invoke('setParseOn', {'on': on});
+    if (r is bool) return r;
+    throw const AutoReadBridgeException('failed');
+  }
+
+  /// Writes "What alerts show" (true = Show details); answers the value now held.
+  Future<bool> setAlertDetails(bool on) async {
+    final r = await _invoke('setAlertDetails', {'on': on});
     if (r is bool) return r;
     throw const AutoReadBridgeException('failed');
   }

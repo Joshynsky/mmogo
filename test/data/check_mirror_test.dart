@@ -391,8 +391,8 @@ void main() {
       expect(e.field, 'source_type');
     });
 
-    test('C6: schema 4 is refused whole as newer', () {
-      final e = rejected(fileJson(classes: seedRowsV3(), schemaVersion: 4));
+    test('C6: schema 6 is refused whole as newer', () {
+      final e = rejected(fileJson(classes: seedRowsV3(), schemaVersion: 6));
       expect(e.reason, RestoreRejectReason.newer);
       expect(e.field, 'schema_version');
     });

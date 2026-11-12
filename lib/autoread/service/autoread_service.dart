@@ -11,6 +11,8 @@ import '../../domain/parsing/parse_result.dart';
 import '../../domain/parsing/parsed_sms_fields.dart';
 import '../../domain/parsing/sms_parser.dart';
 import '../bridge/autoread_bridge.dart';
+import '../logic/message_details.dart' show maskedFirstWords;
+import '../logic/non_transaction.dart';
 import '../data/pending_items_store.dart';
 import '../model/waiting_item.dart';
 import '../model/waiting_repository.dart' show ParseOutcome;
@@ -45,7 +47,17 @@ abstract class CodeLookup {
 typedef SmsParseFn = ParseResult Function(String rawMessage);
 
 /// What [AutoReadService.inspect] found.
-enum HeldLook { readable, unreadable, duplicate, gone, busy }
+enum HeldLook {
+  readable,
+  unreadable,
+  duplicate,
+  gone,
+  busy,
+
+  /// A known non-transaction notice (see `isNonTransactionNotice`): dropped
+  /// quietly, never listed.
+  ignored,
+}
 
 class HeldInspection {
   const HeldInspection(this.look, {this.heldAt});
@@ -53,6 +65,16 @@ class HeldInspection {
 
   /// Set for [HeldLook.readable] and [HeldLook.unreadable].
   final DateTime? heldAt;
+}
+
+/// What [AutoReadService.lookForDetails] found. Holds the parser's fields or
+/// the masked first words, never the body.
+class HeldDetailsLook {
+  const HeldDetailsLook(this.look, {this.heldAt, this.fields, this.firstWords});
+  final HeldLook look;
+  final DateTime? heldAt;
+  final ParsedSmsFields? fields;
+  final String? firstWords;
 }
 
 class AutoReadService {
@@ -100,6 +122,10 @@ class AutoReadService {
       return _fail(ParseFailure.tooLong);
     }
 
+    if (isNonTransactionNotice(held.body)) {
+      await _bridge.ackHeld(id, generation: await _bridge.readGeneration());
+      return ParseOutcome.gone;
+    }
     final result = _parser(held.body);
     final ParsedSmsFields? fields = switch (result) {
       ParseSuccess(:final fields) => fields,
@@ -156,6 +182,11 @@ class AutoReadService {
       if (held.body.length > kAutoReadMaxChars) {
         return HeldInspection(HeldLook.unreadable, heldAt: held.heldAt);
       }
+      if (isNonTransactionNotice(held.body)) {
+        // PM decision 01-11-2026: a non-transaction message is dropped quietly.
+        await _bridge.ackHeld(id, generation: await _bridge.readGeneration());
+        return const HeldInspection(HeldLook.ignored);
+      }
       final result = _parser(held.body);
       final ParsedSmsFields? fields = switch (result) {
         ParseSuccess(:final fields) => fields,
@@ -169,6 +200,32 @@ class AutoReadService {
         return const HeldInspection(HeldLook.duplicate);
       }
       return HeldInspection(HeldLook.readable, heldAt: held.heldAt);
+    } finally {
+      await _bridge.release(id);
+    }
+  }
+
+  /// The one-time look the Details sheet makes at held message [id]: claim,
+  /// peek, parse, release. Nothing is stored and nothing is acked. The body
+  /// stays inside this method; the result holds only the parser's fields (a
+  /// readable message) or the masked first words (an unreadable one).
+  Future<HeldDetailsLook> lookForDetails(String id) async {
+    if (!isValidHeldId(id)) return const HeldDetailsLook(HeldLook.gone);
+    if (!await _bridge.claim(id)) return const HeldDetailsLook(HeldLook.busy);
+    try {
+      final held = await _bridge.peekHeld(id);
+      if (held == null) return const HeldDetailsLook(HeldLook.gone);
+      if (isNonTransactionNotice(held.body)) return const HeldDetailsLook(HeldLook.ignored);
+      ParsedSmsFields? fields;
+      if (held.body.length <= kAutoReadMaxChars) {
+        final result = _parser(held.body);
+        if (result is ParseSuccess) fields = result.fields;
+      }
+      if (fields != null) {
+        return HeldDetailsLook(HeldLook.readable, heldAt: held.heldAt, fields: fields);
+      }
+      return HeldDetailsLook(HeldLook.unreadable,
+          heldAt: held.heldAt, firstWords: maskedFirstWords(held.body));
     } finally {
       await _bridge.release(id);
     }

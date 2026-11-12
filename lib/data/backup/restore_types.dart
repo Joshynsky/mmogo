@@ -50,11 +50,20 @@ class RestoreTally {
     required this.transactions,
     required this.counterpartyMap,
     this.builtInsUpdated = 0,
+    this.fulizaEvents = const TableCounts(),
+    this.fulizaLeftAlone = false,
   });
 
   final TableCounts classifications;
   final TableCounts transactions;
   final TableCounts counterpartyMap;
+
+  /// Fuliza events (schema >= 4 files). All zero for an older file.
+  final TableCounts fulizaEvents;
+
+  /// Replace from a file that has no Fuliza section (schema < 4): the phone's
+  /// Fuliza events and limit were NOT touched (PM choice C3 A). The UI says so.
+  final bool fulizaLeftAlone;
 
   /// Replace mode only: built-in classifications that took the file's name,
   /// active flag and date (they are never deleted or inserted).
@@ -78,9 +87,17 @@ class RestorePreview {
     required this.phoneUserClassifications,
     required this.phoneCounterpartyMap,
     required this.phoneRecentlyDeleted,
+    this.fileFulizaEvents = 0,
+    this.newFulizaEvents = 0,
+    this.phoneFulizaEvents = 0,
   });
 
   final int fileSchemaVersion;
+
+  /// Fuliza events in the file, what a MERGE would add, and what this phone has.
+  final int fileFulizaEvents;
+  final int newFulizaEvents;
+  final int phoneFulizaEvents;
 
   /// Epoch ms the backup was made (from the file).
   final int fileCreatedAt;
@@ -146,6 +163,11 @@ class RestoreResult {
   TableCounts get classifications => tally.classifications;
   TableCounts get transactions => tally.transactions;
   TableCounts get counterpartyMap => tally.counterpartyMap;
+  TableCounts get fulizaEvents => tally.fulizaEvents;
+
+  /// Replace from an older (schema < 4) file: Fuliza events and limit were
+  /// left as they were. The result screen shows [kReplaceFulizaKept].
+  bool get fulizaLeftAlone => tally.fulizaLeftAlone;
   bool get settingsApplied => settings.ok;
 
   /// Architecture D5 contract: totals over the three tables.

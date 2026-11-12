@@ -64,6 +64,13 @@ String moreNotShown(int m) => 'and $m more not shown';
 const kRowUnreadableEntry = 'An entry that could not be read';
 const kRowCategory = 'A category';
 const kRowSavedReceiver = 'A saved receiver';
+// WORDING-DRAFT (0.2.0 S12): a Fuliza record that could not go into the backup.
+const kRowFulizaRecord = 'A Fuliza record';
+
+// WORDING-DRAFT (0.2.0 S12, PM choice C3 A): the Replace result when the file is
+// an older backup with no Fuliza section; the phone's Fuliza figures stay as they were.
+const kReplaceFulizaKept =
+    'Your Fuliza figures were not changed, because this older backup has none.';
 
 // Reasons (PM placeholders; the cascaded one is the S10b choice).
 const kReasonMissingDetail = 'a required detail is missing';

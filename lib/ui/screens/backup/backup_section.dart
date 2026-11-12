@@ -221,9 +221,20 @@ class RestoreCard extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(color: palette.tint, borderRadius: BorderRadius.circular(12)),
-          child: Text(
-            kBackupNotRestorableByOlder,
-            style: TextStyle(fontSize: 12.5, height: 1.45, fontWeight: FontWeight.w600, color: palette.tintInk),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                kBackupNotRestorableByOlder,
+                style: TextStyle(fontSize: 12.5, height: 1.45, fontWeight: FontWeight.w600, color: palette.tintInk),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                kBackupNotRestorableByOlderV4, // WORDING-DRAFT (S12)
+                key: const Key('backupD7LineV4'),
+                style: TextStyle(fontSize: 12.5, height: 1.45, fontWeight: FontWeight.w600, color: palette.tintInk),
+              ),
+            ],
           ),
         ),
         OutlinedButton(

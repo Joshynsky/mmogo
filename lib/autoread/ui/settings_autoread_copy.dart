@@ -105,6 +105,18 @@ const String kConsentFooter = 'You can change or turn off each of these at any t
 /// Settings row and consent switch 2 (wording of the bell mock).
 const String kParseLabel = 'Parse from the notification';
 
+// ------------------------------------------------- What alerts show (0.2.0 S10)
+
+// WORDING-DRAFT (all of this block; PM reviews on return; not signed, J1 pending).
+const String kAlertsLabel = 'What alerts show';
+const String kAlertsGeneric = 'Generic';
+const String kAlertsDetails = 'Show details';
+const String kAlertsGenericDesc = 'The alert only says a message is ready.';
+const String kAlertsDetailsDesc = 'The alert shows what kind of message it is, the amount and the name.';
+// WORDING-DRAFT (S12, J1): Android does not promise a generic lock screen, so the old sentence is gone.
+const String kAlertsLockNote = "Not seeing the pop-up? Open Android's notification settings for mmogo.";
+const String kAlertsDialogTitle = 'What alerts show';
+
 // ------------------------------------------------------- Autostart (Xiaomi)
 
 /// Xiaomi, Redmi and Poco phones only (PM 21-10-2026, Redmi spike: a swiped-away
@@ -199,6 +211,12 @@ List<String> allSettingsAutoReadCopy() => [
       kParseGreyLine,
       kConsentFooter,
       kParseLabel,
+      kAlertsLabel,
+      kAlertsGeneric,
+      kAlertsDetails,
+      kAlertsGenericDesc,
+      kAlertsDetailsDesc,
+      kAlertsLockNote,
       kAutostartLabel,
       kAutostartBody,
       kAutostartButton,

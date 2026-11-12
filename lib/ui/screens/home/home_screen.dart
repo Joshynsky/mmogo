@@ -8,6 +8,7 @@ import '../../../autoread/autoread_feature.dart' show kAutoReadCompiled;
 
 import '../../../data/db/app_database.dart';
 import '../../../data/db/debug_seed.dart';
+import '../../../data/db/demo_seed.dart';
 import '../../../data/db/home_dashboard_dao.dart';
 import '../../../data/db/transaction_dao.dart';
 import '../../../data/prefs/app_prefs.dart';
@@ -25,6 +26,9 @@ import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
 import '../../whats_new/whats_new_hook.dart';
 import '../../widgets/coach_tour.dart';
+import '../fuliza/fuliza_home_line.dart';
+import '../fuliza/fuliza_screen.dart';
+import '../fuliza/fuliza_source.dart';
 import 'home_consts.dart';
 import 'recent_list.dart';
 import 'summary_card.dart';
@@ -84,6 +88,9 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
   PeriodProgress? _progress;
   Map<String, SourceTypeTotal> _bySource = const {};
   List<RecentTransaction> _recent = const [];
+
+  /// 0.2.0 S9: the Fuliza data for the V3 line; null (the normal case) draws nothing.
+  FulizaSnapshot? _fuliza;
 
   late final AppLifecycleListener _lifecycle;
 
@@ -168,6 +175,7 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
     await TransactionDao.purgeExpiredSoftDeletes(db);
     if (kDebugMode && widget.db == null) {
       await DebugSampleData.seedIfEmpty(db);
+      await DemoSeed.runIfOn(db, _now());
     }
     await _loadName();
     await _load();
@@ -221,6 +229,7 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
       HomeDashboardDao.sumAmountCents(db, startMs: priorStart, endMs: priorEnd),
       HomeDashboardDao.sourceTypeTotals(db, startMs: start, endMs: end),
       HomeDashboardDao.recentTransactions(db, limit: homeRecentFetchLimit),
+      FulizaSource.load(db),
     ]);
 
     // A newer load (a quicker second period tap) wins.
@@ -231,6 +240,7 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
       _progress = progress;
       _bySource = results[2] as Map<String, SourceTypeTotal>;
       _recent = results[3] as List<RecentTransaction>;
+      _fuliza = results[4] as FulizaSnapshot?;
       _loading = false;
     });
     // First tour: once, after the first data has painted.
@@ -297,6 +307,12 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
     _load();
   }
 
+  /// 0.2.0 S9: the Fuliza line opens the Fuliza page; Back returns to Home (which re-reads on return).
+  Future<void> _openFuliza() async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => FulizaScreen(db: widget.db)));
+    if (mounted) _load();
+  }
+
   void _openTransaction(RecentTransaction tx) {
     // Hands the transaction id to Analytics, which opens on that
     // transaction's own day (T21) and scrolls it into view with a brief
@@ -358,6 +374,9 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
                 withdrawalFeeCents: withdrawal?.costCents ?? 0,
                 onPeriodTap: _cyclePeriod,
                 hiddenProgress: _progress != null && _progress!.hide ? _progress : null,
+                fulizaLine: _fuliza == null
+                    ? null
+                    : FulizaHomeLine(palette: palette, data: _fuliza!.data, onTap: _openFuliza),
                 ),
               ),
             ),

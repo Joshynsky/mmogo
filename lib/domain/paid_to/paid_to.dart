@@ -115,6 +115,10 @@ String? paidToPartyKeyOf({
 /// [paidToPartyKeyOf]. Not captured: `anon|type|classification` (never shown
 /// as a recipient; see `paidToNotRecorded`).
 String paidToRecipientKey(PaidToPayment p) {
+  // 0.2.0 S8 (debug flavor only, see [PaidToGrouping]): a named Paybill is ONE recipient whatever its account.
+  if (PaidToGrouping.paybillByName && p.sourceType == 'PAYBILL' && _filled(p.label) && _filled(p.account)) {
+    return 'PAYBILL|${_labelKey(p.label)}';
+  }
   final inner = paidToPartyKeyOf(
     sourceType: p.sourceType,
     label: p.label,
@@ -123,6 +127,32 @@ String paidToRecipientKey(PaidToPayment p) {
     agentNumber: p.agentNumber,
   );
   return inner == null ? 'anon|${p.sourceType}|${p.classificationName}' : '${p.sourceType}|$inner';
+}
+
+/// 0.2.0 S8 (WORDING-DRAFT: none, code only): the Paid to grouping switch. Default `false` = the signed
+/// 0.1.3 rule (a Paybill row is name + account). `true` = a named Paybill is one row whatever its
+/// account (the 0.2.0 mock), and its accounts are paged in the recipient sheet. main.dart turns it on
+/// only in the debug flavor (`kAutoReadCompiled`) until the PM signs it.
+class PaidToGrouping {
+  static bool paybillByName = false;
+}
+
+/// One account under a Paybill recipient (the sheet's ACCOUNTS rows).
+class PaidToAccount {
+  const PaidToAccount({
+    required this.account,
+    required this.count,
+    required this.totalCents,
+    required this.feeCents,
+    required this.last,
+  });
+
+  /// '' = no account saved.
+  final String account;
+  final int count;
+  final int totalCents;
+  final int feeCents;
+  final DateTime last;
 }
 
 /// One row on Paid to: a named recipient.
@@ -150,7 +180,7 @@ class PaidToRecipient {
   /// The LOCAL phone (Send Money), "Acc (number)" (Paybill), "Merchant" (Buy
   /// Goods), the local phone or "Pochi", "Agent (number)" or "Agent number not
   /// recorded".
-  final String detail;
+  String detail;
 
   /// Every name written for this recipient (lower case) and every phone form as
   /// stored (more than one phone form = a merge); both feed search.
@@ -165,12 +195,45 @@ class PaidToRecipient {
   int feeCents = 0;
   DateTime lastAt;
 
+  /// Paybill only: the payments split by account, biggest total first (then latest). One entry for a
+  /// row that has one account; empty for every other type.
+  List<PaidToAccount> get accounts {
+    if (sourceType != 'PAYBILL') return const [];
+    final m = <String, List<PaidToPayment>>{};
+    for (final p in payments) {
+      (m[(p.account ?? '').trim()] ??= []).add(p);
+    }
+    final out = [
+      for (final e in m.entries)
+        PaidToAccount(
+          account: e.key,
+          count: e.value.length,
+          totalCents: e.value.fold(0, (s, p) => s + p.amountCents),
+          feeCents: e.value.fold(0, (s, p) => s + p.feeCents),
+          last: e.value.map((p) => p.occurredAt).reduce((a, b) => a.isAfter(b) ? a : b),
+        ),
+    ];
+    out.sort(
+      (a, b) => b.totalCents != a.totalCents
+          ? b.totalCents.compareTo(a.totalCents)
+          : b.last != a.last
+          ? b.last.compareTo(a.last)
+          : a.account.compareTo(b.account),
+    );
+    return out;
+  }
+
+  /// More than one account under this name: the sheet shows the paged ACCOUNTS block and the row
+  /// cannot hand off to Analytics (its party view is one name + account).
+  bool get hasManyAccounts => accounts.length > 1;
+
   /// The row's title: the name as captured, else the detail (phone, account, ...).
   String get name => (label?.trim().isNotEmpty ?? false) ? label! : detail;
 
   /// What search matches on: name, detail (local phone, account, agent number),
   /// every name written and every phone form as stored.
-  String get searchText => '$name $detail ${labels.join(' ')} ${phones.join(' ')}'.toLowerCase();
+  String get searchText =>
+      '$name $detail ${labels.join(' ')} ${phones.join(' ')} ${accounts.map((a) => a.account).join(' ')}'.toLowerCase();
 
   /// Search: [searchText] contains the typed term, or (a phone written in any
   /// form) contains the term's phone key. An empty term matches everything.
@@ -221,7 +284,13 @@ List<PaidToRecipient> groupPaidTo(Iterable<PaidToPayment> payments, {String? cla
     if (_filled(p.phone)) g.phones.add(p.phone!.trim());
     if (p.occurredAt.isAfter(g.lastAt)) g.lastAt = p.occurredAt;
   }
-  return map.values.toList();
+  final out = map.values.toList();
+  if (PaidToGrouping.paybillByName) {
+    for (final g in out) {
+      if (g.hasManyAccounts) g.detail = '${g.accounts.length} accounts';
+    }
+  }
+  return out;
 }
 
 /// Sorts in place (mock `SORTF`): Amount = total, then times paid; Times paid =

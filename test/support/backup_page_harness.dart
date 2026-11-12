@@ -42,6 +42,7 @@ BackupExport fakeExport({
     SkipKind.entry => 'transactions',
     SkipKind.category => 'classifications',
     SkipKind.savedReceiver => 'counterparty_map',
+    SkipKind.fulizaRecord => 'fuliza_events',
   };
   return BackupExport(
     bytes: Uint8List.fromList([123, 125]),

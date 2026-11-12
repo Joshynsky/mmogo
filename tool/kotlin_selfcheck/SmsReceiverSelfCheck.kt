@@ -42,6 +42,20 @@ internal object SmsReceiverSelfCheck {
         check("no code line is quiet", !tracked("Confirmed. Ksh150.00 sent to JOHN KAMAU"))
         check("empty is quiet", !tracked(""))
 
+        fun quiet(s: String) = SmsReceiverLogic.isNonTransactionNotice(s)
+        check("recharge notice ignored", quiet("Recharge of 5.00 KSH for 0712345678 was successful."))
+        check("recharge notice lowercase ignored", quiet("  recharge of 100.00 ksh done"))
+        check("confirmation never ignored", !quiet("POI1U2Y3T4 Confirmed. Ksh150.00 sent to JOHN KAMAU"))
+        check("failed message never ignored", !quiet("Failed. Recharge of 5.00 KSH could not be completed."))
+        check("airtime confirmation never ignored", !quiet("TEJ4VG53X1 Confirmed. You bought Ksh104.00 of airtime on 21/5/24 at 5:57 AM."))
+        check("empty not ignored", !quiet(""))
+
+        check("alert delay within receiver budget (1 to 8 s)", SmsReceiverLogic.ALERT_DELAY_MS in 1000L..8000L)
+        check(
+            "alert delay + repeat within receiver budget (4 to 9 s)",
+            SmsReceiverLogic.ALERT_DELAY_MS + SmsReceiverLogic.ALERT_REPEAT_AFTER_MS in 4000L..9000L,
+        )
+
         return fails
     }
 }

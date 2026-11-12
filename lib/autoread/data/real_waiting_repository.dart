@@ -23,20 +23,26 @@ library;
 
 import 'dart:async';
 
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../data/db/app_database.dart';
+import '../../data/db/classification_dao.dart';
 import '../../data/db/counterparty_dao.dart';
 import '../../data/db/transaction_dao.dart';
 import '../../data/prefs/app_prefs.dart';
+import '../../domain/airtime/airtime_kind.dart';
 import '../../domain/parsing/parsed_sms_fields.dart';
 import '../../ui/screens/add/add_draft.dart';
 import '../bridge/autoread_bridge.dart';
 import '../held_window.dart';
+import '../logic/airtime_auto.dart';
+import '../logic/message_details.dart';
 import '../model/waiting_item.dart';
 import '../model/waiting_repository.dart';
 import '../service/autoread_service.dart';
 import '../ui/category_choices.dart';
+import 'fuliza_event_saver.dart';
 import 'pending_items_store.dart';
 import 'real_category_choices.dart';
 
@@ -69,14 +75,24 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
     Future<bool> Function()? captureIdentity,
     void Function()? onSaved,
     TimerFactory? timer,
-  })  : _bridge = bridge,
+    Future<bool> Function()? readAirtimeAuto,
+    Future<void> Function(bool on)? writeAirtimeAuto,
+    Future<bool> Function()? readAirtimeAutoOther,
+    Future<void> Function(bool on)? writeAirtimeAutoOther,
+    FulizaEventSaver? fulizaSaver,
+  })  : _fulizaSaver = fulizaSaver,
+        _bridge = bridge,
         _store = store,
         _service = service,
         _database = database ?? (() => AppDatabase.instance.database),
         _now = now ?? DateTime.now,
         _captureIdentity = captureIdentity ?? AppPrefs.readCaptureIdentityPreference,
         _onSaved = onSaved ?? (() {}),
-        _timerFactory = timer ?? Timer.new;
+        _timerFactory = timer ?? Timer.new,
+        _readAirtimeAuto = readAirtimeAuto ?? _prefsReadAirtimeAuto,
+        _writeAirtimeAuto = writeAirtimeAuto ?? _prefsWriteAirtimeAuto,
+        _readAirtimeAutoOther = readAirtimeAutoOther ?? _prefsReadAirtimeAutoOther,
+        _writeAirtimeAutoOther = writeAirtimeAutoOther ?? _prefsWriteAirtimeAutoOther;
 
   final AutoReadBridge _bridge;
   final PendingItemsStore _store;
@@ -88,6 +104,17 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
   /// recorded code). Left empty by default: see the hand-back about auto-backup.
   final void Function() _onSaved;
   final TimerFactory _timerFactory;
+  final Future<bool> Function() _readAirtimeAuto;
+  final Future<void> Function(bool on) _writeAirtimeAuto;
+  final Future<bool> Function() _readAirtimeAutoOther;
+  final Future<void> Function(bool on) _writeAirtimeAutoOther;
+
+  /// Saves Fuliza events from held messages (S12 slice D); null = not saving.
+  final FulizaEventSaver? _fulizaSaver;
+
+  /// The Airtime auto-record switch and trail (J2). OFF until the user opts in.
+  late final AirtimeAutoController airtime =
+      AirtimeAutoController(onSwitch: setAirtimeAuto, onUndo: undoAutoRecord, onSwitchOther: setAirtimeAutoOther);
 
   final Map<String, _Held> _held = {};
   List<WaitingItem> _current = const [];
@@ -176,6 +203,16 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
   Future<void> ingest() {
     _ingestStarted = true;
     return _locked(() async {
+      try {
+        airtime.setOn(await _readAirtimeAuto());
+      } catch (_) {
+        // Unreadable preference: keep what we know (OFF at start).
+      }
+      try {
+        airtime.setOnOther(await _readAirtimeAutoOther());
+      } catch (_) {
+        // Same: keep what we know.
+      }
       List<String>? ids;
       try {
         ids = await _bridge.listHeldIds();
@@ -187,6 +224,7 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
         _held.removeWhere((id, _) => !present.contains(id));
         for (final id in present) {
           if (_held.containsKey(id)) continue;
+          await _saveFulizaFrom(id);
           try {
             final r = await _service.inspect(id);
             switch (r.look) {
@@ -197,6 +235,7 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
               case HeldLook.duplicate:
               case HeldLook.gone:
               case HeldLook.busy:
+              case HeldLook.ignored:
                 break;
             }
           } catch (_) {
@@ -204,13 +243,77 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
           }
         }
       }
+      await _autoRecordPending();
       await _publish();
       if (!_ready.isCompleted) _ready.complete();
     });
   }
 
+  /// Looks once at held message [id] for a Fuliza draw or repayment and saves
+  /// it as an event BEFORE the body is dropped. Never throws, never changes the
+  /// row (the item shows in Notifications exactly as before). Returns true when
+  /// a new event was stored.
+  Future<bool> _saveFulizaFrom(String id) async {
+    final saver = _fulizaSaver;
+    if (saver == null || !isValidHeldId(id)) return false;
+    try {
+      final held = await _bridge.peekHeld(id);
+      if (held == null) return false;
+      return await saver.save(held.body, held.heldAt);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Re-looks at every held message and stores the Fuliza events not stored yet
+  /// (the "Rebuild from my messages" button). ADDS only, never deletes; only
+  /// messages still held can be used. Returns how many events were added.
+  /// The merge sets `FulizaRebuild.hook = rebuildFromHeld`.
+  Future<int> rebuildFromHeld() => _locked(() async {
+        List<String> ids;
+        try {
+          ids = await _bridge.listHeldIds();
+        } catch (_) {
+          return 0;
+        }
+        var added = 0;
+        for (final id in ids.where(isValidHeldId).toSet()) {
+          if (await _saveFulizaFrom(id)) added++;
+        }
+        return added;
+      });
+
   /// The row with this id in the latest list, or null.
   WaitingItem? itemById(String id) => _current.where((i) => i.id == id).firstOrNull;
+
+  // ------------------------------------------------------------- details
+
+  /// The content of the Details sheet for row [id], or null when the row is no
+  /// longer in the list. A held message is looked at once (see
+  /// [AutoReadService.lookForDetails]); nothing is stored or acked.
+  Future<MessageDetails?> detailsFor(String id) async {
+    final item = itemById(id);
+    if (item == null) return null;
+    final now = _now();
+    if (item.kind == WaitingKind.waitingCategory || item.kind == WaitingKind.gone) {
+      return buildMessageDetails(item, now);
+    }
+    if (item.isExpiredAt(now)) return buildMessageDetails(item, now, expired: true);
+    final look = await _service.lookForDetails(id);
+    switch (look.look) {
+      case HeldLook.readable:
+        return buildMessageDetails(item, now, fields: look.fields);
+      case HeldLook.unreadable:
+        return buildMessageDetails(item, now, firstWords: look.firstWords);
+      case HeldLook.gone:
+      case HeldLook.duplicate:
+      case HeldLook.ignored:
+        return buildMessageDetails(item, now, expired: true);
+      case HeldLook.busy:
+        // Someone else is parsing it: show what the row already knows.
+        return buildMessageDetails(item, now);
+    }
+  }
 
   // ------------------------------------------------------------- actions
 
@@ -227,6 +330,7 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
           case ParseOutcome.gone:
             if (h != null) _held[id] = _Held(WaitingKind.gone, h.heldAt);
         }
+        if (outcome == ParseOutcome.parsed) await _autoRecordPending();
         await _publish();
         return outcome;
       });
@@ -257,7 +361,7 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
   Future<CategoryChoices> categoryChoicesFor(WaitingItem item) async {
     final type = item.parsed?.sourceType;
     if (type == null) throw StateError('Only a parsed item can be categorized.');
-    return RealCategoryChoices(await _database(), type);
+    return RealCategoryChoices(await _database(), type, airtimeOther: item.parsed!.airtimeOther);
   }
 
   /// Saves the waiting item [id] as a real transaction under [categoryId] (a
@@ -276,46 +380,136 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
   Future<void> saveCategory(String id, String categoryId) => _locked(() async {
         final cls = int.tryParse(categoryId);
         if (cls == null) throw ArgumentError.value(categoryId, 'categoryId', 'not a category id');
-        final stored = (await _store.list()).where((i) => i.id == id).firstOrNull;
-        if (stored == null) return; // already saved, removed, or cleared
-        final p = stored.parsed!;
-        final db = await _database();
-        if (!await TransactionDao.mpesaCodeExists(db, code: p.code)) {
-          final draft = _draftFor(p, await _captureIdentity(), cls);
-          final input = draft.toInput(
-            cashCode: '',
-            rawParseSource: 'SMS_PARSE',
-            occurredAtMillis: p.transactionOccurredAt,
-          );
-          var inserted = false;
-          try {
-            await TransactionDao.insert(db, input);
-            inserted = true;
-          } on DatabaseException catch (e) {
-            // The code index refused a second row: it is already recorded.
-            if (!e.isUniqueConstraintError()) rethrow;
-          }
-          if (inserted) {
-            final key = draft.counterpartyKey;
-            if (key.isNotEmpty) {
-              try {
-                await CounterpartyDao.upsertOnConfirm(db,
-                    sourceType: draft.type, counterpartyKey: key, classificationId: cls);
-              } catch (_) {
-                // The transaction is committed; the memory of the choice is a bonus.
-              }
-            }
-            _onSaved();
-          }
-        }
-        await _store.remove(id);
-        try {
-          await _bridge.ackHeld(id, generation: await _bridge.readGeneration());
-        } catch (_) {
-          // The held copy is dropped by the next ingest (saved code).
-        }
-        _held.remove(id);
+        await _saveInner(id, cls);
         await _publish();
+      });
+
+  /// The save itself, inside [_locked]; returns the new ledger row id, or null
+  /// when nothing was written (item gone, or the code was already recorded).
+  Future<int?> _saveInner(String id, int cls) async {
+    final stored = (await _store.list()).where((i) => i.id == id).firstOrNull;
+    if (stored == null) return null; // already saved, removed, or cleared
+    final p = stored.parsed!;
+    final db = await _database();
+    // An airtime item may only go into the category of its own kind. A stale sheet
+    // (or a bad caller) that names the other one saves nothing; the item keeps waiting.
+    if (p.sourceType == SmsSourceType.airtime && cls != await _airtimeCategoryFor(p.airtimeOther)) {
+      return null;
+    }
+    int? rowId;
+    if (!await TransactionDao.mpesaCodeExists(db, code: p.code)) {
+      final draft = _draftFor(p, await _captureIdentity(), cls);
+      final input = draft.toInput(
+        cashCode: '',
+        rawParseSource: 'SMS_PARSE',
+        occurredAtMillis: p.transactionOccurredAt,
+      );
+      try {
+        rowId = await TransactionDao.insert(db, input);
+      } on DatabaseException catch (e) {
+        // The code index refused a second row: it is already recorded.
+        if (!e.isUniqueConstraintError()) rethrow;
+      }
+      if (rowId != null) {
+        final key = draft.counterpartyKey;
+        if (key.isNotEmpty) {
+          try {
+            await CounterpartyDao.upsertOnConfirm(db,
+                sourceType: draft.type, counterpartyKey: key, classificationId: cls);
+          } catch (_) {
+            // The transaction is committed; the memory of the choice is a bonus.
+          }
+        }
+        _onSaved();
+      }
+    }
+    await _store.remove(id);
+    try {
+      await _bridge.ackHeld(id, generation: await _bridge.readGeneration());
+    } catch (_) {
+      // The held copy is dropped by the next ingest (saved code).
+    }
+    _held.remove(id);
+    return rowId;
+  }
+
+  // ------------------------------------------------- airtime auto-record (J2)
+
+  static Future<bool> _prefsReadAirtimeAuto() async =>
+      (await SharedPreferences.getInstance()).getBool(kAirtimeAutoPrefKey) ?? false;
+
+  static Future<void> _prefsWriteAirtimeAuto(bool on) async =>
+      (await SharedPreferences.getInstance()).setBool(kAirtimeAutoPrefKey, on);
+
+  static Future<bool> _prefsReadAirtimeAutoOther() async =>
+      (await SharedPreferences.getInstance()).getBool(kAirtimeAutoOtherPrefKey) ?? false;
+
+  static Future<void> _prefsWriteAirtimeAutoOther(bool on) async =>
+      (await SharedPreferences.getInstance()).setBool(kAirtimeAutoOtherPrefKey, on);
+
+  /// The ACTIVE built-in Airtime category of a kind, found by seed key, or null
+  /// (then nothing is recorded for that kind and the item waits as today; never a
+  /// fallback to the other category).
+  Future<int?> _airtimeCategoryFor(bool other) async {
+    final row = await ClassificationDao.fetchActiveBySeedKey(await _database(), seedKey: airtimeSeedKey(other));
+    return row?.id;
+  }
+
+  /// With a switch ON, records every parsed Airtime item of THAT kind that waits
+  /// (the user tapped Parse for each). Never touches another type or the other
+  /// kind. Inside [_locked].
+  Future<void> _autoRecordPending() async {
+    if (!airtime.on && !airtime.onOther) return;
+    try {
+      final stored = (await _store.list())
+          .where((i) => isAutoRecordEligible(i, myselfOn: airtime.on, otherOn: airtime.onOther))
+          .toList();
+      for (final item in stored) {
+        final cls = await _airtimeCategoryFor(item.parsed!.airtimeOther);
+        if (cls == null) continue;
+        final rowId = await _saveInner(item.id, cls);
+        if (rowId != null) {
+          airtime.add(AutoRecorded(rowId: rowId, amountCents: item.parsed!.amountCents, at: _now()));
+        }
+      }
+    } catch (_) {
+      // A failure leaves the item waiting; the user can still Categorize it.
+    }
+  }
+
+  /// The switch for airtime for another number (default OFF); same behaviour.
+  Future<void> setAirtimeAutoOther(bool on) => _locked(() async {
+        await _writeAirtimeAutoOther(on);
+        airtime.setOnOther(on);
+        await _autoRecordPending();
+        await _publish();
+      });
+
+  /// The switch: remembers the choice; turning it ON records the Airtime items
+  /// that already wait (same type the user just agreed to).
+  Future<void> setAirtimeAuto(bool on) => _locked(() async {
+        await _writeAirtimeAuto(on);
+        airtime.setOn(on);
+        await _autoRecordPending();
+        await _publish();
+      });
+
+  /// Undo of one auto-recorded entry: it moves to Recently deleted (the
+  /// existing soft delete, restorable for 1 hour) and leaves every total.
+  Future<void> undoAutoRecord(AutoRecorded e) => _locked(() async {
+        if (e.undone) return;
+        final db = await _database();
+        await TransactionDao.softDelete(db, id: e.rowId);
+        final gone = (await db.query('transactions',
+                columns: ['deleted_at'], where: 'id = ?', whereArgs: [e.rowId]))
+            .firstOrNull;
+        if (gone == null || gone['deleted_at'] == null) {
+          e.undoFailed = true;
+        } else {
+          e.undone = true;
+          _onSaved();
+        }
+        airtime.changed();
       });
 
   /// The Add screen's own draft, filled the way Add fills it after a paste

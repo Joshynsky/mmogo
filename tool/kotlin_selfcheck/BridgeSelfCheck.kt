@@ -40,7 +40,7 @@ internal object BridgeSelfCheck {
         check("peek values", p != null && p["id"] == good && p["body"] == "hello" && p["receivedAtMs"] == 1234L)
 
         val s = BridgeLogic.stateResult(true, false, true, 3)
-        check("state keys", s.keys == setOf("enabled", "smsGranted", "notifGranted", "heldCount", "parseOn", "autostartHelp", "consentVersion"))
+        check("state keys", s.keys == setOf("enabled", "smsGranted", "notifGranted", "heldCount", "parseOn", "autostartHelp", "consentVersion", "alertDetails"))
         check("state values", s["enabled"] == true && s["smsGranted"] == false && s["notifGranted"] == true && s["heldCount"] == 3)
         check("state parse and autostart default off", s["parseOn"] == false && s["autostartHelp"] == false)
         val s2 = BridgeLogic.stateResult(false, true, true, 0, parseOn = true, autostartHelp = true)

@@ -90,14 +90,14 @@ void main() {
       await db.close();
     });
 
-    test('classifications has exactly 17 rows (v3), group-scoped correctly', () async {
+    test('classifications has exactly 18 rows, group-scoped correctly', () async {
       final db = await _openFreshDb();
       final rows = await db.rawQuery('''
         SELECT g.code AS group_code, c.name AS name
         FROM classifications c
         JOIN classification_groups g ON g.id = c.group_id
       ''');
-      expect(rows, hasLength(17));
+      expect(rows, hasLength(18));
 
       final byGroup = <String, List<String>>{};
       for (final r in rows) {
@@ -108,7 +108,7 @@ void main() {
       expect(byGroup['BUY_GOODS']!..sort(), ['Groceries', 'Rent Payment', 'Shopping', 'Transport']);
       expect(byGroup['POCHI_LA_BIASHARA']!..sort(), ['Groceries', 'Shopping', 'Transport']);
       expect(byGroup['AGENT_WITHDRAWAL'], ['Withdrawal']);
-      expect(byGroup['AIRTIME'], ['Airtime']);
+      expect(byGroup['AIRTIME'], ['For myself', 'For another number']);
 
       await db.close();
     });

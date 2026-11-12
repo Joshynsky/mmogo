@@ -8,6 +8,7 @@ object AutoReadSwitch {
     private const val KEY_ENABLED = "enabled"
     private const val KEY_CONSENT = "consent_version"
     private const val KEY_PARSE = "parse_from_notification"
+    private const val KEY_ALERT_DETAILS = "alert_details"
 
     /** The consent version the user agreed to (0 when none). Kept in this file, on this side. */
     fun consentVersion(context: Context): Int =
@@ -41,6 +42,21 @@ object AutoReadSwitch {
     fun setParseOn(context: Context, on: Boolean): Boolean =
         try {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_PARSE, on).commit()
+        } catch (_: Throwable) {
+            false
+        }
+
+    /** "What alerts show": true = Show details. Absent or unreadable = [AlertText.DEFAULT_SHOW_DETAILS] (Generic). */
+    fun alertDetails(context: Context): Boolean =
+        try {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ALERT_DETAILS, AlertText.DEFAULT_SHOW_DETAILS)
+        } catch (_: Throwable) {
+            AlertText.DEFAULT_SHOW_DETAILS
+        }
+
+    fun setAlertDetails(context: Context, on: Boolean): Boolean =
+        try {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ALERT_DETAILS, on).commit()
         } catch (_: Throwable) {
             false
         }

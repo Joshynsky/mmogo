@@ -363,6 +363,10 @@ class AppPrefs {
   /// documented default (ON/true), same discipline
   /// [readAutoRecognizeClassifications] already uses for its own correct
   /// default.
+  /// The Fuliza kill-switch (bool, default true). Off hides the page and the Home line;
+  /// events are still saved. Not on the backup allowlist.
+  static const keyFulizaShow = 'fuliza_show';
+
   static const keyCaptureIdentityPreference = 'capture_identity_preference';
 
   static Future<bool> readCaptureIdentityPreference() async {

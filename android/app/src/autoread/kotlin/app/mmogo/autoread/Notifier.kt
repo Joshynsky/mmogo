@@ -1,6 +1,7 @@
 package app.mmogo.autoread
 
 import android.Manifest
+import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -13,12 +14,16 @@ import android.os.Build
 import app.mmogo.R
 
 /**
- * §AUTOREAD.NOTIFIER. Posts the "a message is ready" notification. It carries only the held id:
- * no amount, no sender, no body, and no parameter that could carry one. Stateless; every
- * function takes a Context. No logging.
+ * §AUTOREAD.NOTIFIER. Posts the "a message is ready" notification. It carries only the held id as a
+ * parameter. Its words are Generic (no amount, no name) unless the user chose "Show details" (see
+ * [AlertText]; default Generic); the public lock-screen version is Generic in both cases. Stateless;
+ * every function takes a Context. No logging.
  */
 object Notifier {
     const val CHANNEL_ID = "mmogo_mpesa_messages"
+
+    /** HIGH-importance channel of the "ready" alert: pops up (heads-up), then stays in the shade. One notification. */
+    const val POPUP_CHANNEL_ID = "mmogo_mpesa_popup"
     const val EXTRA_HELD_ID = "app.mmogo.autoread.HELD_ID"
 
     private const val MAIN_ACTIVITY = "app.mmogo.MainActivity"
@@ -36,8 +41,20 @@ object Notifier {
             PackageManager.PERMISSION_GRANTED
         ) return false
 
-        val title = context.getString(R.string.autoread_notification_title)
-        val text = context.getString(R.string.autoread_notification_text)
+        val genericTitle = context.getString(R.string.autoread_notification_title)
+        val genericText = context.getString(R.string.autoread_notification_text)
+        // "What alerts show": Generic (default) or Show details. The body is read only in details mode,
+        // and only to build one short line; the lock-screen version below is generic in both modes.
+        val showDetails = AutoReadSwitch.alertDetails(context)
+        val body = if (showDetails) AutoReadStores.held(context).peek(heldId)?.body else null
+        val locked = try {
+            (context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager)?.isKeyguardLocked == true
+        } catch (_: Throwable) {
+            true // unknown: be generic
+        }
+        val shown = AlertText.choose(showDetails, body, AutoReadSwitch.parseOn(context), genericTitle, genericText, locked)
+        val title = shown.title
+        val text = shown.text
         val id = NotifierPure.notificationId(heldId)
 
         val intent = Intent().apply {
@@ -51,21 +68,23 @@ object Notifier {
 
         val builder: Notification.Builder
         if (Build.VERSION.SDK_INT >= 26) {
-            ensureChannel(context, nm)
-            builder = Notification.Builder(context, CHANNEL_ID)
+            ensurePopupChannel(context, nm)
+            builder = Notification.Builder(context, POPUP_CHANNEL_ID)
             builder.setTimeoutAfter(HeldWindow.WINDOW_MS)
         } else {
             @Suppress("DEPRECATION")
             builder = Notification.Builder(context)
+            @Suppress("DEPRECATION")
+            builder.setPriority(Notification.PRIORITY_HIGH)
         }
 
         // The public version (shown on a locked screen) carries the same generic words.
         val publicBuilder: Notification.Builder =
-            if (Build.VERSION.SDK_INT >= 26) Notification.Builder(context, CHANNEL_ID)
+            if (Build.VERSION.SDK_INT >= 26) Notification.Builder(context, POPUP_CHANNEL_ID)
             else @Suppress("DEPRECATION") Notification.Builder(context)
         publicBuilder.setSmallIcon(R.mipmap.ic_launcher_monochrome)
-            .setContentTitle(title)
-            .setContentText(text)
+            .setContentTitle(genericTitle)
+            .setContentText(genericText)
 
         builder.setSmallIcon(R.mipmap.ic_launcher_monochrome)
             .setContentTitle(title)
@@ -86,6 +105,19 @@ object Notifier {
         return true
     }
 
+    /** True only while our notification for [heldId] is still in the shade; false on any error. */
+    fun isActive(context: Context, heldId: String): Boolean {
+        return try {
+            if (!HeldId.isValid(heldId)) return false
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                ?: return false
+            val id = NotifierPure.notificationId(heldId)
+            nm.activeNotifications.any { it.id == id }
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
     /** Cancels the notification for [heldId]. An invalid id does nothing. */
     fun cancel(context: Context, heldId: String) {
         if (!HeldId.isValid(heldId)) return
@@ -104,7 +136,8 @@ object Notifier {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             ?: return
         for (sbn in nm.activeNotifications) {
-            if (sbn.notification.channelId == CHANNEL_ID) nm.cancel(sbn.tag, sbn.id)
+            val ch = sbn.notification.channelId
+            if (ch == CHANNEL_ID || ch == POPUP_CHANNEL_ID) nm.cancel(sbn.tag, sbn.id)
         }
     }
 
@@ -114,6 +147,21 @@ object Notifier {
         return NotifierPure.validated(object : NotifierPure.ExtraSource {
             override fun heldIdExtra(): String? = intent.getStringExtra(EXTRA_HELD_ID)
         })
+    }
+
+    /** Creates the HIGH channel once (importance cannot be raised later on an existing channel, hence a new id). */
+    internal fun ensurePopupChannel(context: Context, nm: NotificationManager) {
+        if (Build.VERSION.SDK_INT < 26) return
+        if (nm.getNotificationChannel(POPUP_CHANNEL_ID) != null) return
+        val channel = NotificationChannel(
+            POPUP_CHANNEL_ID,
+            context.getString(R.string.autoread_popup_channel_name),
+            NotificationManager.IMPORTANCE_HIGH
+        )
+        channel.description = context.getString(R.string.autoread_popup_channel_description)
+        channel.setShowBadge(false)
+        channel.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+        nm.createNotificationChannel(channel)
     }
 
     internal fun ensureChannel(context: Context, nm: NotificationManager) {

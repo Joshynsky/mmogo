@@ -250,8 +250,10 @@ void main() {
       ['year_view_amounts', 'year_view_amounts', BackupSettingKind.choice, null, null, null, ['quarters', 'months']],
       ['show_withdrawals_in_chart', 'show_withdrawals_in_chart', BackupSettingKind.boolean, null, null, null, null],
       ['where_it_went_style', 'where_it_went_style', BackupSettingKind.choice, null, null, null, ['button', 'strip']],
+      // 0.2.0 S12 (Judge C2): the Fuliza limit in cents, 0 to KSh 1 billion.
+      ['fuliza_limit_cents', 'fuliza_limit_cents', BackupSettingKind.integer, 0, 100000000000, null, null],
     ]);
-    expect(kBackupSettingSpecs, hasLength(11));
+    expect(kBackupSettingSpecs, hasLength(12));
 
     // Of the auto-backup keys only every-N and keep-K are in the file.
     final inFile = kBackupSettingSpecs.map((s) => s.prefsKey).toSet();
@@ -280,12 +282,12 @@ void main() {
   });
 
   test('device_only_prefs_are_never_in_the_allowlist', () {
-    // The allowlist is EXACTLY these eleven prefs keys...
+    // The allowlist is EXACTLY these twelve prefs keys (eleven + the Fuliza limit)...
     const eleven = {
       'user_display_name', 'palette_id', 'auto_recognize_classifications',
       'capture_identity_preference', 'auto_backup_every_n', 'auto_backup_keep_k',
       'first_day_of_week', 'month_chart_style', 'year_view_amounts',
-      'show_withdrawals_in_chart', 'where_it_went_style',
+      'show_withdrawals_in_chart', 'where_it_went_style', 'fuliza_limit_cents',
     };
     // ...and none of these device-only keys is in it (denied by absence).
     const deviceOnly = [
@@ -299,7 +301,7 @@ void main() {
 
     final prefsKeys = kBackupSettingSpecs.map((s) => s.prefsKey).toList();
     expect(prefsKeys.toSet(), eleven);
-    expect(prefsKeys, hasLength(11), reason: 'no duplicate');
+    expect(prefsKeys, hasLength(12), reason: 'no duplicate');
     expect(kBackupSettingSpecs.map((s) => s.fileKey).toSet(), eleven);
     expect(leaks(prefsKeys), isEmpty);
     for (final k in deviceOnly) {

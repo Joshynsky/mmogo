@@ -57,6 +57,7 @@ class FakeReadingBridge implements ReadingBridge {
       parseOn: parseOn,
       autostartHelp: autostartHelp,
       consentVersion: kotlinConsent,
+      alertDetails: alertDetails,
     );
   }
 
@@ -73,6 +74,16 @@ class FakeReadingBridge implements ReadingBridge {
     calls.add('setParseOn:$on');
     if (!setParseIgnored) parseOn = on;
     return parseOn;
+  }
+
+  /// "What alerts show" held by the pretend Kotlin side (default Generic).
+  bool alertDetails = false;
+
+  @override
+  Future<bool> setAlertDetails(bool on) async {
+    calls.add('setAlertDetails:$on');
+    alertDetails = on;
+    return alertDetails;
   }
 
   @override

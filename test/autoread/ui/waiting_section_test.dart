@@ -123,7 +123,9 @@ void main() {
       )));
       expect(find.text(kCouldNotRead), findsOneWidget);
       expect(find.byKey(const Key('waitingRowDimIcon')), findsOneWidget);
-      expect(_texts(t), contains('$kHeadingToParse (0)')); // shown, but not counted
+      // 0.2.0: an unreadable row sits under its own heading; no "To parse (0)".
+      expect(_texts(t), contains('$kHeadingCouldNotRead (1)'));
+      expect(_texts(t), isNot(contains('$kHeadingToParse (0)')));
       // F6: Paste goes through the paste sheet, Remove through its question.
       await t.tap(find.text(kActionPaste));
       await t.pumpAndSettle();

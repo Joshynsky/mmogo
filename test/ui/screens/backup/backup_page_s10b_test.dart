@@ -60,6 +60,7 @@ void main() {
       await pumpBackupPage(t);
       expect(kBackupNotRestorableByOlder, 'A backup made with 0.1.2 cannot be restored by 0.1.1 or older.');
       expect(find.text(kBackupNotRestorableByOlder), findsOneWidget);
+      expect(find.text(kBackupNotRestorableByOlderV4), findsOneWidget); // S12: 0.2.0 backups (schema 4)
     });
 
     testWidgets('D7 is not on the Privacy page', (t) async {

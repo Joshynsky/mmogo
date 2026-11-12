@@ -24,6 +24,7 @@ String skippedRowText(SkippedRowInfo r, {required bool showReason}) {
   final head = switch (r.kind) {
     SkipKind.category => kRowCategory,
     SkipKind.savedReceiver => kRowSavedReceiver,
+    SkipKind.fulizaRecord => kRowFulizaRecord,
     SkipKind.entry =>
       r.unreadable ? kRowUnreadableEntry : '${backupDmy(r.date!)}, ${r.typeName ?? ''}',
   };

@@ -45,6 +45,8 @@ const String kCategorizeNewFailed =
 const String kCategorizeSaveFailed =
     'Could not save. Try again.'; // NOT IN MOCK
 const String kCategorizeCheckThis = 'Check this one.'; // mock flag box
+/// WORDING-DRAFT (row 17): under the one fixed category of an airtime item.
+const String kCategorizeAirtimeFixed = 'Set when the airtime was read. It cannot be changed.';
 const String kCategorizeLabelType = 'Type';
 const String kCategorizeLabelAmount = 'Amount';
 const String kCategorizeLabelPaidTo = 'Paid to';
@@ -115,6 +117,8 @@ class _CategorizeSheetState extends State<CategorizeSheet> {
       if (!mounted) return;
       setState(() {
         _cats = cats;
+        // Row 17: an airtime item has exactly one category, its own kind's; it is preselected.
+        if (_isAirtime && cats.length == 1) _pickedId = cats.first.id;
         _loading = false;
       });
     } catch (_) {
@@ -125,6 +129,8 @@ class _CategorizeSheetState extends State<CategorizeSheet> {
       });
     }
   }
+
+  bool get _isAirtime => widget.item.parsed?.sourceType == SmsSourceType.airtime;
 
   CategoryChoice? get _picked {
     for (final c in _cats) {
@@ -429,17 +435,29 @@ class _CategorizeSheetState extends State<CategorizeSheet> {
           spacing: 8,
           runSpacing: 8,
           children: [
-            for (final c in _cats) _chip(palette, c),
-            if (!_creatingNew) _newPill(palette),
+            for (final c in _cats) _chip(palette, c, fixed: _isAirtime),
+            if (!_creatingNew && !_isAirtime) _newPill(palette),
           ],
         ),
+        if (_isAirtime && !_loading && _loadError == null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              kCategorizeAirtimeFixed,
+              key: const Key('categorizeAirtimeFixed'),
+              style: TextStyle(fontSize: 12, height: 1.4, color: palette.mutedInk),
+            ),
+          ),
       ],
     );
   }
 
-  Widget _chip(AppPalette palette, CategoryChoice c) {
+  Widget _chip(AppPalette palette, CategoryChoice c, {bool fixed = false}) {
     final selected = c.id == _pickedId;
-    void tap() => setState(() => _pickedId = c.id);
+    // A fixed chip (airtime) is shown selected and cannot be switched.
+    void tap() {
+      if (!fixed) setState(() => _pickedId = c.id);
+    }
     return Semantics(
       button: true,
       inMutuallyExclusiveGroup: true,
@@ -458,7 +476,7 @@ class _CategorizeSheetState extends State<CategorizeSheet> {
         child: InkWell(
           key: Key('categorizeChip_${c.id}'),
           customBorder: const StadiumBorder(),
-          onTap: tap,
+          onTap: fixed ? null : tap,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
             child: Padding(

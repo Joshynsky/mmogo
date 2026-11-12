@@ -11,6 +11,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/bottom_sheet_shell.dart';
 import '../../widgets/tabular.dart';
 import '../../widgets/type_icon.dart';
+import 'accounts_block.dart';
 
 /// §PAIDTO.SHEET — the recipient sheet INSIDE Paid to (mock `openRecipient`): header (tile, name,
 /// "Type · detail", close X), the combined-numbers note when more than one stored phone form, a 2x2
@@ -260,6 +261,8 @@ class PaidToRecipientSheet extends StatelessWidget {
             child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [for (final b in data.bars) bar(b)]),
           ),
         ),
+        // 0.2.0 S8: a Paybill name with several accounts lists them, in pages of 5 above 5.
+        if (g.hasManyAccounts) PaidToAccountsBlock(palette: p, recipient: g),
         Text('BY CATEGORY', style: label),
         Column(
           children: [
@@ -293,15 +296,18 @@ class PaidToRecipientSheet extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              action(
-                const Key('paidToSheetAnalytics'),
-                'See in Analytics',
-                p.primary,
-                p.onPrimary,
-                () => Navigator.of(context).pop(true),
-                semantics: 'See these payments in Analytics',
-              ),
-              const SizedBox(width: 8),
+              // Several accounts under one name: Analytics' party view is one name + account, so no hand-off (S8 gap).
+              if (!g.hasManyAccounts) ...[
+                action(
+                  const Key('paidToSheetAnalytics'),
+                  'See in Analytics',
+                  p.primary,
+                  p.onPrimary,
+                  () => Navigator.of(context).pop(true),
+                  semantics: 'See these payments in Analytics',
+                ),
+                const SizedBox(width: 8),
+              ],
               action(const Key('paidToSheetClose'), 'Close', p.track, p.ink, () => Navigator.of(context).pop()),
             ],
           ),

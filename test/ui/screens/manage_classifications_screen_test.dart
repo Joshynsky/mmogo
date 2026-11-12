@@ -71,7 +71,8 @@ class _FakeDatabase implements Database {
           {'id': 106, 'group_id': 2, 'name': 'Shopping', 'active': 1},
           {'id': 107, 'group_id': 4, 'name': 'Fares', 'active': 1},
           {'id': 108, 'group_id': 5, 'name': 'Cash withdrawal', 'active': 1},
-          {'id': 109, 'group_id': 6, 'name': 'Top up', 'active': 1},
+          {'id': 109, 'group_id': 6, 'name': 'For myself', 'active': 1},
+          {'id': 110, 'group_id': 6, 'name': 'For another number', 'active': 1},
         ],
         transactionCountByClassification = {102: 3};
 
@@ -399,7 +400,6 @@ void main() {
 
     for (final (code, name, row) in [
       ('AGENT_WITHDRAWAL', 'Withdrawal', 'Cash withdrawal'),
-      ('AIRTIME', 'Airtime', 'Top up'),
     ]) {
       testWidgets('$name: built-in is locked (tag, no Rename or Delete) and there is no create row', (tester) async {
         await openTab(tester, _FakeDatabase(), code);
@@ -413,6 +413,24 @@ void main() {
         expect(find.text('$name entries always use this category.'), findsOneWidget);
       });
     }
+
+    testWidgets('manage_airtime_two_locked_rows_no_rename_no_delete_no_create', (tester) async {
+      await openTab(tester, _FakeDatabase(), 'AIRTIME');
+      for (final row in ['For myself', 'For another number']) {
+        expect(find.text(row), findsOneWidget);
+        expect(find.byKey(Key('manageBuiltIn-$row')), findsOneWidget);
+      }
+      expect(find.text('Built in'), findsNWidgets(2));
+      expect(find.byIcon(Icons.edit_outlined), findsNothing);
+      expect(find.byIcon(Icons.delete_outline), findsNothing);
+      expect(find.byKey(const Key('manageCreateRow')), findsNothing);
+      expect(find.byKey(const Key('manageCreateField')), findsNothing);
+      expect(
+        find.text('Airtime has two built-in categories: For myself and For another number. mmogo picks the right one from the message, so you cannot rename, delete or switch them.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('one built-in'), findsNothing);
+    });
 
     for (final code in ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'POCHI_LA_BIASHARA']) {
       testWidgets('$code has the create row and no Built in tag', (tester) async {
@@ -493,7 +511,7 @@ void main() {
         await tester.ensureVisible(find.byKey(const Key('manageTab-AIRTIME')));
         await tester.tap(find.byKey(const Key('manageTab-AIRTIME')));
         await _settle(tester);
-        expect(find.text('Built in'), findsOneWidget);
+        expect(find.text('Built in'), findsNWidgets(2));
         expect(tester.takeException(), isNull);
       });
     }

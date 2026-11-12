@@ -133,7 +133,7 @@ void main() {
     await svc(viaMerge).restore(file, RestoreMode.merge);
     final seeds = await viaMerge.rawQuery(
         'SELECT COUNT(*) AS n FROM classifications WHERE seed_key IS NOT NULL');
-    expect(seeds.first['n'], 17); // schema 3: all 17 built-ins, none duplicated
+    expect(seeds.first['n'], 18); // all 18 built-ins on the phone, none duplicated
     // REN1111111 is on the built-in (matched by seed_key, B keeps its own name
     // "Rent"). A's user class "Rent" meets B's ACTIVE built-in "Rent" by
     // (group, name) and merges into it (data-model D, merge step 2; a second
@@ -370,7 +370,7 @@ void main() {
     final r = await svc(merged).restore(export.bytes, RestoreMode.merge);
     expect(r.transactions.added, 4);
     expect((await merged.rawQuery('SELECT COUNT(*) AS n FROM classifications WHERE seed_key IS NOT NULL'))
-        .first['n'], 17); // the migrated 0.1.0 database now holds 17 built-ins
+        .first['n'], 18); // the migrated 0.1.0 database now holds 18 built-ins
     await upgraded.close();
     await fresh.close();
     await merged.close();

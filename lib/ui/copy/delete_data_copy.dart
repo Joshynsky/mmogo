@@ -129,11 +129,13 @@ String deleteCountsText({
   required int recentlyDeleted,
   required int learnedReceivers,
   required int rememberedRecipients,
+  int fulizaRecords = 0,
 }) {
   final parts = <String>[
     if (live > 0) _plural(live, 'transaction', 'transactions'),
     if (recentlyDeleted > 0) _plural(recentlyDeleted, 'recently deleted', 'recently deleted'),
     if (learnedReceivers > 0) _plural(learnedReceivers, 'learned receiver', 'learned receivers'),
+    if (fulizaRecords > 0) _plural(fulizaRecords, 'Fuliza record', 'Fuliza records'), // WORDING-DRAFT
     if (rememberedRecipients > 0) _plural(rememberedRecipients, 'remembered recipient', 'remembered recipients'),
   ];
   return parts.join(', ');

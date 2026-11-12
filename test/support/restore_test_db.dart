@@ -192,7 +192,7 @@ Future<Map<String, List<String>>> contentDump(DatabaseExecutor db, {bool withDel
   final classes = [
     for (final r in await db.rawQuery(
         "SELECT g.code, c.name, c.active, c.seed_key, "
-        "CASE WHEN c.seed_key IN ('AGENT_WITHDRAWAL:cash_withdrawal', 'AIRTIME:airtime') "
+        "CASE WHEN c.seed_key IN ('AGENT_WITHDRAWAL:cash_withdrawal', 'AIRTIME:airtime', 'AIRTIME:for_another_number') "
         "THEN 0 ELSE c.created_at END FROM classifications c "
         'JOIN classification_groups g ON g.id = c.group_id'))
       r.values.join('|'),

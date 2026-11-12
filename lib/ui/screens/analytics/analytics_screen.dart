@@ -20,7 +20,10 @@ import 'analytics_loader.dart';
 import 'analytics_view.dart';
 import 'categories_sheet.dart';
 import 'chart_card.dart';
+import '../fuliza/fuliza_screen.dart';
+import '../fuliza/fuliza_source.dart';
 import 'custom_dates_sheet.dart';
+import 'edit_lock_parts.dart' show FulizaPaidInfo;
 import 'edit_sheet.dart';
 import 'format.dart';
 import 'hero_card.dart';
@@ -547,6 +550,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
   Future<void> _openEdit(AnalyticsTransactionRow tx) async {
     setState(() => _openRowId = null);
     final db = await _db();
+    // 0.2.0 S9: did a Fuliza borrowing pay for this row? (null, and no lookup cost, unless Fuliza data exists)
+    final fuliza = await FulizaSource.load(db);
+    final draw = fuliza?.drawCentsFor(tx.displayCode);
     if (!mounted) return;
     final result = await showModalBottomSheet<Object>(
       context: context,
@@ -555,10 +561,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
       barrierColor: const Color(0x59000000),
       builder: (ctx) => Theme(
         data: analyticsPickerTheme(AppPalette.of(context)),
-        child: AnalyticsEditSheet(db: db, tx: tx, palette: AppPalette.of(context)),
+        child: AnalyticsEditSheet(
+          db: db,
+          tx: tx,
+          palette: AppPalette.of(context),
+          fulizaPaid: draw == null ? null : FulizaPaidInfo(drawCents: draw),
+        ),
       ),
     );
     if (!mounted || result == null) return;
+    if (result is AnalyticsOpenFuliza) {
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const FulizaScreen()));
+      return;
+    }
     if (result is AnalyticsDeleteRequest) {
       await _delete(tx);
       return;

@@ -28,10 +28,51 @@ class SmsReceiver : BroadcastReceiver() {
             }
             val body = sb.toString()
             if (!SmsReceiverLogic.bodyAcceptable(body)) return
+            // Known non-transaction notice (the Safaricom recharge notice): dropped, not held, not listed.
+            if (SmsReceiverLogic.isNonTransactionNotice(body)) return
             // The one process-wide store (a Parse in flight is claimed there, so it is never evicted).
             val id = AutoReadStores.held(context).put(body, parts[0].timestampMillis) ?: return
             // Only a recognised outgoing kind interrupts the user; the rest stay held, silently.
-            if (SmsReceiverLogic.trackedKind(body)) Notifier.post(context, id)
+            // The held message is already saved; only the heads-up is late (SmsReceiverLogic.ALERT_DELAY_MS),
+            // so M-Pesa's own notification does not push it off the screen.
+            if (SmsReceiverLogic.trackedKind(body)) {
+                val pending = goAsync()
+                if (pending == null) {
+                    Notifier.post(context, id)
+                } else {
+                    val app = context.applicationContext ?: context
+                    val t = Thread {
+                        try {
+                            try {
+                                Thread.sleep(SmsReceiverLogic.ALERT_DELAY_MS)
+                            } catch (_: InterruptedException) {
+                                // Carry on: the held check below decides.
+                            }
+                            // Still held (not parsed or removed meanwhile): post; else stay silent.
+                            if (AutoReadStores.held(app).peek(id) != null) Notifier.post(app, id)
+                            try {
+                                Thread.sleep(SmsReceiverLogic.ALERT_REPEAT_AFTER_MS)
+                            } catch (_: InterruptedException) {
+                                // Carry on: the checks below decide.
+                            }
+                            // Repeat once (same id, so it updates and pops up again) only if the message is
+                            // still held AND our notification is still shown: a dismissed or tapped one stays gone.
+                            if (AutoReadStores.held(app).peek(id) != null && Notifier.isActive(app, id)) {
+                                Notifier.post(app, id)
+                            }
+                        } catch (_: Throwable) {
+                            // Never crash on the late post.
+                        } finally {
+                            try {
+                                pending.finish()
+                            } catch (_: Throwable) {
+                            }
+                        }
+                    }
+                    t.isDaemon = true
+                    t.start()
+                }
+            }
         } catch (_: Throwable) {
             // A receiver must never crash on a hostile message.
         }

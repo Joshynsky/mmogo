@@ -18,6 +18,8 @@ class AddingSection extends StatelessWidget {
     required this.onAutoRecognizeChanged,
     required this.captureReceiver,
     required this.onCaptureReceiverChanged,
+    this.showFuliza = true,
+    this.onShowFulizaChanged,
   });
 
   final AppPalette palette;
@@ -26,6 +28,10 @@ class AddingSection extends StatelessWidget {
   final ValueChanged<bool>? onAutoRecognizeChanged;
   final bool captureReceiver;
   final ValueChanged<bool>? onCaptureReceiverChanged;
+
+  /// Fuliza kill-switch (S12 slice C).
+  final bool showFuliza;
+  final ValueChanged<bool>? onShowFulizaChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +63,15 @@ class AddingSection extends StatelessWidget {
                   subtitle: kCaptureReceiverSubtitle,
                   value: captureReceiver,
                   onChanged: onCaptureReceiverChanged,
+                ),
+                SettingsToggle(
+                  key: const Key('settingsShowFuliza'),
+                  palette: palette,
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: kShowFulizaLabel,
+                  subtitle: kShowFulizaSubtitle,
+                  value: showFuliza,
+                  onChanged: onShowFulizaChanged,
                 ),
                 SettingsLink(
                   key: const Key('settingsManageCategories'),

@@ -32,6 +32,7 @@ class AnalyticsTransactionRow {
     required this.occurredAt,
     required this.transactionCostCents,
     this.agentNumber,
+    this.fromMessage = false,
   });
 
   final int id;
@@ -64,6 +65,10 @@ class AnalyticsTransactionRow {
 
   /// -> `transactions.agent_number` (v3). Withdrawal rows only, else null.
   final String? agentNumber;
+
+  /// 0.2.0 S9: the row was read from an M-Pesa message (`raw_parse_source` = SMS_PARSE), not typed by hand.
+  /// The edit sheet locks the message's own figures for such a row (flavor-gated there). Existing column, no schema change.
+  final bool fromMessage;
 
   /// Row title: Cash rows show their classification (no counterparty exists
   /// for cash); every other row prefers its captured counterparty label,
@@ -262,7 +267,7 @@ class AnalyticsDao {
       SELECT t.id, t.display_code, t.source_type, t.amount_cents,
              t.counterparty_label, t.counterparty_phone, t.paybill_account_number,
              t.classification_id, c.name AS classification_name,
-             t.transaction_occurred_at, t.transaction_cost_cents, t.agent_number
+             t.transaction_occurred_at, t.transaction_cost_cents, t.agent_number, t.raw_parse_source
       FROM transactions t
       JOIN classifications c ON c.id = t.classification_id
       WHERE $where
@@ -287,6 +292,7 @@ class AnalyticsDao {
             ),
             transactionCostCents: (row['transaction_cost_cents'] as num?)?.toInt(),
             agentNumber: row['agent_number'] as String?,
+            fromMessage: row['raw_parse_source'] == 'SMS_PARSE',
           ),
         )
         .toList();
@@ -306,5 +312,43 @@ class AnalyticsDao {
           .toList();
     }
     return items;
+  }
+
+  /// 0.2.0 S9: the live (not soft-deleted) rows whose code is in [codes], newest first. The Fuliza page uses
+  /// it to pair a borrowing with the payment it funded, by code (read time, nothing stored).
+  static Future<List<AnalyticsTransactionRow>> byCodes(Database db, Set<String> codes) async {
+    if (codes.isEmpty) return const [];
+    final marks = List.filled(codes.length, '?').join(',');
+    final rows = await db.rawQuery(
+      '''
+      SELECT t.id, t.display_code, t.source_type, t.amount_cents,
+             t.counterparty_label, t.counterparty_phone, t.paybill_account_number,
+             t.classification_id, c.name AS classification_name,
+             t.transaction_occurred_at, t.transaction_cost_cents, t.agent_number, t.raw_parse_source
+      FROM transactions t
+      JOIN classifications c ON c.id = t.classification_id
+      WHERE t.deleted_at IS NULL AND t.display_code IN ($marks)
+      ORDER BY t.transaction_occurred_at DESC
+      ''',
+      codes.toList(),
+    );
+    return [
+      for (final row in rows)
+        AnalyticsTransactionRow(
+          id: row['id'] as int,
+          displayCode: row['display_code'] as String,
+          sourceType: row['source_type'] as String,
+          amountCents: (row['amount_cents'] as num).toInt(),
+          counterpartyLabel: row['counterparty_label'] as String?,
+          counterpartyPhone: row['counterparty_phone'] as String?,
+          paybillAccountNumber: row['paybill_account_number'] as String?,
+          classificationId: row['classification_id'] as int,
+          classificationName: row['classification_name'] as String,
+          occurredAt: DateTime.fromMillisecondsSinceEpoch(row['transaction_occurred_at'] as int),
+          transactionCostCents: (row['transaction_cost_cents'] as num?)?.toInt(),
+          agentNumber: row['agent_number'] as String?,
+          fromMessage: row['raw_parse_source'] == 'SMS_PARSE',
+        ),
+    ];
   }
 }

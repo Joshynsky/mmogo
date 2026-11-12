@@ -151,6 +151,20 @@ void main() {
       expect(kPrivacyStoredReceiverDetails, isNot(contains('receiver-details tick')));
     });
 
+    testWidgets('row 17 (Privacy line B): the airtime sentence is exact and shows in both builds', (tester) async {
+      expect(
+        kPrivacyAirtimeOtherNumber,
+        'When you buy airtime for another number, mmogo files it under For another number. '
+        'It does not keep that phone number anywhere.',
+      );
+      expect(kPrivacyAirtimeOtherNumber, isNot(contains('—')));
+      for (final autoRead in [false, true]) {
+        await _pumpPage(tester, PrivacyScreen(autoRead: autoRead));
+        expect(find.byKey(const Key('privacyAirtimeOtherNumber')), findsOneWidget);
+        expect(find.text(kPrivacyAirtimeOtherNumber), findsOneWidget);
+      }
+    });
+
     testWidgets('the auto-read build keeps its waiting-message sentence', (tester) async {
       await _pumpPage(tester, const PrivacyScreen(autoRead: true));
       expect(_allText(tester), contains(kPrivacyStoredReceiverDetails));

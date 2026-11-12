@@ -26,6 +26,7 @@ import '../../theme/app_palette_scope.dart';
 import '../../widgets/coach_tour.dart';
 import '../backup/backup_export_flow.dart';
 import '../backup/backup_format.dart';
+import '../fuliza/fuliza_source.dart';
 import 'about_section.dart';
 import 'adding_section.dart';
 import 'data_section.dart';
@@ -92,6 +93,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoRecognize = true;
   // Same remembered value as the Add screen's receiver tick (default ON).
   bool _captureReceiver = true;
+  // Fuliza kill-switch (default ON).
+  bool _showFuliza = true;
   // The Look values, read in _bootstrap (the prefs' own defaults until then).
   int _firstDay = AppPrefs.defaultFirstDayOfWeek;
   MonthChartStyle _monthStyle = MonthChartStyle.weeks;
@@ -144,6 +147,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final count = await ExportDao.activeTransactionCount(db);
     final autoRecognize = await AppPrefs.readAutoRecognizeClassifications();
     final captureReceiver = await AppPrefs.readCaptureIdentityPreference();
+    final showFuliza = await FulizaSource.readShow();
     final backupSubtitle = await _readBackupSubtitle();
     await _readLook();
     if (!mounted) return;
@@ -152,6 +156,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _activeCount = count;
       _autoRecognize = autoRecognize;
       _captureReceiver = captureReceiver;
+      _showFuliza = showFuliza;
       _backupSubtitle = backupSubtitle;
       _loading = false;
     });
@@ -269,6 +274,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _handleAutoRecognizeChanged(bool value) {
     setState(() => _autoRecognize = value);
     AppPrefs.writeAutoRecognizeClassifications(value);
+  }
+
+  void _handleShowFulizaChanged(bool value) {
+    setState(() => _showFuliza = value);
+    FulizaSource.writeShow(value);
   }
 
   void _handleCaptureReceiverChanged(bool value) {
@@ -397,6 +407,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onAutoRecognizeChanged: _loading ? null : _handleAutoRecognizeChanged,
               captureReceiver: _captureReceiver,
               onCaptureReceiverChanged: _loading ? null : _handleCaptureReceiverChanged,
+              showFuliza: _showFuliza,
+              onShowFulizaChanged: _loading ? null : _handleShowFulizaChanged,
             ),
             const SizedBox(height: 14),
             DataSection(

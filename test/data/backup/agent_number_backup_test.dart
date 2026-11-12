@@ -92,7 +92,7 @@ void main() {
       final export = await backupOf(db).export();
       expect(export.skippedCount, 0);
       final json = jsonDecode(utf8.decode(export.bytes)) as Map<String, Object?>;
-      expect(json['schema_version'], 3);
+      expect(json['schema_version'], 5);
       final rows = (json['transactions']! as List).cast<Map<String, Object?>>();
       for (final r in rows) {
         expect(r.keys.toList(), kBackupTransactionKeys, reason: 'exact keys, in order');

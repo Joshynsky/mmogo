@@ -72,8 +72,8 @@ List<Map<String, Object?>> hostileTxs() => [
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('the locked keys are exactly Withdrawal and Airtime, and both are real built-ins', () {
-    expect(kBackupLockedSeedKeys, {_withdrawal, _airtime});
+  test('the locked keys are exactly Withdrawal and the two Airtime kinds, and all are real built-ins', () {
+    expect(kBackupLockedSeedKeys, {_withdrawal, _airtime, 'AIRTIME:for_another_number'});
     final seeds = [for (final s in AppSchema.seedClassifications) s.seedKey];
     expect(seeds, containsAll(kBackupLockedSeedKeys));
     expect(kBackupSeedKeys, containsAll(kBackupLockedSeedKeys));
@@ -98,7 +98,7 @@ void main() {
 
     expect(await lockedRows(db), before, reason: 'ids, names, active and dates all unchanged');
     expect(await oneRow(db, _withdrawal), startsWith('Withdrawal|1|'));
-    expect(await oneRow(db, _airtime), startsWith('Airtime|1|'));
+    expect(await oneRow(db, _airtime), startsWith('For myself|1|'), reason: 'the live name wins over the file name Top up');
     // Transactions pointing at them keep a valid classification_id: the phone's own rows.
     final onLocked = [
       for (final x in await db.rawQuery(
@@ -186,7 +186,7 @@ void main() {
         final rows = [
           ...hostileRows(),
           cls(30, 'AGENT_WITHDRAWAL', 'Withdrawal'),
-          cls(31, 'AIRTIME', 'Airtime'),
+          cls(31, 'AIRTIME', 'For myself'),
         ];
         final bytes = fileBytes(fileJson(
             classes: rows,
@@ -194,7 +194,7 @@ void main() {
             schemaVersion: 3));
         await svc(db).restore(bytes, mode);
         expect(await lockedRows(db), before, reason: mode.name);
-        expect(await classCount(db), 17, reason: '${mode.name}: the user rows folded onto the built-ins');
+        expect(await classCount(db), 18, reason: '${mode.name}: the user rows folded onto the built-ins');
         final onLocked = [
           for (final x in await db.rawQuery(
               'SELECT c.seed_key FROM transactions t JOIN classifications c '

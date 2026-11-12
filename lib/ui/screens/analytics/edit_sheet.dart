@@ -6,6 +6,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../../data/db/analytics_dao.dart';
 import '../../../data/db/classification_dao.dart';
+import '../../../data/prefs/app_prefs.dart';
 import '../../../domain/analytics/analytics_period.dart';
 import '../../../domain/format/ksh_amount.dart';
 import '../../../domain/format/money.dart';
@@ -16,6 +17,8 @@ import '../add/receiver_card.dart' show receiverFieldMaxLength;
 import '../../widgets/ksh_input_formatter.dart';
 import '../../widgets/flat_classification_picker.dart';
 import '../../widgets/mpesa_classification_picker.dart';
+import 'copy_button.dart';
+import 'edit_lock_parts.dart';
 import 'format.dart';
 import 'sheet_parts.dart';
 
@@ -23,6 +26,11 @@ import 'sheet_parts.dart';
 /// The edit form's "Delete" choice (handled by the screen, like the swipe).
 class AnalyticsDeleteRequest {
   const AnalyticsDeleteRequest();
+}
+
+/// 0.2.0 S9: the "How it was paid" block was tapped: the screen that opened the sheet shows the Fuliza page.
+class AnalyticsOpenFuliza {
+  const AnalyticsOpenFuliza();
 }
 
 /// T13's edit form result: exactly the field set `TransactionDao.update`
@@ -51,6 +59,9 @@ class AnalyticsEditResult {
   final String? agentNumber;
 }
 
+/// WORDING-DRAFT (row 17): the note under the read-only category of an airtime row.
+const String _kAirtimeCategoryLockedNote = 'Set when the airtime was read. It cannot be changed.';
+
 String _fmtEditDateTime(DateTime d, DateTime now) {
   final time = analyticsHhmm(d);
   if (sameDay(d, now)) return 'Today, $time';
@@ -65,11 +76,26 @@ String _fmtEditDateTime(DateTime d, DateTime now) {
 /// locked to the row's own type (the flat list for Cash). New in T21: a
 /// Delete action (PM decision, 2026-09-25).
 class AnalyticsEditSheet extends StatefulWidget {
-  const AnalyticsEditSheet({super.key, required this.db, required this.tx, required this.palette});
+  const AnalyticsEditSheet({
+    super.key,
+    required this.db,
+    required this.tx,
+    required this.palette,
+    this.lockMessageFields,
+    this.fulizaPaid,
+  });
 
   final Database db;
   final AnalyticsTransactionRow tx;
   final AppPalette palette;
+
+  /// 0.2.0 S9: for a row read from an M‑Pesa message, amount, date and time, phone / account / agent number
+  /// and transaction cost are shown read-only (the message's own figures); name and category stay editable.
+  /// null = [EditLockSwitch.messageRowsReadOnly] (the debug flavor only), so the signed 0.1.3 standard build is unchanged.
+  final bool? lockMessageFields;
+
+  /// 0.2.0 S9: set when a Fuliza borrowing paid for this row (looked up by code); draws "How it was paid".
+  final FulizaPaidInfo? fulizaPaid;
 
   @override
   State<AnalyticsEditSheet> createState() => _EditTransactionSheetState();
@@ -85,11 +111,40 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
     text: widget.tx.transactionCostCents == null ? '' : (widget.tx.transactionCostCents! / 100).toStringAsFixed(2),
   );
 
+  /// "Record receiver details" (the existing preference): the Copy buttons show
+  /// only while it is on. Off until it has been read.
+  bool _showCopy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(
+      AppPrefs.readCaptureIdentityPreference().then((on) {
+        if (mounted && on != _showCopy) setState(() => _showCopy = on);
+      }),
+    );
+  }
+
+  /// [input] with a Copy button beside it while the receiver-details switch is on.
+  Widget _withCopy(Widget input, TextEditingController c, String what) => !_showCopy
+      ? input
+      : Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(child: input),
+            CopyFieldButton(controller: c, palette: widget.palette, what: what),
+          ],
+        );
+
   late DateTime _occurredAt = widget.tx.occurredAt;
   late int _classificationId = widget.tx.classificationId;
   late String _classificationName = widget.tx.classificationName;
 
   bool get _isCash => widget.tx.sourceType == 'CASH';
+
+  /// The message's own figures are read-only (see [AnalyticsEditSheet.lockMessageFields]).
+  bool get _locked => (widget.lockMessageFields ?? EditLockSwitch.messageRowsReadOnly) && widget.tx.fromMessage && !_isCash;
+  bool get _isAirtime => widget.tx.sourceType == 'AIRTIME';
   bool get _isWithdrawal => widget.tx.sourceType == 'AGENT_WITHDRAWAL';
 
   // ED1: the fields follow the type. Cash and Airtime have no name field;
@@ -261,6 +316,19 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
 
   List<Widget> _field(String label, Widget input) => [analyticsFieldLabel(widget.palette, label), input];
 
+  /// A message-owned field: padlocked label and a read-only box (with Copy while that switch is on).
+  List<Widget> _lockedField(Key key, String label, TextEditingController c, String what) => [
+    editLockedLabel(widget.palette, label),
+    EditLockedBox(
+      key: key,
+      palette: widget.palette,
+      text: c.text.trim().isEmpty ? 'None' : c.text,
+      trailing: _showCopy && c.text.trim().isNotEmpty
+          ? CopyFieldButton(controller: c, palette: widget.palette, what: what)
+          : null,
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final p = widget.palette;
@@ -301,6 +369,14 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.mutedInk),
         ),
+        // 0.2.0 S9: "How it was paid" (read-only Fuliza tags) for a row a Fuliza borrowing paid for.
+        if (widget.fulizaPaid != null)
+          EditFulizaBlock(
+            palette: p,
+            amountCents: tx.amountCents,
+            drawCents: widget.fulizaPaid!.drawCents,
+            onTap: () => Navigator.of(context).pop(const AnalyticsOpenFuliza()),
+          ),
         // P-Analytics-13: a small greyed label; tapping it explains why the type
         // cannot be changed (there is no Change-type control).
         Align(
@@ -330,43 +406,59 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
             ),
           ),
         ),
-        group(
-          _field(
-            'Amount (Ksh)',
-            _input(
-              const Key('editAmountField'),
-              _amountController,
-              keyboard: const TextInputType.numberWithOptions(decimal: true),
-              onChange: true,
-              money: true,
-              errorText: _amountController.text.trim().isNotEmpty && _parsedAmountCents() == null
-                  ? kshAmountHelp
-                  : null,
+        if (_locked)
+          group([
+            editLockedLabel(p, 'Amount (Ksh)'),
+            EditLockedBox(key: const Key('editAmountLocked'), palette: p, text: _amountController.text),
+          ])
+        else
+          group(
+            _field(
+              'Amount (Ksh)',
+              _input(
+                const Key('editAmountField'),
+                _amountController,
+                keyboard: const TextInputType.numberWithOptions(decimal: true),
+                onChange: true,
+                money: true,
+                errorText: _amountController.text.trim().isNotEmpty && _parsedAmountCents() == null
+                    ? kshAmountHelp
+                    : null,
+              ),
             ),
           ),
-        ),
-        group([
-          analyticsFieldLabel(p, 'Date & time'),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _fmtEditDateTime(_occurredAt, DateTime.now()),
-                  key: const Key('editDateTimeText'),
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: p.ink),
+        if (_locked)
+          group([
+            editLockedLabel(p, 'Date & time'),
+            EditLockedBox(
+              key: const Key('editDateTimeText'),
+              palette: p,
+              text: _fmtEditDateTime(_occurredAt, DateTime.now()),
+            ),
+          ])
+        else
+          group([
+            analyticsFieldLabel(p, 'Date & time'),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _fmtEditDateTime(_occurredAt, DateTime.now()),
+                    key: const Key('editDateTimeText'),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: p.ink),
+                  ),
                 ),
-              ),
-              TextButton(
-                key: const Key('editDateTimeChangeLink'),
-                onPressed: _pickDateTime,
-                child: Text(
-                  'Change',
-                  style: TextStyle(fontWeight: FontWeight.w700, color: p.primary),
+                TextButton(
+                  key: const Key('editDateTimeChangeLink'),
+                  onPressed: _pickDateTime,
+                  child: Text(
+                    'Change',
+                    style: TextStyle(fontWeight: FontWeight.w700, color: p.primary),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ]),
+              ],
+            ),
+          ]),
         if (_hasName) ...[
           group(
             _field(
@@ -374,53 +466,79 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
               _input(const Key('editLabelField'), _labelController, maxLength: receiverFieldMaxLength),
             ),
           ),
-          if (_isWithdrawal)
+          if (_isWithdrawal && _locked)
+            group(
+              _lockedField(const Key('editAgentNumberLocked'), 'Agent number', _agentNumberController, 'agent number'),
+            )
+          else if (_isWithdrawal)
             group(
               _field(
                 'Agent number',
-                _input(
-                  const Key('editAgentNumberField'),
+                _withCopy(
+                  _input(
+                    const Key('editAgentNumberField'),
+                    _agentNumberController,
+                    keyboard: TextInputType.number,
+                    digitsOnly: true,
+                    maxLength: 20,
+                  ),
                   _agentNumberController,
-                  keyboard: TextInputType.number,
-                  digitsOnly: true,
-                  maxLength: 20,
+                  'agent number',
                 ),
               ),
             ),
-          if (tx.sourceType == 'SEND_MONEY')
+          if (tx.sourceType == 'SEND_MONEY' && _locked)
+            group(_lockedField(const Key('editPhoneLocked'), 'Phone', _phoneController, 'phone number'))
+          else if (tx.sourceType == 'SEND_MONEY')
             group(
               _field(
                 'Phone',
-                _input(
-                  const Key('editPhoneField'),
+                _withCopy(
+                  _input(
+                    const Key('editPhoneField'),
+                    _phoneController,
+                    keyboard: TextInputType.phone,
+                    maxLength: receiverFieldMaxLength,
+                  ),
                   _phoneController,
-                  keyboard: TextInputType.phone,
-                  maxLength: receiverFieldMaxLength,
+                  'phone number',
                 ),
               ),
             ),
-          if (tx.sourceType == 'PAYBILL')
+          if (tx.sourceType == 'PAYBILL' && _locked)
+            group(_lockedField(const Key('editAccountLocked'), 'Account number', _accountController, 'account number'))
+          else if (tx.sourceType == 'PAYBILL')
             group(
               _field(
                 'Account number',
-                _input(const Key('editAccountField'), _accountController, maxLength: receiverFieldMaxLength),
+                _withCopy(
+                  _input(const Key('editAccountField'), _accountController, maxLength: receiverFieldMaxLength),
+                  _accountController,
+                  'account number',
+                ),
               ),
             ),
         ],
         if (_hasCost) ...[
-          group(
-            _field(
-              'Transaction cost (Ksh)',
-              _input(
-                const Key('editCostField'),
-                _costController,
-                keyboard: const TextInputType.numberWithOptions(decimal: true),
-                onChange: true,
-                money: true,
-                errorText: _parsedCostCents() == null ? 'Enter a cost from 0 to 10,000,000.00' : null,
+          if (_locked)
+            group([
+              editLockedLabel(p, 'Transaction cost (Ksh)'),
+              EditLockedBox(key: const Key('editCostLocked'), palette: p, text: _costController.text),
+            ])
+          else
+            group(
+              _field(
+                'Transaction cost (Ksh)',
+                _input(
+                  const Key('editCostField'),
+                  _costController,
+                  keyboard: const TextInputType.numberWithOptions(decimal: true),
+                  onChange: true,
+                  money: true,
+                  errorText: _parsedCostCents() == null ? 'Enter a cost from 0 to 10,000,000.00' : null,
+                ),
               ),
             ),
-          ),
           // FN1 long sentence: the edit sheet only, never on a list row.
           if (_isWithdrawal && _parsedCostCents() != null)
             Container(
@@ -436,6 +554,33 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
               ),
             ),
         ],
+        if (_locked) EditLockedCaption(palette: p),
+        if (_isAirtime)
+          // Row 17: the kind of an airtime row is its category; it is set by the message and cannot be changed.
+          group([
+            editLockedLabel(p, 'Category'),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              decoration: analyticsFieldBox(p),
+              child: Semantics(
+                label: 'Category: $_classificationName. $_kAirtimeCategoryLockedNote',
+                excludeSemantics: true,
+                child: Text(
+                  _classificationName,
+                  key: const Key('editClassificationReadOnly'),
+                  style: TextStyle(fontSize: 13, color: p.softInk),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _kAirtimeCategoryLockedNote,
+              key: const Key('editClassificationReadOnlyNote'),
+              style: TextStyle(fontSize: 11.5, height: 1.4, color: p.mutedInk),
+            ),
+          ])
+        else
         group([
           analyticsFieldLabel(p, 'Category'),
           Row(

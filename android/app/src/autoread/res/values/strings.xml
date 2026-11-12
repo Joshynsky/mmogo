@@ -2,6 +2,9 @@
 <resources>
     <string name="autoread_channel_name">M-Pesa messages</string>
     <string name="autoread_channel_description">Tells you a new M-Pesa message is waiting in mmogo.</string>
+    <!-- 0.2.0 S10 WORDING-DRAFT: the pop-up (high importance) channel; shown in Android's notification settings. -->
+    <string name="autoread_popup_channel_name">M-Pesa message alerts</string>
+    <string name="autoread_popup_channel_description">Pop-up alert when a new M-Pesa message is waiting in mmogo.</string>
     <string name="autoread_notification_title">M-Pesa message received</string>
     <string name="autoread_notification_text">An M-Pesa message is waiting. Tap to parse it.</string>
     <!-- Stage 2 (Wave C). "Parse": existing copy (kActionParse). "Categorize now" and "Later": the signed

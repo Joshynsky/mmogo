@@ -126,11 +126,11 @@ void main() {
       expect(newId, greaterThan(maxId));
     });
 
-    test('foreign_key_check is empty and the file still has the 17 seeded built-ins', () async {
+    test('foreign_key_check is empty and the file still has the 18 seeded built-ins', () async {
       await env.service().deleteMyTransactions();
       final db = await env.open();
       expect(await db.rawQuery('PRAGMA foreign_key_check'), isEmpty);
-      expect(await env.count('SELECT COUNT(*) FROM classifications WHERE seed_key IS NOT NULL'), 17);
+      expect(await env.count('SELECT COUNT(*) FROM classifications WHERE seed_key IS NOT NULL'), 18);
     });
   });
 

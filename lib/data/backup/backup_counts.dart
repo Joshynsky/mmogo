@@ -10,6 +10,7 @@ class BackupCounts {
     required this.userClassifications,
     required this.receivers,
     required this.deletedLeftOut,
+    this.fulizaEvents = 0,
   });
 
   final int transactions;
@@ -23,9 +24,12 @@ class BackupCounts {
   /// Soft-deleted transactions, not written to a backup.
   final int deletedLeftOut;
 
-  /// Nothing worth backing up: no live transaction and no classification the
-  /// user made.
-  bool get isEmpty => transactions == 0 && userClassifications == 0;
+  /// Fuliza events stored (`fuliza_events`); they are in a backup too.
+  final int fulizaEvents;
+
+  /// Nothing worth backing up: no live transaction, no classification the
+  /// user made and no Fuliza event.
+  bool get isEmpty => transactions == 0 && userClassifications == 0 && fulizaEvents == 0;
 
   /// All four counts in ONE read transaction so they agree.
   static Future<BackupCounts> read(Database db) {
@@ -36,6 +40,7 @@ class BackupCounts {
         userClassifications: await count('SELECT COUNT(*) AS n FROM classifications WHERE seed_key IS NULL'),
         receivers: await count('SELECT COUNT(*) AS n FROM counterparty_classification_map'),
         deletedLeftOut: await count('SELECT COUNT(*) AS n FROM transactions WHERE deleted_at IS NOT NULL'),
+        fulizaEvents: await count('SELECT COUNT(*) AS n FROM fuliza_events'),
       );
     });
   }

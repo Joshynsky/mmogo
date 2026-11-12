@@ -160,8 +160,8 @@ void main() {
 
   group('v2 -> v3 on a populated invented fixture', () {
     test('the ladder is registered and the live version is 3', () {
-      expect(kDbVersion, 3);
-      expect(AppMigrations.steps.keys, [2, 3]);
+      expect(kDbVersion, 5);
+      expect(AppMigrations.steps.keys, [2, 3, 4, 5]);
     });
 
     test('transactions are identical, agent_number is NULL, 14 columns, integrity ok, FK check empty',
@@ -175,7 +175,7 @@ void main() {
       await v2.close();
 
       final db = await _openLive(path);
-      expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 3);
+      expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 5);
       expect(await db.rawQuery('SELECT $cols FROM transactions ORDER BY id'), before);
       expect(await _count(db, 'SELECT COUNT(*) FROM transactions WHERE agent_number IS NOT NULL'), 0);
       final info = await db.rawQuery('PRAGMA table_info(transactions)');
@@ -312,7 +312,7 @@ void main() {
           ];
       final a = await objects(db);
       expect(a, await objects(fresh));
-      expect(a, hasLength(16), reason: '4 tables + 10 indexes + 2 triggers');
+      expect(a, hasLength(19), reason: '5 tables + 11 indexes + 3 triggers (v4 adds fuliza_events and its unique index; v5 adds the airtime kind trigger)');
       // negative control: a tampered migrated file differs
       await db.execute('CREATE INDEX idx_extra ON transactions(amount_cents)');
       expect(await objects(db), isNot(await objects(fresh)));
@@ -326,9 +326,9 @@ void main() {
         () async {
       final path = await _plainV1();
       final db = await _openLive(path);
-      expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 3);
+      expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 5);
       final rows = await db.rawQuery('SELECT id, seed_key FROM classifications ORDER BY id');
-      expect(rows.map((r) => r['seed_key']).toList(), v3SeedKeys());
+      expect(rows.map((r) => r['seed_key']).toList(), [...v3SeedKeys(), 'AIRTIME:for_another_number']);
       for (var i = 0; i < 12; i++) {
         expect(rows[i]['seed_key'], AppMigrations.v2SeedClassifications[i].seedKey);
       }
@@ -405,9 +405,9 @@ void main() {
         final adopted = rows.singleWhere((r) => r['name'] == name);
         expect(adopted['id'], plantedId);
         expect(adopted['seed_key'], 'POCHI_LA_BIASHARA:${name.toLowerCase()}');
-        expect(await _count(db, 'SELECT COUNT(*) FROM classifications WHERE seed_key IS NOT NULL'), 17);
-        expect(await _count(db, 'SELECT COUNT(*) FROM classifications'), 12 + 1 + 4,
-            reason: '12 old + the planted row + 4 inserted');
+        expect(await _count(db, 'SELECT COUNT(*) FROM classifications WHERE seed_key IS NOT NULL'), 18);
+        expect(await _count(db, 'SELECT COUNT(*) FROM classifications'), 12 + 1 + 4 + 1,
+            reason: '12 old + the planted row + 4 inserted + the v5 category');
         expect(
             await _count(db,
                 "SELECT classification_id FROM counterparty_classification_map WHERE counterparty_key = '0700000077'"),
@@ -423,8 +423,8 @@ void main() {
         (name: 'Shopping', active: 1, group: 'POCHI_LA_BIASHARA'),
       ]);
       final db = await migrated(path);
-      expect(await _count(db, 'SELECT COUNT(*) FROM classifications WHERE seed_key IS NOT NULL'), 17);
-      expect(await _count(db, 'SELECT COUNT(*) FROM classifications'), 12 + 3 + 2);
+      expect(await _count(db, 'SELECT COUNT(*) FROM classifications WHERE seed_key IS NOT NULL'), 18);
+      expect(await _count(db, 'SELECT COUNT(*) FROM classifications'), 12 + 3 + 2 + 1);
       expect((await pochi(db)).every((r) => r['seed_key'] != null), isTrue);
       await db.close();
     });
@@ -451,7 +451,7 @@ void main() {
       final inactive = rows.firstWhere((r) => r['active'] == 0);
       expect(inactive['seed_key'], isNull);
       expect(rows.where((r) => r['seed_key'] == 'POCHI_LA_BIASHARA:transport'), hasLength(1));
-      expect(await _count(db, 'SELECT COUNT(*) FROM classifications WHERE seed_key IS NOT NULL'), 17);
+      expect(await _count(db, 'SELECT COUNT(*) FROM classifications WHERE seed_key IS NOT NULL'), 18);
       await db.close();
     });
 
@@ -625,6 +625,7 @@ void main() {
             singleInstance: false,
             onUpgrade: (db, a, b) => AppMigrations.upgrade(db, a, b, steps: {
                   3: (d) => migrateToV3(d, txColumns: live),
+                  4: AppMigrations.steps[4]!,
                 }));
         await db.close();
       } catch (e) {
@@ -646,10 +647,12 @@ void main() {
       expect(labels, _expectedLabels);
     });
 
+    // One test per label (T1, 0.2.0): the old single loop ran every label in one
+    // test and passed the default 30 s limit under full-suite load.
     for (final fixture in ['v2 populated', 'v1 chain']) {
-      test('$fixture: a throw at each label leaves the file v${fixture == 'v1 chain' ? 1 : 2} with '
-          'identical rows and sqlite_master, FK ON on the next open, no cached handle', () async {
-        for (final label in _expectedLabels) {
+      for (final label in _expectedLabels) {
+        test('$fixture: a throw at $label leaves the file v${fixture == 'v1 chain' ? 1 : 2} with '
+            'identical rows and sqlite_master, FK ON on the next open, no cached handle', () async {
           final path = fixture == 'v1 chain' ? await _plainV1() : await _populatedV2();
           final pre = await _readDump(path);
           final error = await _failAt(path, label);
@@ -659,14 +662,14 @@ void main() {
 
           // the same path (singleInstance: true, as in the app) opens normally next time
           final db = await _openLive(path, single: true);
-          expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 3, reason: label);
+          expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 5, reason: label);
           expect(firstIntOf(await db.rawQuery('PRAGMA foreign_keys')), 1, reason: label);
           expect((await db.rawQuery('PRAGMA integrity_check')).first.values.first, 'ok');
           expect(await db.rawQuery('PRAGMA foreign_key_check'), isEmpty);
-          expect(await _count(db, 'SELECT COUNT(*) FROM classifications WHERE seed_key IS NOT NULL'), 17);
+          expect(await _count(db, 'SELECT COUNT(*) FROM classifications WHERE seed_key IS NOT NULL'), 18);
           await db.close();
-        }
-      });
+        });
+      }
     }
 
     test('NEGATIVE CONTROL: a migration run WITHOUT the upgrade transaction leaves a half-migrated '

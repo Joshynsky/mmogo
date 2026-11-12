@@ -77,14 +77,14 @@ void main() {
   // upgrade and ON after.
   test('live path: a fresh file is created at kDbVersion 3 with ON, then reopens with no upgrade',
       () async {
-    expect(kDbVersion, 3);
+    expect(kDbVersion, 5);
     await (await openMmogoDatabase(databaseFactoryFfi, path, singleInstance: false)).close();
     var upgraded = false;
     final db = await openMmogoDatabase(databaseFactoryFfi, path,
         singleInstance: false, onUpgrade: (db, a, b) async => upgraded = true);
     expect(upgraded, isFalse);
     expect(await _fk(db), 1);
-    expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 3);
+    expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 5);
     await db.close();
   });
 
@@ -98,7 +98,7 @@ void main() {
     });
     expect(inUpgrade, 0);
     expect(await _fk(db), 1);
-    expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 3);
+    expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 5);
     await db.close();
   });
 

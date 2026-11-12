@@ -71,7 +71,7 @@ void main() {
     final w = (await db.query('classifications', where: 'id = ?', whereArgs: [withdrawal])).single;
     final a = (await db.query('classifications', where: 'id = ?', whereArgs: [airtime])).single;
     expect(w['name'], 'Withdrawal');
-    expect(a['name'], 'Airtime');
+    expect(a['name'], 'For myself'); // renamed by schema 5 (row 17)
   });
 
   test('Withdrawal with agent name and number: stored; the amount comma is only display', () async {

@@ -5,8 +5,11 @@ import 'parse_helpers.dart';
 ///
 /// Invented shapes: `PT8N4W7Q2K confirmed.You bought Ksh200.00 of airtime on
 /// 31/10/25 at 2:01 PM.New M-PESA balance is Ksh77,777.77. Transaction cost,
-/// Ksh0.00.` and the "another number" form `... at 5:57 AM for 254712345678.
-/// New M-PESA balance ...`.
+/// Ksh0.00.` and the "another number" form. REAL wording (seen on a phone,
+/// 11-11-2026): `XXXXXXXXXX confirmed.You bought Ksh5.00 of airtime for
+/// 0712345678 on 11/11/26 at 5:13 PM.New  balance is Ksh100.00. Transaction cost,
+/// Ksh0.00.` (the number sits BEFORE `on`). Older invented samples that put it
+/// after the time are no longer assumed.
 ///
 /// FEE-LINE RULE (pinned by a named test): a message with a
 /// `Transaction cost, Ksh<fee>` line uses that fee; a message with NO fee line gets
@@ -15,16 +18,18 @@ import 'parse_helpers.dart';
 ///
 /// The label is null: the v3 label CHECK says AIRTIME never carries one, and
 /// the screens show the type name. The other number of the "another number"
-/// form is deliberately not kept.
+/// form is deliberately not kept: only the fact `airtimeOther` is set.
 const int kAirtimeNoFeeCents = 0;
 
 class AirtimeRule {
   AirtimeRule._();
 
   static final RegExp _re = RegExp(
-    r'^([A-Z0-9]{10})\s+[Cc]onfirmed\.\s*You bought\s+Ksh([\d,]+\.\d{2})\s+of airtime\s+on\s+'
+    r'^([A-Z0-9]{10})\s+[Cc]onfirmed\.\s*You bought\s+Ksh([\d,]+\.\d{2})\s+of airtime\s+(?:for\s+\+?\d+\s+)?on\s+'
     '$kDatePattern\\s+at\\s+$kTimePattern',
   );
+  // Presence test only (no capture group): was "for <digits>" in the matched part?
+  static final RegExp _otherRe = RegExp(r'of airtime\s+for\s+\+?\d+\s+on\s');
   static final RegExp _feeRe = RegExp(kFeePattern);
 
   static ParsedSmsFields? tryParse(String text) {
@@ -48,6 +53,8 @@ class AirtimeRule {
       paybillAccountNumber: null,
       transactionOccurredAt: parseOccurredAt(m.group(3)!, m.group(4)!),
       transactionCostCents: feeCents,
+      // Only whether "for <digits>" was there; the digits are never read out.
+      airtimeOther: _otherRe.hasMatch(m.group(0)!),
     );
   }
 }

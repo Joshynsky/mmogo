@@ -36,6 +36,18 @@ void main() {
     expect(f.toString(), isNot(contains('254712345678')));
   });
 
+  test('real wording: airtime for another number (number before "on") parses; number not kept', () {
+    final f = _ok(kSampleAirtimeOtherReal);
+    expect(f.code, 'AB1CD2EF3G');
+    expect(f.sourceType, SmsSourceType.airtime);
+    expect(f.amountCents, 500);
+    expect(f.transactionCostCents, 0);
+    expect(f.counterpartyLabel, isNull);
+    expect(f.counterpartyPhone, isNull);
+    expect(f.transactionOccurredAt, DateTime(2026, 11, 11, 17, 13).millisecondsSinceEpoch);
+    expect(f.toString(), isNot(contains('0712345678')));
+  });
+
   test('FEE-LINE RULE: a fee line uses the parsed fee', () {
     expect(_ok(kSampleAirtime.replaceFirst('Ksh0.00.', 'Ksh2.00.')).transactionCostCents, 200);
   });

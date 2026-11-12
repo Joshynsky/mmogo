@@ -55,6 +55,11 @@ const kLookNote = 'Appearance is saved on this phone only. The other choices her
 // ---- Adding entries ----
 const kAutoRecognizeLabel = 'Auto-recognize categories';
 const kAutoRecognizeSubtitle = 'Suggest a category for repeat senders and receivers while you add';
+// WORDING-DRAFT (S12 slice C): the Fuliza kill-switch row.
+const kShowFulizaLabel = 'Show Fuliza';
+const kShowFulizaSubtitle =
+    'Turning this off hides Fuliza. mmogo still keeps the figures on this phone so they are there if you turn it on again.';
+
 const kCaptureReceiverLabel = 'Record receiver details';
 const kCaptureReceiverSubtitle =
     'Keep the name, phone, business or account of who you paid. Off: payments are saved without them.';

@@ -49,6 +49,8 @@ class BackupExport {
     this.liveTransactions,
     this.liveCounterpartyMap,
     this.userClassifications = 0,
+    this.fulizaEvents = 0,
+    this.liveFulizaEvents,
   });
 
   final Uint8List bytes;
@@ -57,6 +59,12 @@ class BackupExport {
   final int classifications;
   final int transactions;
   final int counterpartyMap;
+
+  /// Fuliza events IN the file, and the number the phone held when it was read
+  /// (null only for an export built by hand in a test: then equal to the
+  /// events in the file plus the skipped ones).
+  final int fulizaEvents;
+  final int? liveFulizaEvents;
 
   /// Recently deleted (soft-deleted) transactions left OUT of the file (PM
   /// rule); the UI tells the user how many.
@@ -91,6 +99,9 @@ class BackupExport {
   /// F3 (R41): how many of the categories IN the file the person made (no
   /// `seed_key`). In-memory only; the file format is unchanged.
   final int userClassifications;
+
+  /// Fuliza events the phone held at read time (see [liveFulizaEvents]).
+  int get fulizaLive => liveFulizaEvents ?? fulizaEvents + _skippedIn('fuliza_events');
 
   int _skippedIn(String table) => skipped.where((s) => s.table == table).length;
 
@@ -188,6 +199,7 @@ class BackupService {
     late List<Map<String, Object?>> classes;
     late List<Map<String, Object?>> txs;
     late List<Map<String, Object?>> map;
+    late List<Map<String, Object?>> fuliza;
     late int excluded;
     late Set<String> enabledGroups;
 
@@ -221,6 +233,13 @@ class BackupService {
         ))
           Map<String, Object?>.of(r),
       ];
+      fuliza = [
+        for (final r in await txn.rawQuery(
+          'SELECT id, kind, code, occurred_at, amount_cents, fee_cents, '
+          'printed_total_cents FROM fuliza_events ORDER BY id',
+        ))
+          Map<String, Object?>.of(r),
+      ];
       final ex = await txn.rawQuery(
         'SELECT COUNT(*) AS n FROM transactions WHERE deleted_at IS NOT NULL',
       );
@@ -237,6 +256,7 @@ class BackupService {
     _guardRows('classifications', classes.length, kBackupMaxClassifications);
     _guardRows('transactions', txs.length, kBackupMaxTransactions);
     _guardRows('counterparty_map', map.length, kBackupMaxMapRows);
+    _guardRows('fuliza_events', fuliza.length, kBackupMaxFulizaEvents);
 
     // Date and type of every entry, taken from the SAME read (A2b/D): the
     // describer needs them after repair has dropped the row.
@@ -256,6 +276,10 @@ class BackupService {
       counterpartyMap: map,
       enabledGroupCodes: enabledGroups,
     );
+    // Fuliza events are copied as they are; a row the validator refuses below
+    // is left out and reported (table, id, field, rule: never the value).
+    final fulizaKept = List<Map<String, Object?>>.of(fuliza);
+    final fulizaSkipped = <BackupSkippedRow>[];
     final prefs = await _settings.snapshot();
     final createdAt = _now().millisecondsSinceEpoch;
 
@@ -270,6 +294,7 @@ class BackupService {
         classifications: repair.classifications,
         transactions: repair.transactions,
         counterpartyMap: repair.counterpartyMap,
+        fulizaEvents: fulizaKept,
         prefs: prefs,
       );
       if (bytes.length > maxBytes) {
@@ -281,6 +306,16 @@ class BackupService {
         last = e;
         final table = e.table;
         final index = e.rowIndex;
+        if (table == 'fuliza_events' && index != null && index >= 0 && index < fulizaKept.length) {
+          final row = fulizaKept.removeAt(index);
+          fulizaSkipped.add(BackupSkippedRow(
+            table: table!,
+            rowId: row['id'] is int ? row['id']! as int : null,
+            field: e.field ?? '(row)',
+            rule: e.reason.name,
+          ));
+          continue;
+        }
         if (table == null ||
             index == null ||
             !repair.skipRow(table, index, e.field ?? '(row)', e.reason.name)) {
@@ -290,17 +325,20 @@ class BackupService {
       }
       return BackupExport(
         bytes: bytes,
-        skippedRows: List.unmodifiable(describeSkipped(repair.skipped, entryFacts: facts)),
+        skippedRows: List.unmodifiable(
+            describeSkipped([...repair.skipped, ...fulizaSkipped], entryFacts: facts)),
         liveClassifications: classes.length,
         liveTransactions: txs.length,
         liveCounterpartyMap: map.length,
+        fulizaEvents: fulizaKept.length,
+        liveFulizaEvents: fuliza.length,
         classifications: repair.classifications.length,
         userClassifications: repair.classifications.where((c) => c['seed_key'] == null).length,
         transactions: repair.transactions.length,
         counterpartyMap: repair.counterpartyMap.length,
         excludedSoftDeleted: excluded,
         repairedCount: repair.repairedCount,
-        skipped: List.unmodifiable(repair.skipped),
+        skipped: List.unmodifiable([...repair.skipped, ...fulizaSkipped]),
       );
     }
     throw BackupNotRestorable(last!);

@@ -14,15 +14,19 @@ library;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../data/db/classification_dao.dart';
+import '../../domain/airtime/airtime_kind.dart';
 import '../../domain/parsing/parsed_sms_fields.dart';
 import '../../ui/screens/add/add_draft.dart';
 import '../ui/category_choices.dart';
 
 class RealCategoryChoices implements CategoryChoices {
-  RealCategoryChoices(this._db, this._type);
+  RealCategoryChoices(this._db, this._type, {bool airtimeOther = false}) : _airtimeOther = airtimeOther;
 
   final Database _db;
   final SmsSourceType _type;
+
+  /// Airtime only: the item's kind (`for <number>`); picks the ONE category offered.
+  final bool _airtimeOther;
 
   Future<int?> _groupId() async {
     final groups = await ClassificationDao.fetchGroups(_db);
@@ -33,7 +37,9 @@ class RealCategoryChoices implements CategoryChoices {
   }
 
   Future<List<ClassificationItem>> _items() async {
-    final seed = AddDraft.fixedSeedKey(_type.dbValue);
+    final seed = _type == SmsSourceType.airtime
+        ? airtimeSeedKey(_airtimeOther)
+        : AddDraft.fixedSeedKey(_type.dbValue);
     if (seed != null) {
       final one = await ClassificationDao.fetchActiveBySeedKey(_db, seedKey: seed);
       return one == null ? const <ClassificationItem>[] : [one];

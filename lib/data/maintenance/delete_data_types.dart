@@ -38,6 +38,7 @@ class DeleteDataResult {
     this.transactionsDeleted = 0,
     this.softDeletedIncluded = 0,
     this.learnedReceiversDeleted = 0,
+    this.fulizaRecordsDeleted = 0,
     this.safetyCopyCleared = false,
     this.vacuumRan = false,
     this.failedStep,
@@ -50,6 +51,7 @@ class DeleteDataResult {
   final int transactionsDeleted;
   final int softDeletedIncluded;
   final int learnedReceiversDeleted;
+  final int fulizaRecordsDeleted;
   final bool safetyCopyCleared;
   final bool vacuumRan;
 
@@ -68,6 +70,7 @@ class DeleteDataPeek {
     required this.liveTransactions,
     required this.softDeletedTransactions,
     required this.learnedReceivers,
+    this.fulizaRecords = 0,
     required this.safetyCopyPresent,
     required this.rememberedRecipientsPresent,
     required this.queuePresent,
@@ -79,6 +82,9 @@ class DeleteDataPeek {
   final int liveTransactions;
   final int softDeletedTransactions;
   final int learnedReceivers;
+
+  /// Stored Fuliza records (a count only).
+  final int fulizaRecords;
   final bool safetyCopyPresent;
   final bool rememberedRecipientsPresent;
   final bool queuePresent;
@@ -100,6 +106,7 @@ class DeleteDataPeek {
       liveTransactions == 0 &&
       softDeletedTransactions == 0 &&
       learnedReceivers == 0 &&
+      fulizaRecords == 0 &&
       !safetyCopyPresent &&
       !rememberedRecipientsPresent &&
       !queuePresent;

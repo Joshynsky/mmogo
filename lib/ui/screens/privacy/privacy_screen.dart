@@ -46,6 +46,7 @@ class PrivacyScreen extends StatelessWidget {
               _Para(palette, kPrivacyStoredBody),
               _Para(palette, autoRead ? kPrivacyStoredReceiverDetails : kPrivacyStoredReceiverDetailsStandard),
               _Para(palette, kPrivacyStoredAgentNumber),
+              _Para(palette, kPrivacyAirtimeOtherNumber, key: const Key('privacyAirtimeOtherNumber')),
               _Para(palette, kPrivacyStoredRememberedAnswers),
               _Para(palette, '$kUninstallErasesNotice $kPhoneTransferNotice'),
             ],

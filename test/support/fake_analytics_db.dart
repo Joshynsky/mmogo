@@ -150,7 +150,10 @@ class FakeAnalyticsDb implements Database {
     if (table == 'transactions') {
       // TransactionDao.update's source_type pre-read.
       return [
-        {'source_type': byId(whereArgs![0] as int)['source_type']},
+        {
+          'source_type': byId(whereArgs![0] as int)['source_type'],
+          'classification_id': byId(whereArgs[0] as int)['classification_id'],
+        },
       ];
     }
     throw UnsupportedError('FakeAnalyticsDb.query: unexpected table "$table"');

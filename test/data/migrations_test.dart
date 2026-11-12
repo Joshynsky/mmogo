@@ -184,19 +184,19 @@ void main() {
   });
 
   // S3b retarget: a fresh install is now version 3 with all 17 seed keys.
-  test('fresh install: version 3 with all 17 seed keys', () async {
-    expect(kDbVersion, 3);
+  test('fresh install: version 3 with all 18 seed keys', () async {
+    expect(kDbVersion, 5);
     final db = await _openLatest(path);
-    expect(await _userVersion(db), 3);
+    expect(await _userVersion(db), 5);
     final rows = await db
         .rawQuery('SELECT id, name, seed_key FROM classifications ORDER BY id');
-    expect(rows.length, 17);
-    for (var i = 0; i < 17; i++) {
+    expect(rows.length, 18);
+    for (var i = 0; i < 18; i++) {
       expect(rows[i]['id'], i + 1);
       expect(rows[i]['seed_key'], AppSchema.seedClassifications[i].seedKey);
       expect(rows[i]['name'], AppSchema.seedClassifications[i].name);
     }
-    expect(rows.map((r) => r['seed_key']).toSet().length, 17);
+    expect(rows.map((r) => r['seed_key']).toSet().length, 18);
     await db.close();
   });
 
@@ -208,7 +208,7 @@ void main() {
     await v1.close();
 
     final db = await _openLatest(path);
-    expect(await _userVersion(db), 3);
+    expect(await _userVersion(db), 5);
     final after = await _dump(db, dropSeedKey: true);
     // Transactions: identical except for the new NULL agent_number column.
     expect([
@@ -223,7 +223,7 @@ void main() {
         'SELECT name, seed_key FROM classifications WHERE id > 15 ORDER BY id');
     expect(tail.map((r) => r['seed_key']).toList(), [
       'AGENT_WITHDRAWAL:cash_withdrawal', 'AIRTIME:airtime', 'POCHI_LA_BIASHARA:transport',
-      'POCHI_LA_BIASHARA:groceries', 'POCHI_LA_BIASHARA:shopping',
+      'POCHI_LA_BIASHARA:groceries', 'POCHI_LA_BIASHARA:shopping', 'AIRTIME:for_another_number',
     ]);
     // Groups: ids 1..4 keep their codes; Pochi is enabled and renamed; two new groups.
     final groups = await db.rawQuery(
@@ -373,7 +373,7 @@ void main() {
     await db.close();
 
     db = await _openLatest(path);
-    expect(await _userVersion(db), 3);
+    expect(await _userVersion(db), 5);
     expect(await _dump(db), first);
     expect(await _shape(db), firstShape);
     await db.close();

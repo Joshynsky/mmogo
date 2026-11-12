@@ -135,6 +135,21 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
         await _refresh();
       });
 
+  Future<void> _onAlerts() async {
+    final c = _c;
+    final s = _state;
+    if (c == null || s == null || _busy) return;
+    final pick = await showDialog<bool>(
+      context: context,
+      builder: (_) => _AlertsDialog(showDetails: s.alertDetails),
+    );
+    if (pick == null || pick == s.alertDetails || !mounted) return;
+    await _runBusy(() async {
+      _message = await c.setAlertDetails(pick) ? null : kReadFailed;
+      await _refresh();
+    });
+  }
+
   /// Only ever called from the user's tap on "Open Autostart settings".
   Future<void> _openAutostart() async {
     await _c?.openAutostartSettings();
@@ -227,6 +242,14 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
                 value: s.on && s.parseOn,
                 onChanged: (!s.available || !s.on || _busy) ? null : _onParse,
               ),
+              SettingsLink(
+                key: const Key('alertsRow'),
+                palette: palette,
+                icon: Icons.notifications_active_outlined,
+                label: kAlertsLabel,
+                subtitle: s.alertDetails ? kAlertsDetails : kAlertsGeneric,
+                onTap: (s.available && !_busy) ? _onAlerts : null,
+              ),
               if (s.autostartHelp)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
@@ -260,6 +283,50 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+}
+
+/// "What alerts show": Generic or Show details. Pops true for details. The
+/// lock-screen alert is always generic, said in the dialog.
+class _AlertsDialog extends StatelessWidget {
+  const _AlertsDialog({required this.showDetails});
+  final bool showDetails;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget option(Key key, String label, String desc, bool value) => SimpleDialogOption(
+          key: key,
+          onPressed: () => Navigator.of(context).pop(value),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Row(
+              children: [
+                Icon(showDetails == value ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(label, style: Theme.of(context).textTheme.titleSmall),
+                      Text(desc, style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+    return SimpleDialog(
+      title: const Text(kAlertsDialogTitle),
+      children: [
+        option(const Key('alertsGeneric'), kAlertsGeneric, kAlertsGenericDesc, false),
+        option(const Key('alertsDetails'), kAlertsDetails, kAlertsDetailsDesc, true),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+          child: Text(kAlertsLockNote, style: Theme.of(context).textTheme.bodySmall),
         ),
       ],
     );

@@ -5,6 +5,7 @@
 library;
 
 import '../held_window.dart';
+import '../logic/message_details.dart' show timeLeftWords;
 
 // Chips: visible names and the full spoken names.
 const String kChipParse = 'Parse';
@@ -13,6 +14,9 @@ const String kChipCategorize = 'Categorize';
 /// Heading of the two groups (full words).
 const String kHeadingToParse = 'To parse';
 const String kHeadingToCategorize = 'To categorize';
+
+/// Unreadable (and gone) held messages, under their own heading (PM 11-11-2026).
+const String kHeadingCouldNotRead = 'Could not read';
 
 String _spokenCount(int n) => n == 0 ? 'none' : (n > 99 ? '99 or more' : '$n');
 
@@ -42,10 +46,10 @@ const String kGoneRecovery =
 /// NOT IN MOCK: the mock's gone footer still names an old hour count; none typed.
 const String kGoneFooter = 'Expired';
 
-/// "expires in N h" (or "under 1 h") for a readable ready row; [hours] comes
-/// from `expiresInHours`, [underOneHour] from `expiresUnderOneHour`.
-String expiresInLine({required int hours, required bool underOneHour}) =>
-    'expires in ${underOneHour ? 'under 1 h' : '$hours h'}';
+/// "expires in 3 h 20 min", "expires in 45 min", "expires in less than 1 min"
+/// (a day or more: whole hours) for a readable ready row; [left] comes
+/// from `expiresLeft`. WORDING-DRAFT: hours and minutes, for PM approval.
+String expiresInLine(Duration left) => 'expires in ${timeLeftWords(left)}';
 
 /// The quiet line for the held window, built from the constant.
 String get kHeldWindowLine => kHeldWindowCopy;
@@ -88,6 +92,7 @@ List<String> allAutoReadCopy() => [
       kChipCategorize,
       kHeadingToParse,
       kHeadingToCategorize,
+      kHeadingCouldNotRead,
       parseChipSpoken(3),
       categorizeChipSpoken(0),
       categorizeChipSpoken(120),
@@ -101,8 +106,9 @@ List<String> allAutoReadCopy() => [
       kGoneLine,
       kGoneRecovery,
       kGoneFooter,
-      expiresInLine(hours: 4, underOneHour: false),
-      expiresInLine(hours: 1, underOneHour: true),
+      expiresInLine(const Duration(hours: 4)),
+      expiresInLine(const Duration(minutes: 40)),
+      expiresInLine(Duration.zero),
       kHeldWindowLine,
       kRemoveTitle,
       kRemoveBody,

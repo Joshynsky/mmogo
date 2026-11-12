@@ -12,6 +12,9 @@ library;
 
 import 'backup_limits.dart';
 
+/// The Fuliza limit's key in a file's `prefs` (and in preferences).
+const String kFulizaLimitFileKey = 'fuliza_limit_cents';
+
 enum BackupSettingKind { text, boolean, integer, choice }
 
 class BackupSettingSpec {
@@ -98,7 +101,7 @@ const List<BackupSettingSpec> kBackupSettingSpecs = [
     min: 2,
     max: 20,
   ),
-  // 0.1.2 (Judge C-B13): five Look / grouping choices travel in a backup. No
+  // Five Look / grouping choices travel in a backup. No
   // new schema version and no version gating: a file without them leaves the
   // phone alone. `appearance_mode` is DEVICE-ONLY and is deliberately absent.
   BackupSettingSpec(
@@ -130,6 +133,15 @@ const List<BackupSettingSpec> kBackupSettingSpecs = [
     prefsKey: 'where_it_went_style',
     kind: BackupSettingKind.choice,
     choices: ['button', 'strip'],
+  ),
+  // The Fuliza limit, in cents. Only a schema >= 4 file may
+  // carry it (the validator drops it from an older file). 0 to KSh 1 billion.
+  BackupSettingSpec(
+    fileKey: kFulizaLimitFileKey,
+    prefsKey: kFulizaLimitFileKey,
+    kind: BackupSettingKind.integer,
+    min: 0,
+    max: 100000000000,
   ),
 ];
 

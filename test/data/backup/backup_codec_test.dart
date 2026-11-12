@@ -28,14 +28,16 @@ void main() {
     expect(obj.keys.toList(), kBackupTopLevelKeys);
     expect(obj['app'], 'mmogo');
     expect(obj['format_version'], 1);
-    expect(obj['schema_version'], 3); // 0.1.2: schema 3
+    expect(obj['schema_version'], 5); // 0.2.0 row 17: schema 5
     expect(obj['created_at'], tBase);
     expect(obj['end'], 'mmogo-v1');
     expect(obj['counts'], {
       'classifications': 5,
       'transactions': 5,
       'counterparty_map': 2,
+      'fuliza_events': 0,
     });
+    expect(obj['fuliza_events'], isEmpty);
   });
 
   test('constants agree with the app: schema version and seed keys', () {
@@ -44,7 +46,7 @@ void main() {
       kBackupSeedKeys,
       AppSchema.seedClassifications.map((s) => s.seedKey).toList(),
     );
-    expect(kBackupSeedKeys.length, 17);
+    expect(kBackupSeedKeys.length, 18);
     expect(kBackupGroupCodes.toSet(), {
       'SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'POCHI_LA_BIASHARA',
       'AGENT_WITHDRAWAL', 'AIRTIME',

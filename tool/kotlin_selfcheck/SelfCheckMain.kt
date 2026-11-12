@@ -32,5 +32,10 @@ fun main() {
     println("ParsePolicy (stage 2): " + (if (parse.isEmpty()) "ALL PASS" else "FAILS=" + parse.size))
     failed += parse.size
 
+    val alert = AlertTextSelfCheck.runAll()
+    alert.forEach { println("  FAIL: $it") }
+    println("AlertText (0.2.0 S10): " + (if (alert.isEmpty()) "ALL PASS" else "FAILS=" + alert.size))
+    failed += alert.size
+
     if (failed != 0) System.exit(1)
 }

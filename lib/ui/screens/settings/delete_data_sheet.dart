@@ -301,6 +301,7 @@ class _DeleteDataSheetState extends State<DeleteDataSheet> {
             live: p.liveTransactions,
             recentlyDeleted: p.softDeletedTransactions,
             learnedReceivers: p.learnedReceivers,
+            fulizaRecords: p.fulizaRecords,
             rememberedRecipients: p.rememberedRecipientsCount,
           );
     return [

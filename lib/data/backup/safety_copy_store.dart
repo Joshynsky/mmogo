@@ -73,7 +73,8 @@ class SafetyCopyStore {
       final v = BackupValidator.validate(back, enabledGroupCodes: enabledGroupCodes);
       if (v.transactions.length != expect.transactions ||
           v.classifications.length != expect.classifications ||
-          v.counterpartyMap.length != expect.counterpartyMap) {
+          v.counterpartyMap.length != expect.counterpartyMap ||
+          (expect.fulizaEvents != null && v.fulizaEvents.length != expect.fulizaEvents)) {
         throw const SafetyCopyError('counts differ');
       }
     } catch (e) {

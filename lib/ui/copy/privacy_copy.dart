@@ -43,6 +43,12 @@ const kPrivacyStoredReceiverDetailsStandard =
 /// C-B12, COPY AHEAD OF FEATURE: the agent number exists from slice S3 (AG1).
 const kPrivacyStoredAgentNumber = "An agent number is kept beside the receiver's phone number.";
 
+/// 0.2.0 row 17 (PM picked line B, Judge signed the text, J-row17-full-verdict.md S7): exact, one constant.
+/// The parser sorts airtime by kind in both builds (paste and auto-read), so both Privacy pages show it.
+const kPrivacyAirtimeOtherNumber =
+    'When you buy airtime for another number, mmogo files it under For another number. '
+    'It does not keep that phone number anywhere.';
+
 /// C-B12: remembered answers ship with 0.1.2 S8c-2 (no longer copy ahead of the feature).
 const kPrivacyStoredRememberedAnswers =
     'The Send Money or Pochi answer mmogo remembers is kept only when the tick is on. '

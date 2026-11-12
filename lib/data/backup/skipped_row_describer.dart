@@ -12,7 +12,7 @@ import 'backup_repair.dart';
 /// copy"); "skipped" stays in the file-side result table.
 
 /// What a described row is.
-enum SkipKind { entry, category, savedReceiver }
+enum SkipKind { entry, category, savedReceiver, fulizaRecord }
 
 /// Why a row was left out. Three of these are the signed mock reasons, the
 /// fourth is a row that went with its category (wording decided in S10b).
@@ -133,6 +133,8 @@ List<SkippedRowInfo> describeSkipped(
       switch (s.table) {
         'transactions' => _entry(s, entryFacts[s.rowId]),
         'classifications' => SkippedRowInfo(kind: SkipKind.category, reason: skipReasonFor(s.rule)),
+        // WORDING-DRAFT (0.2.0): a Fuliza record is described by kind and reason only.
+        'fuliza_events' => SkippedRowInfo(kind: SkipKind.fulizaRecord, reason: skipReasonFor(s.rule)),
         _ => SkippedRowInfo(kind: SkipKind.savedReceiver, reason: skipReasonFor(s.rule)),
       },
   ];

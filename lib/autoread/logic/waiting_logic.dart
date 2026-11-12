@@ -81,6 +81,13 @@ bool expiresUnderOneHour(WaitingItem item, DateTime now) {
   return left != null && left > Duration.zero && left < const Duration(hours: 1);
 }
 
+/// Time left before a readable ready item runs out (zero when it has, or when
+/// it is not a held message). Feeds the "expires in" line.
+Duration expiresLeft(WaitingItem item, DateTime now) {
+  final left = _remaining(item, now);
+  return left == null || left < Duration.zero ? Duration.zero : left;
+}
+
 Duration? _remaining(WaitingItem item, DateTime now) {
   if (effectiveKind(item, now) != WaitingKind.readyToParse) return null;
   return item.expiresAt.difference(now);

@@ -24,9 +24,14 @@ Map<String, Object?> cls(int id, String group, String name,
 List<Map<String, Object?>> seedRows({Map<String, String> renamed = const {}}) =>
     _seedRows(kBackupSeedKeysV2, renamed);
 
-/// The 17 built-ins as a SCHEMA 3 file carries them (file ids 1..17).
+/// The 17 built-ins as a SCHEMA 3 or 4 file carries them (file ids 1..17).
 List<Map<String, Object?>> seedRowsV3({Map<String, String> renamed = const {}}) =>
-    _seedRows(kBackupSeedKeys, renamed);
+    _seedRows(kBackupSeedKeysV3V4, renamed);
+
+/// The 18 built-ins as a SCHEMA 5 file carries them (file ids 1..18; the Airtime
+/// row is named 'For myself', id 18 is 'For another number').
+List<Map<String, Object?>> seedRowsV5({Map<String, String> renamed = const {}}) =>
+    _seedRows(kBackupSeedKeys, {'AIRTIME:airtime': 'For myself', ...renamed});
 
 List<Map<String, Object?>> _seedRows(
     List<String> keys, Map<String, String> renamed) {
@@ -48,6 +53,7 @@ List<Map<String, Object?>> _seedRows(
     'POCHI_LA_BIASHARA:transport': 'Transport',
     'POCHI_LA_BIASHARA:groceries': 'Groceries',
     'POCHI_LA_BIASHARA:shopping': 'Shopping',
+    'AIRTIME:for_another_number': 'For another number',
   };
   var id = 0;
   return [
@@ -94,10 +100,25 @@ Map<String, Object?> mapRow(String source, String key, int classification,
       'updated_at': updatedAt,
     };
 
+/// One `fuliza_events` row of a schema 4 file (invented data).
+Map<String, Object?> fulizaRow(String kind, String code,
+        {int at = f0, int amount = 50000, int fee = 0, int? printed}) =>
+    {
+      'kind': kind,
+      'code': code,
+      'occurred_at': at,
+      'amount_cents': amount,
+      'fee_cents': fee,
+      'printed_total_cents': printed,
+    };
+
+/// A file of [schemaVersion]. [fuliza] is written only into a schema 4 file
+/// (the section and its counts entry), as the exporter does.
 Map<String, Object?> fileJson({
   required List<Map<String, Object?>> classes,
   List<Map<String, Object?>> txs = const [],
   List<Map<String, Object?>> map = const [],
+  List<Map<String, Object?>> fuliza = const [],
   Map<String, Object?> prefs = const {},
   int schemaVersion = 2,
 }) =>
@@ -110,6 +131,7 @@ Map<String, Object?> fileJson({
         'classifications': classes.length,
         'transactions': txs.length,
         'counterparty_map': map.length,
+        if (schemaVersion >= 4) 'fuliza_events': fuliza.length,
       },
       'classifications': classes,
       // A schema 3 row always carries agent_number (null allowed); a schema 2
@@ -121,6 +143,7 @@ Map<String, Object?> fileJson({
               : t,
       ],
       'counterparty_map': map,
+      if (schemaVersion >= 4) 'fuliza_events': fuliza,
       'prefs': prefs,
       'end': 'mmogo-v1',
     };

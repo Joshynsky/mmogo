@@ -105,7 +105,7 @@ void main() {
 
   test('the device-only keys are not in the backup allowlist', () {
     final inFile = kBackupSettingSpecs.map((s) => s.prefsKey).toSet();
-    expect(inFile, hasLength(11));
+    expect(inFile, hasLength(12)); // S12: eleven + fuliza_limit_cents
     for (final k in [kPendingEntriesKey, kResetPendingKey, kPhoneMergeReportKey, 'recipient_types_v1']) {
       expect(inFile.contains(k), isFalse, reason: k);
     }

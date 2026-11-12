@@ -103,8 +103,8 @@ void main() {
     expect(r.classifications, const TableCounts(added: 1, skipped: 12)); // the file's 12 built-ins
     final seeds = await db.rawQuery(
         'SELECT COUNT(*) AS n FROM classifications WHERE seed_key IS NOT NULL');
-    // The phone has all 17 built-ins (schema 3); the v2 file names 12 of them.
-    expect(seeds.first['n'], 17, reason: 'no built-in duplicated');
+    // The phone has all 18 built-ins (schema 3); the v2 file names 12 of them.
+    expect(seeds.first['n'], 18, reason: 'no built-in duplicated');
     final rentSeed = await seedId(db, 'SEND_MONEY:rent');
     final seedRow = await db.rawQuery('SELECT name FROM classifications WHERE id = ?', [rentSeed]);
     expect(seedRow.first['name'], 'Landlord', reason: 'merge never renames');

@@ -67,6 +67,8 @@ String encodePendingItem(WaitingItem item) {
     'phone': p.counterpartyPhone,
     'account': p.paybillAccountNumber,
     'agent': p.agentNumber,
+    // Airtime kind (WBS row 17): only the fact, never the number or any text.
+    'other': p.sourceType == SmsSourceType.airtime && p.airtimeOther,
     'occurredAt': p.transactionOccurredAt,
   });
 }
@@ -106,6 +108,8 @@ WaitingItem? decodePendingItem(String json) {
         counterpartyPhone: optStr('phone'),
         paybillAccountNumber: optStr('account'),
         agentNumber: optStr('agent'),
+        // Missing key, a non-bool or a non-airtime type reads as false (For myself).
+        airtimeOther: type == SmsSourceType.airtime && m['other'] == true,
         transactionOccurredAt: occurred,
       ),
     );

@@ -235,5 +235,7 @@ class _OverFake implements ReadingBridge {
   @override
   Future<bool> setParseOn(bool on) => throw UnimplementedError();
   @override
+  Future<bool> setAlertDetails(bool on) => throw UnimplementedError();
+  @override
   Future<void> openAutostartSettings() => throw UnimplementedError();
 }

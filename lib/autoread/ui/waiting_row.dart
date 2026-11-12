@@ -16,6 +16,7 @@ import '../../ui/screens/notifications/news_row.dart';
 import '../../ui/theme/app_colors.dart';
 import '../../ui/widgets/notif_colors.dart';
 import '../../ui/widgets/notif_shape_icon.dart';
+import '../logic/message_details.dart' show kDetailsLink;
 import '../logic/waiting_logic.dart';
 import '../model/waiting_item.dart';
 import 'notifications_autoread_copy.dart';
@@ -70,6 +71,8 @@ class WaitingRow extends StatelessWidget {
     this.onCategorize,
     this.onPaste,
     this.onRemove,
+    this.onDetails,
+    this.footer,
   });
 
   final WaitingItem item;
@@ -78,6 +81,12 @@ class WaitingRow extends StatelessWidget {
   final VoidCallback? onCategorize;
   final VoidCallback? onPaste;
   final VoidCallback? onRemove;
+
+  /// Opens the Details sheet. Null: no Details link (rows without a wired page).
+  final VoidCallback? onDetails;
+
+  /// Extra content under the row (the Auto-record airtime switch on a parsed Airtime item).
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +107,7 @@ class WaitingRow extends StatelessWidget {
       case WaitingKind.readyToParse:
         title = kReadyRowTitle;
         keyword = kSpokenReadyToParse;
-        foot = '$age · ${expiresInLine(hours: expiresInHours(item, now), underOneHour: expiresUnderOneHour(item, now))}';
+        foot = '$age · ${expiresInLine(expiresLeft(item, now))}';
         action = NotifRowAction(
           label: kActionParse,
           semantics: '$kActionParse the M-Pesa message received ${spokenTime(age)}',
@@ -137,12 +146,18 @@ class WaitingRow extends StatelessWidget {
         icon = _diamond(p, true);
     }
     if (kind == WaitingKind.readyToParse) foot = 'Received $foot';
+    final bottom = footer;
+    if (bottom != null) {
+      extra = extra == null
+          ? bottom
+          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [extra, const SizedBox(height: 6), bottom]);
+    }
 
     final spoken = [
       keyword,
       title,
       ?subtitle,
-      if (extra != null) kFlaggedLine,
+      if (item.sameCodeDifferentDetails) kFlaggedLine,
       spokenTime(foot),
     ].map((s) => s.endsWith('.') ? s : '$s.').join(' ');
 
@@ -153,10 +168,18 @@ class WaitingRow extends StatelessWidget {
       footText: foot,
       action: action,
       link: link,
+      leadLink: onDetails == null ? null : _details(title),
       extra: extra,
       spokenLabel: spoken,
     );
   }
+
+  // WORDING-DRAFT: the label "Details" is new UI text (mock item 7).
+  NotifRowAction _details(String title) => NotifRowAction(
+        label: kDetailsLink,
+        semantics: '$kDetailsLink of this message: $title',
+        onTap: onDetails,
+      );
 
   NotifRowAction _paste() => NotifRowAction(
         label: kActionPaste,

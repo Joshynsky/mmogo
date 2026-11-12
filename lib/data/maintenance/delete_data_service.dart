@@ -5,6 +5,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../backup/auto_backup_service.dart';
 import '../db/app_database.dart';
 import '../db/db_open.dart' show firstIntOf;
+import '../db/sqlite_fuliza_repository.dart' show SqliteFulizaRepository;
 import '../prefs/backup_prefs.dart';
 import '../prefs/recipient_memory.dart';
 import 'data_op_gate.dart';
@@ -14,8 +15,8 @@ import 'reset_resume.dart';
 
 export 'delete_data_types.dart';
 
-/// §DATA.MAINTENANCE.SERVICE — Delete data (DD1 / CA7, 0.1.2 S9b-1). Follows
-/// `_pipeline/v0.1.2/baseline/dbe-note-delete-data.md` step by step.
+/// §DATA.MAINTENANCE.SERVICE — Delete data. Runs the delete steps in a fixed
+/// order, one after the other.
 ///
 /// THIS CODE IS DESTRUCTIVE. Tests must inject a temp database path, a temp
 /// safety folder, mock prefs and fakes ([ResetEnv]); see
@@ -82,13 +83,14 @@ class DeleteDataServiceImpl implements DeleteDataService {
   @override
   Future<DeleteDataPeek> peek() async {
     var incomplete = false;
-    var live = 0, soft = 0, learned = 0, userClasses = 0;
+    var live = 0, soft = 0, learned = 0, userClasses = 0, fuliza = 0;
     try {
       final db = await env.db.database;
       live = await _scalar(db, 'SELECT COUNT(*) FROM transactions WHERE deleted_at IS NULL');
       soft = await _scalar(db, 'SELECT COUNT(*) FROM transactions WHERE deleted_at IS NOT NULL');
       learned = await _scalar(db, 'SELECT COUNT(*) FROM counterparty_classification_map');
       userClasses = await _scalar(db, 'SELECT COUNT(*) FROM classifications WHERE seed_key IS NULL');
+      fuliza = await _scalar(db, 'SELECT COUNT(*) FROM fuliza_events');
     } catch (_) {
       incomplete = true;
     }
@@ -117,6 +119,7 @@ class DeleteDataServiceImpl implements DeleteDataService {
       liveTransactions: live,
       softDeletedTransactions: soft,
       learnedReceivers: learned,
+      fulizaRecords: fuliza,
       safetyCopyPresent: safety,
       rememberedRecipientsPresent: remembered > 0,
       rememberedRecipientsCount: remembered,
@@ -126,6 +129,7 @@ class DeleteDataServiceImpl implements DeleteDataService {
           soft == 0 &&
           learned == 0 &&
           userClasses == 0 &&
+          fuliza == 0 &&
           !safety &&
           !extraKeys,
       incomplete: incomplete,
@@ -142,7 +146,7 @@ class DeleteDataServiceImpl implements DeleteDataService {
   Future<DeleteDataResult> deleteMyTransactions() async {
     if (!_gate.tryAcquire()) return const DeleteDataResult(outcome: DeleteDataOutcome.busy);
     var step = DeleteDataStep.database;
-    var live = 0, soft = 0, learned = 0;
+    var live = 0, soft = 0, learned = 0, fuliza = 0;
     var committed = false;
     var vacuumRan = false;
     var safetyCleared = false;
@@ -151,6 +155,7 @@ class DeleteDataServiceImpl implements DeleteDataService {
           transactionsDeleted: committed ? live : 0,
           softDeletedIncluded: committed ? soft : 0,
           learnedReceiversDeleted: committed ? learned : 0,
+          fulizaRecordsDeleted: committed ? fuliza : 0,
           safetyCopyCleared: safetyCleared,
           vacuumRan: vacuumRan,
           failedStep: failed,
@@ -166,10 +171,13 @@ class DeleteDataServiceImpl implements DeleteDataService {
           live = await _scalar(txn, 'SELECT COUNT(*) FROM transactions WHERE deleted_at IS NULL');
           soft = await _scalar(txn, 'SELECT COUNT(*) FROM transactions WHERE deleted_at IS NOT NULL');
           learned = await _scalar(txn, 'SELECT COUNT(*) FROM counterparty_classification_map');
+          fuliza = await _scalar(txn, 'SELECT COUNT(*) FROM fuliza_events');
           await txn.delete('counterparty_classification_map');
+          await txn.delete('fuliza_events');
           await txn.delete('transactions');
           // Count again with no deleted_at filter: soft-deleted rows too.
-          final left = await _countRows(txn, 'counterparty_classification_map') + await _countRows(txn, 'transactions');
+          final left = await _countRows(txn, 'counterparty_classification_map') + await _countRows(txn, 'transactions') +
+              await _countRows(txn, 'fuliza_events');
           if (left != 0) throw StateError(_nothingDeleted);
         });
         committed = true;
@@ -178,6 +186,16 @@ class DeleteDataServiceImpl implements DeleteDataService {
         return partial(DeleteDataOutcome.notFinished, DeleteDataStep.database);
       } catch (_) {
         return partial(DeleteDataOutcome.notFinished, DeleteDataStep.database);
+      }
+
+      // The Fuliza limit (a preference, so outside the transaction): removed, read back absent.
+      step = DeleteDataStep.prefs;
+      try {
+        const k = SqliteFulizaRepository.limitPrefsKey;
+        if (await env.prefs.has(k) && !await env.prefs.remove(k)) throw StateError('not removed');
+        if (await env.prefs.has(k)) throw StateError('still stored');
+      } catch (_) {
+        return partial(DeleteDataOutcome.notFinished, step);
       }
 
       // a. best-effort VACUUM: never a failure.
@@ -267,12 +285,13 @@ class DeleteDataServiceImpl implements DeleteDataService {
   Future<DeleteDataResult> resetApp() async {
     if (!_gate.tryAcquire()) return const DeleteDataResult(outcome: DeleteDataOutcome.busy);
     var step = DeleteDataStep.database;
-    var live = 0, soft = 0, learned = 0;
+    var live = 0, soft = 0, learned = 0, fuliza = 0;
     DeleteDataResult result(DeleteDataOutcome o, [DeleteDataStep? failed]) => DeleteDataResult(
           outcome: o,
           transactionsDeleted: o == DeleteDataOutcome.done ? live : 0,
           softDeletedIncluded: o == DeleteDataOutcome.done ? soft : 0,
           learnedReceiversDeleted: o == DeleteDataOutcome.done ? learned : 0,
+          fulizaRecordsDeleted: o == DeleteDataOutcome.done ? fuliza : 0,
           safetyCopyCleared: o == DeleteDataOutcome.done,
           failedStep: failed,
         );
@@ -290,6 +309,7 @@ class DeleteDataServiceImpl implements DeleteDataService {
           live = await _scalar(db, 'SELECT COUNT(*) FROM transactions WHERE deleted_at IS NULL');
           soft = await _scalar(db, 'SELECT COUNT(*) FROM transactions WHERE deleted_at IS NOT NULL');
           learned = await _scalar(db, 'SELECT COUNT(*) FROM counterparty_classification_map');
+          fuliza = await _scalar(db, 'SELECT COUNT(*) FROM fuliza_events');
         } catch (_) {}
       }
 

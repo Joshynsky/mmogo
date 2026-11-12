@@ -35,6 +35,11 @@ const String _insertMapSql =
     'INSERT INTO counterparty_classification_map (source_type, '
     'counterparty_key, classification_id, auto_apply, updated_at) '
     'VALUES (?, ?, ?, ?, ?)';
+const String _insertFulizaSql =
+    'INSERT INTO fuliza_events (kind, code, occurred_at, amount_cents, '
+    'fee_cents, printed_total_cents) VALUES (?, ?, ?, ?, ?, ?)';
+const String _deleteFulizaSql = 'DELETE FROM fuliza_events';
+const String _countFulizaSql = 'SELECT COUNT(*) AS n FROM fuliza_events';
 const String _deleteMapSql = 'DELETE FROM counterparty_classification_map';
 const String _deleteTxSql = 'DELETE FROM transactions';
 const String _deleteUserClassesSql = 'DELETE FROM classifications WHERE seed_key IS NULL';
@@ -58,10 +63,15 @@ class ExpectedRows {
     required this.transactions,
     required this.classifications,
     required this.counterpartyMap,
+    this.fulizaEvents,
   });
   final int transactions;
   final int classifications;
   final int counterpartyMap;
+
+  /// Fuliza events the phone must hold when the transaction opens; null = not
+  /// checked (only a hand-built value in a test; the service always sets it).
+  final int? fulizaEvents;
 }
 
 /// Thrown inside the transaction when the phone's rows differ from the safety
@@ -108,15 +118,21 @@ class RestoreWriter {
     if (expect != null) {
       if (await _count(txn, _countLiveTxSql) != expect.transactions ||
           await _count(txn, _countClassesSql) != expect.classifications ||
-          await _count(txn, _countMapSql) != expect.counterpartyMap) {
+          await _count(txn, _countMapSql) != expect.counterpartyMap ||
+          (expect.fulizaEvents != null &&
+              await _count(txn, _countFulizaSql) != expect.fulizaEvents)) {
         throw const RestoreDataChanged();
       }
     }
+    // C3 (PM choice A): a file WITHOUT a Fuliza section (schema < 4) leaves the
+    // phone's Fuliza events and limit alone; only a schema >= 4 file replaces them.
+    final fulizaBefore = await _count(txn, _countFulizaSql);
     // Dependency order: nothing references the map; transactions reference
     // classifications (RESTRICT), so they go before the user classifications.
     await txn.rawDelete(_deleteMapSql);
     await txn.rawDelete(_deleteTxSql); // includes recently deleted rows
     await txn.rawDelete(_deleteUserClassesSql);
+    if (file.hasFulizaSection) await txn.rawDelete(_deleteFulizaSql);
 
     // Built-ins: two phases so a name swap between two of them can never trip
     // idx_classifications_active_name. Phase 1 parks every built-in the file
@@ -150,7 +166,8 @@ class RestoreWriter {
 
     final lookups = await RestoreLookups.load(txn);
     final plan = RestorePlan.build(file, lookups);
-    final tally = await _apply(txn, file, plan, lookups, builtInsUpdated: writable.length);
+    final tally = await _apply(txn, file, plan, lookups,
+        builtInsUpdated: writable.length, fulizaLeftAlone: !file.hasFulizaSection);
     await _postCheck(txn, file, tally);
     // The file's counts are not the phone's counts any more: saved receivers
     // that combine into one (C-A5) make the map smaller than the file, and a
@@ -159,6 +176,12 @@ class RestoreWriter {
     if (await _count(txn, _countLiveTxSql) != file.transactions.length ||
         await _count(txn, _countMapSql) != plan.newMapRows.length) {
       throw StateError('replace row counts do not match the file');
+    }
+    // The Fuliza table holds exactly the file's events (schema >= 4), or is
+    // exactly as it was (older file).
+    final fulizaExpected = file.hasFulizaSection ? file.fulizaEvents.length : fulizaBefore;
+    if (await _count(txn, _countFulizaSql) != fulizaExpected) {
+      throw StateError('replace Fuliza count does not match');
     }
     final dbSeeds = await _count(txn, _countSeedClassesSql);
     final expectedClasses = expectedReplaceClassCount(
@@ -194,6 +217,7 @@ class RestoreWriter {
     RestorePlan plan,
     RestoreLookups lookups, {
     int builtInsUpdated = 0,
+    bool fulizaLeftAlone = false,
   }) async {
     // 1. classifications (ids needed, so results are kept).
     final newIds = <int>[];
@@ -233,11 +257,20 @@ class RestoreWriter {
           dbClassId(r['classification']), r['auto_apply'], r['updated_at'],
         ]);
 
+    // 4. Fuliza events (already filtered against what is stored).
+    await _insertAll(txn, 'fuliza_events', _insertFulizaSql, plan.newFulizaEvents, (r) => [
+          r['kind'], r['code'], r['occurred_at'], r['amount_cents'],
+          r['fee_cents'], r['printed_total_cents'],
+        ]);
+
     return RestoreTally(
       classifications: TableCounts(added: classes.length, skipped: plan.classSkipped),
       transactions: TableCounts(added: plan.newTransactions.length, skipped: plan.txSkipped),
       counterpartyMap: TableCounts(added: plan.newMapRows.length, skipped: plan.mapSkipped),
       builtInsUpdated: builtInsUpdated,
+      fulizaEvents: TableCounts(
+          added: plan.newFulizaEvents.length, skipped: plan.fulizaSkipped),
+      fulizaLeftAlone: fulizaLeftAlone,
     );
   }
 
@@ -266,7 +299,8 @@ class RestoreWriter {
     }
     if (t.classifications.total != file.classifications.length ||
         t.transactions.total != file.transactions.length ||
-        t.counterpartyMap.total != file.counterpartyMap.length) {
+        t.counterpartyMap.total != file.counterpartyMap.length ||
+        t.fulizaEvents.total != file.fulizaEvents.length) {
       throw StateError('added + skipped does not equal the file counts');
     }
   }

@@ -68,6 +68,9 @@ const kPhoneTransferNotice =
 /// page only (S11 / WN1 reuses the constant; the Privacy page does not).
 const kBackupNotRestorableByOlder = 'A backup made with 0.1.2 cannot be restored by 0.1.1 or older.';
 
+/// 0.2.0 (S12): backups now carry Fuliza records (schema 4). WORDING-DRAFT, PM to sign at the wording gate.
+const kBackupNotRestorableByOlderV4 = 'A backup made with 0.2.0 cannot be restored by 0.1.3 or older.';
+
 /// W3: why a backup matters (Backup page header, What's-new, Privacy page).
 const kUninstallErasesNotice =
     'Uninstalling mmogo erases your data from this phone. Only a backup you saved can bring it back.';

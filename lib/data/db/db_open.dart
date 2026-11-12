@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../domain/airtime/airtime_kind.dart';
 import 'migrations.dart';
 import 'schema.dart';
 
@@ -41,6 +42,7 @@ Future<Database> openMmogoDatabase(
   bool singleInstance = true,
   FutureOr<void> Function(Database db, int version)? onCreate,
   FutureOr<void> Function(Database db, int oldVersion, int newVersion)? onUpgrade,
+  FutureOr<void> Function(Database db, int oldVersion, int newVersion)? onDowngrade,
 }) {
   return factory.openDatabase(
     path,
@@ -59,15 +61,42 @@ Future<Database> openMmogoDatabase(
             await AppSchema.seed(db);
           },
       onUpgrade: onUpgrade ?? AppMigrations.migrate,
+      // Without a handler sqflite opens a NEWER file and rewrites its
+      // user_version to this build's. A database newer than this build is never
+      // opened or rewritten: the throw rolls the open back, so the file keeps
+      // its version and rows. The open then fails like any other failed open
+      // (OPN-1: `kUpg3ProofOnRecord` is off, so no stronger claim is made).
+      onDowngrade: onDowngrade ?? _refuseNewerDatabase,
       onOpen: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
         final on = firstIntOf(await db.rawQuery('PRAGMA foreign_keys'));
         if (on != 1) {
           throw StateError('PRAGMA foreign_keys is not ON after open');
         }
+        // Version 5 and up: both Airtime built-ins must exist, or auto-record would
+        // silently do nothing. Fail the open cleanly instead.
+        if (version >= 5 && await _hasClassificationsTable(db)) {
+          final n = firstIntOf(await db.rawQuery(
+            'SELECT COUNT(*) FROM classifications WHERE seed_key IN (?, ?)',
+            [kAirtimeSeedMyself, kAirtimeSeedOther],
+          ));
+          if (n != 2) throw StateError('The Airtime built-in categories are missing.');
+        }
       },
     ),
   );
+}
+
+/// False for a file with no `classifications` table at all (not a mmogo file yet,
+/// or a refused newer file); the Airtime guard has nothing to check there.
+Future<bool> _hasClassificationsTable(Database db) async =>
+    (await db.rawQuery("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'classifications'")).isNotEmpty;
+
+/// Thrown from `onDowngrade`: the file's `user_version` is above this build's.
+Never _refuseNewerDatabase(Database db, int oldVersion, int newVersion) {
+  throw StateError(
+      'This database (version $oldVersion) is newer than this version of mmogo '
+      '(version $newVersion); it was not opened or changed.');
 }
 
 /// The first column of the first row as an int (sqflite's own helper is not

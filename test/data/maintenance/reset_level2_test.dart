@@ -79,8 +79,8 @@ void main() {
       expect(removes.where((l) => l == 'remove:$kResetPendingKey').length, 1);
       expect(AppDatabase.resetInProgress, isFalse);
 
-      // Fresh install: 17 built-ins, no transactions.
-      expect(await env.count('SELECT COUNT(*) FROM classifications'), 17);
+      // Fresh install: 18 built-ins, no transactions.
+      expect(await env.count('SELECT COUNT(*) FROM classifications'), 18);
       expect(await env.count('SELECT COUNT(*) FROM transactions'), 0);
       expect(await env.count('SELECT COUNT(*) FROM counterparty_classification_map'), 0);
     });

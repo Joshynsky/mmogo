@@ -25,6 +25,7 @@ class HomeSummaryCard extends StatelessWidget {
     this.cashWithdrawnCents,
     this.withdrawalFeeCents = 0,
     this.hiddenProgress,
+    this.fulizaLine,
   });
 
   /// Early in a This week / This month: the progress cue ("3/7") shows in
@@ -38,6 +39,9 @@ class HomeSummaryCard extends StatelessWidget {
   /// The withdrawal part of [costCents] (already inside it); 0 hides the
   /// "incl. Ksh X withdrawal fees" sub-line.
   final int withdrawalFeeCents;
+
+  /// 0.2.0 S9 (V3): the one Fuliza line under Transaction cost. `null` = no Fuliza data, nothing is drawn.
+  final Widget? fulizaLine;
 
   /// Lets Home's coach tour spotlight the period button.
   final GlobalKey? periodTourKey;
@@ -122,46 +126,56 @@ class HomeSummaryCard extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border(top: BorderSide(color: palette.line)),
             ),
-            child: Semantics(
-              key: const Key('homeCostRow'),
-              container: true,
-              label:
-                  'Transaction cost, all M-Pesa, ${formatKsh(costCents)}'
-                  '${withdrawalFeeCents > 0 ? ', including ${formatKsh(withdrawalFeeCents)} for withdrawals' : ''}',
-              excludeSemantics: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  HomeSplitLine(
-                    start: Text('Transaction cost (all M\u2011Pesa)', style: TextStyle(fontSize: 12, color: palette.mutedInk)),
-                    end: Text(
-                      formatKsh(costCents),
-                      key: const Key('homeCost'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        fontFeatures: tabularFigures,
-                        color: palette.softInk,
-                      ),
-                    ),
-                  ),
-                  if (withdrawalFeeCents > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 3),
-                      child: Text(
-                        'incl. ${kshTrim(withdrawalFeeCents)} withdrawal fees',
-                        key: const Key('homeCostWithdrawalFees'),
-                        textAlign: TextAlign.end,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          height: 1.35,
-                          fontFeatures: tabularFigures,
-                          color: palette.mutedInk,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Semantics(
+                  key: const Key('homeCostRow'),
+                  container: true,
+                  label:
+                      'Transaction cost, all M-Pesa, ${formatKsh(costCents)}'
+                      '${withdrawalFeeCents > 0 ? ', including ${formatKsh(withdrawalFeeCents)} for withdrawals' : ''}',
+                  excludeSemantics: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      HomeSplitLine(
+                        start: Text(
+                          'Transaction cost (all M\u2011Pesa)',
+                          style: TextStyle(fontSize: 12, color: palette.mutedInk),
+                        ),
+                        end: Text(
+                          formatKsh(costCents),
+                          key: const Key('homeCost'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            fontFeatures: tabularFigures,
+                            color: palette.softInk,
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
+                      if (withdrawalFeeCents > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Text(
+                            'incl. ${kshTrim(withdrawalFeeCents)} withdrawal fees',
+                            key: const Key('homeCostWithdrawalFees'),
+                            textAlign: TextAlign.end,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              height: 1.35,
+                              fontFeatures: tabularFigures,
+                              color: palette.mutedInk,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // 0.2.0 S9 (V3): outside the cost row's Semantics, which hides what is inside it.
+                ?fulizaLine,
+              ],
             ),
           ),
         ],

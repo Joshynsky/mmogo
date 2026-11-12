@@ -84,6 +84,10 @@ class _AddScreenState extends State<AddScreen> {
   /// over, and the "or enter it yourself" divider goes.
   bool _filled = false;
 
+  /// Row 17: the parser decided this Airtime is for another number. Set only by
+  /// a parse; read-only; reset by Start over and every manual type change.
+  bool _airtimeOther = false;
+
   /// Withdrawal: the Fee field was edited or left, so its empty-error may show.
   bool _feeTouched = false;
 
@@ -205,6 +209,7 @@ class _AddScreenState extends State<AddScreen> {
       _src = 'MPESA';
       _type = fields.sourceType.dbValue;
       _filled = true;
+      _airtimeOther = fields.sourceType == SmsSourceType.airtime && fields.airtimeOther;
       _rawParseSource = 'SMS_PARSE';
       _feeTouched = false;
       _codeController.text = fields.code;
@@ -239,6 +244,7 @@ class _AddScreenState extends State<AddScreen> {
       _ask.reset();
       _swNote = '';
       _filled = false;
+      _airtimeOther = false;
       _type = 'SEND_MONEY';
       _rawParseSource = 'MANUAL';
       _feeTouched = false;
@@ -269,6 +275,7 @@ class _AddScreenState extends State<AddScreen> {
       _ask.start(name: f.name, key: deriveRecipientNameKey(f.name));
       _swNote = '';
       _src = 'MPESA';
+      _airtimeOther = false;
       _type = 'SEND_MONEY'; // a neutral value while undecided; the pills show none selected
       _filled = true;
       _rawParseSource = 'SMS_PARSE';
@@ -336,6 +343,7 @@ class _AddScreenState extends State<AddScreen> {
         _ask.remembered = rule;
         _ask.tick = false; // "Remember this change" starts OFF
       }
+      _airtimeOther = false;
       _type = type.dbValue;
       _classificationId = null;
       _classificationName = null;
@@ -432,6 +440,7 @@ class _AddScreenState extends State<AddScreen> {
     if (next == _type || _filled) return;
     setState(() {
       _swNote = '';
+      _airtimeOther = false;
       _type = next;
       // A classification chosen under the previous Type's group would
       // violate the group-scope guard trigger for the new Type — must be
@@ -455,7 +464,7 @@ class _AddScreenState extends State<AddScreen> {
   Future<void> _ensureFixedCategory() async {
     final db = _db;
     final type = _type;
-    final seed = AddDraft.fixedSeedKey(type);
+    final seed = AddDraft.fixedSeedKey(type, airtimeOther: _airtimeOther);
     if (db == null || seed == null || _src == 'CASH') return;
     final item = await ClassificationDao.fetchActiveBySeedKey(db, seedKey: seed);
     if (!mounted || item == null || _type != type || _src == 'CASH') return;

@@ -59,6 +59,12 @@ class ParsedSmsFields {
   final String? agentNumber;
   final int transactionOccurredAt;
 
+  /// Airtime only (WBS row 17): true when the message said the airtime was bought
+  /// `for <digits>` (another number). The digits themselves are never kept. False
+  /// for every other message. Carried in memory and in the pending item; a saved
+  /// entry's kind is its category, not a column.
+  final bool airtimeOther;
+
   const ParsedSmsFields({
     required this.code,
     required this.sourceType,
@@ -69,7 +75,9 @@ class ParsedSmsFields {
     required this.paybillAccountNumber,
     this.agentNumber,
     required this.transactionOccurredAt,
-  });
+    this.airtimeOther = false,
+  }) : assert(!airtimeOther || sourceType == SmsSourceType.airtime,
+            'airtimeOther is only for the airtime type');
 
   @override
   String toString() =>
@@ -77,7 +85,7 @@ class ParsedSmsFields {
       'amountCents: $amountCents, transactionCostCents: $transactionCostCents, '
       'counterpartyLabel: $counterpartyLabel, counterpartyPhone: $counterpartyPhone, '
       'paybillAccountNumber: $paybillAccountNumber, agentNumber: $agentNumber, '
-      'transactionOccurredAt: $transactionOccurredAt)';
+      'transactionOccurredAt: $transactionOccurredAt, airtimeOther: $airtimeOther)';
 
   @override
   bool operator ==(Object other) =>
@@ -90,7 +98,8 @@ class ParsedSmsFields {
       other.counterpartyPhone == counterpartyPhone &&
       other.paybillAccountNumber == paybillAccountNumber &&
       other.agentNumber == agentNumber &&
-      other.transactionOccurredAt == transactionOccurredAt;
+      other.transactionOccurredAt == transactionOccurredAt &&
+      other.airtimeOther == airtimeOther;
 
   @override
   int get hashCode => Object.hash(
@@ -103,5 +112,6 @@ class ParsedSmsFields {
         paybillAccountNumber,
         agentNumber,
         transactionOccurredAt,
+        airtimeOther,
       );
 }

@@ -1,3 +1,4 @@
+import '../../../domain/airtime/airtime_kind.dart';
 import '../../../data/db/transaction_dao.dart';
 import '../../../domain/counterparty/counterparty_key.dart';
 import '../../../domain/format/ksh_amount.dart';
@@ -53,9 +54,11 @@ class AddDraft {
   bool get hasFixedCategory => isWithdrawal || isAirtime;
 
   /// The built-in category of a locked type, by `seed_key`; null otherwise.
-  static String? fixedSeedKey(String type) => switch (type) {
+  /// Airtime: the PARSER decides the kind ([airtimeOther] from the parsed
+  /// message); a manual Add (no parse) is For myself (row 17).
+  static String? fixedSeedKey(String type, {bool airtimeOther = false}) => switch (type) {
         'AGENT_WITHDRAWAL' => 'AGENT_WITHDRAWAL:cash_withdrawal',
-        'AIRTIME' => 'AIRTIME:airtime',
+        'AIRTIME' => airtimeSeedKey(airtimeOther),
         _ => null,
       };
 

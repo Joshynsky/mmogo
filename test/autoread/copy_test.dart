@@ -82,8 +82,12 @@ void main() {
     expect(kPasteGoStraight, 'Already copied it? Go straight to Add.');
     expect(kFromMessageTextOnly,
         'From the message text only. mmogo cannot check it with M-Pesa.');
-    expect(expiresInLine(hours: 4, underOneHour: false), 'expires in 4 h');
-    expect(expiresInLine(hours: 1, underOneHour: true), 'expires in under 1 h');
+    expect(expiresInLine(const Duration(hours: 24)), 'expires in 24 h');
+    expect(expiresInLine(const Duration(hours: 4)), 'expires in 4 h');
+    expect(expiresInLine(const Duration(hours: 3, minutes: 20)), 'expires in 3 h 20 min');
+    expect(expiresInLine(const Duration(minutes: 45)), 'expires in 45 min');
+    expect(expiresInLine(const Duration(seconds: 30)), 'expires in less than 1 min');
+    expect(expiresInLine(const Duration(minutes: -5)), 'expires in less than 1 min');
   });
 
   test('the gone recovery names finding the message and pasting it', () {

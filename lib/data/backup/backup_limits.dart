@@ -14,7 +14,7 @@ const int kBackupFormatVersion = 1;
 /// The `schema_version` the exporter writes (the database version it exports).
 /// Mirrors `kDbVersion` in `migrations.dart` (a test pins the two together);
 /// kept as a literal here so this file stays import-free.
-const int kBackupSchemaVersion = 3;
+const int kBackupSchemaVersion = 5;
 
 /// The lowest `schema_version` a file may carry (`seed_key` exists from v2).
 const int kBackupMinSchemaVersion = 2;
@@ -22,6 +22,11 @@ const int kBackupMinSchemaVersion = 2;
 /// First schema that may carry the two new group codes, the two new source
 /// types, the five new seed keys and the `agent_number` row key (0.1.2).
 const int kBackupFirstSchemaWithAgentAndAirtime = 3;
+
+/// First schema that carries the `fuliza_events` section and its counts entry
+/// (0.2.0). A schema 3 file with the section, or a schema 4 file without it,
+/// is refused.
+const int kBackupFirstSchemaWithFuliza = 4;
 
 /// Last top-level key of every file. Lets a reader (and the auto-backup
 /// prune) see the file was written to the end.
@@ -35,6 +40,9 @@ const int kBackupMaxBytes = 20 * 1024 * 1024;
 const int kBackupMaxTransactions = 50000;
 const int kBackupMaxClassifications = 1000;
 const int kBackupMaxMapRows = 20000;
+
+/// Fuliza events: about 440 draws in three years, so this is ample.
+const int kBackupMaxFulizaEvents = 20000;
 const int kBackupMaxPrefsKeys = 32;
 
 /// Deepest JSON nesting a valid file has is 3 (root, array, row object). The
@@ -58,6 +66,10 @@ const int kBackupMaxAgentNumberLength = 20;
 const int kBackupMaxCounterpartyKeyLength = 310;
 const int kBackupMaxDisplayNameLength = 30;
 
+/// A Fuliza event code is an M-Pesa code (10 characters); 20 leaves room and
+/// the text rules (no control characters, trimmed) still apply.
+const int kBackupMaxFulizaCodeLength = 20;
+
 // --- value ranges ---------------------------------------------------------------
 
 /// Epoch ms, [2007-01-01T00:00Z, 2100-01-01T00:00Z).
@@ -67,6 +79,9 @@ const int kBackupMaxEpochMs = 4102444800000;
 const int kBackupMaxClassificationFileId = 2147483647;
 const int kBackupMaxAmountCents = 10000000000; // KSh 100 million
 const int kBackupMaxCostCents = 10000000;
+
+/// Fuliza amounts, fees and printed totals share the transaction amount cap.
+const int kBackupMaxFulizaCents = kBackupMaxAmountCents;
 
 // --- enums ----------------------------------------------------------------------
 
@@ -126,6 +141,9 @@ const List<String> kBackupMapSourceTypes = [
   'PAYBILL',
 ];
 
+/// Fuliza event kinds: the `FulizaEventKind` enum NAMES (a test pins them).
+const List<String> kBackupFulizaKinds = ['draw', 'repayFull', 'repayPartial'];
+
 const List<String> kBackupRawParseSources = ['SMS_PARSE', 'MANUAL'];
 
 /// The 12 built-in keys a schema 2 file may carry (literal, frozen).
@@ -144,11 +162,10 @@ const List<String> kBackupSeedKeysV2 = [
   'BUY_GOODS:groceries',
 ];
 
-/// The 17 built-in classification keys (`classifications.seed_key`) of a
-/// schema >= 3 file: the 12 above, then the five 0.1.2 seeds. A file may carry
-/// each at most once, on a row of the matching group. A test pins this list to
-/// `AppSchema.seedClassifications`.
-const List<String> kBackupSeedKeys = [
+/// The 17 built-in classification keys of a schema 3 or 4 file: the 12 above,
+/// then the five 0.1.2 seeds. FROZEN literal: schema 5 added a key (below), and
+/// a schema 3/4 file naming it is refused.
+const List<String> kBackupSeedKeysV3V4 = [
   'SEND_MONEY:family_friends',
   'SEND_MONEY:rent',
   'SEND_MONEY:transport',
@@ -168,6 +185,17 @@ const List<String> kBackupSeedKeys = [
   'POCHI_LA_BIASHARA:shopping',
 ];
 
+/// The 18 built-in classification keys of a schema >= 5 file: the 17 above, then
+/// `AIRTIME:for_another_number` LAST. A file may carry each at most once, on a row
+/// of the matching group. A test pins this list to `AppSchema.seedClassifications`.
+const List<String> kBackupSeedKeys = [
+  ...kBackupSeedKeysV3V4,
+  'AIRTIME:for_another_number',
+];
+
+/// The first backup schema that may name the 18th seed key.
+const int kBackupFirstSchemaWithAirtimeKinds = 5;
+
 /// C-A10: the two built-ins a restore never writes (Withdrawal and Airtime):
 /// they stay active with their own names whatever a file says. Taken from
 /// [kBackupSeedKeys] by group prefix so the strings are not typed twice; a test
@@ -179,7 +207,23 @@ final Set<String> kBackupLockedSeedKeys = {
 
 // --- exact key sets (const; the file's keys are never used as column names) -----
 
+/// Top-level keys of a schema 4 file (what the exporter writes, in order).
 const List<String> kBackupTopLevelKeys = [
+  'app',
+  'format_version',
+  'schema_version',
+  'created_at',
+  'counts',
+  'classifications',
+  'transactions',
+  'counterparty_map',
+  'fuliza_events',
+  'prefs',
+  'end',
+];
+
+/// Top-level keys of a schema 2 or 3 file (literal, frozen): no `fuliza_events`.
+const List<String> kBackupTopLevelKeysV3 = [
   'app',
   'format_version',
   'schema_version',
@@ -192,7 +236,16 @@ const List<String> kBackupTopLevelKeys = [
   'end',
 ];
 
+/// Counts keys of a schema 4 file.
 const List<String> kBackupCountsKeys = [
+  'classifications',
+  'transactions',
+  'counterparty_map',
+  'fuliza_events',
+];
+
+/// Counts keys of a schema 2 or 3 file (literal, frozen).
+const List<String> kBackupCountsKeysV3 = [
   'classifications',
   'transactions',
   'counterparty_map',
@@ -248,6 +301,17 @@ const List<String> kBackupMapKeys = [
   'classification',
   'auto_apply',
   'updated_at',
+];
+
+/// Row keys of a `fuliza_events` row (schema >= 4). `kind` is an enum name,
+/// `occurred_at` epoch ms, money in integer cents.
+const List<String> kBackupFulizaKeys = [
+  'kind',
+  'code',
+  'occurred_at',
+  'amount_cents',
+  'fee_cents',
+  'printed_total_cents',
 ];
 
 // --- patterns -------------------------------------------------------------------
