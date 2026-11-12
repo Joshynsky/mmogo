@@ -64,12 +64,12 @@ internal object BridgeLogic {
     fun stateResult(
         enabled: Boolean, smsGranted: Boolean, notifGranted: Boolean, heldCount: Int,
         parseOn: Boolean = false, autostartHelp: Boolean = false, consentVersion: Int = 0,
-        alertDetails: Boolean = AlertText.DEFAULT_SHOW_DETAILS,
+        alertDetails: Boolean = AlertText.DEFAULT_SHOW_DETAILS, alertDetailsAbsent: Boolean = false,
     ): Map<String, Any?> =
         mapOf(
             "enabled" to enabled, "smsGranted" to smsGranted, "notifGranted" to notifGranted, "heldCount" to heldCount,
             "parseOn" to parseOn, "autostartHelp" to autostartHelp, "consentVersion" to consentVersion,
-            "alertDetails" to alertDetails,
+            "alertDetails" to alertDetails, "alertDetailsAbsent" to alertDetailsAbsent,
         )
 
     fun permissionsResult(smsGranted: Boolean, notifGranted: Boolean): Map<String, Any?> =

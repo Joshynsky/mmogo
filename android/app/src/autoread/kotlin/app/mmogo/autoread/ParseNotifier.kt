@@ -1,6 +1,7 @@
 package app.mmogo.autoread
 
 import android.Manifest
+import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -41,9 +42,21 @@ object ParseNotifier {
         action(context, R.string.autoread_action_parse, receiverIntent(context, heldId, ACTION_PARSE))
 
     /** Replaces the notification with "Parsed. N waiting for a category", Categorize now and Later; it removes itself after about 6 s. */
-    fun postParsed(context: Context, heldId: String, waiting: Int): Boolean {
+    fun postParsed(context: Context, heldId: String, waiting: Int, queuedCents: Long? = null): Boolean {
         val nm = manager(context, heldId) ?: return false
-        val b = builder(context, nm, context.getString(R.string.autoread_parsed_text, waiting))
+        // Airtime that the app adds on its own at the next open is not "waiting for a category": it gets
+        // its own queued sentence (amount only in Show details mode, never on a locked phone) and the count
+        // only covers the rest. With nothing else waiting there are no buttons.
+        val locked = (context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager)?.isKeyguardLocked == true
+        val showAmount = AutoReadSwitch.alertDetails(context) && !locked
+        val text = AlertText.parsedText(waiting, queuedCents, showAmount) { context.getString(R.string.autoread_parsed_text, it) }
+        val b = builder(context, nm, text)
+        if (!AlertText.parsedHasButtons(waiting, queuedCents)) {
+            if (Build.VERSION.SDK_INT >= 26) b.setTimeoutAfter(ParsePolicy.SELF_DISMISS_MS)
+            b.setContentIntent(openApp(context, heldId, null))
+            nm.notify(NotifierPure.notificationId(heldId), b.build())
+            return true
+        }
         // Categorize now: the same app intent as the body tap (the launch router sends a parsed item to Categorize),
         // told apart by its action so the two PendingIntents do not replace each other.
         b.addAction(action(context, R.string.autoread_action_categorize, openApp(context, heldId, ACTION_CATEGORIZE)))

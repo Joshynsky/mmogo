@@ -13,6 +13,6 @@
     <string name="autoread_action_parse">Parse</string>
     <string name="autoread_action_categorize">Categorize now</string>
     <string name="autoread_action_later">Later</string>
-    <string name="autoread_parsed_text">Parsed. %1$d waiting for a category</string>
+    <string name="autoread_parsed_text">Parsed. %1$d waiting for a category.</string>
     <string name="autoread_could_not_read">Could not read this one. Paste it instead.</string>
 </resources>

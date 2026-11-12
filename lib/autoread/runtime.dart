@@ -12,6 +12,7 @@ import '../data/maintenance/reset_resume.dart' show ResetEnv;
 import 'bridge/method_channel_autoread_bridge.dart';
 import 'data/autoread_wipe.dart';
 import 'data/pending_items_store.dart';
+import 'logic/airtime_auto.dart' show AirtimeAutoController;
 import 'logic/reading_controller.dart';
 
 class AutoReadRuntime {
@@ -24,6 +25,10 @@ class AutoReadRuntime {
   static final MethodChannelAutoReadBridge bridge =
       MethodChannelAutoReadBridge(generation: () => store.readGeneration());
 
+  /// The ONE airtime switch controller (the same instance as the waiting
+  /// repository's `airtime`). Set once by the running app, so the Settings page
+  /// and the Notifications card read and flip the same state; cleared on dispose.
+  static AirtimeAutoController? airtime;
 
   /// Set by the running app: rebuilds the waiting rows after Delete data.
   static Future<void> Function()? refresh;

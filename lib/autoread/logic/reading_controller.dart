@@ -160,6 +160,11 @@ class ReadingState {
   /// ([kAlertDetailsDefault]).
   final bool alertDetails;
 
+  /// Consent is current on the Kotlin side and the details key was never
+  /// written: the one-time card asks this phone to choose (J1 B4). Writing the
+  /// key, either answer, ends it.
+  final bool detailsChoiceNeeded;
+
   const ReadingState({
     required this.available,
     required this.on,
@@ -169,6 +174,7 @@ class ReadingState {
     this.parseOn = false,
     this.autostartHelp = false,
     this.alertDetails = kAlertDetailsDefault,
+    this.detailsChoiceNeeded = false,
   });
 
   /// The platform could not be asked: treated as off and not available.
@@ -214,6 +220,7 @@ class ReadingController {
         parseOn: s.parseOn,
         autostartHelp: s.autostartHelp,
         alertDetails: s.alertDetails,
+        detailsChoiceNeeded: s.alertDetailsAbsent && s.consentVersion == kReadingConsentVersion,
       );
     } catch (_) {
       return ReadingState.unavailable;

@@ -15,6 +15,7 @@ import '../../ui/screens/settings/settings_widgets.dart';
 import '../../ui/theme/app_colors.dart';
 import '../logic/reading_controller.dart';
 import 'consent_sheet.dart';
+import 'details_upgrade_card.dart';
 import 'restricted_help_sheet.dart';
 import 'settings_autoread_copy.dart';
 
@@ -105,6 +106,8 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
             }
             // Switch 2 is kept in the auto-read prefs; default ON, as chosen.
             if (!await c.setParse(choice.parse)) _message = kReadFailed;
+            // Row 16: the details choice is written too, so no phone that agrees now is left on the fallback.
+            if (!await c.setAlertDetails(choice.details)) _message = kReadFailed;
           }
           final r = await c.turnOn();
           if (!mounted) return;
@@ -132,6 +135,14 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
         final c = _c;
         if (c == null) return;
         _message = await c.setParse(on) ? null : kReadFailed;
+        await _refresh();
+      });
+
+  /// The one-time card: either answer writes the key, which ends the card.
+  Future<void> _onDetailsCard(bool details) => _runBusy(() async {
+        final c = _c;
+        if (c == null) return;
+        _message = await c.setAlertDetails(details) ? null : kReadFailed;
         await _refresh();
       });
 
@@ -219,6 +230,7 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SettingsSectionLabel(kReadingSectionLabel, palette: palette),
+        if (s.detailsChoiceNeeded) DetailsUpgradeCard(palette: palette, busy: _busy, onChoose: _onDetailsCard),
         SettingsCard(
           palette: palette,
           child: Column(
@@ -239,7 +251,7 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
                 icon: Icons.touch_app_outlined,
                 label: kParseLabel,
                 subtitle: s.on ? kConsentParseDesc : kParseGreyLine,
-                value: s.on && s.parseOn,
+                value: s.parseOn, // the stored value, even while Read is off (the row stays greyed)
                 onChanged: (!s.available || !s.on || _busy) ? null : _onParse,
               ),
               SettingsLink(
@@ -290,7 +302,7 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
 }
 
 /// "What alerts show": Generic or Show details. Pops true for details. The
-/// lock-screen alert is always generic, said in the dialog.
+/// lock-screen note is in the dialog.
 class _AlertsDialog extends StatelessWidget {
   const _AlertsDialog({required this.showDetails});
   final bool showDetails;

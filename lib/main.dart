@@ -11,6 +11,7 @@ import 'autoread/model/waiting_repository.dart';
 import 'autoread/runtime.dart';
 import 'autoread/service/autoread_service.dart';
 import 'autoread/ui/launch_router.dart';
+import 'autoread/ui/remembered_wiring.dart';
 import 'autoread/ui/waiting_bell_numbers.dart';
 import 'data/db/app_database.dart';
 import 'domain/paid_to/paid_to.dart' show PaidToGrouping;
@@ -146,6 +147,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
             () async => LazySqliteFulizaRepository(() => AppDatabase.instance.database)),
       );
       _waiting = _realWaiting;
+      AutoReadRuntime.airtime = _realWaiting!.airtime; // the ONE switch controller: Notifications card, Remembered tab, Settings row
       FulizaRebuild.hook = _realWaiting!.rebuildFromHeld; // S12: the Rebuild button on the Fuliza page
       WidgetsBinding.instance.addObserver(this);
       // Delete data rebuilds the rows through this once it has wiped.
@@ -190,6 +192,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
     if (kAutoReadCompiled) {
       WidgetsBinding.instance.removeObserver(this);
       if (AutoReadRuntime.refresh == _realWaiting?.ingest) AutoReadRuntime.refresh = null;
+      if (AutoReadRuntime.airtime == _realWaiting?.airtime) AutoReadRuntime.airtime = null;
       _realWaiting?.dispose();
     }
     _launchRouter?.dispose();
@@ -248,14 +251,20 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
         Routes.add: (_) => const AddScreen(),
         Routes.paidTo: (_) => const PrimaryShell(initialIndex: 3),
         Routes.profile: (_) => const PrimaryShell(initialIndex: 4),
-        Routes.settings: (_) => const SettingsScreen(),
+        Routes.settings: (_) => SettingsScreen(
+              rememberedHook: kAutoReadCompiled && AutoReadRuntime.airtime != null
+                  ? rememberedRowHookFor(AutoReadRuntime.airtime!)
+                  : null,
+            ),
         Routes.manageClassifications: (_) => const ManageClassificationsScreen(),
         Routes.recentlyDeleted: (_) => const RecentlyDeletedScreen(),
         Routes.backup: (_) => const BackupScreen(),
         Routes.updates: (_) => const UpdatesScreen(),
         Routes.notifications: (_) => const NotificationsRoute(),
         Routes.privacy: (_) => const PrivacyScreen(),
-        Routes.rememberedRecipients: (_) => const RememberedScreen(),
+        Routes.rememberedRecipients: (ctx) => kAutoReadCompiled && AutoReadRuntime.airtime != null
+            ? rememberedPageFor(AutoReadRuntime.airtime!, args: ModalRoute.of(ctx)?.settings.arguments)
+            : const RememberedScreen(), // standard build: the page as it was
       },
     );
   }

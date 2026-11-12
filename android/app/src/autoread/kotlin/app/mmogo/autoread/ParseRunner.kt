@@ -116,7 +116,7 @@ object ParseRunner {
                 }
                 "done" -> {
                     result.success(null)
-                    finish(job, ParsePolicy.outcomeOf(ParsePolicy.outcomeArg(call.arguments)).code, ParsePolicy.waitingArg(call.arguments))
+                    finish(job, ParsePolicy.outcomeOf(ParsePolicy.outcomeArg(call.arguments)).code, ParsePolicy.waitingArg(call.arguments), ParsePolicy.queuedCentsArg(call.arguments))
                 }
                 else -> result.notImplemented()
             }
@@ -125,14 +125,14 @@ object ParseRunner {
         }
     }
 
-    private fun finish(job: Job, code: String, waiting: Int) {
+    private fun finish(job: Job, code: String, waiting: Int, queuedCents: Long? = null) {
         if (job.finished) return
         job.finished = true
         val ctx = job.ctx
         try {
             job.watchdog?.let { main.removeCallbacks(it) }
             when (ParsePolicy.effectOf(ParsePolicy.outcomeOf(code))) {
-                ParsePolicy.Effect.SHOW_PARSED -> ParseNotifier.postParsed(ctx, job.id, waiting)
+                ParsePolicy.Effect.SHOW_PARSED -> ParseNotifier.postParsed(ctx, job.id, waiting, queuedCents)
                 ParsePolicy.Effect.SHOW_COULD_NOT_READ -> ParseNotifier.postCouldNotRead(ctx, job.id)
                 ParsePolicy.Effect.CANCEL -> Notifier.cancel(ctx, job.id)
                 ParsePolicy.Effect.LEAVE -> {}

@@ -3,8 +3,8 @@
 /// Mock: `global-mock/plugins/mk-air-switch.html` (labels locked 11-11).
 library;
 
-// WORDING-DRAFT
-const String kAirKindMyselfLabel = 'For my number';
+// SIGNED (PM answer 12-11-2026: the labels are the category names; flip here only)
+const String kAirKindMyselfLabel = 'For myself';
 // WORDING-DRAFT
 const String kAirKindMyselfSub = 'Airtime you buy for yourself.';
 // WORDING-DRAFT

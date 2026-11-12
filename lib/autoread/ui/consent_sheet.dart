@@ -13,15 +13,20 @@ import 'package:flutter/material.dart';
 
 import '../../ui/screens/settings/settings_widgets.dart';
 import '../../ui/theme/app_colors.dart';
+import 'consent_details_copy.dart';
 import 'settings_autoread_copy.dart';
 
 /// What the user chose when they pressed Allow with Read on.
 class ConsentChoice {
-  const ConsentChoice({required this.parse});
+  const ConsentChoice({required this.parse, this.details = true});
 
   /// Switch 2 at the moment Allow was pressed. (Switch 1 is on by definition:
   /// with it off, Allow turns nothing on and the sheet answers null.)
   final bool parse;
+
+  /// Switch 3, "Show details in alerts", at the moment Allow was pressed. Both
+  /// keys are written explicitly at Allow (row 16, J1 B1).
+  final bool details;
 }
 
 /// Opens the consent screen. Returns the choice only when the user pressed
@@ -61,6 +66,7 @@ class _ConsentSheetState extends State<ConsentSheet> {
   bool _done = false;
   bool _read = true;
   bool _parse = true;
+  bool _details = true;
 
   void _close(ConsentChoice? answer) {
     if (_done) return; // a double tap answers once
@@ -68,7 +74,7 @@ class _ConsentSheetState extends State<ConsentSheet> {
     Navigator.of(context).pop(answer);
   }
 
-  void _allow() => _close(_read ? ConsentChoice(parse: _parse) : null);
+  void _allow() => _close(_read ? ConsentChoice(parse: _parse, details: _details) : null);
 
   @override
   Widget build(BuildContext context) {
@@ -123,6 +129,15 @@ class _ConsentSheetState extends State<ConsentSheet> {
                               subtitle: _read ? kConsentParseDesc : '$kConsentParseDesc $kParseGreyLine',
                               value: _read && _parse,
                               onChanged: _read ? (v) => setState(() => _parse = v) : null,
+                            ),
+                            SettingsToggle(
+                              key: const Key('consentDetailsSwitch'),
+                              palette: p,
+                              icon: Icons.notifications_active_outlined,
+                              label: kConsentDetailsLabel,
+                              subtitle: _read ? kConsentDetailsDesc : '$kConsentDetailsDesc $kConsentDetailsGrey',
+                              value: _read && _details,
+                              onChanged: _read ? (v) => setState(() => _details = v) : null,
                             ),
                           ],
                         ),

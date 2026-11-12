@@ -67,6 +67,11 @@ const kManageCategoriesLabel = 'Manage categories';
 const kManageCategoriesSubtitle = 'Create, rename, delete and restore';
 const kRememberedRowLabel = 'Remembered recipients';
 const kRememberedRowSubtitle = 'Name and type, kept on this phone';
+// Auto-read build only (WORDING-DRAFT: label from the mock, PM-decided 12-11).
+const kRememberedAutoRowLabel = 'Remembered: recipients and auto-record';
+String kRememberedRowAutoPart(int on) => 'Auto-record airtime: $on of 2 on';
+String kRememberedRowNamesPart(int n) => n == 1 ? '1 name' : '$n names';
+const kRememberedRowTail = ', kept on this phone';
 
 // ---- Remembered recipients page (mock remembered.html) ----
 const kRememberedTitle = 'Remembered recipients';

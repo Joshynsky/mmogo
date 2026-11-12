@@ -25,10 +25,12 @@ import 'dart:ui';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../bridge/autoread_bridge.dart';
 import '../bridge/method_channel_autoread_bridge.dart';
 import '../data/pending_items_store.dart';
+import '../logic/airtime_auto.dart';
 import '../model/waiting_item.dart' show isValidHeldId;
 import '../service/autoread_service.dart';
 
@@ -59,12 +61,28 @@ const List<String> kBackgroundOutcomeCodes = [
 
 /// What a background parse ended as: a code and how many parsed items are now waiting (a number).
 class BackgroundResult {
-  const BackgroundResult(this.code, this.waiting);
+  const BackgroundResult(this.code, this.waiting, {this.queuedAirtimeCents});
   final String code;
+
+  /// Items that still need the user to pick a category. A parsed airtime item that the app will
+  /// add on its own (its switch is ON) is not counted.
   final int waiting;
 
+  /// Set only when the item just parsed is airtime that will be added on its own: its amount in
+  /// cents (a number, never text). The notification words it as queued.
+  final int? queuedAirtimeCents;
+
   @override
-  String toString() => 'BackgroundResult($code, $waiting)';
+  String toString() => 'BackgroundResult($code, $waiting, $queuedAirtimeCents)';
+}
+
+/// The two airtime switches as the app saved them (both default OFF).
+typedef AirtimeSwitches = ({bool myself, bool other});
+
+Future<AirtimeSwitches> readAirtimeSwitches() async {
+  final p = await SharedPreferences.getInstance();
+  await p.reload();
+  return (myself: p.getBool(kAirtimeAutoPrefKey) ?? false, other: p.getBool(kAirtimeAutoOtherPrefKey) ?? false);
 }
 
 /// There is no database in the headless engine: nothing is "already saved" here.
@@ -101,6 +119,7 @@ Future<BackgroundResult> runBackgroundParse({
   required PendingItemsStore store,
   bool Function()? wasStale,
   SmsParseFn? parser,
+  Future<AirtimeSwitches> Function()? readSwitches,
 }) async {
   if (!isValidHeldId(id)) return const BackgroundResult(kBgGone, 0);
   final service = AutoReadService(
@@ -120,14 +139,29 @@ Future<BackgroundResult> runBackgroundParse({
     return const BackgroundResult(kBgStale, 0);
   }
   var waiting = 0;
+  int? queuedCents;
   try {
-    waiting = await store.count();
-  } catch (_) {}
+    final items = await store.list();
+    var sw = (myself: false, other: false);
+    try {
+      sw = await (readSwitches ?? readAirtimeSwitches)();
+    } catch (_) {}
+    waiting = waitingCategoryCount(items, myselfOn: sw.myself, otherOn: sw.other);
+    for (final i in items) {
+      if (i.id == id && isAutoRecordEligible(i, myselfOn: sw.myself, otherOn: sw.other)) {
+        queuedCents = i.parsed!.amountCents;
+      }
+    }
+  } catch (_) {
+    try {
+      waiting = await store.count();
+    } catch (_) {}
+  }
   switch (outcome) {
     case ParseOutcome.parsed:
-      return BackgroundResult(kBgParsed, waiting);
+      return BackgroundResult(kBgParsed, waiting, queuedAirtimeCents: queuedCents);
     case ParseOutcome.duplicate:
-      return BackgroundResult(kBgDuplicate, waiting);
+      return BackgroundResult(kBgDuplicate, waiting, queuedAirtimeCents: queuedCents);
     case ParseOutcome.gone:
       return BackgroundResult(kBgGone, waiting);
     case ParseOutcome.couldNotRead:
@@ -151,11 +185,15 @@ class BackgroundReporter {
 
   bool get sent => _sent;
 
-  Future<void> done(String code, int waiting) async {
+  Future<void> done(String code, int waiting, {int? queuedAirtimeCents}) async {
     if (_sent) return;
     _sent = true;
     try {
-      await _ch.invokeMethod<void>('done', <String, Object?>{'outcome': code, 'waiting': waiting});
+      await _ch.invokeMethod<void>('done', <String, Object?>{
+        'outcome': code,
+        'waiting': waiting,
+        'queuedAirtimeCents': ?queuedAirtimeCents,
+      });
     } catch (_) {}
   }
 }
@@ -170,7 +208,7 @@ Future<void> runBackgroundEntry(List<String> args, {MethodChannel? channel, Back
   final bridge = BackgroundBridge(channel: ch, generation: store.readGeneration);
   try {
     final r = await runBackgroundParse(id: id, bridge: bridge, store: store, wasStale: () => bridge.stale);
-    await out.done(r.code, r.waiting);
+    await out.done(r.code, r.waiting, queuedAirtimeCents: r.queuedAirtimeCents);
   } catch (_) {
     // Only the fact of a failure goes back; never the error text (it could carry the message).
     await out.done(kBgError, 0);

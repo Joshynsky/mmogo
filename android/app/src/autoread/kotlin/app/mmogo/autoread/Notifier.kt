@@ -70,7 +70,7 @@ object Notifier {
         if (Build.VERSION.SDK_INT >= 26) {
             ensurePopupChannel(context, nm)
             builder = Notification.Builder(context, POPUP_CHANNEL_ID)
-            builder.setTimeoutAfter(HeldWindow.WINDOW_MS)
+            builder.setTimeoutAfter(AlertText.timeoutMs(shown.generic, HeldWindow.WINDOW_MS))
         } else {
             @Suppress("DEPRECATION")
             builder = Notification.Builder(context)

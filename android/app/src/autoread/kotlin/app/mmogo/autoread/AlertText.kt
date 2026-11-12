@@ -3,10 +3,10 @@ package app.mmogo.autoread
 /**
  * §AUTOREAD.ALERTTEXT (0.2.0 S10). Pure (no Android classes): what the "a message is ready"
  * alert may say. Two modes, chosen by the "What alerts show" setting:
- *  - Generic (the DEFAULT, and the only thing the lock screen ever gets): no amount, no name.
+ *  - Generic (the fallback when nothing is stored, and what an alert posted on a locked phone gets): no amount, no name.
  *  - Show details: one short line (kind, amount, and the other party's name). Never the M-Pesa
  *    code, a phone number, the balance, a fee or the rest of the body.
- * The default stays Generic until the Judge/Security note J1 is signed (DRAFT only today).
+ * The stored-absent fallback stays Generic; a new consent writes the choice explicitly (J1 B1).
  * A body that is not recognised falls back to Generic, and so does any alert posted while the phone is
  * locked. Nothing here logs.
  */
@@ -15,6 +15,12 @@ internal object AlertText {
     const val DEFAULT_SHOW_DETAILS = false
 
     private const val MAX_NAME = 30
+
+    /** A details alert goes away after this long (PM 12-11-2026, J1 B3); the held message itself stays. */
+    const val DETAILS_TIMEOUT_MS: Long = 15L * 60L * 1000L
+
+    /** The notification timeout: a details alert gets [DETAILS_TIMEOUT_MS], a generic one keeps [heldWindowMs]. */
+    fun timeoutMs(generic: Boolean, heldWindowMs: Long): Long = if (generic) heldWindowMs else DETAILS_TIMEOUT_MS
 
     /** [title] and [text] of one alert; [generic] is true when no detail was used. */
     data class Text(val title: String, val text: String, val generic: Boolean)
@@ -65,6 +71,28 @@ internal object AlertText {
         if (n.isEmpty()) return null
         return if (n.length > MAX_NAME) n.substring(0, MAX_NAME).trimEnd() else n
     }
+
+    // WORDING-DRAFT B (PM 12-11-2026, option A): the line after Parse on airtime the app will add
+    // on its own. The amount is shown only in Show details mode (never on a locked phone).
+    const val QUEUED_AMOUNT_SHOWN = "Parsed. %s airtime is queued for recording."
+    const val QUEUED_AMOUNT_HIDDEN = "Parsed. Your airtime is queued for recording."
+
+    /**
+     * The text of the notification the Parse tap leaves behind. [queuedCents] is set only for airtime that
+     * the app will add to your list on its own; that item is not part of [waiting]. With nothing else waiting the
+     * line is just the queued sentence; otherwise the count follows it. [waitingLine] is the ordinary
+     * sentence (strings.xml, existing copy), used when no airtime is queued.
+     */
+    fun parsedText(waiting: Int, queuedCents: Long?, showAmount: Boolean, waitingLine: (Int) -> String): String {
+        if (queuedCents == null) return waitingLine(waiting)
+        val first = if (showAmount) QUEUED_AMOUNT_SHOWN.format(money(centsToRaw(queuedCents))) else QUEUED_AMOUNT_HIDDEN
+        return if (waiting > 0) "$first $waiting waiting for a category." else first
+    }
+
+    /** True when the Parsed notification should offer Categorize now and Later (something waits for a category). */
+    fun parsedHasButtons(waiting: Int, queuedCents: Long?): Boolean = queuedCents == null || waiting > 0
+
+    internal fun centsToRaw(cents: Long): String = "${cents / 100}.${(cents % 100).toString().padStart(2, '0')}"
 
     /** The text an alert uses: details when asked for AND recognised, else Generic. The public (lock screen) text never calls this. */
     fun choose(

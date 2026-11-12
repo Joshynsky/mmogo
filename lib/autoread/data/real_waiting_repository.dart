@@ -118,6 +118,9 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
 
   final Map<String, _Held> _held = {};
   List<WaitingItem> _current = const [];
+
+  /// Ids of airtime items the app tried to add by itself and could not.
+  final Set<String> _stuck = {};
   final StreamController<List<WaitingItem>> _changes = StreamController<List<WaitingItem>>.broadcast();
   final Completer<void> _ready = Completer<void>();
   Future<void> _tail = Future<void>.value();
@@ -146,7 +149,7 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
       ];
     }
     _current = List.unmodifiable([
-      ...stored,
+      ...visibleWaiting(stored, myselfOn: airtime.on, otherOn: airtime.onOther, stuckIds: _stuck),
       for (final e in _held.entries) WaitingItem(id: e.key, kind: e.value.kind, heldAt: e.value.heldAt),
     ]);
     if (!_closed) _changes.add(_current);
@@ -466,14 +469,23 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
           .toList();
       for (final item in stored) {
         final cls = await _airtimeCategoryFor(item.parsed!.airtimeOther);
-        if (cls == null) continue;
+        if (cls == null) {
+          _stuck.add(item.id);
+          continue;
+        }
         final rowId = await _saveInner(item.id, cls);
-        if (rowId != null) {
+        if (rowId == null) {
+          _stuck.add(item.id);
+        } else {
+          _stuck.remove(item.id);
           airtime.add(AutoRecorded(rowId: rowId, amountCents: item.parsed!.amountCents, at: _now()));
         }
       }
     } catch (_) {
       // A failure leaves the item waiting; the user can still Categorize it.
+      for (final i in await _store.list().catchError((_) => <WaitingItem>[])) {
+        if (isAutoRecordEligible(i, myselfOn: airtime.on, otherOn: airtime.onOther)) _stuck.add(i.id);
+      }
     }
   }
 

@@ -36,8 +36,8 @@ void _size(WidgetTester t, double w, [double h = 900]) {
   addTearDown(t.view.reset);
 }
 
-Future<void> _pump(WidgetTester t, _Rig r, {double w = 390, double scale = 1.0}) async {
-  _size(t, w);
+Future<void> _pump(WidgetTester t, _Rig r, {double w = 390, double scale = 1.0, double h = 900}) async {
+  _size(t, w, h);
   await t.pumpWidget(MaterialApp(
     theme: AppTheme.theme,
     builder: (context, c) => MediaQuery(
@@ -229,7 +229,7 @@ void main() {
 
   group('consent sheet content', () {
     Future<void> open(WidgetTester t, {double scale = 1.0, double w = 390}) async {
-      _size(t, w);
+      _size(t, w, 1400); // the third switch (Show details) makes the sheet taller; it scrolls on a phone
       await t.pumpWidget(MaterialApp(
         theme: AppTheme.theme,
         builder: (context, c) => MediaQuery(
@@ -346,7 +346,7 @@ void main() {
     Finder inSheet(Finder f) => find.descendant(of: find.byType(ConsentSheet), matching: f);
 
     Future<void> openFirst(WidgetTester t, _Rig r) async {
-      await _pump(t, r);
+      await _pump(t, r, h: 1400); // three switches now; the sheet scrolls, the tests read it whole
       await t.tap(_switch);
       await t.pumpAndSettle();
     }
@@ -364,8 +364,8 @@ void main() {
       expect(find.text(kConsentFooter), findsOneWidget);
       expect(find.text(kConsentAllow), findsOneWidget);
       expect(find.text(kConsentNotNow), findsOneWidget);
-      // Exactly two switches in the sheet (plus the two Settings rows behind it).
-      expect(find.descendant(of: find.byType(ConsentSheet), matching: find.byType(Switch)), findsNWidgets(2));
+      // Exactly three switches in the sheet (Read, Parse, Show details), plus the Settings rows behind it.
+      expect(find.descendant(of: find.byType(ConsentSheet), matching: find.byType(Switch)), findsNWidgets(3));
     });
 
     testWidgets('Read off: the Parse switch is greyed (disabled, shows off) and says why', (t) async {
@@ -376,7 +376,7 @@ void main() {
       expect(t.widget<Switch>(sw(readSw)).value, isFalse);
       expect(t.widget<Switch>(sw(parseSw)).onChanged, isNull);
       expect(t.widget<Switch>(sw(parseSw)).value, isFalse);
-      expect(inSheet(find.textContaining(kParseGreyLine)), findsOneWidget);
+      expect(inSheet(find.textContaining(kParseGreyLine)), findsNWidgets(2)); // Parse and Show details
       // Tapping the greyed row changes nothing.
       await t.tap(parseSw, warnIfMissed: false);
       await t.pumpAndSettle();
@@ -472,7 +472,7 @@ void main() {
       expect(find.byKey(const Key('consentAutostart')), findsOneWidget);
       expect(inSheet(find.text(kAutostartBody)), findsOneWidget);
       expect(inSheet(find.text(kAutostartButton)), findsOneWidget);
-      expect(find.descendant(of: find.byType(ConsentSheet), matching: find.byType(Switch)), findsNWidgets(2));
+      expect(find.descendant(of: find.byType(ConsentSheet), matching: find.byType(Switch)), findsNWidgets(3));
       expect(r.b.calls, isNot(contains('openAutostartSettings')), reason: 'never launched automatically');
       await t.tap(inSheet(find.byKey(const Key('autostartOpen'))));
       await t.pumpAndSettle();
@@ -495,13 +495,14 @@ void main() {
   });
 
   group('Settings: Parse from the notification switch', () {
-    testWidgets('Read off: the row is greyed, shows off and says why', (t) async {
+    testWidgets('Read off: the row is greyed, shows the stored value and says why', (t) async {
       final r = _Rig(consent: true, bridge: FakeReadingBridge(parseOn: true));
       await _pump(t, r);
       expect(find.text(kParseLabel), findsOneWidget);
       expect(find.text(kParseGreyLine), findsOneWidget);
       expect(t.widget<Switch>(_parseSwitch).onChanged, isNull);
-      expect(t.widget<Switch>(_parseSwitch).value, isFalse);
+      // Row 16 display fix: the stored value shows even while Read is off (greyed look kept).
+      expect(t.widget<Switch>(_parseSwitch).value, isTrue);
     });
 
     testWidgets('Read on, Parse ON after consent: switch shows on; turning it off and on writes through', (t) async {

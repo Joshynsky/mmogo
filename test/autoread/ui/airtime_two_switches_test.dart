@@ -18,7 +18,7 @@ void main() {
     await t.pumpWidget(_host(AutoAirtimeSwitchCard(on: false, onChanged: (_) {}, onChangedOther: (_) {})));
     expect(find.text(kAirKindMyselfLabel), findsOneWidget);
     expect(find.text(kAirKindOtherLabel), findsOneWidget);
-    expect(find.text('For my number'), findsOneWidget);
+    expect(find.text('For myself'), findsOneWidget);
     expect(find.text('For another number'), findsOneWidget);
     expect(find.text('Hard comes in a later version'), findsOneWidget);
     expect(_value(t, 'autoAirtimeSwitch'), isFalse);

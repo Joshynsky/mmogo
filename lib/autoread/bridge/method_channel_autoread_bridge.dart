@@ -43,6 +43,10 @@ class AutoReadState {
   /// default until the Judge note J1 is signed, 0.2.0 S10).
   final bool alertDetails;
 
+  /// True only when Kotlin says the details key was never written (a phone that
+  /// agreed before the choice existed). Absent or unknown = false.
+  final bool alertDetailsAbsent;
+
   const AutoReadState({
     required this.enabled,
     required this.smsGranted,
@@ -52,6 +56,7 @@ class AutoReadState {
     this.autostartHelp = false,
     this.consentVersion = 0,
     this.alertDetails = false,
+    this.alertDetailsAbsent = false,
   });
 
   @override
@@ -173,6 +178,7 @@ class MethodChannelAutoReadBridge implements AutoReadBridge {
           autostartHelp: r['autostartHelp'] == true,
           consentVersion: r['consentVersion'] is int ? r['consentVersion'] as int : 0,
           alertDetails: r['alertDetails'] == true,
+          alertDetailsAbsent: r['alertDetailsAbsent'] == true,
         );
       }
     }

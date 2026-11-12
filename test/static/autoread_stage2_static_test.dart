@@ -217,6 +217,15 @@ void main() {
       expect(kotlin.toSet(), {...kBackgroundOutcomeCodes, 'watchdog'});
     });
 
+    test('the queued airtime amount travels done -> runner -> notifier under the same name on both sides', () {
+      const k = 'android/app/src/autoread/kotlin/app/mmogo/autoread/';
+      expect(policy, contains('args["queuedAirtimeCents"]'));
+      expect(_read('lib/autoread/background/parse_entry.dart'), contains("'queuedAirtimeCents'"));
+      expect(_read('${k}ParseRunner.kt'), contains('ParsePolicy.queuedCentsArg(call.arguments)'));
+      expect(_read('${k}ParseRunner.kt'), contains('ParseNotifier.postParsed(ctx, job.id, waiting, queuedCents)'));
+      expect(_read('${k}ParseNotifier.kt'), contains('AlertText.parsedText('));
+    });
+
     test('timings: watchdog under the 10 s broadcast limit, self-dismiss about 6 s', () {
       expect(int.parse(_const(policy, 'WATCHDOG_MS').replaceAll('L', '').replaceAll('_', '')), lessThan(10000));
       expect(int.parse(_const(policy, 'WATCHDOG_MS').replaceAll('L', '')), 8000);
@@ -228,7 +237,7 @@ void main() {
       expect(_str('autoread_could_not_read'), kCouldNotRead);
       expect(_str('autoread_action_categorize'), 'Categorize now');
       expect(_str('autoread_action_later'), 'Later');
-      expect(_str('autoread_parsed_text'), r'Parsed. %1$d waiting for a category');
+      expect(_str('autoread_parsed_text'), r'Parsed. %1$d waiting for a category.');
       // The wave A wording stays.
       expect(_str('autoread_notification_title'), 'M-Pesa message received');
       expect(_str('autoread_notification_text'), 'An M-Pesa message is waiting. Tap to parse it.');

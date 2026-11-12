@@ -63,6 +63,14 @@ class Routes {
   static const rememberedRecipients = '/remembered-recipients';
 }
 
+/// Route arguments of [Routes.rememberedRecipients]: [openAutoRecord] opens the
+/// second tab (Recorded automatically) when the build has one; other pages can
+/// deep-link to it. No arguments = the first tab.
+class RememberedRouteArgs {
+  const RememberedRouteArgs({this.openAutoRecord = false});
+  final bool openAutoRecord;
+}
+
 /// Route arguments of [Routes.notifications]: the chip to open on. A chip that
 /// is not available in this flavor opens News (the page decides).
 class NotificationsRouteArgs {

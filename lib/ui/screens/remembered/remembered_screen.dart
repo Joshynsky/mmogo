@@ -11,6 +11,8 @@ import '../../widgets/error_notes.dart';
 import '../../widgets/help_sheet.dart';
 import '../../widgets/palette_alert_dialog.dart';
 import '../add/recipient_chooser.dart' show recipientTypeName;
+import 'remembered_extra_tab.dart';
+import 'remembered_tab_pills.dart';
 
 /// §SCREEN.REMEMBERED — 0.1.2 S9a (signed mock remembered.html): the names the
 /// user told us are Send Money or Pochi. Lists [RecipientMemory.list] newest
@@ -22,7 +24,13 @@ import '../add/recipient_chooser.dart' show recipientTypeName;
 /// only places a name is drawn are the row itself and its screen-reader label.
 /// Messages carry counts ("Forgot 2 recipients").
 class RememberedScreen extends StatefulWidget {
-  const RememberedScreen({super.key, this.memory});
+  const RememberedScreen({super.key, this.memory, this.extraTab, this.openExtraTab = false});
+
+  /// A second tab for the page. Null keeps the page as it was: no tabs.
+  final RememberedExtraTab? extraTab;
+
+  /// Open on the second tab (a deep link). Ignored when there is no second tab.
+  final bool openExtraTab;
 
   /// Test seam (defaults to the real prefs-backed memory).
   final RecipientMemory? memory;
@@ -37,6 +45,7 @@ class _RememberedScreenState extends State<RememberedScreen> {
   bool _loaded = false;
   bool _busy = false;
   bool _error = false;
+  late int _tab = widget.openExtraTab && widget.extraTab != null ? 1 : 0;
 
   @override
   void initState() {
@@ -99,7 +108,13 @@ class _RememberedScreenState extends State<RememberedScreen> {
         return PaletteAlertDialog(
           key: const Key('forgetAllDialog'),
           title: const Text(kForgetAllTitle, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-          content: const Text(kForgetAllBody),
+          content: widget.extraTab == null
+              ? const Text(kForgetAllBody)
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [const Text(kForgetAllBody), const SizedBox(height: 8), Text(widget.extraTab!.forgetAllNote)],
+                ),
           actions: [
             TextButton(
               key: const Key('forgetAllCancel'),
@@ -122,14 +137,34 @@ class _RememberedScreenState extends State<RememberedScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
+    final extra = widget.extraTab;
+    final recipients = Column(children: [Expanded(child: _list(palette)), _forgetBar(palette)]);
     return SecondaryScaffold(
-      title: kRememberedTitle,
+      title: extra?.pageTitle ?? kRememberedTitle,
       followPalette: true,
       actions: const [HelpPageButton(title: kRememberedHelpTitle, paragraphs: kRememberedHelpParagraphs)],
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView(
+      body: extra == null
+          ? recipients
+          : Column(
+              children: [
+                ListenableBuilder(
+                  listenable: extra.listenable,
+                  builder: (context, _) => RememberedTabPills(
+                    palette: palette,
+                    labels: [extra.recipientsTabLabel, extra.tabLabel()],
+                    selected: _tab,
+                    onSelect: (i) => setState(() => _tab = i),
+                  ),
+                ),
+                // Both tabs stay built, so each keeps its own scroll place.
+                Expanded(child: IndexedStack(index: _tab, children: [recipients, extra.buildBody(context)])),
+              ],
+            ),
+    );
+  }
+
+  Widget _list(AppPalette palette) {
+    return ListView(
               key: const Key('rememberedScroll'),
               padding: const EdgeInsets.fromLTRB(14, 6, 14, 20),
               children: [
@@ -173,9 +208,11 @@ class _RememberedScreenState extends State<RememberedScreen> {
                     ),
                   ),
               ],
-            ),
-          ),
-          Container(
+    );
+  }
+
+  Widget _forgetBar(AppPalette palette) {
+    return Container(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
             decoration: BoxDecoration(
               color: palette.background,
@@ -193,12 +230,12 @@ class _RememberedScreenState extends State<RememberedScreen> {
                   side: BorderSide(color: _entries.isEmpty ? palette.line : palette.error, width: 1.5),
                   shape: const StadiumBorder(),
                 ),
-                child: const Text(kForgetAll, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800)),
+                child: Text(
+                  widget.extraTab?.forgetAllLabel ?? kForgetAll,
+                  style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800),
+                ),
               ),
             ),
-          ),
-        ],
-      ),
     );
   }
 

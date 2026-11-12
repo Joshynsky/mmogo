@@ -204,4 +204,60 @@ void main() {
     expect(await pendingKeys(), hasLength(1));
   });
 
+  // WBS row 4: the count after Parse leaves out airtime the app will save on its own.
+  group('the waiting count after Parse and airtime that is queued', () {
+    Future<Map<Object?, Object?>> parseAs(String body, {bool myself = false, bool other = false, String id = _id}) async {
+      SharedPreferences.setMockInitialValues({
+        'flutter.autoread_airtime_auto_record': myself,
+        'flutter.autoread_airtime_auto_record_other': other,
+      });
+      final k = _FakeKotlin(id)..held[id] = body;
+      messenger.setMockMethodCallHandler(_channel, k.handle);
+      await run(id);
+      return k.doneArgs.single;
+    }
+
+    test('airtime for myself, switch ON: count 0 and the amount is queued', () async {
+      final d = await parseAs(kSampleAirtime, myself: true);
+      expect(d['outcome'], 'parsed');
+      expect(d['waiting'], 0);
+      expect(d['queuedAirtimeCents'], 20000);
+    });
+
+    test('airtime for myself, switch OFF: it counts as waiting (1), nothing queued', () async {
+      final d = await parseAs(kSampleAirtime);
+      expect(d['waiting'], 1);
+      expect(d.containsKey('queuedAirtimeCents'), isFalse);
+    });
+
+    test('airtime for another number: only its own switch counts', () async {
+      var d = await parseAs(kSampleAirtimeOtherReal, other: true);
+      expect(d['waiting'], 0);
+      expect(d['queuedAirtimeCents'], 500);
+      d = await parseAs(kSampleAirtimeOtherReal, myself: true); // the other kind stays off
+      expect(d['waiting'], 1);
+      expect(d.containsKey('queuedAirtimeCents'), isFalse);
+      d = await parseAs(kSampleAirtime, other: true); // the other switch does not cover my own airtime
+      expect(d['waiting'], 1);
+      expect(d.containsKey('queuedAirtimeCents'), isFalse);
+    });
+
+    test('n other items waiting: queued airtime is left out of n', () async {
+      SharedPreferences.setMockInitialValues({'flutter.autoread_airtime_auto_record': true});
+      kotlin.held[_id] = kSampleSendMoney;
+      await run();
+      final k2 = _FakeKotlin(_id2)..held[_id2] = kSampleAirtime;
+      messenger.setMockMethodCallHandler(_channel, k2.handle);
+      await run(_id2);
+      expect(k2.doneArgs.single['waiting'], 1, reason: 'the send-money item only');
+      expect(k2.doneArgs.single['queuedAirtimeCents'], 20000);
+      expect(await pendingKeys(), hasLength(2));
+    });
+
+    test('an ordinary item never carries the queued amount', () async {
+      final d = await parseAs(kSampleSendMoney, myself: true, other: true);
+      expect(d['waiting'], 1);
+      expect(d.containsKey('queuedAirtimeCents'), isFalse);
+    });
+  });
 }

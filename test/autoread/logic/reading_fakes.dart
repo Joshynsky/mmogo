@@ -58,6 +58,7 @@ class FakeReadingBridge implements ReadingBridge {
       autostartHelp: autostartHelp,
       consentVersion: kotlinConsent,
       alertDetails: alertDetails,
+      alertDetailsAbsent: alertDetailsAbsent,
     );
   }
 
@@ -79,10 +80,14 @@ class FakeReadingBridge implements ReadingBridge {
   /// "What alerts show" held by the pretend Kotlin side (default Generic).
   bool alertDetails = false;
 
+  /// True until the details key is written (an old consent-v2 phone).
+  bool alertDetailsAbsent = false;
+
   @override
   Future<bool> setAlertDetails(bool on) async {
     calls.add('setAlertDetails:$on');
     alertDetails = on;
+    alertDetailsAbsent = false;
     return alertDetails;
   }
 

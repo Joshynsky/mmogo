@@ -76,6 +76,18 @@ internal object ParsePolicy {
         return if (n < 0L) 0 else if (n > 9999L) 9999 else n.toInt()
     }
 
+    /**
+     * The `queuedAirtimeCents` argument of done: the amount of an airtime item the app will add on its
+     * own, or null when missing, negative or odd. A number only, never content.
+     */
+    fun queuedCentsArg(args: Any?): Long? {
+        if (args !is Map<*, *>) return null
+        val q = args["queuedAirtimeCents"]
+        if (q !is Number) return null
+        val n = q.toLong()
+        return if (n < 0L || n > 100_000_000_000L) null else n
+    }
+
     /** What the Dart side reports at the end. Dart mirror: kBackgroundOutcomeCodes (a test pins the codes). */
     enum class Outcome(val code: String) {
         PARSED("parsed"),

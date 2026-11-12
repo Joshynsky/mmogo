@@ -33,6 +33,29 @@ bool isParsedAirtime(WaitingItem item) =>
 bool isAutoRecordEligible(WaitingItem item, {required bool myselfOn, required bool otherOn}) =>
     isParsedAirtime(item) && (item.parsed!.airtimeOther ? otherOn : myselfOn);
 
+/// How many stored items still wait for the user to pick a category. A parsed
+/// airtime item whose own switch is ON is left out: it will be added by the
+/// app on its own, so it is not waiting for anything from the user. With a
+/// switch OFF the same item counts.
+int waitingCategoryCount(Iterable<WaitingItem> items, {required bool myselfOn, required bool otherOn}) =>
+    items.where((i) => !isAutoRecordEligible(i, myselfOn: myselfOn, otherOn: otherOn)).length;
+
+/// The items the Notifications list, the bell and the chips show: every stored
+/// item except parsed airtime that the app will add by itself (its own switch
+/// is ON). [stuckIds] are ones the app tried and could not add; they stay
+/// visible so they are never lost. One list feeds the rows and every number,
+/// so they cannot disagree.
+List<WaitingItem> visibleWaiting(
+  Iterable<WaitingItem> items, {
+  required bool myselfOn,
+  required bool otherOn,
+  Set<String> stuckIds = const {},
+}) =>
+    [
+      for (final i in items)
+        if (stuckIds.contains(i.id) || !isAutoRecordEligible(i, myselfOn: myselfOn, otherOn: otherOn)) i,
+    ];
+
 /// One entry recorded automatically, kept in memory for the trail.
 class AutoRecorded {
   AutoRecorded({required this.rowId, required this.amountCents, required this.at});

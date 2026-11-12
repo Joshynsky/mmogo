@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../copy/settings_copy.dart';
 import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
+import 'remembered_hook_row.dart';
 import 'settings_widgets.dart';
 
 /// Settings ADDING ENTRIES card (0.1.2 S9a, mock M9): the Auto-recognize
@@ -20,7 +21,12 @@ class AddingSection extends StatelessWidget {
     required this.onCaptureReceiverChanged,
     this.showFuliza = true,
     this.onShowFulizaChanged,
+    this.rememberedHook,
   });
+
+  /// Null keeps the Remembered recipients row as it is; set, the one
+  /// "Remembered: recipients and auto-record" row replaces it.
+  final RememberedRowHook? rememberedHook;
 
   final AppPalette palette;
   final GlobalKey tourKey;
@@ -81,14 +87,17 @@ class AddingSection extends StatelessWidget {
                   subtitle: kManageCategoriesSubtitle,
                   onTap: () => Navigator.of(context).pushNamed(Routes.manageClassifications),
                 ),
-                SettingsLink(
-                  key: const Key('settingsRemembered'),
-                  palette: palette,
-                  icon: Icons.people_outline,
-                  label: kRememberedRowLabel,
-                  subtitle: kRememberedRowSubtitle,
-                  onTap: () => Navigator.of(context).pushNamed(Routes.rememberedRecipients),
-                ),
+                if (rememberedHook != null)
+                  RememberedHookRow(key: const Key('settingsRemembered'), palette: palette, hook: rememberedHook!)
+                else
+                  SettingsLink(
+                    key: const Key('settingsRemembered'),
+                    palette: palette,
+                    icon: Icons.people_outline,
+                    label: kRememberedRowLabel,
+                    subtitle: kRememberedRowSubtitle,
+                    onTap: () => Navigator.of(context).pushNamed(Routes.rememberedRecipients),
+                  ),
               ],
             ),
           ),

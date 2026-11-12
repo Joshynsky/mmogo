@@ -75,12 +75,12 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
                         AutoReadSwitch.isOn(activity), smsGranted(), notifGranted(), store.count(),
                         AutoReadSwitch.parseOn(activity), BridgeLogic.autostartHelp(Build.MANUFACTURER),
                         AutoReadSwitch.consentVersion(activity),
-                        AutoReadSwitch.alertDetails(activity),
+                        AutoReadSwitch.alertDetails(activity), AutoReadSwitch.alertDetailsAbsent(activity),
                     ),
                 )
                 "setAlertDetails" -> {
                     // "What alerts show": Generic / Show details. Applies to the pop-up and the shade
-                    // notification; the lock-screen version is always generic (Notifier).
+                    // notification; the public (lock-screen) version is generic (Notifier).
                     val on = BridgeLogic.onArg(call.arguments)
                     if (on == null) result.error(BridgeLogic.ERR_FAILED, "bad argument", null)
                     else {

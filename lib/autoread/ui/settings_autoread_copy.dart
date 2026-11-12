@@ -13,6 +13,7 @@
 library;
 
 import '../held_window.dart';
+import 'consent_details_copy.dart';
 
 /// Who is responsible for this feature (PM 18-10-2026): a name, no email. ONE
 /// constant so a contact can be added later.
@@ -139,8 +140,9 @@ const String kConsentWhatIsRead =
 const String kConsentAndroidPrompt =
     'Android will ask to “send and view SMS”. That prompt is broader than what mmogo uses: the filter for M-Pesa is in mmogo’s own code.';
 const String kConsentOthers = kOtherMessagesLine;
-const String kConsentNotification =
-    'The notification on your phone only says a message is ready. It shows no amount and no name.';
+// DRAFT (row 16, J1 B2; PM signs). Covers amount, name, the timeout and the lock-screen limit.
+String get kConsentNotification =>
+    'With Show details on, the alert on your phone shows the kind of message, the amount and the other person’s name, and goes away after $kDetailsAlertMinutes minutes. With it off, the alert only says a message is ready. $kLockScreenSentence';
 const String kConsentWhereItStays =
     'Where it stays: on this phone. mmogo does not send messages anywhere.';
 const String kConsentDeveloper = kDeveloperLine;
@@ -217,6 +219,7 @@ List<String> allSettingsAutoReadCopy() => [
       kAlertsGenericDesc,
       kAlertsDetailsDesc,
       kAlertsLockNote,
+      ...allConsentDetailsCopy(),
       kAutostartLabel,
       kAutostartBody,
       kAutostartButton,

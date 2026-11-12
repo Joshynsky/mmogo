@@ -31,6 +31,7 @@ import 'about_section.dart';
 import 'adding_section.dart';
 import 'data_section.dart';
 import 'look_section.dart';
+import 'remembered_hook_row.dart';
 
 /// Settings' coach-tour page id (the seen flag is `tour_seen_settings`).
 const settingsTourId = 'settings';
@@ -49,7 +50,10 @@ const settingsTourId = 'settings';
 /// Appearance icons drive the whole app's light/dark (`AppPaletteController`).
 /// S9b-2: the Delete data row is the last row of Your data (delete_data_row.dart).
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key, this.db, this.exportCsv, this.deleteData, this.restart, this.backupFlow});
+  const SettingsScreen({super.key, this.db, this.exportCsv, this.deleteData, this.restart, this.backupFlow, this.rememberedHook});
+
+  /// Auto-read build only: swaps in the one Remembered row.
+  final RememberedRowHook? rememberedHook;
 
   /// Test-only injection seam (defaults to `null` in real app usage, which
   /// resolves via `AppDatabase.instance.database` at bootstrap — same
@@ -409,6 +413,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onCaptureReceiverChanged: _loading ? null : _handleCaptureReceiverChanged,
               showFuliza: _showFuliza,
               onShowFulizaChanged: _loading ? null : _handleShowFulizaChanged,
+              rememberedHook: widget.rememberedHook,
             ),
             const SizedBox(height: 14),
             DataSection(

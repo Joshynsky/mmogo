@@ -54,6 +54,14 @@ object AutoReadSwitch {
             AlertText.DEFAULT_SHOW_DETAILS
         }
 
+    /** True when the details key was never written (a phone that agreed before the choice existed). */
+    fun alertDetailsAbsent(context: Context): Boolean =
+        try {
+            !context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).contains(KEY_ALERT_DETAILS)
+        } catch (_: Throwable) {
+            false
+        }
+
     fun setAlertDetails(context: Context, on: Boolean): Boolean =
         try {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ALERT_DETAILS, on).commit()
