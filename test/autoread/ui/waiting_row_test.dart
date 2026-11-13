@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/autoread/held_window.dart';
 import 'package:mmogo/autoread/model/waiting_item.dart';
 import 'package:mmogo/autoread/ui/notifications_autoread_copy.dart';
+import 'package:mmogo/autoread/ui/unreadable_copy.dart';
 import 'package:mmogo/autoread/ui/waiting_row.dart';
 import 'package:mmogo/domain/parsing/parsed_sms_fields.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
@@ -168,7 +169,7 @@ void main() {
     expect(waitingTitle(fields(name: '  ')), 'Sent Ksh 640');
   });
 
-  testWidgets('unreadable: copy, dimmed icon, Paste and Remove, callbacks', (t) async {
+  testWidgets('unreadable: copy, dimmed icon, Remove, no Paste button, callbacks', (t) async {
     final calls = <String>[];
     await t.pumpWidget(host(WaitingRow(
       held(WaitingKind.unreadable),
@@ -177,14 +178,14 @@ void main() {
       onRemove: () => calls.add('remove'),
       onParse: () => calls.add('parse'),
     )));
-    expect(find.text(kCouldNotRead), findsOneWidget);
+    expect(find.text(kUnreadableTitle), findsOneWidget);
+    expect(find.text('Received 06:00. $kUnreadableTapHint'), findsOneWidget);
     expect(find.byKey(const Key('waitingRowDimIcon')), findsOneWidget);
     expect(find.text(kActionParse), findsNothing);
-    expect(find.text(kActionPaste), findsOneWidget);
+    expect(find.text(kActionPaste), findsNothing);
     expect(find.text(kActionRemove), findsOneWidget);
-    await t.tap(find.text(kActionPaste));
     await t.tap(find.text(kActionRemove));
-    expect(calls, ['paste', 'remove']);
+    expect(calls, ['remove']);
   });
 
   testWidgets('gone: copy with the recovery wording, Expired footer, Paste and Remove', (t) async {
@@ -216,7 +217,7 @@ void main() {
         findsOneWidget);
     expect(find.bySemanticsLabel(RegExp(r'^Waiting for a category\. Sent Ksh 640 to Sample Shop\. .*same code, different details')),
         findsOneWidget);
-    expect(find.bySemanticsLabel(RegExp(r'^Ready to parse, could not be read\. Could not read this one')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp(r'^Ready to parse, could not be read\. This message could not be read')), findsOneWidget);
     expect(find.bySemanticsLabel(RegExp(r'^Message gone\. This message is no longer available')), findsOneWidget);
     expect(find.bySemanticsLabel('Parse the M-Pesa message received 4 hours ago'), findsOneWidget);
     expect(find.bySemanticsLabel('Categorize: Sent Ksh 640 to Sample Shop'), findsOneWidget);
@@ -238,7 +239,7 @@ void main() {
       ));
       expect(t.takeException(), isNull);
       final wells = find.byType(InkWell);
-      expect(wells, findsNWidgets(1 + 1 + 2 + 2));
+      expect(wells, findsNWidgets(1 + 1 + 1 + 2));
       for (final e in wells.evaluate()) {
         final s = t.getSize(find.byElementPredicate((x) => x == e));
         expect(s.width, greaterThanOrEqualTo(44));
@@ -259,13 +260,6 @@ void main() {
         expect(taps, 1);
       });
     }
-    testWidgets('a footer (the Auto-record airtime card) is drawn and does not add the flag words', (t) async {
-      size360(t);
-      final it = WaitingItem(id: heldIdFor(77), kind: WaitingKind.waitingCategory, heldAt: _now, parsed: fields(type: SmsSourceType.airtime));
-      await t.pumpWidget(host(WaitingRow(it, _now, footer: const Text('FOOTER-X'))));
-      expect(find.text('FOOTER-X'), findsOneWidget);
-      expect(find.bySemanticsLabel(RegExp('same code, different details')), findsNothing);
-    });
     testWidgets('no onDetails: no link (rows of unwired pages are unchanged)', (t) async {
       size360(t);
       await t.pumpWidget(host(WaitingRow(held(WaitingKind.readyToParse), _now)));

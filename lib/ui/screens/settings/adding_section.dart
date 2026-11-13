@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../copy/settings_copy.dart';
 import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
+import '../fuliza/fuliza_visible.dart';
 import 'remembered_hook_row.dart';
 import 'settings_widgets.dart';
 
@@ -70,15 +71,16 @@ class AddingSection extends StatelessWidget {
                   value: captureReceiver,
                   onChanged: onCaptureReceiverChanged,
                 ),
-                SettingsToggle(
-                  key: const Key('settingsShowFuliza'),
-                  palette: palette,
-                  icon: Icons.account_balance_wallet_outlined,
-                  label: kShowFulizaLabel,
-                  subtitle: kShowFulizaSubtitle,
-                  value: showFuliza,
-                  onChanged: onShowFulizaChanged,
-                ),
+                if (fulizaVisible)
+                  SettingsToggle(
+                    key: const Key('settingsShowFuliza'),
+                    palette: palette,
+                    icon: Icons.account_balance_wallet_outlined,
+                    label: kShowFulizaLabel,
+                    subtitle: kShowFulizaSubtitle,
+                    value: showFuliza,
+                    onChanged: onShowFulizaChanged,
+                  ),
                 SettingsLink(
                   key: const Key('settingsManageCategories'),
                   palette: palette,

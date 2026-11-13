@@ -187,7 +187,7 @@ void main() {
 
     testWidgets('no chip bar at all; News only', (t) async {
       await _open(t, typicalNews(), chip: NotifChip.all);
-      for (final c in NotifChip.values) {
+      for (final c in NotifChip.values.where((c) => c != NotifChip.todo)) {
         expect(find.byKey(Key('notif-chip-${c.name}')), findsNothing, reason: c.name);
       }
       expect(find.text(kChipNews), findsNothing); // not even a chip; only the heading remains

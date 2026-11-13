@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../autoread/autoread_feature.dart';
+import '../../../autoread/ui/privacy_autoread_copy.dart' show kPrivacyAutoRecordedTrail, kPrivacyHeldDescription, kPrivacyKeptNotShown;
 import '../../copy/data_copy.dart';
 import '../../copy/privacy_copy.dart';
 import '../../shell/routes.dart';
@@ -45,6 +46,9 @@ class PrivacyScreen extends StatelessWidget {
             children: [
               _Para(palette, kPrivacyStoredBody),
               _Para(palette, autoRead ? kPrivacyStoredReceiverDetails : kPrivacyStoredReceiverDetailsStandard),
+              if (autoRead) _Para(palette, kPrivacyHeldDescription, key: const Key('privacyHeldDescription')),
+              if (autoRead) _Para(palette, kPrivacyAutoRecordedTrail, key: const Key('privacyAutoRecordedTrail')),
+              if (autoRead) _Para(palette, kPrivacyKeptNotShown, key: const Key('privacyKeptNotShown')),
               _Para(palette, kPrivacyStoredAgentNumber),
               _Para(palette, kPrivacyAirtimeOtherNumber, key: const Key('privacyAirtimeOtherNumber')),
               _Para(palette, kPrivacyStoredRememberedAnswers),

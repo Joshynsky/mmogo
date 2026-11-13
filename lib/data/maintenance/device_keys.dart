@@ -40,6 +40,15 @@ const String kPendingGenerationPrefsKey = 'autoread_generation_v1';
 /// `lib/autoread/logic/reading_controller.dart` (a test pins the two).
 const String kReadingConsentPrefsKey = 'autoread_consent_version_v1';
 
+/// The auto-read "Recorded automatically" trail (row numbers and times, 24 h):
+/// ONE preference, device only, NEVER in a backup (not in the allowlist, never
+/// read from a restore file). Delete data removes it inside the preferences
+/// step; a Replace restore removes it after the commit. Defined here (not in
+/// `lib/autoread/`) because the standard build drops that folder and these two
+/// operations compile there; `kAirtimeTrailPrefKey` in
+/// `lib/autoread/logic/airtime_auto.dart` is this same string.
+const String kAirtimeTrailPrefsKey = 'autoread_airtime_trail_v1';
+
 /// Every prefix whose keys the queue step removes.
 const List<String> queueKeyPrefixes = [kPendingItemKeyPrefix];
 

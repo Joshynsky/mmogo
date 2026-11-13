@@ -7,7 +7,6 @@ import 'package:mmogo/autoread/model/waiting_item.dart';
 import 'package:mmogo/autoread/ui/notifications_autoread_copy.dart';
 import 'package:mmogo/autoread/ui/remove_confirm.dart';
 import 'package:mmogo/autoread/ui/waiting_section.dart';
-import 'package:mmogo/domain/notifications/notif_chip.dart';
 import 'package:mmogo/ui/theme/app_theme.dart';
 
 import '../../support/news_fakes.dart';
@@ -32,11 +31,8 @@ WaitingItem _gone() => WaitingItem(id: heldIdFor(4), kind: WaitingKind.gone, hel
 
 Widget _section(List<WaitingItem> items, List<WaitingItem> removed, {double scale = 1.0}) => _host(
       WaitingSection(
-        chip: NotifChip.parse,
         waiting: items,
-        news: const [],
         now: kFakeNow,
-        newsRowBuilder: (n) => const SizedBox(),
         actions: WaitingActions(onRemove: removed.add),
       ),
       scale: scale,

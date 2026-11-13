@@ -1,6 +1,6 @@
 /// §AUTOREAD.REMEMBERED_WIRING: how the auto-read build plugs the airtime
 /// switches into Settings and the Remembered page. Both take the ONE shared
-/// switch controller, so the page, the Settings row and the Notifications card
+/// switch controller, so the page, the Settings row and the trail
 /// always agree. main.dart only calls these two functions.
 library;
 

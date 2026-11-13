@@ -2,10 +2,10 @@
 /// phone notification (cold start through `takeLaunchId`, running app through
 /// the `tapped` stream; contract `interface-K4-bridge-channel.md`).
 ///
-/// Destination: the Parse chip for a held message still waiting to be parsed or
-/// one that is unreadable, the Categorize chip for one already parsed, in both
-/// cases with that row scrolled into view and highlighted (the id goes to the
-/// page as ocusId). An unknown or gone id goes to Categorize with no row.
+/// Destination: the To do chip for every listed item (ready to parse,
+/// unreadable or already parsed), with that row scrolled into view and no
+/// outline (the id goes to the page as focusId). An unknown or gone id opens
+/// To do with no row focused.
 /// It never reads or shows message content: only the 32-hex id and the item's
 /// kind are used, and a malformed id is ignored.
 ///
@@ -114,7 +114,7 @@ class AutoReadLaunchRouter {
   }
 
   Future<_Target> _targetFor(String id) async {
-    const fallback = _Target(NotifChip.categorize, null);
+    const fallback = _Target(NotifChip.todo, null);
     final repo = waiting;
     if (repo == null) return fallback;
     StreamSubscription<List<WaitingItem>>? sub;
@@ -127,14 +127,15 @@ class AutoReadLaunchRouter {
       for (final i in items) {
         if (i.id == id) {
           return switch (effectiveKind(i, _now())) {
-            WaitingKind.readyToParse || WaitingKind.unreadable => _Target(NotifChip.parse, id),
-            WaitingKind.waitingCategory => _Target(NotifChip.categorize, id),
-            WaitingKind.gone => fallback,
+            WaitingKind.readyToParse ||
+            WaitingKind.waitingCategory =>
+              _Target(NotifChip.todo, id),
+            WaitingKind.unreadable || WaitingKind.gone => fallback,
           };
         }
       }
     } catch (_) {
-      // No answer in time: Categorize.
+      // No answer in time: To do, no row.
     } finally {
       unawaited(sub?.cancel());
     }

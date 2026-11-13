@@ -8,18 +8,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/autoread/bridge/fake_autoread_bridge.dart';
+import 'package:mmogo/autoread/data/airtime_trail_store.dart';
 import 'package:mmogo/autoread/data/real_waiting_repository.dart';
 import 'package:mmogo/autoread/logic/airtime_auto.dart';
 import 'package:mmogo/autoread/logic/waiting_logic.dart';
 import 'package:mmogo/autoread/model/waiting_item.dart';
 import 'package:mmogo/autoread/service/autoread_service.dart';
-import 'package:mmogo/autoread/ui/auto_airtime_card.dart';
+import 'package:mmogo/autoread/ui/auto_record_tab.dart';
+import 'package:mmogo/autoread/ui/auto_recorded_row.dart';
 import 'package:mmogo/data/backup/backup_setting_keys.dart';
 import 'package:mmogo/data/db/schema.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../domain/parsing/sample_messages.dart';
+import '../../support/fake_trail_prefs.dart';
 import '../../support/pending_store_stand_in.dart';
 import '../../support/waiting_fakes.dart' show heldIdFor;
 
@@ -64,6 +67,7 @@ void main() {
         prefValue = v;
         prefWrites.add(v);
       },
+      trailStore: AirtimeTrailStore(prefs: FakeTrailPrefs(), now: () => _t0), // the trail's own tests: airtime_trail_*_test.dart
     );
   });
   tearDown(() async {
@@ -163,8 +167,7 @@ void main() {
     final e = repo.airtime.trail.single;
     expect(await live(), hasLength(1));
     await repo.undoAutoRecord(e);
-    expect(e.undone, isTrue);
-    expect(e.undoFailed, isFalse);
+    expect(repo.airtime.trail.single.inRecentlyDeleted, isTrue);
     expect(await live(), isEmpty);
     final all = await db.query('transactions');
     expect(all.single['deleted_at'], isNotNull); // restorable: the row is still there
@@ -176,7 +179,7 @@ void main() {
     expect(await live(), hasLength(1));
   });
 
-  test('Undo of a row that is gone (purged or wiped) is reported, not silent', () async {
+  test('Undo of a row that is gone (purged or wiped) changes nothing and the entry is hidden', () async {
     prefValue = true;
     bridge.hold(heldIdFor(1), kSampleAirtime, _t0.subtract(const Duration(minutes: 5)));
     await repo.ingest();
@@ -184,8 +187,7 @@ void main() {
     final e = repo.airtime.trail.single;
     await db.delete('transactions');
     await repo.undoAutoRecord(e);
-    expect(e.undone, isFalse);
-    expect(e.undoFailed, isTrue);
+    expect(repo.airtime.trail, isEmpty);
   });
 
   test('the same airtime code arriving twice makes one entry and one trail row', () async {
@@ -233,28 +235,41 @@ void main() {
           child: MaterialApp(home: Scaffold(body: SingleChildScrollView(child: child))),
         );
 
-    testWidgets('switch card: shows the wording for OFF and ON and reports the tap', (t) async {
-      var on = false;
-      await t.pumpWidget(StatefulBuilder(
-          builder: (c, set) => host(AutoAirtimeSwitchCard(on: on, onChanged: (v) => set(() => on = v)))));
-      expect(find.text(kAutoAirtimeTitle), findsOneWidget);
-      expect(find.textContaining('Until you turn it on'), findsOneWidget);
-      await t.tap(find.byKey(const Key('autoAirtimeSwitch')));
-      await t.pump();
-      expect(on, isTrue);
-      expect(find.textContaining('Each one can be undone'), findsOneWidget);
+    testWidgets('Settings tab switch: a tap flips the preference through the controller', (t) async {
+      t.view.physicalSize = const Size(390, 800);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      final writes = <bool>[];
+      late AirtimeAutoController c;
+      c = AirtimeAutoController(
+        onSwitch: (v) async {
+          writes.add(v);
+          c.setOn(v);
+        },
+        onUndo: (_) async {},
+      );
+      await t.pumpWidget(AppPaletteScope(
+        controller: AppPaletteController('ocean', 'light'),
+        child: MaterialApp(home: Scaffold(body: AutoRecordTab(controller: c))),
+      ));
+      expect(find.textContaining('can be undone'), findsNothing);
+      await t.tap(find.byKey(const Key('autoRecordMyself')));
+      await t.pumpAndSettle();
+      expect(writes, [true]);
+      expect(c.on, isTrue);
+      expect(find.textContaining('can be undone'), findsOneWidget);
     });
 
     testWidgets('trail row: Undo fires; an undone row has no Undo and says where it went', (t) async {
       final e = AutoRecorded(rowId: 7, amountCents: 10000, at: _t0);
       var undos = 0;
       await t.pumpWidget(host(AutoRecordedRow(entry: e, now: _t0, onUndo: () => undos++)));
-      expect(find.text('Recorded as Airtime, Ksh 100'), findsOneWidget);
+      expect(find.text('Airtime for myself, Ksh 100'), findsOneWidget);
       expect(find.textContaining('counted in your totals'), findsOneWidget);
       await t.tap(find.text('Undo'));
       expect(undos, 1);
-      e.undone = true;
-      await t.pumpWidget(host(AutoRecordedRow(entry: e, now: _t0, onUndo: () => undos++)));
+      final gone = AutoRecorded(rowId: 7, amountCents: 10000, at: _t0, inRecentlyDeleted: true);
+      await t.pumpWidget(host(AutoRecordedRow(entry: gone, now: _t0, onUndo: () => undos++)));
       expect(find.text('Undo'), findsNothing);
       expect(find.text(kAutoRecordedUndone), findsOneWidget);
     });

@@ -75,12 +75,6 @@ const String kFlaggedLine = 'same code, different details, check your M-Pesa mes
 const String kFromMessageTextOnly =
     'From the message text only. mmogo cannot check it with M-Pesa.';
 
-// Empty states (mock).
-const String kEmptyParseTitle = 'Nothing to parse';
-const String kEmptyParseBody = 'No M-Pesa messages are ready to parse.';
-const String kEmptyCategorizeTitle = 'Nothing is waiting';
-const String kEmptyCategorizeBody = 'Nothing is waiting for a category.';
-
 // Toasts (mock).
 const String kToastParsed = 'Parsed. It is now in To categorize. Nothing is saved yet.';
 const String kToastRemoved =
@@ -119,25 +113,17 @@ List<String> allAutoReadCopy() => [
       kPasteGoStraight,
       kFlaggedLine,
       kFromMessageTextOnly,
-      kEmptyParseTitle,
-      kEmptyParseBody,
-      kEmptyCategorizeTitle,
-      kEmptyCategorizeBody,
       kToastParsed,
       kToastRemoved,
     ];
 
-// F3 additions: the All chip and the reading-off quiet line (mock wording).
-const String kEmptyAllTitle = 'All caught up';
-const String kEmptyAllBody = 'Nothing needs you right now.';
+// F3 additions: the reading-off quiet line (mock wording).
 const String kReadingOffLine =
     'Reading M-Pesa messages is off, so no new messages will arrive. Items already here stay until you deal with them.';
 const String kTurnOnReading = 'Turn on reading M-Pesa messages';
 
 /// Every F3 string above, for the banned-phrase test.
 const List<String> kAutoReadPageCopyAll = <String>[
-  kEmptyAllTitle,
-  kEmptyAllBody,
   kReadingOffLine,
   kTurnOnReading,
 ];

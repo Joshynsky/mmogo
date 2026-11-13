@@ -1,10 +1,9 @@
-// Settings row, Remembered page (both tabs) and the Notifications card all run
+// Settings row and Remembered page (both tabs) run
 // off ONE controller. These tests mount the same wiring the app uses
 // (remembered_wiring.dart) over mock preferences and invented names.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/autoread/logic/airtime_auto.dart';
-import 'package:mmogo/autoread/ui/auto_airtime_card.dart';
 import 'package:mmogo/autoread/ui/remembered_wiring.dart';
 import 'package:mmogo/data/prefs/recipient_memory.dart';
 import 'package:mmogo/domain/parsing/parsed_sms_fields.dart';
@@ -83,19 +82,6 @@ Future<void> _pump(WidgetTester t, AirtimeAutoController? c, RecipientMemory mem
           Routes.rememberedRecipients: (ctx) => c == null
               ? RememberedScreen(memory: mem)
               : rememberedPageFor(c, args: ModalRoute.of(ctx)?.settings.arguments, memory: mem),
-          '/card': (_) => Scaffold(
-            body: ListenableBuilder(
-              listenable: c ?? ValueNotifier(0),
-              builder: (_, _) => c == null
-                  ? const SizedBox()
-                  : AutoAirtimeSwitchCard(
-                      on: c.on,
-                      onChanged: c.onSwitch,
-                      onChangedOther: c.onSwitchOther,
-                      onOther: c.onOther,
-                    ),
-            ),
-          ),
         },
         home: SettingsScreen(
           db: _CountDb(),
@@ -117,15 +103,10 @@ Future<void> _openTab2(WidgetTester t) async {
   await t.pumpAndSettle();
 }
 
-Future<void> _card(WidgetTester t) async {
-  _nav.currentState!.pushNamed('/card');
-  await t.pumpAndSettle();
-}
-
 void main() {
   setUp(() => useFakeDeleteData());
 
-  testWidgets('flip on the tab, read on the Notifications card; flip on the card, read on the tab', (t) async {
+  testWidgets('one controller: flip on the tab, the label and Settings sub follow; flip back, they follow again', (t) async {
     final mem = await _seeded();
     final c = _controller();
     await _pump(t, c, mem);
@@ -135,25 +116,23 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Recorded automatically · 1'), findsOneWidget);
     expect(c.on, isTrue);
-    await _card(t);
-    expect(_sw(t, 'autoAirtimeSwitch'), isTrue);
-    expect(_sw(t, 'autoAirtimeSwitchOther'), isFalse);
-    await t.tap(find.byKey(const Key('autoAirtimeSwitchOther')));
+    expect(c.onOther, isFalse);
+    await t.tap(find.byKey(const Key('autoRecordOther')));
     await t.pumpAndSettle();
     expect(c.onOther, isTrue);
-    _nav.currentState!.pop();
-    await t.pumpAndSettle();
     expect(find.text('Recorded automatically · 2'), findsOneWidget);
     expect(_sw(t, 'autoRecordOtherSwitch'), isTrue);
-    // Reverse: switch the first one off on the card, read it on the tab.
-    await _card(t);
-    await t.tap(find.byKey(const Key('autoAirtimeSwitch')));
+    await t.pageBack();
     await t.pumpAndSettle();
-    _nav.currentState!.pop();
+    expect(find.text(_sub2), findsOneWidget);
+    // The controller flipped from outside (the repository), the page re-reads it.
+    c.setOn(false);
     await t.pumpAndSettle();
+    expect(find.text('Auto-record airtime: 1 of 2 on · 1 name, kept on this phone'), findsOneWidget);
+    await _openTab2(t);
     expect(find.text('Recorded automatically · 1'), findsOneWidget);
-    expect(find.byKey(const Key('autoRecordMyselfSwitch')), findsOneWidget);
     expect(_sw(t, 'autoRecordMyselfSwitch'), isFalse);
+    expect(find.byKey(const Key('autoAirtimeCard')), findsNothing);
   });
 
   testWidgets('the Settings row sub shows the count and names, and updates after Back', (t) async {

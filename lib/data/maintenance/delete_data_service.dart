@@ -194,6 +194,11 @@ class DeleteDataServiceImpl implements DeleteDataService {
         const k = SqliteFulizaRepository.limitPrefsKey;
         if (await env.prefs.has(k) && !await env.prefs.remove(k)) throw StateError('not removed');
         if (await env.prefs.has(k)) throw StateError('still stored');
+        // The 24 h "Recorded automatically" trail (row numbers and times): same step.
+        if (await env.prefs.has(kAirtimeTrailPrefsKey) && !await env.prefs.remove(kAirtimeTrailPrefsKey)) {
+          throw StateError('trail not removed');
+        }
+        if (await env.prefs.has(kAirtimeTrailPrefsKey)) throw StateError('trail still stored');
       } catch (_) {
         return partial(DeleteDataOutcome.notFinished, step);
       }

@@ -85,7 +85,7 @@ void main() {
           _wrap(_chips(all: 150, news: 120), width: width, scale: scale),
         );
         expect(t.takeException(), isNull);
-        final rects = [for (final c in NotifChip.values) _r(t, c)];
+        final rects = [for (final c in NotifChip.values.where((c) => c != NotifChip.todo)) _r(t, c)];
         for (final r in rects) {
           expect(r.top, rects.first.top);
           expect(r.height, greaterThanOrEqualTo(44));

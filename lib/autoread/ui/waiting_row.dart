@@ -3,7 +3,8 @@
 /// Lives under `lib/autoread/` (the standard build drops it) and is reached
 /// from shared code only inside `if (kAutoReadCompiled)`. Built on the shared
 /// `NotifRowShell`. It shows nothing of the raw message: a ready row says only
-/// "M-Pesa message ready"; a waiting row shows the parsed amount and name.
+/// "M-Pesa message ready" until a description arrives; a waiting row shows the
+/// parsed amount and name.
 /// Waiting and ready rows have no dismiss or remove of any kind; unreadable
 /// and gone rows have Remove (with the page's confirmation, not built here).
 library;
@@ -16,10 +17,12 @@ import '../../ui/screens/notifications/news_row.dart';
 import '../../ui/theme/app_colors.dart';
 import '../../ui/widgets/notif_colors.dart';
 import '../../ui/widgets/notif_shape_icon.dart';
-import '../logic/message_details.dart' show kDetailsLink;
+import '../logic/message_details.dart' show kDetailsLink, unreadableSubline;
 import '../logic/waiting_logic.dart';
+import '../model/held_description.dart';
 import '../model/waiting_item.dart';
 import 'notifications_autoread_copy.dart';
+import 'unreadable_copy.dart';
 
 // NOT IN THE COPY FILE (taken from the signed mock's row keywords and the
 // brief's title pattern; the orchestrator may move them into the copy file).
@@ -72,7 +75,7 @@ class WaitingRow extends StatelessWidget {
     this.onPaste,
     this.onRemove,
     this.onDetails,
-    this.footer,
+    this.description,
   });
 
   final WaitingItem item;
@@ -85,8 +88,9 @@ class WaitingRow extends StatelessWidget {
   /// Opens the Details sheet. Null: no Details link (rows without a wired page).
   final VoidCallback? onDetails;
 
-  /// Extra content under the row (the Auto-record airtime switch on a parsed Airtime item).
-  final Widget? footer;
+  /// What a held message is, in words (memory only, may be null: the row then
+  /// keeps its plain title). Used for ready and unreadable rows only.
+  final HeldDescription? description;
 
   @override
   Widget build(BuildContext context) {
@@ -98,14 +102,16 @@ class WaitingRow extends StatelessWidget {
     final String keyword;
     String? subtitle;
     String foot;
-    NotifRowAction action;
+    NotifRowAction? action;
     NotifRowAction? link;
     Widget? extra;
     Widget icon;
 
     switch (kind) {
       case WaitingKind.readyToParse:
-        title = kReadyRowTitle;
+        final what = description?.what;
+        title = what ?? kReadyRowTitle;
+        subtitle = what == null ? null : kReadyRowFine;
         keyword = kSpokenReadyToParse;
         foot = '$age · ${expiresInLine(expiresLeft(item, now))}';
         action = NotifRowAction(
@@ -130,10 +136,11 @@ class WaitingRow extends StatelessWidget {
         icon = _pill(p);
         if (item.sameCodeDifferentDetails) extra = _FlagLine(palette: p);
       case WaitingKind.unreadable:
-        title = kCouldNotRead;
+        title = kUnreadableTitle;
+        subtitle = unreadableSubline(description, item.heldAt);
         keyword = kSpokenReadyCouldNotRead;
         foot = 'Received $age';
-        action = _paste();
+        action = null; // tap the row or Details to see how to paste it
         link = _remove();
         icon = _diamond(p, true);
       case WaitingKind.gone:
@@ -146,12 +153,6 @@ class WaitingRow extends StatelessWidget {
         icon = _diamond(p, true);
     }
     if (kind == WaitingKind.readyToParse) foot = 'Received $foot';
-    final bottom = footer;
-    if (bottom != null) {
-      extra = extra == null
-          ? bottom
-          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [extra, const SizedBox(height: 6), bottom]);
-    }
 
     final spoken = [
       keyword,
@@ -169,12 +170,13 @@ class WaitingRow extends StatelessWidget {
       action: action,
       link: link,
       leadLink: onDetails == null ? null : _details(title),
+      onOpen: kind == WaitingKind.unreadable ? onDetails : null,
       extra: extra,
       spokenLabel: spoken,
     );
   }
 
-  // WORDING-DRAFT: the label "Details" is new UI text (mock item 7).
+  // SIGNED (PM 13-11-2026): the label "Details".
   NotifRowAction _details(String title) => NotifRowAction(
         label: kDetailsLink,
         semantics: '$kDetailsLink of this message: $title',

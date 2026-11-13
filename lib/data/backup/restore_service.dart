@@ -9,6 +9,7 @@ import 'backup_settings.dart';
 import 'backup_validator.dart';
 import 'restore_plan.dart';
 import 'restore_steps.dart';
+import 'restore_trail_hook.dart';
 import 'restore_types.dart';
 import 'restore_writer.dart';
 import 'safety_copy_store.dart';
@@ -52,7 +53,9 @@ class RestoreService {
     DataOpGate? gate,
     Duration slowAfter = const Duration(seconds: 10),
     RestoreTimerFactory? timer,
-  })  : _timer = timer,
+    Future<void> Function()? afterReplace,
+  })  : _afterReplace = afterReplace ?? AirtimeTrailRestoreHook.afterReplace,
+        _timer = timer,
         _slowAfter = slowAfter,
         _gate = gate ?? DataOpGate.instance,
         _db = db,
@@ -70,6 +73,10 @@ class RestoreService {
   final bool _isolate;
   final DataOpGate _gate;
   final RestoreTimerFactory? _timer;
+
+  /// Runs after a COMMITTED Replace (and after the Undo of one): the 24 h
+  /// "Recorded automatically" trail goes. Never throws (see the hook).
+  final Future<void> Function() _afterReplace;
 
   /// A step still running after this long emits a `slow` event (BP2: 10 s).
   final Duration _slowAfter;
@@ -191,6 +198,7 @@ class RestoreService {
 
     final tally = await steps.run(
         RestoreStep.writing, () => _write(db, file, mode, copy?.live));
+    if (mode == RestoreMode.replace) await _afterReplace();
     final settings = await _applySettings(file.prefs, onlyIfUnset: mode == RestoreMode.merge);
     return RestoreResult(
       mode: mode,
@@ -246,6 +254,7 @@ class RestoreService {
     });
     final tally = await steps.run(
         RestoreStep.writing, () => _write(db, file, RestoreMode.replace, null));
+    await _afterReplace(); // Undo of a Replace is a Replace write too
     final settings = await _applySettings(file.prefs, onlyIfUnset: false);
     var stillThere = false;
     try {

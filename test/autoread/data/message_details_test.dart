@@ -10,9 +10,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/autoread/bridge/fake_autoread_bridge.dart';
 import 'package:mmogo/autoread/data/real_waiting_repository.dart';
 import 'package:mmogo/autoread/logic/message_details.dart';
+import 'package:mmogo/autoread/model/held_description.dart';
 import 'package:mmogo/autoread/model/waiting_item.dart';
 import 'package:mmogo/autoread/service/autoread_service.dart';
 import 'package:mmogo/autoread/ui/message_details_sheet.dart';
+import 'package:mmogo/autoread/ui/unreadable_copy.dart';
 import 'package:mmogo/data/db/schema.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -48,34 +50,22 @@ void main() {
     });
   });
 
-  group('maskedFirstWords', () {
-    test('codes, numbers and capital names are left out', () {
-      expect(maskedFirstWords('QWE1R2T3Y4 Confirmed. Ksh500.00 sent to JANE DOE'), '… Confirmed. …');
-      expect(maskedFirstWords('Dear customer, you have JANE'), 'Dear customer, you');
-      expect(maskedFirstWords('ABCDEFGHIJ confirmed 12'), '… confirmed …');
-    });
-    test('only the first words, empty body, extra spaces', () {
-      expect(maskedFirstWords(''), '');
-      expect(maskedFirstWords('   '), '');
-      expect(maskedFirstWords('Hello   there  friend and more'), 'Hello there friend');
-      expect(maskedFirstWords('a b c d e', words: 2), 'a b');
-    });
-  });
-
   group('buildMessageDetails', () {
     WaitingItem held(WaitingKind k, Duration age) =>
         WaitingItem(id: heldIdFor(1), kind: k, heldAt: _t0.subtract(age));
 
-    test('unreadable: sender, time, first words, time left; no amount, no code', () {
+    test('unreadable: sender, code, amount, time, time left; Not found for gaps; no body words', () {
       final d = buildMessageDetails(held(WaitingKind.unreadable, const Duration(minutes: 20)), _t0,
-          firstWords: '… Confirmed. …');
+          light: const HeldDescription(code: 'QWE1R2T3Y4', amount: 'Ksh 5'));
       expect(d.valueOf(kDetailsSenderLabel), 'MPESA');
-      expect(d.valueOf(kDetailsReceivedLabel), 'Today, 13:45');
-      expect(d.valueOf(kDetailsWhatFailedLabel), kDetailsFailedValue);
-      expect(d.valueOf(kDetailsFirstWordsLabel), '“… Confirmed. ……”');
+      expect(d.valueOf(kUnreadableCodeLabel), 'QWE1R2T3Y4');
+      expect(d.valueOf(kDetailsAmountLabel), 'Ksh 5');
+      expect(d.valueOf(kUnreadableTimeLabel), kNotFound);
       expect(d.valueOf(kDetailsTimeLeftLabel), '23 h 40 min (expires at 13:45 tomorrow)');
-      expect(d.valueOf(kDetailsAmountLabel), isNull);
-      expect(d.note, kDetailsNoteUnreadable);
+      expect(d.valueOf('First words'), isNull);
+      expect(d.valueOf('What failed'), isNull);
+      expect(d.note, kUnreadablePasteWithCode);
+      expect(d.fine, kUnreadableFine);
     });
 
     test('expired held item reads as gone', () {
@@ -137,15 +127,19 @@ void main() {
       expect(all.contains('0712345678'), isFalse);
     });
 
-    test('an unreadable message: masked first words only', () async {
+    test('an unreadable message: code, amount and time only, never its words', () async {
       final id = heldIdFor(2);
       bridge.hold(id, 'XYZ1234567 Confirmed. something odd about KSH 77 for JOHN',
           _t0.subtract(const Duration(hours: 2)));
       await repo.ingest();
       final d = (await repo.detailsFor(id))!;
       expect(d.kind, WaitingKind.unreadable);
-      expect(d.valueOf(kDetailsFirstWordsLabel), '“… Confirmed. something…”');
-      expect(d.lines.map((l) => l.value).join().contains('77'), isFalse);
+      expect(d.valueOf(kUnreadableCodeLabel), 'XYZ1234567');
+      expect(d.valueOf(kDetailsAmountLabel), 'Ksh 77');
+      expect(d.valueOf(kUnreadableTimeLabel), kNotFound);
+      final text = d.lines.map((l) => l.value).join('|') + (d.note ?? '') + (d.fine ?? '');
+      expect(text.contains('something'), isFalse);
+      expect(text.contains('JOHN'), isFalse);
       expect(d.valueOf(kDetailsTimeLeftLabel), '22 h (expires at 12:05 tomorrow)');
     });
 

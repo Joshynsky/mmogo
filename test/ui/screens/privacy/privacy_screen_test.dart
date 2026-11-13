@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../../../support/mpesa_text.dart';
 import 'package:mmogo/app_constants.dart';
+import 'package:mmogo/autoread/ui/privacy_autoread_copy.dart' show kPrivacyAutoRecordedTrail, kPrivacyHeldDescription, kPrivacyKeptNotShown;
 import 'package:mmogo/data/backup/backup_counts.dart';
 import 'package:mmogo/platform/storage_bridge.dart';
 import 'package:mmogo/ui/copy/data_copy.dart';
@@ -114,6 +115,51 @@ void main() {
       expect(find.text(kPrivacySentenceStandard), findsNothing);
       expect(kPrivacySentenceAutoRead, contains('SMS and notification permission'));
       expect(_allText(tester).toLowerCase(), isNot(contains('no permissions')));
+    });
+
+    testWidgets('the auto-read build shows the held-description sentence, exactly, once', (tester) async {
+      await _pumpPage(tester, const PrivacyScreen(autoRead: true));
+      expect(find.text(kPrivacyHeldDescription), findsOneWidget);
+      final lower = kPrivacyHeldDescription.toLowerCase();
+      expect(lower, isNot(contains('nothing leaves your phone')));
+      expect(lower, isNot(contains('only when you tap parse')));
+      expect(lower, contains('never saved'));
+      expect(lower, contains('up to 24 hours'));
+    });
+
+    testWidgets('the auto-read build shows the signed 24 h trail sentence, exactly, once; the standard build does not', (tester) async {
+      expect(
+          kPrivacyAutoRecordedTrail,
+          'For 24 hours mmogo remembers which airtime entries it recorded for you, so you can see and undo them. '
+          'This list stays on your phone, is not in backups, and Delete data removes it.');
+      await _pumpPage(tester, const PrivacyScreen(autoRead: true));
+      expect(find.text(kPrivacyAutoRecordedTrail), findsOneWidget);
+      await _pumpPage(tester, const PrivacyScreen(autoRead: false));
+      expect(find.text(kPrivacyAutoRecordedTrail), findsNothing);
+      expect(find.byKey(const Key('privacyAutoRecordedTrail')), findsNothing);
+      expect(_allText(tester).toLowerCase(), isNot(contains('recorded for you')));
+    });
+
+    testWidgets('the auto-read build shows the signed kept-not-shown sentence, exactly, once; the standard build does not', (
+      tester,
+    ) async {
+      expect(
+        kPrivacyKeptNotShown,
+        'mmogo keeps some messages from your mobile-money provider on this phone for a feature that is not shown yet; '
+        'nothing is shown from them and they are never sent anywhere.',
+      );
+      await _pumpPage(tester, const PrivacyScreen(autoRead: true));
+      expect(find.text(kPrivacyKeptNotShown), findsOneWidget);
+      expect(_allText(tester), isNot(contains('Fuliza')));
+      await _pumpPage(tester, const PrivacyScreen(autoRead: false));
+      expect(find.text(kPrivacyKeptNotShown), findsNothing);
+    });
+
+    testWidgets('the standard build shows no held-description sentence', (tester) async {
+      await _pumpPage(tester, const PrivacyScreen(autoRead: false));
+      expect(find.text(kPrivacyHeldDescription), findsNothing);
+      expect(find.byKey(const Key('privacyHeldDescription')), findsNothing);
+      expect(_allText(tester).toLowerCase(), isNot(contains('held message')));
     });
 
     testWidgets('0.1.3 F1: the standard build still says internet only', (tester) async {

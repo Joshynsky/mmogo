@@ -6,7 +6,7 @@ import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/autoread/logic/airtime_auto.dart';
-import 'package:mmogo/autoread/ui/auto_airtime_card.dart';
+import 'package:mmogo/autoread/ui/auto_group.dart';
 import 'package:mmogo/autoread/ui/airtime_kind_copy.dart';
 import 'package:mmogo/autoread/ui/auto_record_copy.dart';
 import 'package:mmogo/autoread/ui/auto_record_tab.dart';
@@ -29,6 +29,7 @@ AirtimeAutoController _controller() {
       c.setOnOther(v);
     },
     onUndo: (_) async {},
+    now: () => DateTime(2026, 11, 13, 10), // the trail window is 24 h: a fixed clock keeps this test stable
   );
   return c;
 }
@@ -167,23 +168,43 @@ void main() {
     expect(autoRecordTabSpoken(1), 'Recorded automatically, 1 of 2 on');
   });
 
-  testWidgets('flipping here moves the Notifications card; flipping there moves this tab', (t) async {
+  testWidgets('tab, tab label and trail agree on one controller; no switch card anywhere', (t) async {
     phone(t);
+    final tab = autoRecordExtraTab(_c);
     await t.pumpWidget(_host(ListenableBuilder(
       listenable: _c,
       builder: (context, _) => Column(children: [
-        AutoAirtimeSwitchCard(on: _c.on, onChanged: _c.onSwitch, onOther: _c.onOther, onChangedOther: _c.onSwitchOther),
+        Text(tab.tabLabel(), key: const Key('tabLabel')),
+        AutoGroup(_c, DateTime(2026, 11, 13, 9), onChangeInSettings: () {}),
         Expanded(child: AutoRecordTab(controller: _c)),
       ]),
     )));
-    bool card(String k) => t.widget<Switch>(find.byKey(Key(k))).value;
+    expect(find.byKey(const Key('autoAirtimeCard')), findsNothing);
     await t.tap(find.byKey(const Key('autoRecordOther')));
     await t.pumpAndSettle();
-    expect(card('autoAirtimeSwitchOther'), isTrue);
-    expect(card('autoAirtimeSwitch'), isFalse);
-    await t.tap(find.byKey(const Key('autoAirtimeSwitch')));
+    expect(_c.onOther, isTrue);
+    expect(_c.on, isFalse);
+    expect(t.widget<Text>(find.byKey(const Key('tabLabel'))).data, 'Recorded automatically · 1');
+    await t.tap(find.byKey(const Key('autoRecordMyself')));
     await t.pumpAndSettle();
+    expect(t.widget<Text>(find.byKey(const Key('tabLabel'))).data, 'Recorded automatically · 2');
     expect(find.byKey(const Key('autoRecordMyselfPanel')), findsOneWidget);
+    // A new record shows on the trail, with its link; still no card.
+    _c.add(AutoRecorded(rowId: 5, amountCents: 500, at: DateTime(2026, 11, 13, 9)));
+    await t.pumpAndSettle();
+    expect(find.text(kAutoRecordedChangeInSettings), findsOneWidget);
+    expect(find.byKey(const Key('autoAirtimeCard')), findsNothing);
+  });
+
+  testWidgets('the open panel says each record can be undone and no Categorize tap is needed', (t) async {
+    phone(t);
+    await t.pumpWidget(_tab());
+    expect(find.text(kAutoRecordExplainUndo), findsNothing);
+    await t.tap(find.byKey(const Key('autoRecordMyself')));
+    await t.pumpAndSettle();
+    expect(find.text(kAutoRecordExplainUndo), findsOneWidget);
+    expect(find.textContaining('can be undone'), findsOneWidget);
+    expect(find.textContaining('Categorize'), findsOneWidget);
   });
 
   testWidgets('no digits or phone text anywhere in the open tab', (t) async {

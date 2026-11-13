@@ -13,10 +13,11 @@ import 'package:flutter/material.dart';
 
 import '../../../autoread/autoread_feature.dart';
 import '../../../autoread/logic/all_view_logic.dart' as all;
-import '../../../autoread/logic/waiting_logic.dart';
 import '../../../autoread/model/waiting_item.dart';
 import '../../../autoread/model/waiting_repository.dart';
 import '../../../autoread/ui/notifications_autoread_copy.dart';
+import '../../../autoread/ui/quiet_note.dart';
+import '../../../autoread/ui/todo_copy.dart';
 import '../../../autoread/ui/waiting_section.dart';
 import '../../../domain/notifications/news_item.dart';
 import '../../../domain/notifications/news_logic.dart';
@@ -46,6 +47,7 @@ class NotificationsPage extends StatefulWidget {
     this.waitingActions = const WaitingActions(),
     this.readingOn = true,
     this.onTurnOnReading,
+    this.quietNote,
   });
 
   final NotificationsRepository news;
@@ -71,13 +73,16 @@ class NotificationsPage extends StatefulWidget {
   /// Update pressed on an update row. Default: `news.completeUpdate(id)`.
   final void Function(NewsItem item)? onUpdate;
 
-  /// Parse, Categorize, Paste, Remove on waiting rows (wired in slice F6;
-  /// unwired = no-op). Autoread build only.
+  /// Parse, Categorize, Paste, Remove on waiting rows (unwired = no-op). Autoread build only.
   final WaitingActions waitingActions;
 
   /// Reading M-Pesa messages is on. When off, the quiet line shows (autoread only).
   final bool readingOn;
   final VoidCallback? onTurnOnReading;
+
+  /// The one-line note at the top of the To do view (autoread build only).
+  /// The wiring sets its value; the next tap clears it. Null: no note.
+  final ValueNotifier<String?>? quietNote;
 
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
@@ -97,7 +102,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
   void initState() {
     super.initState();
     final chips = availableChips(autoReadCompiled: kAutoReadCompiled);
-    _chip = chips.contains(widget.initialChip) ? widget.initialChip : NotifChip.news;
+    // Any chip that opens To do (the old All, Parse, Categorize too) opens To do.
+    final wanted = widget.initialChip.opensTodo ? NotifChip.todo : widget.initialChip;
+    _chip = chips.contains(wanted) ? wanted : NotifChip.news;
     _newsSub = widget.news.watchNews().listen((v) => setState(() => _news = v));
     if (kAutoReadCompiled) {
       _waitingSub = widget.waiting?.watch().listen((v) => setState(() => _waiting = v));
@@ -152,17 +159,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
     final specs = <NotifChipSpec>[];
     if (kAutoReadCompiled) {
       final w = _waiting ?? const <WaitingItem>[];
-      specs.addAll([
-        NotifChipSpec(
-            chip: NotifChip.all, label: kChipAll, spokenName: kChipAll, count: all.allCount(w, news, now)),
-        NotifChipSpec(
-            chip: NotifChip.parse, label: kChipParse, spokenName: kHeadingToParse, count: parseCount(w, now)),
-        NotifChipSpec(
-            chip: NotifChip.categorize,
-            label: kChipCategorize,
-            spokenName: kHeadingToCategorize,
-            count: categorizeCount(w, now)),
-      ]);
+      final n = all.todoCount(w, now);
+      specs.add(NotifChipSpec(
+          chip: NotifChip.todo, label: kTodoChipLabel, spokenName: kTodoChipSpoken, count: n));
     }
     specs.add(NotifChipSpec(
         chip: NotifChip.news, label: kChipNews, spokenName: kChipNews, count: unreadNewsCount(news)));
@@ -175,11 +174,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
       return [
         if (!widget.readingOn) _readingOff(),
         WaitingSection(
-          chip: _chip,
           waiting: _waiting ?? const <WaitingItem>[],
-          news: news,
           now: now,
-          newsRowBuilder: (n) => _newsRow(n, now),
           actions: widget.waitingActions,
           focusId: widget.focusId,
         ),
@@ -227,6 +223,17 @@ class _NotificationsPageState extends State<NotificationsPage> {
         ],
       ),
     );
+  }
+
+  Widget _list(DateTime now) {
+    if (_news == null) return const SizedBox.shrink();
+    final list = ListView(
+      key: const Key('notif-list'),
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+      children: _body(now),
+    );
+    final note = widget.quietNote;
+    return kAutoReadCompiled && note != null && _chip != NotifChip.news ? QuietNote(note: note, child: list) : list;
   }
 
   @override
@@ -300,15 +307,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   }),
                 ),
               ),
-            Expanded(
-              child: _news == null
-                  ? const SizedBox.shrink()
-                  : ListView(
-                      key: const Key('notif-list'),
-                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-                      children: _body(now),
-                    ),
-            ),
+            Expanded(child: _list(now)),
           ],
         ),
       ),

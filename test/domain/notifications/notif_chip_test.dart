@@ -6,8 +6,12 @@ void main() {
     expect(availableChips(autoReadCompiled: false), [NotifChip.news]);
   });
 
-  test('with auto-read all four chips in order', () {
-    expect(availableChips(autoReadCompiled: true),
-        [NotifChip.all, NotifChip.parse, NotifChip.categorize, NotifChip.news]);
+  test('with auto-read two chips in order: To do, News', () {
+    expect(availableChips(autoReadCompiled: true), [NotifChip.todo, NotifChip.news]);
+  });
+
+  test('every chip but News opens To do', () {
+    expect([for (final c in NotifChip.values) if (c.opensTodo) c.name],
+        ['all', 'parse', 'categorize', 'todo']);
   });
 }

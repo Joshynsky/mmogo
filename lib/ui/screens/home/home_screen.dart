@@ -13,6 +13,8 @@ import '../../../data/db/home_dashboard_dao.dart';
 import '../../../data/db/transaction_dao.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../../data/updates/updates_startup.dart';
+import '../../../domain/format/money.dart' show formatKsh;
+import '../../../domain/fuliza/fuliza_home_rows.dart';
 import '../../../domain/home/home_diff.dart';
 import '../../../domain/home/home_greeting.dart';
 import '../../../domain/home/home_period.dart';
@@ -91,6 +93,9 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
 
   /// 0.2.0 S9: the Fuliza data for the V3 line; null (the normal case) draws nothing.
   FulizaSnapshot? _fuliza;
+
+  /// The rows of the Fuliza block for the period shown; null = no block.
+  FulizaHomeRows? _fulizaRows;
 
   late final AppLifecycleListener _lifecycle;
 
@@ -241,6 +246,9 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
       _bySource = results[2] as Map<String, SourceTypeTotal>;
       _recent = results[3] as List<RecentTransaction>;
       _fuliza = results[4] as FulizaSnapshot?;
+      _fulizaRows = _fuliza == null
+          ? null
+          : fulizaHomeRows(_fuliza!.data, start, end, fulizaPeriodWord(_period), formatKsh);
       _loading = false;
     });
     // First tour: once, after the first data has painted.
@@ -374,9 +382,9 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
                 withdrawalFeeCents: withdrawal?.costCents ?? 0,
                 onPeriodTap: _cyclePeriod,
                 hiddenProgress: _progress != null && _progress!.hide ? _progress : null,
-                fulizaLine: _fuliza == null
+                fulizaLine: _fulizaRows == null
                     ? null
-                    : FulizaHomeLine(palette: palette, data: _fuliza!.data, onTap: _openFuliza),
+                    : FulizaHomeLine(palette: palette, rows: _fulizaRows!, onTap: _openFuliza),
                 ),
               ),
             ),

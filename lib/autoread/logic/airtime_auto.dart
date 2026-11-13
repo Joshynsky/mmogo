@@ -1,14 +1,18 @@
 /// §AUTOREAD.AIRTIME_AUTO — Airtime recorded without the Categorize tap
-/// (0.2.0 S6, J2 note: `_pipeline/v0.2.0/judge-notes/J2-airtime-auto-record.md`).
+/// (the switches live in Settings > Remembered > Recorded automatically).
 /// Pure Dart plus one small observable ([AirtimeAutoController]); no widgets.
 ///
-/// Rules (J2): Airtime only; ONE preference, default OFF; the user still taps
+/// Rules: Airtime only; ONE preference, default OFF; the user still taps
 /// Parse; each entry has an Undo (moves it to Recently deleted) and a visible
-/// trail row; nothing is stored beyond the preference and the ledger entry.
+/// trail row. Stored: the preference, the ledger entry, and for 24 hours the
+/// trail's row numbers and times (one preference, `kAirtimeTrailPrefKey`; see
+/// `data/airtime_trail_store.dart`).
 library;
 
 import 'package:flutter/foundation.dart';
 
+import '../../data/maintenance/device_keys.dart' show kAirtimeTrailPrefsKey;
+import '../../domain/airtime/airtime_kind.dart';
 import '../../domain/parsing/parsed_sms_fields.dart';
 import '../model/waiting_item.dart';
 
@@ -18,9 +22,26 @@ import '../model/waiting_item.dart';
 /// in when only that kind existed; their consent does not extend to the other kind).
 const String kAirtimeAutoPrefKey = 'autoread_airtime_auto_record';
 
-/// New key (WBS row 17): auto-record for airtime bought FOR ANOTHER NUMBER.
+/// Second key: auto-record for airtime bought FOR ANOTHER NUMBER.
 /// Default OFF. Also outside the backup table.
 const String kAirtimeAutoOtherPrefKey = 'autoread_airtime_auto_record_other';
+
+/// Third key: the 24 h "Recorded automatically" trail, `[[rowId, atMs], ...]`
+/// and nothing else. NOT in the backup key table, never read from a restore
+/// file. The same string as `kAirtimeTrailPrefsKey` (`device_keys.dart`, which
+/// the standard build also compiles for Delete data and Restore).
+const String kAirtimeTrailPrefKey = kAirtimeTrailPrefsKey;
+
+/// How long an entry stays on the trail, counted from its own recording time.
+const Duration kTrailWindow = Duration(hours: 24);
+
+/// The most entries the trail keeps (the newest).
+const int kTrailMaxEntries = 200;
+
+/// True when an entry recorded at [at] is no longer shown at [now]: an age of
+/// 24 h or more, or a time later than [now] (zero tolerance for a clock that
+/// moved back).
+bool trailExpired(DateTime at, DateTime now) => at.isAfter(now) || now.difference(at) >= kTrailWindow;
 
 /// True for a parsed Airtime item that waits for a category: the only kind this
 /// feature may ever record.
@@ -56,20 +77,27 @@ List<WaitingItem> visibleWaiting(
         if (stuckIds.contains(i.id) || !isAutoRecordEligible(i, myselfOn: myselfOn, otherOn: otherOn)) i,
     ];
 
-/// One entry recorded automatically, kept in memory for the trail.
+/// One trail row, built from the stored row number and time plus the ledger row.
 class AutoRecorded {
-  AutoRecorded({required this.rowId, required this.amountCents, required this.at});
+  AutoRecorded({
+    required this.rowId,
+    required this.amountCents,
+    required this.at,
+    this.airtimeOther = false,
+    this.inRecentlyDeleted = false,
+  });
 
   /// The ledger row (`transactions.id`) that was written.
   final int rowId;
   final int amountCents;
   final DateTime at;
 
-  /// Undo was used: the entry sits in Recently deleted.
-  bool undone = false;
+  /// Airtime bought for another number (false: for myself).
+  final bool airtimeOther;
 
-  /// Undo was tried and changed nothing (the row was purged or wiped).
-  bool undoFailed = false;
+  /// The row has `deleted_at` set (Undo, or deleted from Home): it sits in
+  /// Recently deleted. Read from the ledger, never stored.
+  final bool inRecentlyDeleted;
 }
 
 /// What the Notifications page needs: the switch, the trail and two actions.
@@ -79,7 +107,10 @@ class AirtimeAutoController extends ChangeNotifier {
     required this.onSwitch,
     required this.onUndo,
     this.onSwitchOther,
-  });
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
+
+  final DateTime Function() _now;
 
   /// Called when the user flips the switch for airtime for another number.
   final Future<void> Function(bool on)? onSwitchOther;
@@ -92,17 +123,36 @@ class AirtimeAutoController extends ChangeNotifier {
 
   bool _on = false;
   bool _onOther = false;
-  final List<AutoRecorded> _trail = [];
+  List<AutoRecorded> _trail = [];
+  int _recordedCount = 0;
+  AutoRecorded? _lastRecorded;
 
   /// The switch for airtime bought for myself (the original switch).
   bool get on => _on;
 
   /// The switch for airtime bought for another number (default OFF).
   bool get onOther => _onOther;
-  List<AutoRecorded> get trail => List.unmodifiable(_trail);
+
+  /// Entries still inside the 24 h window, oldest first. Expired ones are left
+  /// out here even when the stored list was not purged.
+  List<AutoRecorded> get trail {
+    final t = _now();
+    return List.unmodifiable([
+      for (final e in _trail)
+        if (!trailExpired(e.at, t)) e,
+    ]);
+  }
 
   /// Newest first, for display.
-  List<AutoRecorded> get trailNewestFirst => _trail.reversed.toList();
+  List<AutoRecorded> get trailNewestFirst => trail.reversed.toList();
+
+  /// How many entries the app has recorded since start. Only goes up, so a
+  /// caller can tell "something was recorded during this call" without
+  /// comparing list lengths (a capped, purged or reloaded list has no growth).
+  int get recordedCount => _recordedCount;
+
+  /// The entry recorded last (null before the first).
+  AutoRecorded? get lastRecorded => _lastRecorded;
 
   void setOn(bool value) {
     if (_on == value) return;
@@ -116,37 +166,49 @@ class AirtimeAutoController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Replaces the shown list (built from the stored list and the ledger).
+  void setTrail(List<AutoRecorded> entries) {
+    _trail = [...entries]..sort((a, b) => a.at.compareTo(b.at));
+    notifyListeners();
+  }
+
+  /// Counts one recording (for the toast) without touching the list.
+  void noteRecorded(AutoRecorded e) {
+    _recordedCount++;
+    _lastRecorded = e;
+  }
+
+  /// Shows [e] and counts it as recorded.
   void add(AutoRecorded e) {
-    _trail.add(e);
+    _trail = [..._trail, e];
+    noteRecorded(e);
     notifyListeners();
   }
 
   void changed() => notifyListeners();
 
-  /// Clears the in-memory trail (Delete data).
+  /// Clears the in-memory trail (Delete data, Replace restore). The stored list
+  /// is removed by those operations themselves.
   void clearTrail() {
-    _trail.clear();
+    _trail = [];
     notifyListeners();
   }
 }
 
-// WORDING-DRAFT: all labels below are new UI text for the PM to review (from
-// the mock's "Auto-record airtime" block and the "Recorded automatically" row).
-const String kAutoAirtimeTitle = 'Auto-record airtime';
-const String kAutoAirtimeBody =
-    'mmogo will record airtime purchases for you. You can turn this off here any time.';
-const String kAutoAirtimeOnTail = ' Each one can be undone.';
-const String kAutoAirtimeOffTail = ' Until you turn it on, airtime waits in To categorize like the rest.';
+// SIGNED (PM 13-11-2026): the trail's heading, foot, Undo and toast words.
 const String kAutoRecordedHeading = 'Recorded automatically';
-String autoRecordedTitle(String amount) => 'Recorded as Airtime, $amount';
 const String kAutoRecordedFoot = 'counted in your totals';
 const String kAutoRecordedUndone = 'Moved to Recently deleted. You can restore it there within 1 hour.';
-const String kAutoRecordedUndoFailed = 'Could not undo. It may already be gone from Recently deleted.';
 const String kAutoRecordedUndo = 'Undo';
 String autoRecordedToast(String amount) => 'Recorded as Airtime, $amount.';
 const String kAutoRecordedUndoneToast = 'Airtime moved to Recently deleted';
-const String kAutoAirtimeOnToast =
-    'Auto-record airtime is on. Airtime purchases are recorded for you; Undo stays on each one.';
-const String kAutoAirtimeOffToast =
-    'Auto-record airtime is off. Airtime goes through To categorize like the rest.';
 const String kToastParsedAirtimeRecorded = 'Parsed. Airtime was recorded; the rest is in To categorize.';
+
+// SIGNED (PM 13-11-2026): the trail row's words.
+/// Trail row title ("Airtime for myself, Ksh 5"), built from the signed kind names.
+String autoRecordedTitle(String amount, {bool other = false}) =>
+    'Airtime ${(other ? kAirtimeNameOther : kAirtimeNameMyself).toLowerCase()}, $amount';
+// SIGNED (PM 13-11-2026)
+const String kAutoRecordedSub = 'Recorded automatically.';
+// SIGNED (PM 13-11-2026)
+const String kAutoRecordedChangeInSettings = 'Change in Settings';

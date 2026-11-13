@@ -3,6 +3,8 @@ package app.mmogo.autoread
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 
 /**
  * The Parse button and the Later button of the notification. NOT exported, no intent-filter, declared
@@ -10,7 +12,7 @@ import android.content.Intent
  * PendingIntents reach it; the only extra is the hidden held id, which is validated here.
  *
  * Parse order: id check, switch/consent/permission check ([ParseGuard]), the held message must still
- * exist, then the in-flight claim (a second tap finds it taken), then [ParseRunner]. Any "no" leaves
+ * exist, then the in-flight claim (a second tap finds it taken), then [ParseRunner] (a busy claim is retried once, see [ClaimRetry]). Any "no" leaves
  * the notification and the held message exactly as they were, so the user can still tap the body and
  * parse in the app. No logging; never throws.
  */
@@ -37,8 +39,35 @@ class ParseActionReceiver : BroadcastReceiver() {
             Notifier.cancel(ctx, id)
             return
         }
-        if (!store.claim(id)) return // a second tap on a message that is already being parsed
-        val pending = goAsync()
-        ParseRunner.submit(ctx, id, pending)
+        // A second tap on a message that is already being parsed finds the claim taken. The app's list can
+        // also hold it for a moment while it describes the message, so a busy claim is tried once more
+        // after a short wait (never blocking this thread); still busy: give up as before.
+        var pending: PendingResult? = null
+        var claimedNotHandedOver = false
+        // finish() may throw if the broadcast was already finished; it is only ever called through here.
+        fun finishQuietly() {
+            try { pending?.finish() } catch (_: Throwable) {}
+        }
+        ClaimRetry.run(
+            claim = { store.claim(id) },
+            later = { ms, task ->
+                pending = goAsync()
+                Handler(Looper.getMainLooper()).postDelayed({
+                    try {
+                        task()
+                    } catch (_: Throwable) {
+                        // submit() failed after the claim was taken: give the claim back so the user can tap again.
+                        if (claimedNotHandedOver) try { store.release(id) } catch (_: Throwable) {}
+                        finishQuietly()
+                    }
+                }, ms)
+            },
+            onClaimed = {
+                claimedNotHandedOver = true
+                ParseRunner.submit(ctx, id, pending ?: goAsync())
+                claimedNotHandedOver = false
+            },
+            onGaveUp = { finishQuietly() },
+        )
     }
 }

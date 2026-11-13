@@ -5,6 +5,7 @@ import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/maintenance/delete_data_service.dart';
+import 'package:mmogo/data/maintenance/delete_data_types.dart';
 import 'package:mmogo/ui/copy/delete_data_copy.dart';
 import 'package:mmogo/ui/screens/backup/backup_export_flow.dart';
 import 'package:mmogo/ui/screens/settings/settings_widgets.dart';
@@ -222,6 +223,44 @@ void main() {
       await typeWord(tester, 'delete');
       expect(find.text(kDeleteButtonLevel1), findsOneWidget, reason: 'Level 1 is the preselected, enabled level');
       expect(goEnabled(tester), isTrue);
+    });
+
+    for (final c in [(0, null), (1, '1 other saved record'), (5, '5 other saved records')]) {
+      testWidgets('hidden saved records: ${c.$1} -> ${c.$2 ?? 'no line'}, never the word Fuliza', (tester) async {
+        final fake = useFakeDeleteData(
+          FakeDeleteDataService(
+            peekValue: DeleteDataPeek(
+              liveTransactions: 0,
+              softDeletedTransactions: 0,
+              learnedReceivers: 0,
+              fulizaRecords: c.$1,
+              safetyCopyPresent: c.$1 == 0,
+              rememberedRecipientsPresent: false,
+              queuePresent: false,
+            ),
+          ),
+        );
+        await pumpSettings(tester, fake);
+        await openDeleteSheet(tester);
+        if (c.$2 == null) {
+          expect(find.textContaining('other saved record'), findsNothing);
+        } else {
+          expect(find.textContaining(c.$2!), findsOneWidget);
+          expect(find.byKey(const Key('deleteLevel1')), findsOneWidget);
+        }
+        expect(find.textContaining('Fuliza'), findsNothing);
+      });
+    }
+
+    test('counts: other saved records, singular and plural', () {
+      expect(
+        deleteCountsText(live: 0, recentlyDeleted: 0, learnedReceivers: 0, rememberedRecipients: 0, otherSavedRecords: 1),
+        '1 other saved record',
+      );
+      expect(
+        deleteCountsText(live: 2, recentlyDeleted: 0, learnedReceivers: 0, rememberedRecipients: 0, otherSavedRecords: 3),
+        '2 transactions, 3 other saved records',
+      );
     });
 
     testWidgets('CB6: the sheet says backups stay, SMS stay, the safety copy goes, categories stay', (tester) async {

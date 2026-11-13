@@ -3,7 +3,11 @@
 /// [RealWaitingRepository]. Built by `NotificationsRoute` inside
 /// `if (kAutoReadCompiled)`.
 ///
-/// - Parse: the repository parses; the toast says it moved to To categorize.
+/// - Parse: the repository parses and the row turns into a choose-a-category
+///   row in place (no toast). Airtime recorded on its own keeps its Undo toast.
+/// - Pick a category in the row: the same `repo.saveCategory` call the
+///   Categorize sheet makes; a quiet note says what was recorded.
+/// - Later: the row stays, without the Later chip, under To categorize.
 /// - Categorize: an item not parsed yet is parsed first; then the sheet opens
 ///   with the same categories Add shows; Save writes the real transaction.
 /// - Paste: after the paste sheet closed, Add opens. Add is paste-first: its
@@ -20,9 +24,13 @@ import '../../ui/shell/routes.dart';
 import '../model/waiting_item.dart';
 import '../model/waiting_repository.dart';
 import '../logic/airtime_auto.dart';
+import '../logic/held_describe.dart' show describeReadable;
 import '../ui/categorize_sheet.dart';
 import '../ui/message_details_sheet.dart';
 import '../ui/notifications_autoread_copy.dart';
+import '../ui/remove_confirm.dart';
+import '../ui/todo_choose.dart';
+import '../ui/todo_copy.dart';
 import '../ui/waiting_section.dart';
 import 'real_waiting_repository.dart';
 
@@ -39,7 +47,17 @@ SnackBar autoRecordedSnackBar(AutoRecorded e, VoidCallback onUndo) => SnackBar(
       action: SnackBarAction(label: kAutoRecordedUndo, onPressed: onUndo),
     );
 
-WaitingActions buildRealWaitingActions(BuildContext context, RealWaitingRepository repo) {
+/// [choosing] and [note] belong to the page (they must outlive a rebuild of
+/// the route); a caller that passes none gets fresh ones.
+WaitingActions buildRealWaitingActions(
+  BuildContext context,
+  RealWaitingRepository repo, {
+  ChoosingIds? choosing,
+  ValueNotifier<String?>? note,
+}) {
+  final ids = choosing ?? ChoosingIds();
+  final quiet = note ?? ValueNotifier<String?>(null);
+
   void toast(String text) {
     final m = ScaffoldMessenger.maybeOf(context);
     m?.hideCurrentSnackBar();
@@ -57,20 +75,33 @@ WaitingActions buildRealWaitingActions(BuildContext context, RealWaitingReposito
   }
 
   Future<void> parse(WaitingItem item) async {
+    // The row turns into a choose row the moment it is parsed (marked first so
+    // it never flashes as a To categorize row).
+    ids.add(item.id);
     try {
-      final before = repo.airtime.trail.length;
+      final before = repo.airtime.recordedCount; // a counter: the list can stay the same length (cap, purge)
       final r = await repo.parse(item.id);
-      if (r == ParseOutcome.parsed) {
-        final trail = repo.airtime.trail;
-        if (trail.length > before) {
-          toastAutoRecorded(trail.last);
-        } else {
-          toast(kToastParsed);
-        }
+      final recorded = repo.airtime.lastRecorded;
+      if (r == ParseOutcome.parsed && repo.airtime.recordedCount > before && recorded != null) {
+        toastAutoRecorded(recorded);
       }
+      if (repo.itemById(item.id)?.kind != WaitingKind.waitingCategory) ids.remove(item.id);
     } catch (_) {
       // The row stays as it was; a later ingest shows the true state.
+      ids.remove(item.id);
     }
+  }
+
+  Future<void> pickCategory(WaitingItem item, String categoryId) async {
+    await repo.saveCategory(item.id, categoryId); // the call the Categorize sheet makes
+    ids.remove(item.id);
+    final f = item.parsed;
+    if (f != null) quiet.value = noteRecorded(describeReadable(f));
+  }
+
+  void later(WaitingItem item) {
+    ids.remove(item.id);
+    quiet.value = kNoteMovedToCategorize;
   }
 
   Future<void> categorize(WaitingItem item) async {
@@ -105,12 +136,23 @@ WaitingActions buildRealWaitingActions(BuildContext context, RealWaitingReposito
   }
 
   Future<void> parseAll(List<WaitingItem> items) async {
+    for (final i in items) {
+      ids.add(i.id);
+    }
     try {
-      final before = repo.airtime.trail.length;
+      final before = repo.airtime.recordedCount;
       final n = await repo.parseAll([for (final i in items) i.id]);
-      if (n > 0) toast(repo.airtime.trail.length > before ? kToastParsedAirtimeRecorded : kToastParsed);
+      if (n > 0) {
+        if (repo.airtime.recordedCount > before) {
+          toast(kToastParsedAirtimeRecorded);
+        } else {
+          quiet.value = noteReadMany(n);
+        }
+      }
     } catch (_) {
       // Rows that were not parsed stay.
+    } finally {
+      ids.retainWhere((id) => repo.itemById(id)?.kind == WaitingKind.waitingCategory);
     }
   }
 
@@ -118,7 +160,15 @@ WaitingActions buildRealWaitingActions(BuildContext context, RealWaitingReposito
     try {
       final d = await repo.detailsFor(item.id);
       if (!context.mounted) return;
-      await showMessageDetailsSheet(context, details: d);
+      await showMessageDetailsSheet(
+        context,
+        details: d,
+        onRemove: item.kind == WaitingKind.unreadable && d?.kind == WaitingKind.unreadable
+            ? () async {
+                if (context.mounted && await showRemoveConfirm(context, item: item)) await remove(item);
+              }
+            : null,
+      );
     } catch (_) {
       // Nothing changes; the row stays.
     }
@@ -126,11 +176,19 @@ WaitingActions buildRealWaitingActions(BuildContext context, RealWaitingReposito
 
   return WaitingActions(
     onDetails: details,
+    describe: (item) => repo.describeHeld(item.id),
+    clearDescriptions: repo.clearDescriptions,
     airtime: repo.airtime,
     onParse: parse,
     onCategorize: categorize,
     onPaste: (_) => Navigator.of(context).pushNamed(Routes.add),
     onRemove: remove,
     onParseAll: parseAll,
+    onChangeInSettings: () => Navigator.of(context)
+        .pushNamed(Routes.rememberedRecipients, arguments: const RememberedRouteArgs(openAutoRecord: true)),
+    choicesFor: repo.categoryChoicesFor,
+    onPickCategory: pickCategory,
+    onLater: later,
+    choosing: ids,
   );
 }

@@ -1,6 +1,7 @@
 // 0.2.0 S9: the numbers the Fuliza page and the Home line show (invented data only).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/domain/format/money.dart';
+import 'package:mmogo/domain/fuliza/fuliza_home_rows.dart';
 import 'package:mmogo/domain/fuliza/fuliza_demo.dart';
 import 'package:mmogo/domain/fuliza/fuliza_ledger.dart';
 import 'package:mmogo/domain/fuliza/fuliza_page_data.dart';
@@ -17,6 +18,12 @@ FulizaEvent _draw(String code, DateTime at, int amt, int fee, int total) => Fuli
   feeCents: fee,
   printedTotalCents: total,
 );
+
+/// The owing row of the Home block as one string, over all time (no period filter needed for it).
+String? _homeOwing(FulizaPageData d) {
+  final o = fulizaHomeRows(d, 0, 0, 'today', formatKsh)?.owing;
+  return o == null ? null : (o.value == null ? o.label : '${o.label} ${o.value}');
+}
 
 void main() {
   final now = DateTime(2026, 11, 3, 12);
@@ -39,7 +46,7 @@ void main() {
     expect(d.carriedInCents, 20000);
     expect(d.unmatchedCount, 0);
     expect(d.costPer100, 2); // 27 of 1,500 taken
-    expect(fulizaHomeLineLabel(d, formatKsh), 'Fuliza · Owing about Ksh 1,227.00');
+    expect(_homeOwing(d), 'Fuliza: owing about Ksh 1,227.00');
   });
 
   test('history is by day, newest first, newest entry first inside a day', () {
@@ -76,7 +83,7 @@ void main() {
     final d = _page(ev)!;
     expect(d.owingUnknown, isTrue);
     expect(d.owingCents, isNull);
-    expect(fulizaHomeLineLabel(d, formatKsh), 'Fuliza · Owing unknown');
+    expect(_homeOwing(d), 'Fuliza: balance not known');
     expect(d.drawCount, 0);
     expect(d.costPer100, 0); // nothing taken: no division by zero
   });
@@ -89,7 +96,7 @@ void main() {
     final d = _page(ev)!;
     expect(d.nothingOwed, isTrue);
     expect(d.carriedInCents, isNull);
-    expect(fulizaHomeLineLabel(d, formatKsh), 'Fuliza · Nothing owed');
+    expect(_homeOwing(d), isNull, reason: 'nothing owed: no owing row');
     expect(d.days.first.entries.single.owingAfterCents, 0);
   });
 
@@ -97,7 +104,7 @@ void main() {
     final d = _page([_draw('QDMFL00001', DateTime(2026, 11, 1, 9), 50000, 500, 50500)])!;
     expect(d.owingIsEstimate, isFalse);
     expect(d.carriedInCents, isNull);
-    expect(fulizaHomeLineLabel(d, formatKsh), 'Fuliza · Owing Ksh 505.00');
+    expect(_homeOwing(d), 'Fuliza: owing Ksh 505.00');
   });
 
   test('demo switch is off unless the define is given (this test run has none)', () {

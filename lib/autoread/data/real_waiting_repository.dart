@@ -23,6 +23,8 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -38,11 +40,15 @@ import '../bridge/autoread_bridge.dart';
 import '../held_window.dart';
 import '../logic/airtime_auto.dart';
 import '../logic/message_details.dart';
+import '../model/held_description.dart';
 import '../model/waiting_item.dart';
 import '../model/waiting_repository.dart';
 import '../service/autoread_service.dart';
 import '../ui/category_choices.dart';
+import 'airtime_trail_join.dart';
+import 'airtime_trail_store.dart';
 import 'fuliza_event_saver.dart';
+import 'held_describer.dart';
 import 'pending_items_store.dart';
 import 'real_category_choices.dart';
 
@@ -80,7 +86,9 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
     Future<bool> Function()? readAirtimeAutoOther,
     Future<void> Function(bool on)? writeAirtimeAutoOther,
     FulizaEventSaver? fulizaSaver,
+    AirtimeTrailStore? trailStore,
   })  : _fulizaSaver = fulizaSaver,
+        _trailStore = trailStore ?? AirtimeTrailStore(prefs: MemoryTrailPrefs(), now: now ?? DateTime.now),
         _bridge = bridge,
         _store = store,
         _service = service,
@@ -112,11 +120,25 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
   /// Saves Fuliza events from held messages (S12 slice D); null = not saving.
   final FulizaEventSaver? _fulizaSaver;
 
+  /// The stored 24 h trail (row numbers and times). Written only by [_autoRecordPending].
+  final AirtimeTrailStore _trailStore;
+
   /// The Airtime auto-record switch and trail (J2). OFF until the user opts in.
   late final AirtimeAutoController airtime =
-      AirtimeAutoController(onSwitch: setAirtimeAuto, onUndo: undoAutoRecord, onSwitchOther: setAirtimeAutoOther);
+      AirtimeAutoController(
+          onSwitch: setAirtimeAuto, onUndo: undoAutoRecord, onSwitchOther: setAirtimeAutoOther, now: _now);
 
   final Map<String, _Held> _held = {};
+
+  /// In-memory descriptions of held messages (never stored); see [HeldDescriber].
+  late final HeldDescriber _describer = HeldDescriber(
+    service: _service,
+    runLocked: _locked,
+    kindOf: (id) {
+      final h = _held[id];
+      return h == null || heldExpired(h.heldAt, _now()) ? null : h.kind;
+    },
+  );
   List<WaitingItem> _current = const [];
 
   /// Ids of airtime items the app tried to add by itself and could not.
@@ -152,6 +174,7 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
       ...visibleWaiting(stored, myselfOn: airtime.on, otherOn: airtime.onOther, stuckIds: _stuck),
       for (final e in _held.entries) WaitingItem(id: e.key, kind: e.value.kind, heldAt: e.value.heldAt),
     ]);
+    _describer.sync({for (final e in _held.entries) e.key: e.value.kind});
     if (!_closed) _changes.add(_current);
     _scheduleExpiry();
   }
@@ -176,6 +199,7 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
 
   void dispose() {
     _closed = true;
+    _describer.clear();
     _timer?.cancel();
     unawaited(_changes.close());
   }
@@ -246,6 +270,7 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
           }
         }
       }
+      await _reloadTrail();
       await _autoRecordPending();
       await _publish();
       if (!_ready.isCompleted) _ready.complete();
@@ -302,12 +327,12 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
       return buildMessageDetails(item, now);
     }
     if (item.isExpiredAt(now)) return buildMessageDetails(item, now, expired: true);
-    final look = await _service.lookForDetails(id);
+    final look = await _locked(() => _service.lookForDetails(id)); // queued with Parse: never holds the claim at the same time
     switch (look.look) {
       case HeldLook.readable:
         return buildMessageDetails(item, now, fields: look.fields);
       case HeldLook.unreadable:
-        return buildMessageDetails(item, now, firstWords: look.firstWords);
+        return buildMessageDetails(item, now, light: look.light);
       case HeldLook.gone:
       case HeldLook.duplicate:
       case HeldLook.ignored:
@@ -358,6 +383,17 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
         _held.remove(id);
         await _publish();
       });
+
+  /// A short description of a held message for its row, or null (the row keeps
+  /// its plain title). Runs inside the queue, one look per id per page visit.
+  Future<HeldDescription?> describeHeld(String id) => _describer.describe(id);
+
+  /// Forgets every description (page closed, app hidden, Delete data).
+  void clearDescriptions() => _describer.clear();
+
+  /// Tests only: how many ids hold an answer.
+  @visibleForTesting
+  int get describedCount => _describer.cachedCount;
 
   /// The categories the Categorize sheet offers for [item] (the same ones Add
   /// shows for its type).
@@ -478,7 +514,11 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
           _stuck.add(item.id);
         } else {
           _stuck.remove(item.id);
-          airtime.add(AutoRecorded(rowId: rowId, amountCents: item.parsed!.amountCents, at: _now()));
+          final at = _now();
+          final shown = await _trailStore.add(rowId, at); // never throws; a failed write keeps the record
+          await _reloadTrail(shown);
+          airtime.noteRecorded(AutoRecorded(
+              rowId: rowId, amountCents: item.parsed!.amountCents, at: at, airtimeOther: item.parsed!.airtimeOther));
         }
       }
     } catch (_) {
@@ -506,22 +546,27 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
         await _publish();
       });
 
+  /// Shows the stored trail: [entries] (just written) or a fresh read, joined
+  /// to the ledger. A failure leaves the list as it was.
+  Future<void> _reloadTrail([List<TrailEntry>? entries]) async {
+    try {
+      airtime.setTrail(await joinTrail(await _database(), entries ?? await _trailStore.load()));
+    } catch (_) {}
+  }
+
   /// Undo of one auto-recorded entry: it moves to Recently deleted (the
   /// existing soft delete, restorable for 1 hour) and leaves every total.
+  /// The row is read first: one already in Recently deleted, or gone, is left
+  /// alone (a second Undo must not move its 1 hour window).
   Future<void> undoAutoRecord(AutoRecorded e) => _locked(() async {
-        if (e.undone) return;
         final db = await _database();
-        await TransactionDao.softDelete(db, id: e.rowId);
-        final gone = (await db.query('transactions',
-                columns: ['deleted_at'], where: 'id = ?', whereArgs: [e.rowId]))
+        final row = (await db.query('transactions', columns: ['deleted_at'], where: 'id = ?', whereArgs: [e.rowId]))
             .firstOrNull;
-        if (gone == null || gone['deleted_at'] == null) {
-          e.undoFailed = true;
-        } else {
-          e.undone = true;
+        if (row != null && row['deleted_at'] == null) {
+          await TransactionDao.softDelete(db, id: e.rowId);
           _onSaved();
         }
-        airtime.changed();
+        await _reloadTrail();
       });
 
   /// The Add screen's own draft, filled the way Add fills it after a paste

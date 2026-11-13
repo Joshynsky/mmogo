@@ -4,7 +4,7 @@
 ///
 /// The mock it follows: `global-mock/plugins/fuliza.js` (V3 Home line, the page with Taken / Repaid /
 /// Fuliza cost, History by day, Related transactions, "estimated", "carried in", "owing unknown").
-/// WORDING-DRAFT: every label in [fulizaHomeLineLabel] and the page widgets is a plain label for the PM to review.
+/// WORDING-DRAFT: every label in the page widgets and in `fuliza_home_rows.dart`; the page widgets is a plain label for the PM to review.
 library;
 
 import 'fuliza_ledger.dart';
@@ -62,7 +62,13 @@ class FulizaPageData {
     required this.days,
     required this.unmatchedCount,
     required this.limitCents,
+    this.feesAt = const [],
   });
+
+  /// Every fee in [costCents], each with the time of its message: the access fee of each borrowing and
+  /// each daily fee seen. Their sum is [costCents]; a period total filters this list (see
+  /// `fulizaCostBetween`).
+  final List<FulizaFeeAt> feesAt;
 
   /// Null = "owing unknown" (the first message seen was a partial repayment).
   final int? owingCents;
@@ -120,6 +126,7 @@ FulizaPageData? buildFulizaPage(FulizaState state, List<FulizaEvent> events) {
   };
   final days = <String, FulizaDay>{};
   var taken = 0, repaid = 0, access = 0, draws = 0, unmatched = 0;
+  final feesAt = <FulizaFeeAt>[];
   for (final (_, e) in sorted) {
     final isDraw = e.kind == FulizaEventKind.draw;
     final view = isDraw ? byKey['${e.code}|draw'] : null;
@@ -136,6 +143,7 @@ FulizaPageData? buildFulizaPage(FulizaState state, List<FulizaEvent> events) {
     if (isDraw) {
       taken += e.amountCents;
       access += e.feeCents;
+      if (e.feeCents != 0) feesAt.add(FulizaFeeAt(e.at, e.feeCents));
       draws += 1;
       day.borrowedCents += e.amountCents;
       if (!entry.paired) unmatched += 1;
@@ -147,6 +155,9 @@ FulizaPageData? buildFulizaPage(FulizaState state, List<FulizaEvent> events) {
   final newestFirst = days.values.toList()..sort((a, b) => b.day.compareTo(a.day));
   for (final d in newestFirst) {
     d.entries.sort((a, b) => b.event.at.compareTo(a.event.at));
+  }
+  for (final c in state.chains) {
+    feesAt.addAll(c.dailyFeesAt);
   }
   final firstChain = state.chains.isEmpty ? null : state.chains.first;
   return FulizaPageData(
@@ -163,13 +174,6 @@ FulizaPageData? buildFulizaPage(FulizaState state, List<FulizaEvent> events) {
     days: newestFirst,
     unmatchedCount: unmatched,
     limitCents: state.limitCents,
+    feesAt: feesAt,
   );
-}
-
-/// The Home line's label (WORDING-DRAFT): "Fuliza · Owing Ksh 1,227", "... Owing about Ksh X" while an
-/// estimate, "... Owing unknown" when the balance is not known, "... Nothing owed" at 0. [ksh] formats cents.
-String fulizaHomeLineLabel(FulizaPageData d, String Function(int cents) ksh) {
-  if (d.owingUnknown) return 'Fuliza · Owing unknown';
-  if (d.nothingOwed) return 'Fuliza · Nothing owed';
-  return 'Fuliza · Owing ${d.owingIsEstimate ? 'about ' : ''}${ksh(d.owingCents!)}';
 }

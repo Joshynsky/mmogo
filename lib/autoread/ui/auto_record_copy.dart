@@ -40,7 +40,7 @@ String autoRecordChipLaterSpoken(String typeName) => '$typeName, coming later';
 // DRAFT (mock text)
 const String kAutoRecordChipsGroup = 'Types recorded automatically';
 
-// DRAFT (mock text; the same subs as the card, kept in one place here)
+// DRAFT (mock text; the two subs, kept in one place here)
 const String kAutoRecordMyselfSub = kAirKindMyselfSub;
 // DRAFT
 const String kAutoRecordOtherSub = kAirKindOtherSub;
@@ -48,7 +48,9 @@ const String kAutoRecordOtherSub = kAirKindOtherSub;
 // [label] is the row label (For myself / For another number).
 // DRAFT (PM decision 12-11-2026): line one of the block under an opened row.
 String autoRecordExplainTap(String label) => 'You tap Parse on each message, then mmogo files it under $label.';
-// DRAFT (PM decision 12-11-2026): line two, muted.
+// SIGNED (PM 13-11-2026): line two. The words that used to sit on the Notifications card.
+const String kAutoRecordExplainUndo = 'Each automatic record can be undone. You do not need to tap Categorize.';
+// SIGNED (PM 13-11-2026): line three, muted.
 const String kAutoRecordExplainLater = 'Filing without a tap comes in a later version.';
 
 // DRAFT (mock text)

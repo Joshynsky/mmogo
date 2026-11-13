@@ -168,3 +168,23 @@ internal class ParseScheduler(
         return running
     }
 }
+
+/**
+ * The Parse button's claim, with ONE retry. The app's own list can hold the same claim for a moment while it
+ * reads a held message to describe it; a tap that lands then must not be dropped. [run] tries the claim; when
+ * it is busy it asks [later] to run the second try after [WAIT_MS] (the caller must not block its thread while
+ * it waits, the app's release call needs that thread); if that is busy too it gives up, exactly as before.
+ * Never more than two tries. Pure: no Android class, so ParseSelfCheck can run it.
+ */
+internal object ClaimRetry {
+    /** The one wait before the one retry. */
+    const val WAIT_MS = 150L
+
+    fun run(claim: () -> Boolean, later: (Long, () -> Unit) -> Unit, onClaimed: () -> Unit, onGaveUp: () -> Unit) {
+        if (claim()) {
+            onClaimed()
+            return
+        }
+        later(WAIT_MS) { if (claim()) onClaimed() else onGaveUp() }
+    }
+}

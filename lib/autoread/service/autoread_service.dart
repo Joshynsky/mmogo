@@ -11,9 +11,10 @@ import '../../domain/parsing/parse_result.dart';
 import '../../domain/parsing/parsed_sms_fields.dart';
 import '../../domain/parsing/sms_parser.dart';
 import '../bridge/autoread_bridge.dart';
-import '../logic/message_details.dart' show maskedFirstWords;
+import '../logic/held_describe.dart' show lightRead;
 import '../logic/non_transaction.dart';
 import '../data/pending_items_store.dart';
+import '../model/held_description.dart';
 import '../model/waiting_item.dart';
 import '../model/waiting_repository.dart' show ParseOutcome;
 
@@ -67,14 +68,15 @@ class HeldInspection {
   final DateTime? heldAt;
 }
 
-/// What [AutoReadService.lookForDetails] found. Holds the parser's fields or
-/// the masked first words, never the body.
+/// What [AutoReadService.lookForDetails] found. Holds the parser's fields (a
+/// readable message) or the light reader's code, amount and time ([light], an
+/// unreadable one), never the body or any words of it.
 class HeldDetailsLook {
-  const HeldDetailsLook(this.look, {this.heldAt, this.fields, this.firstWords});
+  const HeldDetailsLook(this.look, {this.heldAt, this.fields, this.light});
   final HeldLook look;
   final DateTime? heldAt;
   final ParsedSmsFields? fields;
-  final String? firstWords;
+  final HeldDescription? light;
 }
 
 class AutoReadService {
@@ -208,7 +210,7 @@ class AutoReadService {
   /// The one-time look the Details sheet makes at held message [id]: claim,
   /// peek, parse, release. Nothing is stored and nothing is acked. The body
   /// stays inside this method; the result holds only the parser's fields (a
-  /// readable message) or the masked first words (an unreadable one).
+  /// readable message) or the light reader's code, amount and time.
   Future<HeldDetailsLook> lookForDetails(String id) async {
     if (!isValidHeldId(id)) return const HeldDetailsLook(HeldLook.gone);
     if (!await _bridge.claim(id)) return const HeldDetailsLook(HeldLook.busy);
@@ -225,7 +227,8 @@ class AutoReadService {
         return HeldDetailsLook(HeldLook.readable, heldAt: held.heldAt, fields: fields);
       }
       return HeldDetailsLook(HeldLook.unreadable,
-          heldAt: held.heldAt, firstWords: maskedFirstWords(held.body));
+          heldAt: held.heldAt,
+          light: held.body.length <= kAutoReadMaxChars ? lightRead(held.body) : const HeldDescription());
     } finally {
       await _bridge.release(id);
     }

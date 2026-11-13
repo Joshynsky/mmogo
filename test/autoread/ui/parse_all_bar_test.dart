@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/autoread/model/waiting_item.dart';
 import 'package:mmogo/autoread/ui/notifications_autoread_copy.dart';
 import 'package:mmogo/autoread/ui/waiting_section.dart';
-import 'package:mmogo/domain/notifications/notif_chip.dart';
 import 'package:mmogo/ui/theme/app_theme.dart';
 
 import '../../support/news_fakes.dart';
@@ -29,7 +28,7 @@ List<WaitingItem> _ready(int n) => [
     ];
 
 Widget _bar(List<WaitingItem> items, List<List<WaitingItem>> calls,
-        {double scale = 1.0, NotifChip chip = NotifChip.parse, bool wired = true}) =>
+        {double scale = 1.0, bool wired = true}) =>
     MaterialApp(
       theme: AppTheme.theme,
       builder: (context, c) => MediaQuery(
@@ -39,11 +38,8 @@ Widget _bar(List<WaitingItem> items, List<List<WaitingItem>> calls,
       home: Scaffold(
         body: SingleChildScrollView(
           child: WaitingSection(
-            chip: chip,
             waiting: items,
-            news: const [],
             now: kFakeNow,
-            newsRowBuilder: (n) => const SizedBox(),
             actions: wired ? WaitingActions(onParseAll: calls.add) : const WaitingActions(),
           ),
         ),
@@ -139,14 +135,14 @@ void main() {
     expect(find.text('Parse all 105 messages?'), findsOneWidget);
   });
 
-  testWidgets('All chip: the bar sits under To parse; not wired means no bar', (t) async {
+  testWidgets('the bar sits under To parse; not wired means no bar', (t) async {
     _size(t, 360);
     final items = _ready(3);
-    await t.pumpWidget(_bar(items, [], chip: NotifChip.all));
+    await t.pumpWidget(_bar(items, []));
     expect(_barF, findsOneWidget);
     expect(t.getTopLeft(_barF).dy,
         lessThan(t.getTopLeft(find.byKey(Key('waiting-row-${heldIdFor(1)}'))).dy));
-    await t.pumpWidget(_bar(items, [], chip: NotifChip.all, wired: false));
+    await t.pumpWidget(_bar(items, [], wired: false));
     expect(_barF, findsNothing);
   });
 

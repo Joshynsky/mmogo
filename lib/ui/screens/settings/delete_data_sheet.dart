@@ -12,6 +12,7 @@ import '../../widgets/tap_target.dart';
 import '../backup/backup_export_flow.dart';
 import '../backup/backup_format.dart' show kBackupFailedMessage;
 import '../backup/backup_widgets.dart' show BackupWarning;
+import '../fuliza/fuliza_visible.dart';
 
 /// §SETTINGS.DELETE_SHEET — the Delete data sheet (0.1.2 S9b-2, DD2 + CB6) and
 /// its Reset app confirm sheet. This file only CHOOSES: it never calls the
@@ -301,7 +302,9 @@ class _DeleteDataSheetState extends State<DeleteDataSheet> {
             live: p.liveTransactions,
             recentlyDeleted: p.softDeletedTransactions,
             learnedReceivers: p.learnedReceivers,
-            fulizaRecords: p.fulizaRecords,
+            fulizaRecords: fulizaVisible ? p.fulizaRecords : 0,
+            // Hidden records are still deleted, so they are counted without a name.
+            otherSavedRecords: fulizaVisible ? 0 : p.fulizaRecords,
             rememberedRecipients: p.rememberedRecipientsCount,
           );
     return [

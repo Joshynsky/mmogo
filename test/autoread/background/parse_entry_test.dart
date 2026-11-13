@@ -254,6 +254,18 @@ void main() {
       expect(await pendingKeys(), hasLength(2));
     });
 
+    test('background_parse_does_not_write_trail: an airtime SMS with a switch ON leaves the trail key absent', () async {
+      for (final body in [kSampleAirtime, kSampleAirtimeOtherReal]) {
+        final d = await parseAs(body, myself: true, other: true);
+        expect(d['outcome'], 'parsed');
+        expect(d['queuedAirtimeCents'], isNotNull, reason: 'the airtime path really ran');
+        final p = await SharedPreferences.getInstance();
+        await p.reload();
+        expect(p.containsKey('autoread_airtime_trail_v1'), isFalse);
+        expect(p.getKeys().where((k) => k.contains('trail')), isEmpty);
+      }
+    });
+
     test('an ordinary item never carries the queued amount', () async {
       final d = await parseAs(kSampleSendMoney, myself: true, other: true);
       expect(d['waiting'], 1);

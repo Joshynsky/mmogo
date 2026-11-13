@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'app_startup.dart';
 import 'autoread/autoread_feature.dart';
 import 'autoread/background/parse_entry.dart' show parseEntry;
+import 'autoread/data/airtime_trail_store.dart';
 import 'autoread/data/fuliza_event_saver.dart';
 import 'data/db/sqlite_fuliza_repository.dart' show LazySqliteFulizaRepository;
 import 'autoread/data/ingesting_launch_source.dart';
@@ -22,6 +23,7 @@ import 'data/db/startup_open.dart';
 import 'data/updates/updates_inbox.dart';
 import 'ui/restart_scope.dart';
 import 'ui/screens/add/add_screen.dart';
+import 'data/backup/restore_trail_hook.dart';
 import 'ui/screens/backup/backup_screen.dart';
 import 'ui/screens/manage_classifications_screen.dart';
 import 'ui/screens/onboarding_screen.dart';
@@ -145,14 +147,18 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
         ),
         fulizaSaver: FulizaEventSaver(
             () async => LazySqliteFulizaRepository(() => AppDatabase.instance.database)),
+        // The 24 h "Recorded automatically" list is kept in the phone's preferences.
+        trailStore: AirtimeTrailStore(prefs: SharedTrailPrefs(), now: DateTime.now),
       );
       _waiting = _realWaiting;
       AutoReadRuntime.airtime = _realWaiting!.airtime; // the ONE switch controller: Notifications card, Remembered tab, Settings row
+      AirtimeTrailRestoreHook.clearMemory = _realWaiting!.airtime.clearTrail; // a Replace restore empties the shown trail
       FulizaRebuild.hook = _realWaiting!.rebuildFromHeld; // S12: the Rebuild button on the Fuliza page
       WidgetsBinding.instance.addObserver(this);
       // Delete data rebuilds the rows through this once it has wiped.
       AutoReadRuntime.refresh = () async {
         _realWaiting!.airtime.clearTrail(); // the in-memory auto-record trail goes with the data
+        _realWaiting!.clearDescriptions(); // so do the in-memory held-message descriptions
         await _realWaiting!.ingest();
       };
       // Look at what is held once the first frame is up (on start), after the
@@ -193,6 +199,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
       WidgetsBinding.instance.removeObserver(this);
       if (AutoReadRuntime.refresh == _realWaiting?.ingest) AutoReadRuntime.refresh = null;
       if (AutoReadRuntime.airtime == _realWaiting?.airtime) AutoReadRuntime.airtime = null;
+      AirtimeTrailRestoreHook.clearMemory = null;
       _realWaiting?.dispose();
     }
     _launchRouter?.dispose();

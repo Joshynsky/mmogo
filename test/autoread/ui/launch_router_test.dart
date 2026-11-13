@@ -2,8 +2,8 @@
 library;
 
 // F8: the phone-notification deep link. Cold start id (once), tapped ids,
-// malformed ids ignored, ready or unreadable -> Parse, parsed -> Categorize,
-// gone or unknown -> Categorize, the row id handed on, and a tap before Home
+// malformed ids ignored, every listed item -> To do with its row id handed on,
+// gone or unknown -> To do with no row, and a tap before Home
 // waits for Home. No message content is involved: ids only.
 import 'dart:async';
 
@@ -87,13 +87,72 @@ WaitingItem _parsed(int n) => WaitingItem(
       parsed: sampleFields(n, _now));
 
 void main() {
-  testWidgets('cold start id opens Notifications on Categorize, and the id is read once', (t) async {
+  testWidgets('cold start id opens Notifications on To do, and the id is read once', (t) async {
     final h = await _pump(t, launchId: heldIdFor(1));
     unawaited(h.router.start());
     unawaited(h.router.start()); // a second start does nothing
     await t.pumpAndSettle();
-    expect(h.opened, [NotifChip.categorize]);
+    expect(h.opened, [NotifChip.todo]);
     expect(h.source.takeCalls, 1);
+  });
+
+  testWidgets('parsed item: To do, its row scrolled to', (t) async {
+    final h = await _pump(t, items: [_parsed(4)]);
+    unawaited(h.router.start());
+    h.source.taps.add(heldIdFor(4));
+    await t.pumpAndSettle();
+    expect(h.opened, [NotifChip.todo]);
+    expect(h.focus, [heldIdFor(4)]);
+  });
+
+  testWidgets('ready item: To do, its row scrolled to', (t) async {
+    final h = await _pump(t, items: [_item(3, WaitingKind.readyToParse)]);
+    unawaited(h.router.start());
+    h.source.taps.add(heldIdFor(3));
+    await t.pumpAndSettle();
+    expect(h.opened, [NotifChip.todo]);
+    expect(h.focus, [heldIdFor(3)]);
+  });
+
+  testWidgets('gone id: To do, no row', (t) async {
+    final h = await _pump(t, items: [_item(2, WaitingKind.gone)]);
+    unawaited(h.router.start());
+    h.source.taps.add(heldIdFor(2));
+    await t.pumpAndSettle();
+    expect(h.opened, [NotifChip.todo]);
+    expect(h.focus, [null]);
+  });
+
+  testWidgets('unknown id (well formed, not listed): To do, no row', (t) async {
+    final h = await _pump(t, items: [_item(1, WaitingKind.readyToParse)]);
+    unawaited(h.router.start());
+    h.source.taps.add(heldIdFor(99));
+    await t.pumpAndSettle();
+    expect(h.opened, [NotifChip.todo]);
+    expect(h.focus, [null]);
+  });
+
+  testWidgets('malformed id: nothing opens', (t) async {
+    final h = await _pump(t, items: [_item(1, WaitingKind.readyToParse)]);
+    unawaited(h.router.start());
+    h.source.taps.add('not-an-id');
+    await t.pumpAndSettle();
+    expect(h.opened, isEmpty);
+  });
+
+  testWidgets('32-hex rule: only 32 lowercase hex characters pass', (t) async {
+    final h = await _pump(t);
+    unawaited(h.router.start());
+    final ok = heldIdFor(0xabc);
+    expect(ok.length, 32);
+    for (final bad in [ok.substring(1), '${ok}0', ok.toUpperCase(), '${ok.substring(1)}g']) {
+      h.source.taps.add(bad);
+    }
+    await t.pumpAndSettle();
+    expect(h.opened, isEmpty);
+    h.source.taps.add(ok);
+    await t.pumpAndSettle();
+    expect(h.opened, [NotifChip.todo]);
   });
 
   testWidgets('no launch id: nothing opens', (t) async {
@@ -103,17 +162,17 @@ void main() {
     expect(h.opened, isEmpty);
   });
 
-  testWidgets('every tapped id opens the page (Categorize)', (t) async {
+  testWidgets('every tapped id opens the page (To do)', (t) async {
     final h = await _pump(t);
     unawaited(h.router.start());
     h.source.taps.add(heldIdFor(2));
     await t.pumpAndSettle();
     h.source.taps.add(heldIdFor(3));
     await t.pumpAndSettle();
-    expect(h.opened, [NotifChip.categorize, NotifChip.categorize]);
+    expect(h.opened, [NotifChip.todo, NotifChip.todo]);
   });
 
-  testWidgets('ready and unreadable land on Parse, parsed on Categorize; gone and unknown on Categorize', (t) async {
+  testWidgets('ready and parsed land on To do with their row; unreadable, gone and unknown on To do with no row', (t) async {
     final h = await _pump(t, items: [
       _item(1, WaitingKind.unreadable),
       _item(2, WaitingKind.gone),
@@ -131,36 +190,31 @@ void main() {
     await t.pumpAndSettle();
     h.source.taps.add(heldIdFor(99));
     await t.pumpAndSettle();
-    expect(h.opened, [
-      NotifChip.parse,
-      NotifChip.categorize,
-      NotifChip.parse,
-      NotifChip.categorize,
-      NotifChip.categorize,
-    ]);
-    // The row id goes with the tap only when the item is listed and not gone.
-    expect(h.focus, [heldIdFor(1), null, heldIdFor(3), heldIdFor(4), null]);
+    expect(h.opened, List.filled(5, NotifChip.todo));
+    // The row id goes with the tap only for a ready or parsed item (PM 13-11-2026:
+    // an unreadable row opens To do with no row focused).
+    expect(h.focus, [null, null, heldIdFor(3), heldIdFor(4), null]);
   });
 
-  testWidgets('a held message ready to parse: Parse chip with its row in focus (warm tap)', (t) async {
+  testWidgets('a held message ready to parse: To do with its row in focus (warm tap)', (t) async {
     final h = await _pump(t, items: [_item(5, WaitingKind.readyToParse)]);
     unawaited(h.router.start());
     h.source.taps.add(heldIdFor(5));
     await t.pumpAndSettle();
-    expect(h.opened, [NotifChip.parse]);
+    expect(h.opened, [NotifChip.todo]);
     expect(h.focus, [heldIdFor(5)]);
   });
 
-  testWidgets('a held message past the window counts as gone: Categorize, no row', (t) async {
+  testWidgets('a held message past the window counts as gone: To do, no row', (t) async {
     final h = await _pump(t, items: [_item(6, WaitingKind.readyToParse, ageHours: 200)]);
     unawaited(h.router.start());
     h.source.taps.add(heldIdFor(6));
     await t.pumpAndSettle();
-    expect(h.opened, [NotifChip.categorize]);
+    expect(h.opened, [NotifChip.todo]);
     expect(h.focus, [null]);
   });
 
-  testWidgets('cold start: ready message waits for Home, then Parse with its row in focus', (t) async {
+  testWidgets('cold start: ready message waits for Home, then To do with its row in focus', (t) async {
     final h = await _pump(t,
         launchId: heldIdFor(7), items: [_item(7, WaitingKind.readyToParse)], initial: Routes.welcome);
     unawaited(h.router.start());
@@ -168,7 +222,7 @@ void main() {
     expect(h.opened, isEmpty);
     t.state<NavigatorState>(find.byType(Navigator)).pushReplacementNamed(Routes.home);
     await t.pumpAndSettle();
-    expect(h.opened, [NotifChip.parse]);
+    expect(h.opened, [NotifChip.todo]);
     expect(h.focus, [heldIdFor(7)]);
   });
 
@@ -200,7 +254,7 @@ void main() {
     final nav = t.state<NavigatorState>(find.byType(Navigator));
     nav.pushReplacementNamed(Routes.home);
     await t.pumpAndSettle();
-    expect(h.opened, [NotifChip.categorize]);
+    expect(h.opened, [NotifChip.todo]);
     expect(find.text('page ${Routes.notifications}'), findsOneWidget);
   });
 }

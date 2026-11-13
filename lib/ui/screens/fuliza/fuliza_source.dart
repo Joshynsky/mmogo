@@ -9,6 +9,7 @@ import '../../../domain/fuliza/fuliza_demo.dart';
 import '../../../domain/fuliza/fuliza_ledger.dart';
 import '../../../domain/fuliza/fuliza_page_data.dart';
 import '../../../domain/fuliza/fuliza_repository.dart';
+import 'fuliza_visible.dart';
 
 /// §FULIZA.SOURCE — 0.2.0 S9: where the Fuliza page and the Home line get their data. Persistence is
 /// held (schema change, slice 12), so this reads a [FulizaRepository] that only exists when something
@@ -57,6 +58,7 @@ class FulizaSource {
   /// The page data and the ordinary payments the borrowings paid for, or null when there is no Fuliza
   /// data (no repository, or no events).
   static Future<FulizaSnapshot?> load(Database db) async {
+    if (!fulizaVisible) return null;
     final repo = repository;
     if (repo == null) return null;
     // Kill-switch off: nothing is shown; events are still saved by the writer (PM choice C6 B).

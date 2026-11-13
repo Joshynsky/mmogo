@@ -1,6 +1,6 @@
 /// §AUTOREAD.AUTO_RECORD_TAB: the second tab of the Remembered page (chip row,
 /// two airtime rows, the opened explainer block). It reads and flips
-/// the ONE shared controller it is given, so the Notifications card and this
+/// the ONE shared controller it is given, so the Settings row, the trail and this
 /// tab always agree. Nothing is stored here: the controller writes the two
 /// existing switches.
 library;
@@ -227,6 +227,9 @@ class _Panel extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text(autoRecordExplainTap(label),
             key: Key('${rowKey}Explain'), style: TextStyle(fontSize: 12.5, height: 1.4, color: p.softInk)),
+        const SizedBox(height: 4),
+        Text(kAutoRecordExplainUndo,
+            key: Key('${rowKey}ExplainUndo'), style: TextStyle(fontSize: 12.5, height: 1.4, color: p.softInk)),
         const SizedBox(height: 4),
         Text(kAutoRecordExplainLater,
             key: Key('${rowKey}ExplainLater'), style: TextStyle(fontSize: 12, height: 1.35, color: p.mutedInk)),

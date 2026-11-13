@@ -11,12 +11,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/autoread/model/waiting_item.dart';
 import 'package:mmogo/autoread/autoread_feature.dart';
 import 'package:mmogo/autoread/bridge/fake_autoread_bridge.dart';
 import 'package:mmogo/autoread/data/ingesting_launch_source.dart';
 import 'package:mmogo/autoread/data/real_waiting_actions.dart';
 import 'package:mmogo/autoread/data/real_waiting_repository.dart';
 import 'package:mmogo/autoread/service/autoread_service.dart';
+import 'package:mmogo/autoread/ui/categorize_sheet.dart' show kCategorizeNewPill;
+import 'package:mmogo/autoread/ui/choose_category_copy.dart';
 import 'package:mmogo/autoread/ui/launch_router.dart';
 import 'package:mmogo/autoread/ui/notifications_autoread_copy.dart';
 import 'package:mmogo/autoread/ui/waiting_bell_numbers.dart';
@@ -136,11 +139,12 @@ void main() {
 
     await t.tap(find.descendant(of: row(1), matching: find.text(kActionParse)));
     await settle(t);
-    expect(find.text(kToastParsed), findsOneWidget);
-    expect(find.descendant(of: row(1), matching: find.text(kActionCategorize)), findsOneWidget);
+    expect(find.text(kToastParsed), findsNothing); // Parse in place: no toast
+    expect(find.descendant(of: row(1), matching: find.text(kChooseCategoryTitle)), findsOneWidget);
     expect(await t.runAsync(() => db.query('transactions')), isEmpty); // nothing saved by Parse
 
-    await t.tap(find.descendant(of: row(1), matching: find.text(kActionCategorize)));
+    // "+ New" in the choose row opens the same Categorize sheet.
+    await t.tap(find.descendant(of: row(1), matching: find.text(kCategorizeNewPill)));
     await settle(t);
     final chips = find.byWidgetPredicate((w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('categorizeChip_'));
     expect(chips, findsWidgets);
@@ -186,8 +190,12 @@ void main() {
 
   testWidgets('Paste opens Add after the sheet closes', (t) async {
     await setup(t);
-    bridge.hold(heldIdFor(1), 'nothing to read here', now.subtract(const Duration(hours: 2)));
+    // A gone row keeps its Paste button; an unreadable row has none.
+    bridge.hold(heldIdFor(1), kSampleSendMoney, now.subtract(const Duration(hours: 2)));
     await openPage(t, chip: NotifChip.parse);
+    bridge.generation = 99; // Delete data happened: the Parse finds the message gone
+    await t.tap(find.descendant(of: row(1), matching: find.text(kActionParse)));
+    await settle(t);
     await t.tap(find.descendant(of: row(1), matching: find.text(kActionPaste)));
     await settle(t);
     await t.tap(find.byKey(const Key('pasteContinue')));
@@ -195,7 +203,7 @@ void main() {
     expect(find.text('ADD SCREEN'), findsOneWidget);
   }, skip: skip);
 
-  testWidgets('Parse all parses every readable item, toasts once, and the rows move to Categorize', (t) async {
+  testWidgets('Parse all parses every readable item, no toast, and the rows turn into choose rows', (t) async {
     await setup(t);
     bridge.hold(heldIdFor(1), kSampleSendMoney, now.subtract(const Duration(minutes: 1)));
     bridge.hold(heldIdFor(2), kSampleBuyGoods, now.subtract(const Duration(minutes: 2)));
@@ -204,11 +212,11 @@ void main() {
     await openPage(t, chip: NotifChip.parse);
     await t.tap(find.byKey(const Key('parseAllBar')));
     await settle(t);
-    expect(find.text(kToastParsed), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing); // the quiet note replaces the toast
     expect(await t.runAsync(() => store.count()), 3);
     expect(bridge.isHeld(heldIdFor(4)), isTrue); // the unreadable one is not lost
     expect(row(4), findsOneWidget);
-    expect(row(1), findsNothing); // moved out of Parse
+    expect(repo.itemById(heldIdFor(1))!.kind, WaitingKind.waitingCategory); // moved out of To parse, still on To do
   }, skip: skip);
 
   testWidgets('NotificationsRoute wires the real actions and the bell numbers follow the repository', (t) async {
@@ -239,7 +247,7 @@ void main() {
     expect(bell.value.value.waiting, 0);
     await t.tap(find.descendant(of: row(1), matching: find.text(kActionParse)));
     await settle(t);
-    expect(find.text(kToastParsed), findsOneWidget);
+    expect(find.text(kToastParsed), findsNothing);
     expect(bell.value.value.readyToParse, 0);
     expect(bell.value.value.waiting, 1);
   }, skip: skip);

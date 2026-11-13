@@ -47,6 +47,13 @@ class FulizaDrawView {
   bool explainedByLaterPartial = false;
 }
 
+/// An amount of fee and the time of the message it comes from.
+class FulizaFeeAt {
+  const FulizaFeeAt(this.at, this.cents);
+  final DateTime at;
+  final int cents;
+}
+
 /// One run from the first draw seen to the full repayment (or the present).
 class FulizaChain {
   FulizaChain({required this.openingCents});
@@ -62,6 +69,10 @@ class FulizaChain {
 
   /// Sum of positive residuals and of full-repayment excess: estimated.
   int dailyFeeEstimateCents = 0;
+
+  /// The same daily-fee amounts, each with the time of the message that showed it (a draw, or the full
+  /// repayment). Their sum is always [dailyFeeEstimateCents]; this is what lets a period filter them.
+  final List<FulizaFeeAt> dailyFeesAt = [];
 
   /// Full repayment below the running balance, or an unexplained negative
   /// residual: a message is missing or out of order. Shown, not invented.
@@ -135,6 +146,7 @@ class FulizaCalculator {
             view.residualCents = residual;
             if (residual > 0) {
               chain.dailyFeeEstimateCents += residual;
+              chain.dailyFeesAt.add(FulizaFeeAt(e.at, residual));
             } else if (residual < 0) {
               view.needsReview = true; // may be cleared by rule 7 below
             }
@@ -179,6 +191,7 @@ class FulizaCalculator {
               final diff = e.amountCents - balance;
               if (diff > 1) {
                 chain.dailyFeeEstimateCents += diff; // rule 6: shown as fees, estimated
+                chain.dailyFeesAt.add(FulizaFeeAt(e.at, diff));
               } else if (diff < -1) {
                 chain.unreconciledCents += -diff; // rule 6: do not invent
               }

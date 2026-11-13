@@ -134,6 +134,41 @@ internal object ParseSelfCheck {
             dir.deleteRecursively()
         }
 
+        // --- the Parse button's claim retries ONCE (the app's list may hold the claim for a moment)
+        run {
+            fun drive(results: List<Boolean>): Triple<Int, String, List<Long>> {
+                var tries = 0
+                val waits = ArrayList<Long>()
+                var outcome = "none"
+                val queue = ArrayList<() -> Unit>()
+                ClaimRetry.run(
+                    claim = { results[minOf(tries++, results.size - 1)] },
+                    later = { ms, task -> waits.add(ms); queue.add(task) },
+                    onClaimed = { outcome = "claimed" },
+                    onGaveUp = { outcome = "gave up" },
+                )
+                val beforeWait = outcome
+                while (queue.isNotEmpty()) queue.removeAt(0)()
+                return Triple(tries, if (beforeWait == "claimed") beforeWait else outcome, waits)
+            }
+            val free = drive(listOf(true))
+            check("claim free: claimed, one try, no wait", free.first == 1 && free.second == "claimed" && free.third.isEmpty())
+            val busyThenFree = drive(listOf(false, true))
+            check("claim busy then free: succeeds after one retry", busyThenFree.second == "claimed" && busyThenFree.first == 2)
+            check("claim retry waits once, ${ClaimRetry.WAIT_MS} ms", busyThenFree.third == listOf(150L))
+            val stillBusy = drive(listOf(false, false, false, false))
+            check("claim still busy: gives up without crash", stillBusy.second == "gave up")
+            check("claim still busy: never more than one retry (two tries)", stillBusy.first == 2 && stillBusy.third.size == 1)
+            // the retry is NOT run until the caller's timer fires (the caller must not block)
+            var claimedAt = 0
+            var scheduled: (() -> Unit)? = null
+            var tries = 0
+            ClaimRetry.run({ tries++ > 0 }, { _, t -> scheduled = t }, { claimedAt++ }, { claimedAt = -100 })
+            check("claim retry waits for the timer", tries == 1 && claimedAt == 0 && scheduled != null)
+            scheduled?.invoke()
+            check("claim retry runs once the timer fires", tries == 2 && claimedAt == 1)
+        }
+
         return fails
     }
 }

@@ -10,7 +10,9 @@ library;
 
 import '../../domain/format/money.dart';
 import '../../domain/parsing/parsed_sms_fields.dart';
+import '../model/held_description.dart';
 import '../model/waiting_item.dart';
+import '../ui/unreadable_copy.dart';
 
 /// The only sender the receiver accepts (`SmsReceiverLogic.ALLOWED_SENDERS`).
 const String kDetailsSender = 'MPESA';
@@ -61,17 +63,6 @@ String detailsTypeLabel(SmsSourceType t) => switch (t) {
       SmsSourceType.airtime => 'Airtime',
     };
 
-/// The first [words] words of [body] with every word that holds a digit, or is
-/// three or more capital letters, replaced by "…". Never more than the first
-/// words, so a name or an amount further in is never reached. Empty body: ''.
-String maskedFirstWords(String body, {int words = 3}) {
-  final parts = body.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).take(words);
-  final caps = RegExp(r'^[A-Z]{3,}[.,:;]?$');
-  return parts
-      .map((w) => RegExp(r'\d').hasMatch(w) || caps.hasMatch(w) ? '…' : w)
-      .join(' ');
-}
-
 /// One row of the sheet: a label and its value.
 class DetailLine {
   const DetailLine(this.label, this.value);
@@ -82,10 +73,13 @@ class DetailLine {
 /// The content of the Details sheet. [lines] are in display order; [note] is
 /// the quiet sentence under them.
 class MessageDetails {
-  const MessageDetails({required this.kind, required this.lines, this.note});
+  const MessageDetails({required this.kind, required this.lines, this.note, this.fine});
   final WaitingKind kind;
   final List<DetailLine> lines;
   final String? note;
+
+  /// A quiet line after [note] (the unreadable sheet's keep-time line).
+  final String? fine;
 
   String? valueOf(String label) {
     for (final l in lines) {
@@ -95,8 +89,8 @@ class MessageDetails {
   }
 }
 
-// WORDING-DRAFT: every label and sentence below is new UI text for the PM to
-// review (taken from the mock's Message details sheet).
+// SIGNED (PM 13-11-2026): every label and sentence below is signed UI text; a changed value needs
+// a new signature (taken from the mock's Message details sheet).
 const String kDetailsTitle = 'Message details';
 const String kDetailsSenderLabel = 'Sender';
 const String kDetailsReceivedLabel = 'Received';
@@ -104,16 +98,11 @@ const String kDetailsAmountLabel = 'Amount';
 const String kDetailsUnderstoodLabel = 'What mmogo understood';
 const String kDetailsTimeLeftLabel = 'Time left';
 const String kDetailsWaitingForLabel = 'Waiting for';
-const String kDetailsWhatFailedLabel = 'What failed';
-const String kDetailsFirstWordsLabel = 'First words';
 const String kDetailsStatusLabel = 'Status';
-const String kDetailsFailedValue = 'mmogo could not read this message';
 const String kDetailsExpiredValue = 'Expired. No longer on this phone';
 const String kDetailsNoteReady = 'Not read yet. Tap Parse to read it. Nothing is saved yet.';
 const String kDetailsNoteWaiting =
     'Parsed, not saved yet. It is not counted in your totals until you categorize it.';
-const String kDetailsNoteUnreadable =
-    'Codes, numbers and amounts are left out on purpose. Open the message in your phone’s Messages, copy it, then paste it in Add.';
 const String kDetailsNoteGone = 'Find it in your phone’s Messages, copy it, then paste it in Add.';
 const String kDetailsClose = 'Close';
 const String kDetailsLink = 'Details';
@@ -122,14 +111,14 @@ const String kDetailsMissing = 'This message is no longer in the list.';
 /// Builds the sheet content for [item] at [now].
 ///
 /// [fields] are the parser's fields (a parsed item has them; a ready message
-/// gets them from a one-time look at the held text); [firstWords] is
-/// [maskedFirstWords] of an unreadable message. Neither the body nor a code is
+/// gets them from a one-time look at the held text); [light] is the code, amount
+/// and time the light reader found in an unreadable message. The body is never
 /// passed in or shown.
 MessageDetails buildMessageDetails(
   WaitingItem item,
   DateTime now, {
   ParsedSmsFields? fields,
-  String? firstWords,
+  HeldDescription? light,
   bool expired = false,
 }) {
   final f = fields ?? item.parsed;
@@ -152,12 +141,15 @@ MessageDetails buildMessageDetails(
         kind: kind,
         lines: [
           sender,
-          received,
-          const DetailLine(kDetailsWhatFailedLabel, kDetailsFailedValue),
-          if (firstWords != null && firstWords.isNotEmpty) DetailLine(kDetailsFirstWordsLabel, '“$firstWords…”'),
+          DetailLine(kUnreadableCodeLabel, light?.code ?? kNotFound),
+          DetailLine(kDetailsAmountLabel, light?.amount ?? kNotFound),
+          DetailLine(kUnreadableTimeLabel, light?.time ?? kNotFound),
           DetailLine(kDetailsTimeLeftLabel, timeLeft),
         ],
-        note: kDetailsNoteUnreadable,
+        note: light?.code != null
+            ? kUnreadablePasteWithCode
+            : '$kUnreadablePasteNoCodePrefix ${light?.time ?? clockText(item.heldAt)}.',
+        fine: kUnreadableFine,
       );
     case WaitingKind.readyToParse:
     case WaitingKind.waitingCategory:
@@ -179,4 +171,13 @@ MessageDetails buildMessageDetails(
         note: waiting ? kDetailsNoteWaiting : kDetailsNoteReady,
       );
   }
+}
+
+/// "UFGH123456 · Ksh 5 · 14:08. Tap to see how to paste it." for an unreadable
+/// row: the found pieces in that order, a missing piece left out; nothing found:
+/// "Received 14:08. Tap to ..." (the time it arrived).
+String unreadableSubline(HeldDescription? d, DateTime heldAt) {
+  final parts = [?d?.code, ?d?.amount, ?d?.time];
+  final head = parts.isEmpty ? 'Received ${clockText(heldAt)}' : parts.join(' · ');
+  return '$head. $kUnreadableTapHint';
 }

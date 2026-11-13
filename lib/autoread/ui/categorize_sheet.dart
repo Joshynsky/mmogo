@@ -45,8 +45,9 @@ const String kCategorizeNewFailed =
 const String kCategorizeSaveFailed =
     'Could not save. Try again.'; // NOT IN MOCK
 const String kCategorizeCheckThis = 'Check this one.'; // mock flag box
-/// WORDING-DRAFT (row 17): under the one fixed category of an airtime item.
+/// SIGNED (PM 13-11-2026): under the one fixed category of an airtime item.
 const String kCategorizeAirtimeFixed = 'Set when the airtime was read. It cannot be changed.';
+// SIGNED (PM 13-11-2026): the labels of the details block.
 const String kCategorizeLabelType = 'Type';
 const String kCategorizeLabelAmount = 'Amount';
 const String kCategorizeLabelPaidTo = 'Paid to';

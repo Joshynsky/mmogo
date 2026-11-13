@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/autoread/ui/notifications_autoread_copy.dart';
 import 'package:mmogo/autoread/ui/paste_sheet.dart';
 import 'package:mmogo/autoread/ui/waiting_section.dart';
-import 'package:mmogo/domain/notifications/notif_chip.dart';
 import 'package:mmogo/ui/theme/app_theme.dart';
 
 import '../../support/news_fakes.dart';
@@ -93,11 +92,8 @@ void main() {
       home: Scaffold(
         body: SingleChildScrollView(
           child: WaitingSection(
-            chip: NotifChip.parse,
             waiting: items,
-            news: const [],
             now: kFakeNow,
-            newsRowBuilder: (n) => const SizedBox(),
             actions: WaitingActions(onPaste: (w) => pasted.add(w.id)),
           ),
         ),

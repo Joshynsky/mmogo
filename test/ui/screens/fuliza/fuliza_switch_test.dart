@@ -7,6 +7,7 @@ import 'package:mmogo/domain/fuliza/fuliza_repository.dart';
 import 'package:mmogo/ui/copy/settings_copy.dart';
 import 'package:mmogo/ui/screens/fuliza/fuliza_screen.dart';
 import 'package:mmogo/ui/screens/fuliza/fuliza_source.dart';
+import 'package:mmogo/ui/screens/fuliza/fuliza_visible.dart';
 import 'package:mmogo/ui/screens/settings/adding_section.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,8 +15,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../support/fake_analytics_db.dart';
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    fulizaVisible = true;
+    SharedPreferences.setMockInitialValues({});
+  });
   tearDown(() {
+    fulizaVisible = false;
     FulizaSource.repository = null;
     FulizaRebuild.hook = null;
   });
@@ -97,5 +102,58 @@ void main() {
     await t.pumpAndSettle();
     expect(calls, 1);
     expect(find.text('Added 2 records. Only messages mmogo still holds can be used.'), findsOneWidget);
+  });
+
+  group('hidden in 0.2.0 (default)', () {
+    test('the visibility switch is off by default', () {
+      fulizaVisible = false;
+      expect(fulizaVisible, isFalse);
+    });
+
+    test('load returns null even with stored events and the pref on; capture still saves', () async {
+      fulizaVisible = false;
+      final repo = InMemoryFulizaRepository();
+      await repo.addEvent(
+        FulizaEvent(
+          kind: FulizaEventKind.draw,
+          code: 'QDMFS00001',
+          at: DateTime(2026, 11, 2),
+          amountCents: 100000,
+          feeCents: 1000,
+          printedTotalCents: 101000,
+        ),
+      );
+      FulizaSource.repository = repo;
+      expect(await FulizaSource.load(FakeAnalyticsDb(analyticsSampleRows())), isNull);
+      final saved = await repo.addEvent(
+        FulizaEvent(kind: FulizaEventKind.repayFull, code: 'QDMFS00002', at: DateTime(2026, 11, 3), amountCents: 5000),
+      );
+      expect(saved, isTrue);
+      expect((await repo.events()).length, 2);
+    });
+
+    testWidgets('the Settings card has no Show Fuliza row', (t) async {
+      fulizaVisible = false;
+      await t.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AddingSection(
+                palette: AppPalette.light,
+                tourKey: GlobalKey(),
+                autoRecognize: true,
+                onAutoRecognizeChanged: (_) {},
+                captureReceiver: true,
+                onCaptureReceiverChanged: (_) {},
+                showFuliza: true,
+                onShowFulizaChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.byKey(const Key('settingsShowFuliza')), findsNothing);
+      expect(find.textContaining('Fuliza'), findsNothing);
+    });
   });
 }
