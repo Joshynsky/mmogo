@@ -22,6 +22,7 @@ class WhatsNewItem {
     required this.id,
     required this.title,
     required this.summary,
+    required this.origin,
     this.paragraphs = const [],
     this.settingsButton = false,
     this.backupButton = false,
@@ -31,6 +32,9 @@ class WhatsNewItem {
   final String id;
   final String title;
   final String summary;
+
+  /// Which update the item came from: [kWhatsNewTagNew] or [kWhatsNewTagFrom013].
+  final String origin;
   final List<String> paragraphs;
   final bool settingsButton;
   final bool backupButton;
@@ -39,23 +43,73 @@ class WhatsNewItem {
   final bool boldFirst;
 }
 
-/// The page's items for this build: six, the same in both builds except the
-/// closing Privacy item, which says each build's own words.
+/// The page's items for this build (PM 14-11-2026: 0.1.3 folded into 0.2.0). Items new in 0.2.0
+/// come first, then the 0.1.3 items; each carries its origin tag. The shared items are the same in
+/// both builds; the auto-read build adds its own and says its own Privacy words.
 List<WhatsNewItem> whatsNewItems() => [
   const WhatsNewItem(
+    id: 'airother',
+    origin: kWhatsNewTagNew,
+    title: kWhatsNewAirOtherTitle,
+    summary: kWhatsNewAirOtherSummary,
+    paragraphs: [kWhatsNewAirOtherBody],
+  ),
+  if (kAutoReadCompiled) ...const [
+    WhatsNewItem(
+      id: 'todo',
+      origin: kWhatsNewTagNew,
+      title: kWhatsNewTodoTitle,
+      summary: kWhatsNewTodoSummary,
+      paragraphs: [kWhatsNewTodoBody, kWhatsNewTodoDescribes],
+    ),
+    WhatsNewItem(
+      id: 'unread',
+      origin: kWhatsNewTagNew,
+      title: kWhatsNewUnreadTitle,
+      summary: kWhatsNewUnreadSummary,
+      paragraphs: [kWhatsNewUnreadBody],
+    ),
+    WhatsNewItem(
+      id: 'trail',
+      origin: kWhatsNewTagNew,
+      title: kWhatsNewTrailTitle,
+      summary: kWhatsNewTrailSummary,
+      paragraphs: [kWhatsNewTrailBody],
+    ),
+    WhatsNewItem(
+      id: 'autosettings',
+      origin: kWhatsNewTagNew,
+      title: kWhatsNewAutoSettingsTitle,
+      summary: kWhatsNewAutoSettingsSummary,
+      paragraphs: [kWhatsNewAutoSettingsBody, kWhatsNewAutoDefaults],
+      settingsButton: true,
+    ),
+  ],
+  const WhatsNewItem(
+    id: 'backups',
+    origin: kWhatsNewTagNew,
+    title: kWhatsNewBackupsTitle,
+    summary: kWhatsNewBackupsSummary,
+    paragraphs: [kWhatsNewBackupsBody],
+    backupButton: true,
+  ),
+  const WhatsNewItem(
     id: 'nav',
+    origin: kWhatsNewTagFrom013,
     title: kWhatsNewNavTitle,
     summary: kWhatsNewNavSummary,
     paragraphs: [kWhatsNewNavBody],
   ),
   const WhatsNewItem(
     id: 'airtime',
+    origin: kWhatsNewTagFrom013,
     title: kWhatsNewAirtimeTitle,
     summary: kWhatsNewAirtimeSummary,
     paragraphs: [kWhatsNewAirtimeBody],
   ),
   const WhatsNewItem(
     id: 'receiver',
+    origin: kWhatsNewTagFrom013,
     title: kWhatsNewReceiverTitle,
     summary: kWhatsNewReceiverSummary,
     paragraphs: [kWhatsNewReceiverBody],
@@ -63,12 +117,14 @@ List<WhatsNewItem> whatsNewItems() => [
   ),
   const WhatsNewItem(
     id: 'deleted',
+    origin: kWhatsNewTagFrom013,
     title: kWhatsNewDeletedTitle,
     summary: kWhatsNewDeletedSummary,
     paragraphs: [kWhatsNewDeletedBody],
   ),
   const WhatsNewItem(
     id: 'exports',
+    origin: kWhatsNewTagFrom013,
     title: kWhatsNewExportsTitle,
     summary: kWhatsNewExportsSummary,
     paragraphs: [kWhatsNewExportsBody],
@@ -76,14 +132,21 @@ List<WhatsNewItem> whatsNewItems() => [
   if (kAutoReadCompiled)
     const WhatsNewItem(
       id: 'privacy',
+      origin: kWhatsNewTagFrom013,
       title: kWhatsNewCard5Title,
-      summary: kWhatsNewPrivacyAutoReadSummaryProvisional,
-      paragraphs: [kWhatsNewPrivacyAutoReadBodyProvisional, kWhatsNewPrivacyAutoReadReceiverNote],
+      summary: kWhatsNewPrivacyAutoReadSummary,
+      paragraphs: [
+        kWhatsNewPrivacyAutoReadBody,
+        kWhatsNewPrivacyAutoReadTrail,
+        kWhatsNewPrivacyAutoReadKept,
+        kWhatsNewPrivacyAutoReadReceiverNote,
+      ],
       boldFirst: true,
     )
   else
     WhatsNewItem(
       id: 'privacy',
+      origin: kWhatsNewTagFrom013,
       title: kWhatsNewCard5Title,
       summary: kWhatsNewCard5Summary,
       paragraphs: [kWhatsNewCard5Body, kWhatsNewCard5Network, kWhatsNewCard5Receiver],
@@ -92,7 +155,7 @@ List<WhatsNewItem> whatsNewItems() => [
 ];
 
 /// The line under the title for this build.
-String whatsNewIntro() => kAutoReadCompiled ? kWhatsNewAutoIntro : kWhatsNewIntro;
+String whatsNewIntro() => kWhatsNewIntro;
 
 /// The banner at the very top: a tinted note saying which version this is.
 /// The standard build's banner has the link to the mmogo page; the auto-read
@@ -227,6 +290,11 @@ class WhatsNewItemView extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text(
+                              item.origin,
+                              key: Key('whatsNewItemTag-$id'),
+                              style: TextStyle(fontSize: 11.5, height: 1.3, fontWeight: FontWeight.w700, color: palette.primary),
+                            ),
                             Text(
                               item.title,
                               key: Key('whatsNewItemTitle-$id'),

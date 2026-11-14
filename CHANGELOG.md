@@ -2,6 +2,21 @@
 
 What changed in each version of mmogo, newest first. Written for the people who use the app, so it says what you will notice, not how it was built. Dates are when the version was released.
 
+## 0.2.0 (not released)
+
+0.1.3 was never released, so 0.2.0 includes its changes (listed under 0.1.3 below).
+
+### Added
+- **Airtime for another number.** Airtime bought for another number is now read and recorded. Earlier versions missed it. Airtime has two categories: For myself and For another number. Your earlier airtime is filed under For myself.
+- **To do page (auto-read version).** Notifications now has one To do page with five lists: To parse, Could not read, To categorize, Recorded by you and Recorded automatically.
+- **Messages say what they are (auto-read version).** Messages waiting for you now say what they are, for example Sent Ksh 200 to Wanjiru.
+- **Messages mmogo cannot read (auto-read version).** If mmogo cannot read a message, it shows its code, amount and time so you can paste it yourself.
+- **Recorded automatically stays for 24 hours (auto-read version).** The list is kept on your phone, is not in backups, and Delete data removes it.
+- **Auto-record in Settings (auto-read version).** The Auto-record airtime switches are now in Settings, under Remembered. Each automatic record can be undone. Showing details and Parse from the notification are on by default for new users; your existing choices are not changed.
+
+### Good to know
+- A backup made with 0.2.0 cannot be restored by 0.1.3 or older. Backups from 0.1.2 still restore.
+
 ## 0.1.3 (not released)
 
 0.1.3 was a fix-and-verify version. It was built and checked on phones as "mmogo next" but never published as an APK. Everything below is carried into 0.2.0.

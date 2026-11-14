@@ -12,9 +12,9 @@ class AppInfo {
 
   /// Must equal `pubspec.yaml`'s `version:` value exactly (build-name +
   /// `+`build-number).
-  static const version = '0.1.3+4';
+  static const version = '0.2.0+5';
 
-  /// `0.1.3` — the user-facing build-name part of [version].
+  /// `0.2.0` — the user-facing build-name part of [version].
   static String get versionName => version.split('+').first;
 
   /// T2 (0.2.0): a debug build made with `flutter build apk --build-number N`
@@ -23,7 +23,7 @@ class AppInfo {
   /// Unset (every release build) = the pubspec number, as before.
   static const _buildNumberOverride = String.fromEnvironment('MMOGO_BUILD_NUMBER');
 
-  /// `4` — the build-number part of [version], or `null` if absent. The
+  /// `5` — the build-number part of [version], or `null` if absent. The
   /// `MMOGO_BUILD_NUMBER` define, when set, wins (see above).
   static String? get buildNumber {
     if (_buildNumberOverride.isNotEmpty) return _buildNumberOverride;
@@ -31,7 +31,7 @@ class AppInfo {
     return parts.length > 1 ? parts[1] : null;
   }
 
-  /// `Version 0.1.3 (build 4)` — Profile's display string.
+  /// `Version 0.2.0 (build 5)` — Profile's display string.
   static String get displayVersion =>
       buildNumber == null ? 'Version $versionName' : 'Version $versionName (build $buildNumber)';
 }

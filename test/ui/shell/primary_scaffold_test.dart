@@ -334,7 +334,7 @@ void main() {
     testWidgets('B27: an unread update shows the arrow and is spoken; tapping opens the page with that row', (tester) async {
       SharedPreferences.setMockInitialValues({
         'updates_inbox_v1': jsonEncode([
-          {'tag': 'v0.2.0', 'notes': 'Shiny', 'receivedAt': 1000, 'read': false},
+          {'tag': 'v0.3.0', 'notes': 'Shiny', 'receivedAt': 1000, 'read': false},
         ]),
       });
       await UpdatesInbox.instance.load();

@@ -125,9 +125,22 @@ void main() {
       // The auto-read build's words (and the provisional Privacy pair) follow the same rules.
       kWhatsNewAutoBannerHead,
       kWhatsNewAutoBannerBody,
-      kWhatsNewAutoIntro,
-      kWhatsNewPrivacyAutoReadSummaryProvisional,
-      kWhatsNewPrivacyAutoReadBodyProvisional,
+      kWhatsNewTodoTitle,
+      kWhatsNewTodoSummary,
+      kWhatsNewTodoBody,
+      kWhatsNewTodoDescribes,
+      kWhatsNewUnreadTitle,
+      kWhatsNewUnreadSummary,
+      kWhatsNewUnreadBody,
+      kWhatsNewTrailTitle,
+      kWhatsNewTrailSummary,
+      kWhatsNewTrailBody,
+      kWhatsNewAutoSettingsTitle,
+      kWhatsNewAutoSettingsSummary,
+      kWhatsNewAutoSettingsBody,
+      kWhatsNewAutoDefaults,
+      kWhatsNewPrivacyAutoReadSummary,
+      kWhatsNewPrivacyAutoReadBody,
       kWhatsNewPrivacyAutoReadReceiverNote,
     ].join('\n').replaceAll(kUninstallErasesNotice, '').replaceAll(kPrivacySentenceStandard, '').replaceAll(kWhatsNewCard5Summary, '');
     expect(bannedHits(shown), isEmpty);
@@ -146,8 +159,8 @@ void main() {
     expect(kWhatsNewCard5Summary, 'No permissions except internet, used only to check for updates.');
     expect(kPrivacySentenceStandard, startsWith(kWhatsNewCard5Summary.substring(0, kWhatsNewCard5Summary.length - 1)));
     // The auto-read build never shows the standard sentence: its Privacy words are the provisional pair.
-    expect(kWhatsNewPrivacyAutoReadBodyProvisional, isNot(contains('No permissions')));
-    expect(kWhatsNewPrivacyAutoReadSummaryProvisional, isNot(contains('No permissions')));
+    expect(kWhatsNewPrivacyAutoReadBody, isNot(contains('No permissions')));
+    expect(kWhatsNewPrivacyAutoReadSummary, isNot(contains('No permissions')));
   });
   test('the banned-phrase check catches a planted phrase', () {
     expect(bannedHits('This app has zero permissions.'), ['zero permissions']);

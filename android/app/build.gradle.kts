@@ -68,6 +68,15 @@ android {
         release {
             // No key.properties means no release: never fall back to the debug key.
             signingConfig = signingConfigs.findByName("release")
+            // Row 22 "next" switch, OFF by default (a plain release build is unchanged).
+            // Set -PmmogoNext=true or env ORG_GRADLE_PROJECT_mmogoNext=true to get the
+            // release code (not debuggable, same shrink as release) installable beside
+            // the real app: id suffix .next, label "mmogo next", debug key. Never for publishing.
+            if (project.findProperty("mmogoNext") == "true") {
+                applicationIdSuffix = ".next"
+                manifestPlaceholders["appLabel"] = "mmogo next"
+                signingConfig = signingConfigs.getByName("debug")
+            }
         }
         // DEVIATION from E7 "no suffix" (PM, 08-10-2026), DEBUG ONLY: a debug
         // build installs beside the real app as "mmogo next" with its own data.

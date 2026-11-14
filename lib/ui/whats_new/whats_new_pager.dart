@@ -15,7 +15,7 @@ import 'whats_new_cards.dart';
 /// six-card pager sheet). ONE full-screen route, shown the same way from Home
 /// (the pop-up after an update) and from the Updates entry. Top to bottom: a
 /// tinted banner saying which version this is, the title, one intro line, the
-/// item rows (tap to open; several can be open; the first starts open) and a
+/// item rows (tap to open; one open at a time; the first starts open) and a
 /// pinned bottom bar with the one "Got it". The system Back key closes the page
 /// WITHOUT marking anything seen; only "Got it" does. Opened to read (from the
 /// Updates entry or its Notifications row) the bar has "Back" instead and there
@@ -132,8 +132,16 @@ class _WhatsNewPageState extends State<WhatsNewPage> {
     super.dispose();
   }
 
+  /// One row open at a time (PM 14-11-2026): opening a row closes the one that was open, so you can
+  /// move down the list with one tap each. Tapping the open row closes it.
   void _toggle(String id) => setState(() {
-    if (!_open.remove(id)) _open.add(id);
+    if (_open.contains(id)) {
+      _open.remove(id);
+    } else {
+      _open
+        ..clear()
+        ..add(id);
+    }
   });
 
   void _gotIt() => Navigator.of(context).pop(true);

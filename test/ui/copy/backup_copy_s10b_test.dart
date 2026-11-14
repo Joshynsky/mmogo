@@ -165,14 +165,15 @@ void main() {
       expect(n, 1);
     });
 
-    test('only the Backup page copy uses it (the pager no longer does since 0.1.3; Privacy does not)', () {
+    test('only the Backup page copy and the What is new Backups item use it (Privacy does not)', () {
       final users = [
         for (final f in _dartFiles('lib'))
           if (f.readAsStringSync().contains('kBackupNotRestorableByOlder')) _p(f),
       ]..sort();
-      // 0.1.3: the What's new Backups card is gone, so the pager copy no longer uses it; still no Privacy page.
+      // 0.2.0: the What's new Backups item is back (via the V4 constant); still no Privacy page.
       expect(users, [
         'lib/ui/copy/data_copy.dart',
+        'lib/ui/copy/whats_new_pager_copy.dart',
         'lib/ui/screens/backup/backup_section.dart',
       ]);
     });

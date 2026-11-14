@@ -1,5 +1,5 @@
 // 0.1.2 A5a (WN1, PK2, CW2): the full-screen What's-new page. A banner at the
-// top, the title, the intro, six expandable rows (first open, several can be
+// top, the title, the intro, expandable rows (first open, one open at a time, can be
 // open), one pinned Got it, the system Back key (closes, marks nothing), the
 // injected Settings route button, the banner link, 44 px, dark, text scale 1.3 and
 // the row semantics. Stub routes only: the real Settings and Backup pages are
@@ -37,7 +37,7 @@ Key _head(String id) => Key('whatsNewItemHead-$id');
 Key _body(String id) => Key('whatsNewItemBody-$id');
 Key _summary(String id) => Key('whatsNewItemSummary-$id');
 
-const _ids = ['nav', 'airtime', 'receiver', 'deleted', 'exports', 'privacy'];
+const _ids = ['airother', 'backups', 'nav', 'airtime', 'receiver', 'deleted', 'exports', 'privacy'];
 
 Future<_Host> _pump(
   WidgetTester tester, {
@@ -119,11 +119,11 @@ void main() {
   const autoreadOnly = kAutoReadCompiled ? null : 'run with --dart-define=MMOGO_AUTOREAD=true';
 
   group('the page, in the signed order (standard build)', () {
-    testWidgets('banner, title, intro and six rows, with the mock\'s words', (tester) async {
+    testWidgets('banner, title, intro and eight rows, with the mock\'s words', (tester) async {
       await _pump(tester);
       expect(find.byKey(_pager), findsOneWidget);
-      expect(_text(tester, const Key('whatsNewPagerTitle')), "What's new in mmogo 0.1.3");
-      expect(_text(tester, const Key('whatsNewIntro')), 'Six small things changed. Tap one to read it. Tap Got it when you are done.');
+      expect(_text(tester, const Key('whatsNewPagerTitle')), "What's new in mmogo 0.2.0");
+      expect(_text(tester, const Key('whatsNewIntro')), kWhatsNewIntro);
       // The banner is above the title.
       expect(tester.getTopLeft(find.byKey(const Key('whatsNewBanner'))).dy, lessThan(tester.getTopLeft(find.byKey(const Key('whatsNewPagerTitle'))).dy));
       expect(_text(tester, const Key('whatsNewBannerHead')), 'This is the standard version of mmogo');
@@ -140,6 +140,8 @@ void main() {
         titles.add(_text(tester, Key('whatsNewItemTitle-$id')));
       }
       expect(titles, [
+        'Airtime for another number',
+        'Backups',
         'Navigation bar',
         'Airtime on Paid to',
         'Receiver details',
@@ -147,7 +149,7 @@ void main() {
         'Exports',
         'Privacy',
       ]);
-      expect(find.byType(WhatsNewItemView), findsNWidgets(6));
+      expect(find.byType(WhatsNewItemView), findsNWidgets(8));
     }, skip: standardOnly != null);
 
     testWidgets('the standard banner says nothing of auto-read, even in its spoken words', (tester) async {
@@ -163,8 +165,8 @@ void main() {
 
     testWidgets('the first row starts open, the others closed; each closed row shows its one-line summary', (tester) async {
       await _pump(tester);
-      expect(find.byKey(_body('nav')), findsOneWidget);
-      expect(find.byKey(_summary('nav')), findsNothing, reason: 'open: the summary is not repeated');
+      expect(find.byKey(_body('airother')), findsOneWidget);
+      expect(find.byKey(_summary('airother')), findsNothing, reason: 'open: the summary is not repeated');
       for (final id in _ids.skip(1)) {
         expect(find.byKey(_body(id)), findsNothing, reason: id);
         await tester.ensureVisible(find.byKey(_summary(id)));
@@ -177,23 +179,23 @@ void main() {
       expect(_text(tester, _summary('privacy')), 'No permissions except internet, used only to check for updates.');
     }, skip: standardOnly != null);
 
-    testWidgets('a tap opens a row and a second tap closes it; several can be open at once', (tester) async {
+    testWidgets('a tap opens a row and a second tap closes it; only one row is open at a time', (tester) async {
       await _pump(tester);
       await _toggle(tester, 'receiver');
       expect(find.byKey(_body('receiver')), findsOneWidget);
-      expect(find.byKey(_body('nav')), findsOneWidget, reason: 'the first stays open');
+      expect(find.byKey(_body('airother')), findsNothing, reason: 'opening a row closes the one that was open');
+      expect(find.byKey(_summary('airother')), findsOneWidget);
       await _toggle(tester, 'exports');
       expect(find.byKey(_body('exports')), findsOneWidget);
-      expect(find.byKey(_body('receiver')), findsOneWidget);
-      await _toggle(tester, 'receiver');
       expect(find.byKey(_body('receiver')), findsNothing);
-      expect(find.byKey(_summary('receiver')), findsOneWidget);
-      await _toggle(tester, 'nav');
-      expect(find.byKey(_body('nav')), findsNothing);
+      await _toggle(tester, 'exports');
+      expect(find.byKey(_body('exports')), findsNothing, reason: 'tapping the open row closes it');
+      expect(find.byKey(_summary('exports')), findsOneWidget);
     }, skip: standardOnly != null);
 
     testWidgets('item 1: the bottom bar text', (tester) async {
       await _pump(tester);
+      await _toggle(tester, 'nav');
       final body = _text(tester, const Key('whatsNewPara-nav-0'));
       expect(body, kWhatsNewNavBody);
       expect(body, contains('the Home, Analytics, Paid to and Profile tabs were covered'));
@@ -414,7 +416,7 @@ void main() {
     testWidgets('each row header is a button that says whether it is expanded, and follows a tap', (tester) async {
       final handle = tester.ensureSemantics();
       await _pump(tester);
-      expect(tester.getSemantics(find.byKey(_head('nav'))).flagsCollection.isExpanded, ui.Tristate.isTrue);
+      expect(tester.getSemantics(find.byKey(_head('airother'))).flagsCollection.isExpanded, ui.Tristate.isTrue);
       await tester.ensureVisible(find.byKey(_head('receiver')));
       final closed = tester.getSemantics(find.byKey(_head('receiver')));
       expect(closed.flagsCollection.isButton, isTrue);
@@ -439,17 +441,18 @@ void main() {
       await _pump(tester);
       await tester.ensureVisible(find.byKey(_head('receiver')));
       final label = tester.getSemantics(find.byKey(_head('receiver'))).label;
-      expect(label, isNot(contains('3')));
+      expect(label, isNot(contains('5')), reason: 'receiver is item 5; the badge is not spoken');
+      expect(label, contains(kWhatsNewTagFrom013), reason: 'the origin tag is spoken');
       handle.dispose();
     });
 
     test('the title is a fixed constant, not the app version', () {
-      expect(kWhatsNewPagerVersion, '0.1.3');
+      expect(kWhatsNewPagerVersion, '0.2.0');
     });
   });
 
   group('the auto-read build (flag on)', () {
-    testWidgets('banner, six items (the standard six), and its provisional Privacy item', (tester) async {
+    testWidgets('banner, twelve items (new in 0.2.0 first, then the 0.1.3 six) and its signed Privacy item', (tester) async {
       await _pump(tester);
       expect(_text(tester, const Key('whatsNewBannerHead')), 'This is the auto-read version of mmogo');
       expect(
@@ -458,16 +461,18 @@ void main() {
         'If you do not want SMS permission, the standard version works without it.',
       );
       expect(find.byKey(const Key('whatsNewBannerLink')), findsNothing, reason: 'no link on this banner');
-      expect(_text(tester, const Key('whatsNewIntro')), startsWith('Six small things changed.'));
-      expect(find.byType(WhatsNewItemView), findsNWidgets(6));
+      expect(_text(tester, const Key('whatsNewIntro')), kWhatsNewIntro);
+      expect(find.byType(WhatsNewItemView), findsNWidgets(12));
       expect(find.byKey(const Key('whatsNewItemTitle-reading')), findsNothing);
-      expect(find.byKey(_body('nav')), findsOneWidget, reason: 'the first row starts open');
+      expect(find.byKey(_body('airother')), findsOneWidget, reason: 'the first row starts open');
       await _openRow(tester, 'privacy');
       final privacy = _text(tester, const Key('whatsNewPara-privacy-0'));
-      expect(privacy, kWhatsNewPrivacyAutoReadBodyProvisional);
+      expect(privacy, kWhatsNewPrivacyAutoReadBody);
       expect(privacy, isNot(contains(kPrivacySentenceStandard)));
-      expect(_text(tester, const Key('whatsNewPara-privacy-1')), kWhatsNewPrivacyAutoReadReceiverNote);
-      expect(find.byKey(const Key('whatsNewPara-privacy-2')), findsNothing);
+      expect(_text(tester, const Key('whatsNewPara-privacy-1')), kWhatsNewPrivacyAutoReadTrail);
+      expect(_text(tester, const Key('whatsNewPara-privacy-2')), kWhatsNewPrivacyAutoReadKept);
+      expect(_text(tester, const Key('whatsNewPara-privacy-3')), kWhatsNewPrivacyAutoReadReceiverNote);
+      expect(find.byKey(const Key('whatsNewPara-privacy-4')), findsNothing);
     }, skip: autoreadOnly != null);
   });
 }

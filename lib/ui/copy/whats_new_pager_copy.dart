@@ -12,23 +12,43 @@ import 'data_copy.dart';
 import 'privacy_copy.dart';
 
 /// The version the page is about. A FIXED constant (not `AppInfo`): the page's
-/// title and the Updates entry say 0.1.3 (PM 31-10-2026: they must match the
-/// build). The six items below describe the 0.1.3 changes (wording signed by the
-/// PM 01-11-2026, `_pipeline/v0.1.3/wording-drafts.md` WN-0.1.3).
-const kWhatsNewPagerVersion = '0.1.3';
+/// title and the Updates entry say 0.2.0 (PM 31-10-2026: they must match the
+/// build). 0.1.3 was never released, so its six items (wording signed by the PM
+/// 01-11-2026, WN-0.1.3) are folded in and tagged [kWhatsNewTagFrom013]; the
+/// items new in 0.2.0 carry [kWhatsNewTagNew] (PM 14-11-2026).
+const kWhatsNewPagerVersion = '0.2.0';
+
+/// The tag on each item: which update it came from (SIGNED PM 14-11-2026).
+const kWhatsNewTagNew = 'New in 0.2.0';
+const kWhatsNewTagFrom013 = 'From 0.1.3';
 
 const kWhatsNewPagerTitle = "What's new in mmogo $kWhatsNewPagerVersion";
 
 /// The Updates entry (a synthetic card, not a stored notice).
+// SIGNED (PM 14-11-2026: 0.1.3 folded into 0.2.0)
 const kWhatsNewEntryBody =
-    'The bottom bar, airtime on Paid to, receiver details, Recently deleted, exports and privacy.';
+    'Airtime for another number, backups, and the 0.1.3 changes: the bottom bar, Paid to, receiver details, Recently deleted, exports and privacy.';
 
 /// PLACEHOLDER (not the mock's "See what's new": that label opens the browser
 /// for release notices, see the Updates footnote).
 const kWhatsNewEntryButton = "Read what's new";
 
 /// The line under the title (standard build: six items).
-const kWhatsNewIntro = 'Six small things changed. Tap one to read it. Tap Got it when you are done.';
+// SIGNED (PM 14-11-2026)
+const kWhatsNewIntro =
+    '0.1.3 was never released, so its changes are folded into 0.2.0. Each item says which update it came from. '
+    'Tap one to read it. Tap Got it when you are done.';
+
+// New in 0.2.0, shared by both builds (SIGNED PM 14-11-2026)
+const kWhatsNewAirOtherTitle = 'Airtime for another number';
+const kWhatsNewAirOtherSummary = 'Airtime bought for another number is now read and recorded.';
+const kWhatsNewAirOtherBody =
+    'Airtime bought for another number is now read and recorded. Earlier versions missed it. '
+    'Airtime has two categories: For myself and For another number. Your earlier airtime is filed under For myself.';
+
+const kWhatsNewBackupsTitle = 'Backups';
+const kWhatsNewBackupsSummary = kBackupNotRestorableByOlderV4;
+const kWhatsNewBackupsBody = '$kBackupNotRestorableByOlderV4 Backups from 0.1.2 still restore.';
 
 /// The banner at the very top of the standard build's page. It never uses the
 /// words of the other version's name: it only says what the second version

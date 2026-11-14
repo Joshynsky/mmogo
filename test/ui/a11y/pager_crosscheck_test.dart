@@ -2,7 +2,7 @@
 // page at 360 x 640, 1.3, light and dark: Got it is pinned (found without
 // scrolling the page, on screen, hit-testable, 44 px, not overlapping), and the
 // banner link and the two route buttons are reached and are 44 px. Two states:
-// the page as it opens (first row open) and every row open. The page's own tests
+// the page as it opens (first row open) and the Receiver details row open (one row at a time, PM 14-11-2026). The page's own tests
 // are in test/ui/whats_new/whats_new_pager_test.dart (A5a); this only runs the
 // same states through the shared matrix helper. Plus B3: item 1 never breaks
 // inside "M-Pesa" (written with the non-breaking hyphen).
@@ -29,8 +29,6 @@ Widget _host() => Builder(
   ),
 );
 
-const _rows = ['nav', 'airtime', 'receiver', 'deleted', 'exports', 'privacy'];
-
 void main() {
   tearDownAll(printA11yLog);
 
@@ -55,13 +53,10 @@ void main() {
     open: (t) async {
       await t.tap(_k('openPager'));
       await a11ySettle(t);
-      for (final id in _rows) {
-        if (_k('whatsNewItemBody-$id').evaluate().isNotEmpty) continue;
-        await t.ensureVisible(_k('whatsNewItemHead-$id'));
-        await a11ySettle(t);
-        await t.tap(_k('whatsNewItemHead-$id'));
-        await a11ySettle(t);
-      }
+      await t.ensureVisible(_k('whatsNewItemHead-receiver'));
+      await a11ySettle(t);
+      await t.tap(_k('whatsNewItemHead-receiver'));
+      await a11ySettle(t);
     },
     actions: () => [
       A11yAction('Got it', _k('whatsNewGotIt')),
