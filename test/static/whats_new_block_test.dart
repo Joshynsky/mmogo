@@ -39,13 +39,14 @@ void main() {
       expect(renderBlock('0.1.2', parseBlock(altered)), isNot(renderBlock('0.1.2', items)));
     });
 
-    test('the landing page block is the 0.1.2 carousel: markers once, six cards, no list', () {
+    test('the landing page block is the 0.2.0 checklist: markers once, six items, no carousel', () {
       final page = File('docs/index.html').readAsStringSync();
       final block = extractBlock(page)!;
-      expect("<h2>What's new in 0.1.2</h2>".allMatches(block), hasLength(1));
-      expect('class="slide wn"'.allMatches(block), hasLength(6));
-      expect(block, isNot(contains('<li>')));
+      expect("<h2>What's new in 0.2.0</h2>".allMatches(block), hasLength(1));
+      expect('<li>'.allMatches(block), hasLength(6));
+      expect(block, isNot(contains('class="slide wn"')));
       expect('<!-- whats-new:start -->'.allMatches(page), hasLength(1));
+      expect(block, equals(generateBlock(_changelog(), '0.2.0')!.trimRight()));
     });
   });
 
