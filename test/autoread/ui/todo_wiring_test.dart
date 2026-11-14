@@ -17,7 +17,6 @@ import 'package:mmogo/autoread/data/real_waiting_repository.dart';
 import 'package:mmogo/autoread/logic/airtime_auto.dart';
 import 'package:mmogo/autoread/model/waiting_item.dart';
 import 'package:mmogo/autoread/service/autoread_service.dart';
-import 'package:mmogo/autoread/ui/categorize_sheet.dart';
 import 'package:mmogo/autoread/ui/choose_category_copy.dart';
 import 'package:mmogo/autoread/ui/notifications_autoread_copy.dart';
 import 'package:mmogo/autoread/ui/todo_copy.dart';
@@ -148,10 +147,28 @@ class _Env {
 
   Finder row(int n) => find.byKey(Key('waiting-row-${heldIdFor(n)}'));
 
-  Finder get chips => find.byWidgetPredicate((w) {
+  /// The compact row's Categorize button (PM 14-11-2026: no chip wall per row).
+  Finder get categorizeButtons => find.byKey(const Key('choose-categorize'));
+
+  Finder get sheetChips => find.byWidgetPredicate((w) {
     final k = w.key;
-    return k is ValueKey<String> && k.value.startsWith('choose-chip-');
+    return k is ValueKey<String> && k.value.startsWith('categorizeChip_');
   });
+
+  /// Taps Categorize on the first row, picks the sheet's first category and saves. Returns its id.
+  Future<String> pickViaSheet(WidgetTester t) async {
+    await t.ensureVisible(categorizeButtons.first);
+    await t.tap(categorizeButtons.first);
+    await settle(t);
+    final chipKey = sheetChips.first.evaluate().first.widget.key! as ValueKey<String>;
+    await t.ensureVisible(sheetChips.first);
+    await t.tap(sheetChips.first);
+    await t.pump();
+    await t.ensureVisible(find.byKey(const Key('categorizeSave')));
+    await t.tap(find.byKey(const Key('categorizeSave')));
+    await settle(t);
+    return chipKey.value.replaceFirst('categorizeChip_', '');
+  }
 
   Future<List<Map<String, Object?>>> live(WidgetTester t) async => (await t
       .runAsync(() => db.query('transactions', where: 'deleted_at IS NULL')))!;
@@ -180,7 +197,7 @@ void main() {
       expect(find.byType(SnackBar), findsNothing);
       expect(find.text(kChooseCategoryTitle), findsOneWidget);
       expect(find.byKey(const Key('choose-later')), findsOneWidget);
-      expect(find.text(kActionCategorize), findsNothing);
+      expect(find.byKey(const Key('choose-categorize')), findsOneWidget);
       expect(
         find.byKey(const Key('waiting-row-focused')),
         findsNothing,
@@ -201,13 +218,8 @@ void main() {
         find.descendant(of: a.row(1), matching: find.text(kActionParse)),
       );
       await a.settle(t);
-      expect(a.chips, findsWidgets);
-      final chipKey =
-          a.chips.first.evaluate().first.widget.key! as ValueKey<String>;
-      final categoryId = chipKey.value.replaceFirst('choose-chip-', '');
-      await t.tap(a.chips.first);
-      await t.tap(a.chips.first, warnIfMissed: false); // a quick second tap
-      await a.settle(t);
+      expect(a.categorizeButtons, findsWidgets);
+      final categoryId = await a.pickViaSheet(t);
       final viaRow = await a.live(t);
       expect(viaRow, hasLength(1));
       expect(
@@ -273,10 +285,9 @@ void main() {
       expect(find.text(kNoteMovedToCategorize), findsOneWidget);
       expect(find.byKey(const Key('choose-later')), findsNothing);
       expect(find.text('$kHeadingToCategorize (1)'), findsOneWidget);
-      expect(e.chips, findsWidgets); // the same chips
+      expect(e.categorizeButtons, findsWidgets); // the same Categorize button
       expect(await e.live(t), isEmpty);
-      await t.tap(e.chips.first);
-      await e.settle(t);
+      await e.pickViaSheet(t);
       final rows = await e.live(t);
       expect(rows, hasLength(1));
       expect(rows.single['amount_cents'], 35000);
@@ -383,7 +394,7 @@ void main() {
   );
 
   testWidgets(
-    'airtime OFF behaves as another row: choose row with its one category, no Later, no switch card',
+    'airtime OFF behaves as another row: choose row, Categorize opens the sheet with its one fixed category, no Later, no switch card',
     (t) async {
       final e = _Env();
       await e.open(t);
@@ -393,13 +404,11 @@ void main() {
       );
       await e.settle(t);
       expect(find.text(kChooseCategoryTitle), findsOneWidget);
-      expect(find.text(kCategorizeAirtimeFixed), findsOneWidget);
       expect(find.byKey(const Key('choose-later')), findsNothing);
       expect(find.byKey(const Key('autoAirtimeCard')), findsNothing);
       expect(find.byKey(const Key('autoAirtimeSwitch')), findsNothing);
-      expect(e.chips, findsOneWidget);
-      await t.tap(e.chips.first);
-      await e.settle(t);
+      expect(e.categorizeButtons, findsOneWidget);
+      await e.pickViaSheet(t);
       final rows = await e.live(t);
       expect(rows, hasLength(1));
       expect(rows.single['source_type'], 'AIRTIME');

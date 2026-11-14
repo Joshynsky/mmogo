@@ -6,6 +6,7 @@ import 'package:mmogo/autoread/ui/categorize_sheet.dart';
 import 'package:mmogo/autoread/ui/category_choices.dart';
 import 'package:mmogo/autoread/ui/choose_category_copy.dart';
 import 'package:mmogo/autoread/ui/choose_category_row.dart';
+import 'package:mmogo/autoread/ui/notifications_autoread_copy.dart' show kActionCategorize;
 import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:mmogo/ui/theme/app_theme.dart';
 
@@ -82,47 +83,63 @@ void main() {
     await t.pump();
   }
 
-  testWidgets('chips come from choicesFor, plus + New and Later on a fresh row', (t) async {
+  testWidgets('a compact row: Categorize and Later on a fresh row, no chips on the row', (t) async {
     await open(t, laters: []);
     expect(find.text(kChooseCategoryTitle), findsOneWidget);
     expect(find.text(chooseCategoryFresh(_desc)), findsOneWidget);
+    expect(find.byKey(const Key('choose-categorize')), findsOneWidget);
+    expect(find.text(kChooseLaterChip), findsOneWidget);
     for (final c in cats) {
-      expect(find.byKey(Key('choose-chip-${c.id}')), findsOneWidget);
+      expect(find.byKey(Key('choose-chip-${c.id}')), findsNothing);
+    }
+    expect(find.byKey(const Key('categorizeSave')), findsNothing, reason: 'the sheet is closed');
+  });
+
+  testWidgets('Categorize opens the sheet; picking there and Save calls onPickCategory once with the id', (t) async {
+    final picks = <String>[];
+    await open(t, picks: picks, laters: []);
+    await t.tap(find.byKey(const Key('choose-categorize')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('categorizeSave')), findsOneWidget);
+    for (final c in cats) {
+      expect(find.byKey(Key('categorizeChip_${c.id}')), findsOneWidget, reason: c.name);
     }
     expect(find.text(kCategorizeNewPill), findsOneWidget);
-    expect(find.text(kChooseLaterChip), findsOneWidget);
+    await t.tap(find.byKey(const Key('categorizeChip_2')));
+    await t.pump();
+    await t.tap(find.byKey(const Key('categorizeSave')));
+    await t.pumpAndSettle();
+    expect(picks, ['2']);
+    expect(find.byKey(const Key('categorizeSave')), findsNothing, reason: 'the sheet closed after saving');
   });
 
-  testWidgets('a chip tap calls onPickCategory once with the id', (t) async {
-    final picks = <String>[];
-    await open(t, picks: picks);
-    await t.tap(find.byKey(const Key('choose-chip-3')));
-    await t.pump();
-    expect(picks, ['3']);
-  });
-
-  testWidgets('double tap is one call', (t) async {
-    final picks = <String>[];
-    await open(t, picks: picks);
-    await t.tap(find.byKey(const Key('choose-chip-1')));
-    await t.tap(find.byKey(const Key('choose-chip-1')));
-    await t.pump();
-    await t.tap(find.byKey(const Key('choose-chip-2')));
-    await t.pump();
-    expect(picks, ['1']);
-  });
-
-  testWidgets('a failed save unlocks the row so a later tap can try again', (t) async {
+  testWidgets('a failed save shows the sheet error and a second Save can try again', (t) async {
     var calls = 0;
     await open(t, onPick: (i, id) async {
       calls++;
       if (calls == 1) throw StateError('no');
     });
-    await t.tap(find.byKey(const Key('choose-chip-1')));
+    await t.tap(find.byKey(const Key('choose-categorize')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('categorizeChip_1')));
     await t.pump();
-    await t.tap(find.byKey(const Key('choose-chip-1')));
-    await t.pump();
+    await t.tap(find.byKey(const Key('categorizeSave')));
+    await t.pumpAndSettle();
+    expect(find.text(kCategorizeSaveFailed), findsOneWidget);
+    await t.tap(find.byKey(const Key('categorizeSave')));
+    await t.pumpAndSettle();
     expect(calls, 2);
+  });
+
+  testWidgets('Close on the sheet saves nothing and leaves the row', (t) async {
+    final picks = <String>[];
+    await open(t, picks: picks);
+    await t.tap(find.byKey(const Key('choose-categorize')));
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip(kCategorizeClose));
+    await t.pumpAndSettle();
+    expect(picks, isEmpty);
+    expect(find.byKey(const Key('choose-categorize')), findsOneWidget);
   });
 
   testWidgets('Later calls onLater; not shown in To categorize or without a callback', (t) async {
@@ -137,32 +154,20 @@ void main() {
     expect(find.byKey(const Key('choose-later')), findsNothing);
   });
 
-  testWidgets('+ New opens the existing Categorize sheet and saving there picks once', (t) async {
-    final picks = <String>[];
-    await open(t, picks: picks, laters: []);
-    await t.tap(find.byKey(const Key('choose-new')));
-    await t.pumpAndSettle();
-    expect(find.byKey(const Key('categorizeSave')), findsOneWidget);
-    await t.tap(find.byKey(const Key('categorizeChip_2')));
-    await t.pump();
-    await t.tap(find.byKey(const Key('categorizeSave')));
-    await t.pumpAndSettle();
-    expect(picks, ['2']);
-  });
-
-  testWidgets('an airtime row shows its one category, no Later, no + New', (t) async {
+  testWidgets('an airtime row: no Later; the sheet shows its one fixed category preselected, Save picks it', (t) async {
     final picks = <String>[];
     await open(t, item: _item(airtime: true), picks: picks, laters: [], choices: [const CategoryChoice(id: '9', name: 'For myself')]);
-    expect(find.byKey(const Key('choose-chip-9')), findsOneWidget);
     expect(find.byKey(const Key('choose-later')), findsNothing);
-    expect(find.byKey(const Key('choose-new')), findsNothing);
+    await t.tap(find.byKey(const Key('choose-categorize')));
+    await t.pumpAndSettle();
     expect(find.text(kCategorizeAirtimeFixed), findsOneWidget);
-    await t.tap(find.byKey(const Key('choose-chip-9')));
-    await t.pump();
+    expect(find.text(kCategorizeNewPill), findsNothing);
+    await t.tap(find.byKey(const Key('categorizeSave')));
+    await t.pumpAndSettle();
     expect(picks, ['9']);
   });
 
-  testWidgets('a load failure says so and offers no chips', (t) async {
+  testWidgets('a load failure says so on the row and the sheet does not open', (t) async {
     t.view.devicePixelRatio = 1.0;
     t.view.physicalSize = const Size(360, 800);
     addTearDown(t.view.reset);
@@ -173,24 +178,22 @@ void main() {
       onPickCategory: (i, id) async {},
     )));
     await t.pump();
-    await t.pump();
+    await t.tap(find.byKey(const Key('choose-categorize')));
+    await t.pumpAndSettle();
     expect(find.text(kCategorizeLoadFailed), findsOneWidget);
-    expect(find.byKey(const Key('choose-chips')), findsNothing);
+    expect(find.byKey(const Key('categorizeSave')), findsNothing);
   });
 
   for (final dark in [false, true]) {
-    testWidgets('text 1.3, dark $dark: chips wrap onto more than one line, 44 px, no overflow', (t) async {
+    testWidgets('text 1.3, dark $dark: the buttons are 44 px and nothing overflows', (t) async {
       await open(t, scale: 1.3, dark: dark, laters: []);
       expect(t.takeException(), isNull);
-      final tops = <double>{};
-      for (final k in ['choose-chip-1', 'choose-chip-2', 'choose-chip-3', 'choose-chip-4', 'choose-chip-5', 'choose-new', 'choose-later']) {
+      for (final k in ['choose-categorize', 'choose-later']) {
         final f = find.byKey(Key(k));
         expect(t.getSize(f).height, greaterThanOrEqualTo(44), reason: k);
         expect(t.getSize(f).width, greaterThanOrEqualTo(44), reason: k);
         expect(t.getBottomRight(f).dx, lessThanOrEqualTo(360), reason: k);
-        tops.add(t.getTopLeft(f).dy);
       }
-      expect(tops.length, greaterThan(1));
     });
   }
 
@@ -198,7 +201,7 @@ void main() {
     final h = t.ensureSemantics();
     await open(t, laters: []);
     expect(find.bySemanticsLabel('Choose a category for $_desc'), findsOneWidget);
-    expect(find.bySemanticsLabel('Groceries'), findsOneWidget);
+    expect(find.bySemanticsLabel(kActionCategorize), findsOneWidget);
     expect(find.bySemanticsLabel(kChooseLaterChip), findsOneWidget);
     h.dispose();
   });

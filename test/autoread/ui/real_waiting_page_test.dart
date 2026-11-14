@@ -18,7 +18,6 @@ import 'package:mmogo/autoread/data/ingesting_launch_source.dart';
 import 'package:mmogo/autoread/data/real_waiting_actions.dart';
 import 'package:mmogo/autoread/data/real_waiting_repository.dart';
 import 'package:mmogo/autoread/service/autoread_service.dart';
-import 'package:mmogo/autoread/ui/categorize_sheet.dart' show kCategorizeNewPill;
 import 'package:mmogo/autoread/ui/choose_category_copy.dart';
 import 'package:mmogo/autoread/ui/launch_router.dart';
 import 'package:mmogo/autoread/ui/notifications_autoread_copy.dart';
@@ -143,8 +142,8 @@ void main() {
     expect(find.descendant(of: row(1), matching: find.text(kChooseCategoryTitle)), findsOneWidget);
     expect(await t.runAsync(() => db.query('transactions')), isEmpty); // nothing saved by Parse
 
-    // "+ New" in the choose row opens the same Categorize sheet.
-    await t.tap(find.descendant(of: row(1), matching: find.text(kCategorizeNewPill)));
+    // "Categorize" in the choose row opens the Categorize sheet.
+    await t.tap(find.descendant(of: row(1), matching: find.byKey(const Key('choose-categorize'))));
     await settle(t);
     final chips = find.byWidgetPredicate((w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('categorizeChip_'));
     expect(chips, findsWidgets);

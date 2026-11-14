@@ -54,6 +54,12 @@ void main() {
       expect(lightRead('UFGH123456 Ksh 70').time, isNull);
       expect(lightRead('Hello there $kSentinel').isEmpty, isTrue);
     });
+    test('the balance is never picked as the amount', () {
+      expect(lightRead('UKE8E24B9U Confirmed. New M-PESA balance is Ksh4,195.44 at 3:09 PM').amount, isNull);
+      expect(lightRead('Ksh 70 sent. M-PESA balance is Ksh4,195.44').amount, 'Ksh 70');
+      expect(lightRead('Your balance: Ksh 900.00. Paid Ksh 50 to X').amount, 'Ksh 50');
+      expect(lightRead('M-PESA balance is Ksh4,195.44. Transaction cost, Ksh0.').amount, isNull);
+    });
     test('words that look like a code are not taken (all letters, all digits, wrong length)', () {
       expect(lightRead('CONFIRMEDX 0712345678 ABCDEFGHIJK').code, isNull);
       expect(lightRead('AB1CD2EF3').code, isNull);

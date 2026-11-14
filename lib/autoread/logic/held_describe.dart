@@ -43,6 +43,7 @@ String airtimeKindWords(bool other) => (other ? kAirtimeNameOther : kAirtimeName
 
 final RegExp _codePattern = RegExp(r'\b(?=[A-Z0-9]*[0-9])(?=[A-Z0-9]*[A-Z])[A-Z0-9]{10}\b');
 final RegExp _amountPattern = RegExp(r'Ksh\.?\s?(\d{1,3}(?:,\d{3})*|\d+)(\.\d{1,2})?', caseSensitive: false);
+final RegExp _balanceWord = RegExp(r'bal(ance)?\b[^.]*$', caseSensitive: false);
 final RegExp _timePattern = RegExp(r'\bat\s+(\d{1,2}):(\d{2})\s*(AM|PM)', caseSensitive: false);
 
 String _two(int n) => n < 10 ? '0$n' : '$n';
@@ -52,8 +53,17 @@ String _two(int n) => n < 10 ? '0$n' : '$n';
 HeldDescription lightRead(String body) {
   final code = _codePattern.firstMatch(body)?.group(0);
 
+  // The balance is never picked out (Privacy): an amount that follows the word
+  // "balance" is skipped, the next amount is used (found 14-11-2026 on the Oppo).
   String? amount;
-  final a = _amountPattern.firstMatch(body);
+  RegExpMatch? a;
+  for (final m in _amountPattern.allMatches(body)) {
+    final before = body.substring(m.start < 40 ? 0 : m.start - 40, m.start);
+    if (_balanceWord.hasMatch(before)) continue;
+    if (RegExp(r'^[0.,]*$').hasMatch(m.group(1)! + (m.group(2) ?? ''))) continue; // "Ksh0" is a fee line, not the amount
+    a = m;
+    break;
+  }
   if (a != null) {
     final frac = a.group(2);
     final trimmed = (frac == null || frac == '.0' || frac == '.00') ? '' : frac;
