@@ -41,7 +41,7 @@ const kWhatsNewAutoSettingsBody =
     'The Auto-record airtime switches are now in Settings, under Remembered. '
     'Each automatic record can be undone. You do not need to tap Categorize.';
 const kWhatsNewAutoDefaults =
-    'Showing details and Parse from the notification are now on by default for new users. Your existing choices are not changed.';
+    'Your existing choices for showing details and Parse from the notification are not changed.';
 
 /// The Privacy item of this build: every sentence is SIGNED (13-11-2026) and comes from its one
 /// place; the first line is the permissions line.
