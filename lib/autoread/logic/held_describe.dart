@@ -81,5 +81,12 @@ HeldDescription lightRead(String body) {
       time = '${_two(h24)}:${_two(m)}';
     }
   }
-  return HeldDescription(code: code, amount: amount, time: time);
+  return HeldDescription(code: code, amount: amount, time: time, notice: isSystemNotice(body));
 }
+
+final RegExp _noticeShape = RegExp(r'unable\s+to\s+process|similar\s+transaction', caseSensitive: false);
+final RegExp _confirmedOpening = RegExp(r'^\s*[A-Z0-9]{10}\s*confirmed\b', caseSensitive: false);
+
+/// True for an M-Pesa system notice that is not a transaction (never a "Confirmed"
+/// message). Used only to label the row; the message is kept as before.
+bool isSystemNotice(String body) => !_confirmedOpening.hasMatch(body) && _noticeShape.hasMatch(body);

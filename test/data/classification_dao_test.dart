@@ -75,11 +75,11 @@ void main() {
 
   group('fetchGroups', () {
     // S3b (v3, signed 08-10-2026): 6 groups, all enabled, Pochi named 'Pochi'.
-    test('returns all 6 seeded groups, ordered by id, with correct enabled flags', () async {
+    test('returns all 7 seeded groups, ordered by id, with correct enabled flags', () async {
       final db = await _openFreshDb();
       final groups = await ClassificationDao.fetchGroups(db);
 
-      expect(groups, hasLength(6));
+      expect(groups, hasLength(7));
       expect(groups.map((g) => g.code), [
         'SEND_MONEY',
         'PAYBILL',
@@ -87,6 +87,7 @@ void main() {
         'POCHI_LA_BIASHARA',
         'AGENT_WITHDRAWAL',
         'AIRTIME',
+        'CASH_USE',
       ]);
       final byCode = {for (final g in groups) g.code: g};
       expect(byCode['SEND_MONEY']!.enabled, isTrue);
@@ -99,6 +100,8 @@ void main() {
       expect(byCode['POCHI_LA_BIASHARA']!.displayName, 'Pochi');
       expect(byCode['AGENT_WITHDRAWAL']!.displayName, 'Withdrawal');
       expect(byCode['AIRTIME']!.displayName, 'Airtime');
+      expect(byCode['CASH_USE']!.displayName, 'Cash');
+      expect(byCode['CASH_USE']!.enabled, isTrue);
       await db.close();
     });
   });

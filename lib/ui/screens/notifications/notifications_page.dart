@@ -159,7 +159,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
     final specs = <NotifChipSpec>[];
     if (kAutoReadCompiled) {
       final w = _waiting ?? const <WaitingItem>[];
-      final n = all.todoCount(w, now);
+      final n = all.todoCount(w, now,
+          undecidedWithdrawals: widget.waitingActions.undecided?.value.length ?? 0);
       specs.add(NotifChipSpec(
           chip: NotifChip.todo, label: kTodoChipLabel, spokenName: kTodoChipSpoken, count: n));
     }
@@ -237,7 +238,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+        // 0.2.1: the To do number follows the "need a decision" item.
+        listenable: Listenable.merge([?widget.waitingActions.undecided]),
+        builder: (context, _) => _page(context),
+      );
+
+  Widget _page(BuildContext context) {
     final p = AppPalette.of(context);
     final now = _now();
     final specs = _specs(now);

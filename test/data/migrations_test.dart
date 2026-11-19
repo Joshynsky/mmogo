@@ -185,9 +185,9 @@ void main() {
 
   // S3b retarget: a fresh install is now version 3 with all 17 seed keys.
   test('fresh install: version 3 with all 18 seed keys', () async {
-    expect(kDbVersion, 5);
+    expect(kDbVersion, 7);
     final db = await _openLatest(path);
-    expect(await _userVersion(db), 5);
+    expect(await _userVersion(db), 7);
     final rows = await db
         .rawQuery('SELECT id, name, seed_key FROM classifications ORDER BY id');
     expect(rows.length, 18);
@@ -208,13 +208,17 @@ void main() {
     await v1.close();
 
     final db = await _openLatest(path);
-    expect(await _userVersion(db), 5);
+    expect(await _userVersion(db), 7);
     final after = await _dump(db, dropSeedKey: true);
-    // Transactions: identical except for the new NULL agent_number column.
+    // Transactions: identical except for the new NULL agent_number column and the two v6
+    // columns (parent NULL, decided 0).
     expect([
-      for (final r in after['transactions']!) {...r}..remove('agent_number')
+      for (final r in after['transactions']!)
+        {...r}..remove('agent_number')..remove('parent_transaction_id')..remove('cash_only_decided')
     ], before['transactions']);
     expect(after['transactions']!.every((r) => r['agent_number'] == null), isTrue);
+    expect(after['transactions']!.every((r) => r['parent_transaction_id'] == null && r['cash_only_decided'] == 0),
+        isTrue);
     // The map: the one SEND_MONEY key is already canonical, so nothing changed.
     expect(after['counterparty_classification_map'], before['counterparty_classification_map']);
     // Classifications: the first 15 rows unchanged, then the five new built-ins.
@@ -229,7 +233,7 @@ void main() {
     final groups = await db.rawQuery(
         'SELECT id, code, display_name, enabled FROM classification_groups ORDER BY id');
     expect(groups.map((g) => g['code']).toList(), [
-      'SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'POCHI_LA_BIASHARA', 'AGENT_WITHDRAWAL', 'AIRTIME',
+      'SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'POCHI_LA_BIASHARA', 'AGENT_WITHDRAWAL', 'AIRTIME', 'CASH_USE',
     ]);
     expect(groups[3]['display_name'], 'Pochi');
     expect(groups.every((g) => g['enabled'] == 1), isTrue);
@@ -373,7 +377,7 @@ void main() {
     await db.close();
 
     db = await _openLatest(path);
-    expect(await _userVersion(db), 5);
+    expect(await _userVersion(db), 7);
     expect(await _dump(db), first);
     expect(await _shape(db), firstShape);
     await db.close();

@@ -4,13 +4,17 @@
 /// Rows take callbacks only (no repository); the page wires them.
 library;
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
+
+import '../../data/db/analytics_dao.dart' show AnalyticsTransactionRow;
 
 import '../logic/airtime_auto.dart';
 import '../model/held_description.dart';
 import '../model/waiting_item.dart';
 import 'auto_group.dart';
 import 'category_choices.dart';
+import 'decision_item.dart';
 import 'parse_all_bar.dart';
 import 'paste_sheet.dart';
 import 'remove_confirm.dart';
@@ -23,7 +27,7 @@ import 'waiting_row.dart';
 /// What a tap on a waiting row does. All optional: an unwired action is a
 /// no-op (an UNREADABLE row is shown with Details and Remove either way).
 class WaitingActions {
-  const WaitingActions({this.onParse, this.onCategorize, this.onPaste, this.onRemove, this.onParseAll, this.onDetails, this.airtime, this.describe, this.onChangeInSettings, this.clearDescriptions, this.onPickCategory, this.choicesFor, this.onLater, this.choosing});
+  const WaitingActions({this.onParse, this.onCategorize, this.onPaste, this.onRemove, this.onParseAll, this.onDetails, this.airtime, this.describe, this.onChangeInSettings, this.clearDescriptions, this.onPickCategory, this.choicesFor, this.onLater, this.choosing, this.undecided, this.onWithdrawalCashOnly, this.onWithdrawalCategorize, this.onDecisionCashOnly, this.onDecisionCashOnlyAll, this.onDecisionCategorize});
 
   final void Function(WaitingItem item)? onParse;
   final void Function(WaitingItem item)? onCategorize;
@@ -60,6 +64,21 @@ class WaitingActions {
 
   /// The ids parsed on this page visit (they get the Later chip). Null: none.
   final ChoosingIds? choosing;
+
+  /// 0.2.1: recorded withdrawals still waiting for Cash only / a category. Not empty: the ONE
+  /// "N withdrawals need a decision" item shows (it counts as 1 row in To categorize). Null: none.
+  final ValueListenable<List<AnalyticsTransactionRow>>? undecided;
+
+  /// 0.2.1: a parsed withdrawal ITEM (not recorded yet): Cash only | Categorize.
+  final Future<void> Function(WaitingItem item)? onWithdrawalCashOnly;
+  final Future<void> Function(WaitingItem item)? onWithdrawalCategorize;
+
+  /// 0.2.1: a row of the Review sheet (a recorded withdrawal).
+  final Future<void> Function(AnalyticsTransactionRow row)? onDecisionCashOnly;
+
+  /// "Cash only for all" on the Review sheet (every undecided withdrawal in one go). Null: no button.
+  final Future<void> Function(List<AnalyticsTransactionRow> rows)? onDecisionCashOnlyAll;
+  final Future<void> Function(AnalyticsTransactionRow row)? onDecisionCategorize;
 }
 
 /// The body of the To do view: the lists of readable, unreadable and waiting
@@ -97,6 +116,8 @@ class WaitingSection extends StatelessWidget {
                 choicesFor: actions.choicesFor!,
                 onPickCategory: actions.onPickCategory!,
                 onLater: actions.onLater,
+                onCashOnly: actions.onWithdrawalCashOnly,
+                onCategorizeWithdrawal: actions.onWithdrawalCategorize,
               )
             : HeldRowDescriber(
                 key: ValueKey('described-${w.id}'),
@@ -125,16 +146,33 @@ class WaitingSection extends StatelessWidget {
     if (await showRemoveConfirm(context, item: w)) actions.onRemove!(w);
   }
 
+  /// The one "N withdrawals need a decision" item, or null when there is none to decide.
+  Widget? _decision(BuildContext context) {
+    final list = actions.undecided?.value ?? const <AnalyticsTransactionRow>[];
+    if (list.isEmpty || actions.onDecisionCashOnly == null || actions.onDecisionCategorize == null) return null;
+    return DecisionItem(
+      count: list.length,
+      onReview: () => showDecisionReview(
+        context,
+        rows: actions.undecided!,
+        onCashOnly: actions.onDecisionCashOnly!,
+        onCashOnlyAll: actions.onDecisionCashOnlyAll,
+        onCategorize: actions.onDecisionCategorize!,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // It listens to the choosing ids so a row parsed on this page turns into a
     // choose row.
     return ListenableBuilder(
-      listenable: actions.choosing ?? Listenable.merge(const []),
+      listenable: Listenable.merge([?actions.choosing, ?actions.undecided]),
       builder: (context, _) => TodoSection(
         waiting: waiting,
         now: now,
         rowBuilder: (w) => _row(context, w),
+        decision: _decision(context),
         parseAllBar: actions.onParseAll == null || readableReady(waiting, now).isEmpty
             ? null
             : ParseAllBar(waiting: waiting, now: now, onParseAll: actions.onParseAll!),

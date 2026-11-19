@@ -17,6 +17,14 @@ void main() {
     expect(todoCount(waiting, now), 3 + 3);
   });
 
+  test('the withdrawals-decision item counts as ONE, however many withdrawals wait', () {
+    final waiting = waitingSet(WaitingDataSet.typical, now).items;
+    final base = todoCount(waiting, now);
+    expect(todoCount(waiting, now, undecidedWithdrawals: 0), base);
+    expect(todoCount(waiting, now, undecidedWithdrawals: 1), base + 1);
+    expect(todoCount(waiting, now, undecidedWithdrawals: 5), base + 1);
+  });
+
   test('empty in, zero out', () {
     expect(todoCount(const <WaitingItem>[], now), 0);
   });

@@ -5,7 +5,9 @@ import '../../../data/backup/auto_backup_service.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/db/classification_dao.dart';
 import '../../../data/db/counterparty_dao.dart';
+import '../../../data/db/linked_cash_dao.dart';
 import '../../../data/db/transaction_dao.dart';
+import '../../copy/withdrawal_copy.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../../data/prefs/recipient_memory.dart';
 import '../../../domain/cash/cash_code.dart';
@@ -31,6 +33,7 @@ import 'paste_card.dart';
 import 'receiver_card.dart';
 import 'recipient_chooser.dart';
 import 'review_bar.dart';
+import 'withdrawal_use_row.dart';
 import 'review_sheet.dart';
 import 'src_segment.dart';
 import 'type_pills.dart';
@@ -136,6 +139,10 @@ class _AddScreenState extends State<AddScreen> {
   bool _codeDuplicate = false;
 
   int? _classificationId;
+
+  /// 0.2.1: type W only: the category the withdrawal money was for (null = Cash only).
+  int? _wdChoiceId;
+  String? _wdChoiceName; // name of _wdChoiceId, for the review line
   String? _classificationName;
 
   /// The counterparty key the "Always use" tick is currently held for
@@ -225,6 +232,7 @@ class _AddScreenState extends State<AddScreen> {
       // group can't carry over — category_chips.dart re-offers a suggestion
       // if this counterparty is already known.
       _classificationId = null;
+      _wdChoiceId = null;
       _classificationName = null;
       _autoApplyKey = null;
     });
@@ -256,6 +264,7 @@ class _AddScreenState extends State<AddScreen> {
       _subController.clear();
       _occurredAt = DateTime.now();
       _classificationId = null;
+      _wdChoiceId = null;
       _classificationName = null;
       _autoApplyKey = null;
       _codeDuplicate = false;
@@ -288,6 +297,7 @@ class _AddScreenState extends State<AddScreen> {
       _nameController.clear();
       _subController.clear();
       _classificationId = null;
+      _wdChoiceId = null;
       _classificationName = null;
       _autoApplyKey = null;
     });
@@ -346,6 +356,7 @@ class _AddScreenState extends State<AddScreen> {
       _airtimeOther = false;
       _type = type.dbValue;
       _classificationId = null;
+      _wdChoiceId = null;
       _classificationName = null;
       _autoApplyKey = null;
       _nameController.text = _ask.name; // the SMS name, for Pochi's label / Send Money's note
@@ -430,6 +441,7 @@ class _AddScreenState extends State<AddScreen> {
       // resets — amount/When/receiver fields carry over untouched, so
       // switching tabs to correct a mistake never throws away what's typed.
       _classificationId = null;
+      _wdChoiceId = null;
       _classificationName = null;
       _autoApplyKey = null;
     });
@@ -446,6 +458,7 @@ class _AddScreenState extends State<AddScreen> {
       // violate the group-scope guard trigger for the new Type — must be
       // re-picked (same reasoning `mpesa_tab_body.dart` documented).
       _classificationId = null;
+      _wdChoiceId = null;
       _classificationName = null;
       _autoApplyKey = null;
       // The receiver fields (and so an agent number) never carry to another type.
@@ -552,6 +565,9 @@ class _AddScreenState extends State<AddScreen> {
         code: _codeController.text.trim(),
         feeCents: _src == 'MPESA' && !_draft.isAirtime ? _parsedFeeCents() : null,
         categoryName: _classificationName!,
+        spentOnText: _src != 'CASH' && _type == 'AGENT_WITHDRAWAL'
+            ? wdReviewSpentOn(categoryName: _wdChoiceId == null ? null : _wdChoiceName, amountCents: _parsedAmountCents()!)
+            : null,
         alwaysForThem: _autoApplyKey != null && _autoApplyKey == _currentCounterpartyKey(),
         onConfirm: _save,
       ),
@@ -574,19 +590,32 @@ class _AddScreenState extends State<AddScreen> {
     if (db == null) return 'Not ready yet — try again.';
     final cash = _src == 'CASH';
     final draft = _draft;
+    int? wdLinkId;
+    var wdAmount = 0;
     try {
       final input = draft.toInput(
         cashCode: generateCashDisplayCode(_occurredAt.millisecondsSinceEpoch),
         rawParseSource: _rawParseSource,
         occurredAtMillis: _occurredAt.millisecondsSinceEpoch,
       );
-      await TransactionDao.insert(db, input);
+      final newId = await TransactionDao.insert(db, input);
+      wdLinkId = newId;
+      wdAmount = input.amountCents;
     } catch (_) {
       // B4: any failure (a DatabaseException, or anything else thrown while
       // building or writing the row) comes back as this plain message, which
       // the review sheet shows inline; the screen never crashes or sticks on
       // "saving". The raw error text means nothing to the user.
       return 'Could not save this transaction. Check the amount and code, then try again.';
+    }
+    // 0.2.1: a withdrawal saved with a category also adds its linked Cash entry (Cash only adds nothing).
+    final wdCategory = _wdChoiceId;
+    if (!cash && _type == 'AGENT_WITHDRAWAL' && wdCategory != null) {
+      try {
+        await LinkedCashDao.createLinkedCash(db, withdrawalId: wdLinkId, classificationId: wdCategory, amountCents: wdAmount);
+      } catch (_) {
+        return kWdLinkedNotAdded;
+      }
     }
     if (!cash) {
       final key = _currentCounterpartyKey();
@@ -776,6 +805,17 @@ class _AddScreenState extends State<AddScreen> {
                     autoApplyChecked: _autoApplyKey != null && _autoApplyKey == counterpartyKey,
                     onAutoApplyChanged: (checked) => setState(() => _autoApplyKey = checked ? counterpartyKey : null),
                     tourKey: _categoryTourKey,
+                  ),
+                if (!_ask.pending && _src != 'CASH' && _type == 'AGENT_WITHDRAWAL')
+                  WithdrawalUseRow(
+                    db: db,
+                    palette: palette,
+                    selectedId: _wdChoiceId,
+                    amountCents: _draft.amountCents,
+                    onChanged: (id, name) => setState(() {
+                      _wdChoiceId = id;
+                      _wdChoiceName = name;
+                    }),
                   ),
                 const SizedBox(height: 80),
               ],

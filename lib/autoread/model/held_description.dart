@@ -7,13 +7,17 @@
 library;
 
 class HeldDescription {
-  const HeldDescription({this.what, this.code, this.amount, this.time});
+  const HeldDescription({this.what, this.code, this.amount, this.time, this.notice = false});
 
   final String? what;
   final String? code;
   final String? amount;
   final String? time;
 
+  /// True when the light reader recognised an M-Pesa system notice that is not a
+  /// transaction (e.g. "unable to process ... similar transaction underway").
+  final bool notice;
+
   /// True when nothing was found (the row keeps its fallback title).
-  bool get isEmpty => what == null && code == null && amount == null && time == null;
+  bool get isEmpty => what == null && code == null && amount == null && time == null && !notice;
 }

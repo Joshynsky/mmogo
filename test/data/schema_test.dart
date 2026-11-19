@@ -73,12 +73,12 @@ void main() {
 
   group('seed data', () {
     // S3b (v3, signed 08-10-2026): 6 groups, all enabled, Pochi named 'Pochi'.
-    test('classification_groups has exactly 6 rows (v3), all enabled, in order', () async {
+    test('classification_groups has exactly 7 rows (v7), all enabled, in order', () async {
       final db = await _openFreshDb();
       final rows = await db.query('classification_groups', orderBy: 'id');
-      expect(rows, hasLength(6));
+      expect(rows, hasLength(7));
       expect(rows.map((r) => r['code']).toList(), [
-        'SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'POCHI_LA_BIASHARA', 'AGENT_WITHDRAWAL', 'AIRTIME',
+        'SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'POCHI_LA_BIASHARA', 'AGENT_WITHDRAWAL', 'AIRTIME', 'CASH_USE',
       ]);
 
       final byCode = {for (final r in rows) r['code'] as String: r};
@@ -86,6 +86,7 @@ void main() {
         expect(r['enabled'], 1, reason: '${r['code']} is enabled on a fresh v3 install');
       }
       expect(byCode['POCHI_LA_BIASHARA']!['display_name'], 'Pochi');
+      expect(byCode['CASH_USE']!['display_name'], 'Cash');
 
       await db.close();
     });

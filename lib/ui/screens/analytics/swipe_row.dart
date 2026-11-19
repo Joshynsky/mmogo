@@ -6,6 +6,7 @@ import '../../../data/db/analytics_dao.dart';
 import '../../../domain/format/money.dart';
 import '../../../domain/format/source_types.dart';
 import '../../copy/spend_copy.dart';
+import '../../copy/withdrawal_copy.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/tabular.dart';
 import '../../widgets/type_icon.dart';
@@ -87,10 +88,12 @@ class _SwipeRowState extends State<AnalyticsSwipeRow> {
     final agent = tx.agentNumber;
     // Second line: Class . agent number (a Withdrawal that has one) . time . code
     // (a Cash row has no code).
+    // 0.2.1: a withdrawal that was spent as cash shows "-> Rent" right after its time (same line).
+    final arrow = wd && tx.linkedCategoryNames.isNotEmpty ? wdArrowText(tx.linkedCategoryNames) : null;
     final meta = [
       tx.classificationName,
       if (wd && agent != null && agent.isNotEmpty) agent,
-      analyticsHhmm(tx.occurredAt),
+      arrow == null ? analyticsHhmm(tx.occurredAt) : '${analyticsHhmm(tx.occurredAt)} $arrow',
       if (!isCash) tx.displayCode,
     ].join(' · ');
     final fee = tx.transactionCostCents ?? 0;
@@ -147,11 +150,31 @@ class _SwipeRowState extends State<AnalyticsSwipeRow> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  tx.displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: p.ink),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        tx.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: p.ink),
+                      ),
+                    ),
+                    if (tx.fromWithdrawal)
+                      Container(
+                        key: Key('analyticsRowFromWithdrawal-${tx.id}'),
+                        margin: const EdgeInsets.only(left: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: p.sun.withValues(alpha: 0.18),
+                          borderRadius: const BorderRadius.all(Radius.circular(8)),
+                        ),
+                        child: Text(
+                          kWdFromWithdrawalTag,
+                          style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w700, color: p.sun),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 1),
                 Text(
@@ -191,6 +214,7 @@ class _SwipeRowState extends State<AnalyticsSwipeRow> {
       label:
           '${tx.displayName}, ${formatKsh(tx.amountCents)}'
           '${wd ? ', ${notCountedLabel(feeCents: fee)}' : (fee > 0 ? ', plus ${formatKsh(fee)} fee' : '')}'
+          '${tx.fromWithdrawal ? ', $kWdFromWithdrawalTag' : ''}'
           ', ${sourceTypeName(tx.sourceType)}, $meta. '
           'Tap to edit. Press E to edit, Delete to delete',
       customSemanticsActions: {

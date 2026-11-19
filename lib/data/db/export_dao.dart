@@ -19,6 +19,8 @@ class ExportTransactionRow {
     required this.groupDisplayName,
     required this.occurredAt,
     this.agentNumber,
+    this.parentTransactionId,
+    this.linkedToCode,
   });
 
   final String displayCode;
@@ -37,6 +39,17 @@ class ExportTransactionRow {
 
   /// Withdrawal rows only: 1 to 20 ASCII digits, else `null` (0.1.2, AG1).
   final String? agentNumber;
+
+  /// 0.2.1: the withdrawal this Cash entry is linked to (`parent_transaction_id`), else null.
+  final int? parentTransactionId;
+
+  /// 0.2.1: true for a Cash entry added from a withdrawal. Such a row and its withdrawal
+  /// are two lines of the same money: a sheet that sums Amount should not add both.
+  bool get fromWithdrawal => parentTransactionId != null;
+
+  /// 0.2.1: the display code of that withdrawal, else null. NOT written to the CSV (the header
+  /// stays the same 11 names); a caller that wants a "Linked To" column can add it later.
+  final String? linkedToCode;
 }
 
 /// T10 — CSV Export's query + formatting layer. Follows the same raw-SQL-
@@ -87,10 +100,11 @@ class ExportDao {
     final rows = await db.rawQuery('''
       SELECT t.display_code, t.source_type, t.amount_cents, t.transaction_cost_cents,
              t.counterparty_label, t.counterparty_phone, t.paybill_account_number,
-             t.agent_number,
+             t.agent_number, t.parent_transaction_id, p.display_code AS parent_code,
              c.name AS classification_name, g.display_name AS group_display_name,
              t.transaction_occurred_at
       FROM transactions t
+      LEFT JOIN transactions p ON p.id = t.parent_transaction_id
       JOIN classifications c ON c.id = t.classification_id
       JOIN classification_groups g ON g.id = c.group_id
       WHERE t.deleted_at IS NULL
@@ -107,6 +121,8 @@ class ExportDao {
             counterpartyPhone: row['counterparty_phone'] as String?,
             paybillAccountNumber: row['paybill_account_number'] as String?,
             agentNumber: row['agent_number'] as String?,
+            parentTransactionId: row['parent_transaction_id'] as int?,
+            linkedToCode: row['parent_code'] as String?,
             classificationName: row['classification_name'] as String,
             groupDisplayName: row['group_display_name'] as String,
             occurredAt: DateTime.fromMillisecondsSinceEpoch(row['transaction_occurred_at'] as int),

@@ -33,6 +33,10 @@ class AnalyticsTransactionRow {
     required this.transactionCostCents,
     this.agentNumber,
     this.fromMessage = false,
+    this.parentTransactionId,
+    this.cashOnlyDecided = false,
+    this.linkedCategoryNames = const [],
+    this.linkedCents = 0,
   });
 
   final int id;
@@ -69,6 +73,23 @@ class AnalyticsTransactionRow {
   /// 0.2.0 S9: the row was read from an M-Pesa message (`raw_parse_source` = SMS_PARSE), not typed by hand.
   /// The edit sheet locks the message's own figures for such a row (flavor-gated there). Existing column, no schema change.
   final bool fromMessage;
+
+  /// 0.2.1: the withdrawal this Cash entry is linked to (`parent_transaction_id`), else null.
+  final int? parentTransactionId;
+
+  /// 0.2.1: true for a Cash entry added from a withdrawal (shows "from withdrawal").
+  bool get fromWithdrawal => parentTransactionId != null;
+
+  /// 0.2.1: a withdrawal the user marked "Cash only" (`cash_only_decided`).
+  final bool cashOnlyDecided;
+
+  /// 0.2.1: on a withdrawal row, the category names of its live linked entries, oldest
+  /// first, each name once (for the "-> Rent" line). Empty on every other row.
+  final List<String> linkedCategoryNames;
+
+  /// 0.2.1: on a withdrawal row, the total of its live linked entries in cents (what is
+  /// no longer "still cash"); 0 otherwise. Display only, never a spent total.
+  final int linkedCents;
 
   /// Row title: Cash rows show their classification (no counterparty exists
   /// for cash); every other row prefers its captured counterparty label,
@@ -130,6 +151,53 @@ class AnalyticsDao {
 
   /// Every stored source type, derived from [sourceTypeOrder] so a type
   /// added there can never be left out of an Analytics query.
+  /// The SELECT list every row query here shares (alias `t` = transactions, `c` =
+  /// classifications). `linked_names` / `linked_amounts` are the 0.2.1 read of a withdrawal's
+  /// live linked entries; both are NULL on a row with none.
+  static const String rowColumns = '''
+t.id, t.display_code, t.source_type, t.amount_cents,
+             t.counterparty_label, t.counterparty_phone, t.paybill_account_number,
+             t.classification_id, c.name AS classification_name,
+             t.transaction_occurred_at, t.transaction_cost_cents, t.agent_number, t.raw_parse_source,
+             t.parent_transaction_id, t.cash_only_decided,
+             (SELECT group_concat(lname, char(31)) FROM
+                (SELECT lc.name AS lname FROM transactions ch
+                 JOIN classifications lc ON lc.id = ch.classification_id
+                 WHERE ch.parent_transaction_id = t.id AND ch.deleted_at IS NULL
+                 ORDER BY ch.id)) AS linked_names,
+             (SELECT group_concat(ch.amount_cents, char(31)) FROM transactions ch
+              WHERE ch.parent_transaction_id = t.id AND ch.deleted_at IS NULL) AS linked_amounts''';
+
+  /// Builds one row from a query that selected [rowColumns].
+  static AnalyticsTransactionRow rowFrom(Map<String, Object?> row) {
+    final names = row['linked_names'] as String?;
+    // Summed here, not in SQL: the spend guard test allows no raw sum of the amount column under lib/.
+    final amounts = row['linked_amounts'] as String?;
+    final linked = amounts == null || amounts.isEmpty
+        ? 0
+        : amounts.split('\u001f').fold<int>(0, (s, a) => s + int.parse(a));
+    return AnalyticsTransactionRow(
+      id: row['id'] as int,
+      displayCode: row['display_code'] as String,
+      sourceType: row['source_type'] as String,
+      amountCents: (row['amount_cents'] as num).toInt(),
+      counterpartyLabel: row['counterparty_label'] as String?,
+      counterpartyPhone: row['counterparty_phone'] as String?,
+      paybillAccountNumber: row['paybill_account_number'] as String?,
+      classificationId: row['classification_id'] as int,
+      classificationName: row['classification_name'] as String,
+      occurredAt: DateTime.fromMillisecondsSinceEpoch(row['transaction_occurred_at'] as int),
+      transactionCostCents: (row['transaction_cost_cents'] as num?)?.toInt(),
+      agentNumber: row['agent_number'] as String?,
+      fromMessage: row['raw_parse_source'] == 'SMS_PARSE',
+      parentTransactionId: row['parent_transaction_id'] as int?,
+      cashOnlyDecided: row['cash_only_decided'] == 1,
+      linkedCategoryNames:
+          names == null || names.isEmpty ? const [] : {...names.split('\u001f')}.toList(),
+      linkedCents: linked,
+    );
+  }
+
   static final Set<String> allTypes = {for (final (code, _) in sourceTypeOrder) code};
 
   /// Builds a `t.source_type IN (?,?,...)` fragment and appends its bind
@@ -264,10 +332,7 @@ class AnalyticsDao {
     final where = _buildWhere(startMs: startMs, endMs: endMs, types: types, args: args);
     final rows = await db.rawQuery(
       '''
-      SELECT t.id, t.display_code, t.source_type, t.amount_cents,
-             t.counterparty_label, t.counterparty_phone, t.paybill_account_number,
-             t.classification_id, c.name AS classification_name,
-             t.transaction_occurred_at, t.transaction_cost_cents, t.agent_number, t.raw_parse_source
+      SELECT $rowColumns
       FROM transactions t
       JOIN classifications c ON c.id = t.classification_id
       WHERE $where
@@ -275,27 +340,7 @@ class AnalyticsDao {
       ''',
       args,
     );
-    var items = rows
-        .map(
-          (row) => AnalyticsTransactionRow(
-            id: row['id'] as int,
-            displayCode: row['display_code'] as String,
-            sourceType: row['source_type'] as String,
-            amountCents: (row['amount_cents'] as num).toInt(),
-            counterpartyLabel: row['counterparty_label'] as String?,
-            counterpartyPhone: row['counterparty_phone'] as String?,
-            paybillAccountNumber: row['paybill_account_number'] as String?,
-            classificationId: row['classification_id'] as int,
-            classificationName: row['classification_name'] as String,
-            occurredAt: DateTime.fromMillisecondsSinceEpoch(
-              row['transaction_occurred_at'] as int,
-            ),
-            transactionCostCents: (row['transaction_cost_cents'] as num?)?.toInt(),
-            agentNumber: row['agent_number'] as String?,
-            fromMessage: row['raw_parse_source'] == 'SMS_PARSE',
-          ),
-        )
-        .toList();
+    var items = rows.map(rowFrom).toList();
     if (partyType != null && partyKey != null) {
       items = items
           .where(
@@ -321,10 +366,7 @@ class AnalyticsDao {
     final marks = List.filled(codes.length, '?').join(',');
     final rows = await db.rawQuery(
       '''
-      SELECT t.id, t.display_code, t.source_type, t.amount_cents,
-             t.counterparty_label, t.counterparty_phone, t.paybill_account_number,
-             t.classification_id, c.name AS classification_name,
-             t.transaction_occurred_at, t.transaction_cost_cents, t.agent_number, t.raw_parse_source
+      SELECT $rowColumns
       FROM transactions t
       JOIN classifications c ON c.id = t.classification_id
       WHERE t.deleted_at IS NULL AND t.display_code IN ($marks)
@@ -332,23 +374,6 @@ class AnalyticsDao {
       ''',
       codes.toList(),
     );
-    return [
-      for (final row in rows)
-        AnalyticsTransactionRow(
-          id: row['id'] as int,
-          displayCode: row['display_code'] as String,
-          sourceType: row['source_type'] as String,
-          amountCents: (row['amount_cents'] as num).toInt(),
-          counterpartyLabel: row['counterparty_label'] as String?,
-          counterpartyPhone: row['counterparty_phone'] as String?,
-          paybillAccountNumber: row['paybill_account_number'] as String?,
-          classificationId: row['classification_id'] as int,
-          classificationName: row['classification_name'] as String,
-          occurredAt: DateTime.fromMillisecondsSinceEpoch(row['transaction_occurred_at'] as int),
-          transactionCostCents: (row['transaction_cost_cents'] as num?)?.toInt(),
-          agentNumber: row['agent_number'] as String?,
-          fromMessage: row['raw_parse_source'] == 'SMS_PARSE',
-        ),
-    ];
+    return rows.map(rowFrom).toList();
   }
 }

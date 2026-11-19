@@ -137,7 +137,10 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
       _realWaiting = RealWaitingRepository(
         bridge: AutoReadRuntime.bridge,
         // Home, Analytics and Paid to re-query after a Categorize save, as after Add.
-        onSaved: () => PrimaryShell.active?.dataChanged(),
+        onSaved: () {
+          PrimaryShell.active?.dataChanged();
+          _realWaiting?.refreshUndecided(); // a new or decided withdrawal moves the bell
+        },
         store: AutoReadRuntime.store,
         service: AutoReadService(
           bridge: AutoReadRuntime.bridge,
@@ -160,17 +163,19 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
         _realWaiting!.airtime.clearTrail(); // the in-memory auto-record trail goes with the data
         _realWaiting!.clearDescriptions(); // so do the in-memory held-message descriptions
         await _realWaiting!.ingest();
+        await _realWaiting!.refreshUndecided();
       };
       // Look at what is held once the first frame is up (on start), after the
       // fail-closed check of the switch against the consent version.
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await AutoReadRuntime.reconcile();
         await _realWaiting?.ingest();
+        await _realWaiting?.refreshUndecided();
       });
     }
     _bell = BellCountsTracker(
       news: _news.watchNews(),
-      waiting: kAutoReadCompiled ? waitingBellNumbers(_waiting!, DateTime.now) : null,
+      waiting: kAutoReadCompiled ? waitingBellNumbers(_waiting!, DateTime.now, undecided: _realWaiting?.undecided) : null,
     );
     if (kAutoReadCompiled) {
       // F8: a tap on a phone notification opens the Notifications page.
@@ -189,7 +194,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (kAutoReadCompiled && state == AppLifecycleState.resumed) {
-      AutoReadRuntime.reconcile().then((_) => _realWaiting?.ingest());
+      AutoReadRuntime.reconcile().then((_) => _realWaiting?.ingest()).then((_) => _realWaiting?.refreshUndecided());
     }
   }
 

@@ -5,6 +5,13 @@ library;
 // SIGNED (PM 13-11-2026)
 const String kUnreadableTitle = 'This message could not be read';
 
+// SIGNED (PM 19-11-2026): the row title for an M-Pesa system notice that is not a transaction.
+const String kNoticeTitle = 'M-Pesa notice (not a transaction)';
+
+// WORDING-DRAFT (PM to sign): the line under it, and the note in Details.
+const String kNoticeSub = 'Nothing to paste or record. You can remove it.';
+const String kNoticeNote = 'This is a message from M-Pesa, not a payment. There is nothing to paste or record.';
+
 // SIGNED (PM 13-11-2026)
 const String kUnreadableTapHint = 'Tap to see how to paste it.';
 

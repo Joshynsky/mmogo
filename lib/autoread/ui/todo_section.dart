@@ -22,7 +22,11 @@ class TodoSection extends StatelessWidget {
     required this.rowBuilder,
     this.parseAllBar,
     this.trail,
+    this.decision,
   });
+
+  /// 0.2.1: the ONE "N withdrawals need a decision" item (counts as 1 row in To categorize). Null: none.
+  final Widget? decision;
 
   final List<WaitingItem> waiting;
   final DateTime now;
@@ -51,12 +55,13 @@ class TodoSection extends StatelessWidget {
         _TodoHeading('$kHeadingCouldNotRead (${capCount(unreadable.length)})', small: readable.isNotEmpty),
         ...unreadable.map(rowBuilder),
       ],
-      if (toCategorize.isNotEmpty) ...[
-        _TodoHeading('$kHeadingToCategorize (${capCount(toCategorize.length)})'),
+      if (toCategorize.isNotEmpty || decision != null) ...[
+        _TodoHeading('$kHeadingToCategorize (${capCount(toCategorize.length + (decision == null ? 0 : 1))})'),
         const _Quiet(kWaitingNotCounted),
+        if (decision != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: decision),
         ...toCategorize.map(rowBuilder),
       ],
-      if (readable.isEmpty && unreadable.isEmpty && toCategorize.isEmpty) const _EmptyCard(),
+      if (readable.isEmpty && unreadable.isEmpty && toCategorize.isEmpty && decision == null) const _EmptyCard(),
       ?trail,
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);

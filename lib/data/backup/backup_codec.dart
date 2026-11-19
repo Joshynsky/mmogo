@@ -45,7 +45,7 @@ class BackupCodec {
         for (final r in classifications) _pick(r, kBackupClassificationKeys),
       ],
       'transactions': [
-        for (final r in transactions) _pick(r, kBackupTransactionKeys),
+        for (final r in transactions) _pickTx(r),
       ],
       'counterparty_map': [
         for (final r in counterpartyMap) _pick(r, kBackupMapKeys),
@@ -58,6 +58,15 @@ class BackupCodec {
     };
     return Uint8List.fromList(utf8.encode(jsonEncode(envelope)));
   }
+
+  /// A transaction row also carries the two optional link keys, but only when they are
+  /// not the default (parent_id null, cash_only_decided 0): see `kBackupTransactionLinkKeys`.
+  static Map<String, Object?> _pickTx(Map<String, Object?> row) => <String, Object?>{
+        ..._pick(row, kBackupTransactionKeys),
+        if (row['parent_id'] != null) 'parent_id': row['parent_id'],
+        if (row['cash_only_decided'] != null && row['cash_only_decided'] != 0)
+          'cash_only_decided': row['cash_only_decided'],
+      };
 
   static Map<String, Object?> _pick(Map<String, Object?> row, List<String> keys) =>
       <String, Object?>{for (final k in keys) k: row[k]};

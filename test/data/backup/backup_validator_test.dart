@@ -116,7 +116,7 @@ void main() {
     });
 
     test('reject_newer_schema_version', () {
-      for (final v in [6, 7, 99, 2147483647]) {
+      for (final v in [8, 9, 99, 2147483647]) {
         _rejectJson(validBackupJson()..['schema_version'] = v,
             RestoreRejectReason.newer, field: 'schema_version');
       }
@@ -777,10 +777,11 @@ void main() {
         'dart:convert',
         'dart:typed_data',
         'backup_limits.dart',
+        'backup_links.dart',
         'backup_setting_keys.dart',
       ]);
-      // The two helper files it pulls in are import-free of IO too.
-      for (final f in ['backup_limits.dart', 'backup_setting_keys.dart']) {
+      // The helper files it pulls in are import-free of IO too.
+      for (final f in ['backup_limits.dart', 'backup_links.dart', 'backup_setting_keys.dart']) {
         final s = _stripComments(File('lib/data/backup/$f').readAsStringSync());
         expect(s.contains('dart:io'), isFalse);
         expect(s.contains('Uri'), isFalse);
@@ -844,7 +845,7 @@ void main() {
     });
 
     test('runs in Isolate.run: a rejection crosses back with its reason', () async {
-      final bytes = bytesOf(validBackupJson()..['schema_version'] = 6);
+      final bytes = bytesOf(validBackupJson()..['schema_version'] = 8);
       await expectLater(
         Isolate.run(() => BackupValidator.validate(bytes)),
         throwsA(isA<RestoreRejected>()

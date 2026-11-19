@@ -24,6 +24,7 @@ class ReviewSheet extends StatefulWidget {
     required this.code,
     required this.feeCents,
     required this.categoryName,
+    this.spentOnText,
     required this.alwaysForThem,
     required this.onConfirm,
   });
@@ -45,6 +46,9 @@ class ReviewSheet extends StatefulWidget {
   final int? feeCents;
 
   final String categoryName;
+
+  /// Type W only: what the withdrawal was spent on ("Spent on" row); null = no row.
+  final String? spentOnText;
 
   /// Whether the "Always use" tick was checked for this counterparty — adds
   /// "· always for them" to the Category row, matching the mock's
@@ -89,6 +93,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
       if (!widget.isCash) ('Code', widget.code),
       if (widget.feeCents != null) ('Fee', formatKsh(widget.feeCents!)),
       ('Category', widget.categoryName + (widget.alwaysForThem ? ' · always for them' : '')),
+      if (widget.spentOnText != null) ('Spent on', widget.spentOnText!),
     ];
     return SafeArea(
       child: Padding(

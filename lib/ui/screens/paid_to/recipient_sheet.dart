@@ -30,6 +30,7 @@ Future<bool?> showPaidToRecipientSheet(
   return showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true, // keep the header (title, Delete) below the status bar
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.35),
     constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.9),

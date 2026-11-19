@@ -220,7 +220,8 @@ class BackupService {
           'transaction_cost_cents, counterparty_label, counterparty_phone, '
           'paybill_account_number, agent_number, '
           'classification_id AS classification, '
-          'raw_parse_source, transaction_occurred_at, created_at '
+          'raw_parse_source, transaction_occurred_at, created_at, '
+          'parent_transaction_id AS parent_id, cash_only_decided '
           'FROM transactions WHERE deleted_at IS NULL ORDER BY id',
         ))
           Map<String, Object?>.of(r),

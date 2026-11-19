@@ -21,6 +21,7 @@ import 'copy_button.dart';
 import 'edit_lock_parts.dart';
 import 'format.dart';
 import 'sheet_parts.dart';
+import 'withdrawal_use_section.dart';
 
 /// §ANALYTICS.EDIT_SHEET — the edit-transaction form, its result types and classification sub-sheet.
 /// The edit form's "Delete" choice (handled by the screen, like the swipe).
@@ -31,6 +32,12 @@ class AnalyticsDeleteRequest {
 /// 0.2.0 S9: the "How it was paid" block was tapped: the screen that opened the sheet shows the Fuliza page.
 class AnalyticsOpenFuliza {
   const AnalyticsOpenFuliza();
+}
+
+/// 0.2.1: a linked Cash entry row in the withdrawal sheet was tapped: the screen opens that entry's sheet.
+class AnalyticsOpenLinked {
+  const AnalyticsOpenLinked(this.entryId);
+  final int entryId;
 }
 
 /// T13's edit form result: exactly the field set `TransactionDao.update`
@@ -45,7 +52,11 @@ class AnalyticsEditResult {
     this.paybillAccountNumber,
     this.transactionCostCents,
     this.agentNumber,
+    this.withdrawalPick,
   });
+
+  /// 0.2.1: withdrawal rows only: the "What was this money for?" choice, null = not changed.
+  final WithdrawalPick? withdrawalPick;
 
   final int amountCents;
   final int transactionOccurredAt;
@@ -135,6 +146,9 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
             CopyFieldButton(controller: c, palette: widget.palette, what: what),
           ],
         );
+
+  /// 0.2.1: the withdrawal's "What was this money for?" change (null = untouched).
+  WithdrawalPick? _wdPick;
 
   late DateTime _occurredAt = widget.tx.occurredAt;
   late int _classificationId = widget.tx.classificationId;
@@ -228,6 +242,7 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
     final selected = await showModalBottomSheet<ClassificationItem>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true, // keep the header (title, Delete) below the status bar
       backgroundColor: Colors.transparent,
       // The sheet and the Add-flow pickers inside it follow the app's palette
       // (dark when the app is dark).
@@ -258,6 +273,7 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
         paybillAccountNumber: (!_isCash && widget.tx.sourceType == 'PAYBILL') ? _orNull(_accountController) : null,
         transactionCostCents: _isCash ? null : (_hasCost ? _parsedCostCents() : (widget.tx.transactionCostCents ?? 0)),
         agentNumber: _isWithdrawal ? _orNull(_agentNumberController) : null,
+        withdrawalPick: _isWithdrawal ? _wdPick : null,
       ),
     );
   }
@@ -613,6 +629,14 @@ class _EditTransactionSheetState extends State<AnalyticsEditSheet> {
             ],
           ),
         ]),
+        if (_isWithdrawal)
+          WithdrawalUseSection(
+            db: widget.db,
+            palette: p,
+            tx: tx,
+            onChanged: (changed, id) => _wdPick = changed ? WithdrawalPick(id) : null,
+            onOpenEntry: (id) => Navigator.of(context).pop(AnalyticsOpenLinked(id)),
+          ),
         AnalyticsSheetActions(
           palette: p,
           cancelKey: const Key('editCancelButton'),

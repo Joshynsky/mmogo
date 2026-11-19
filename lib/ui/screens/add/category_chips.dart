@@ -221,7 +221,14 @@ class _CategoryChipsState extends State<CategoryChips> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(item.name, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: selected ? palette.onPrimary : palette.ink)),
+            Flexible(
+              child: Text(
+                item.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: selected ? palette.onPrimary : palette.ink),
+              ),
+            ),
             if (isSuggested) ...[
               const SizedBox(width: 5),
               Text('· usual', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: selected ? palette.onPrimary : palette.primary)),

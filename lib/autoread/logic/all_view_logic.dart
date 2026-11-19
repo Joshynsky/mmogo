@@ -5,6 +5,8 @@ import '../model/waiting_item.dart';
 import 'waiting_logic.dart';
 
 /// The To do chip number: To parse + To categorize (the two bell numbers added).
-/// News, Could not read and the trail are not in it.
-int todoCount(Iterable<WaitingItem> waiting, DateTime now) =>
-    parseCount(waiting, now) + categorizeCount(waiting, now);
+/// Could not read is left out ON PURPOSE (it is the "unreadable" rule above; pinned by test).
+/// News and the trail are not in it. 0.2.1: the "N withdrawals need a decision" item counts as
+/// ONE (as in the To categorize heading): pass [undecidedWithdrawals], the number waiting.
+int todoCount(Iterable<WaitingItem> waiting, DateTime now, {int undecidedWithdrawals = 0}) =>
+    parseCount(waiting, now) + categorizeCount(waiting, now) + (undecidedWithdrawals > 0 ? 1 : 0);

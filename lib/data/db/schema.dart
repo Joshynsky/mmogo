@@ -3,6 +3,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../../domain/airtime/airtime_kind.dart';
 import 'migration_v3_ddl.dart';
 import 'migration_v5_ddl.dart';
+import 'migration_v6_ddl.dart';
+import 'migration_v7_ddl.dart';
 
 /// Pure schema/seed logic, factored out of [AppDatabase] so it can be
 /// exercised directly against an in-memory database in unit tests without
@@ -61,18 +63,21 @@ class AppSchema {
     (group: 'AIRTIME', name: kAirtimeNameOther, seedKey: kAirtimeSeedOther),
   ];
 
-  /// Creates the CURRENT (version 5) schema: the v3 tables plus `fuliza_events` and the Airtime kind-lock trigger from the frozen constants in
+  /// Creates the CURRENT (version 7) schema: the v3 tables plus `fuliza_events`, the Airtime kind-lock trigger and the v6 link columns/triggers from the frozen constants in
   /// `migration_v3_ddl.dart`, so a fresh install and a migrated 0.1.1 database
   /// come from the same text. (The long design history of the `transactions`
   /// CHECKs lives with the frozen 0.1.1 copy, `test/fixtures/schema_v2.dart`.)
   static Future<void> createSchema(Database db) async {
-    for (final sql in v3SchemaStatements()) {
+    for (final sql in v7SchemaStatements()) {
       await db.execute(sql);
     }
     for (final sql in kFulizaEventsStatements) {
       await db.execute(sql);
     }
     await db.execute(kAirtimeKindTriggerDdl);
+    for (final sql in kV6Statements) {
+      await db.execute(sql);
+    }
   }
 
   static Future<void> seed(Database db) async {
@@ -89,6 +94,14 @@ class AppSchema {
         'created_at': now,
       });
     }
+
+    // Version 7: the withdrawal "Cash" group (id 7). It has NO seed categories; the user makes them.
+    groupIds[kCashUseGroupCode] = await db.insert('classification_groups', {
+      'code': kCashUseGroupCode,
+      'display_name': kCashUseGroupName,
+      'enabled': 1,
+      'created_at': now,
+    });
 
     // classifications — 18 seed rows, group-scoped, each with its seed_key.
     for (final row in seedClassifications) {

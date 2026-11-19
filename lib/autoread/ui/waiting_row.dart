@@ -136,9 +136,10 @@ class WaitingRow extends StatelessWidget {
         icon = _pill(p);
         if (item.sameCodeDifferentDetails) extra = _FlagLine(palette: p);
       case WaitingKind.unreadable:
-        title = kUnreadableTitle;
-        subtitle = unreadableSubline(description, item.heldAt);
-        keyword = kSpokenReadyCouldNotRead;
+        final notice = description?.notice ?? false;
+        title = notice ? kNoticeTitle : kUnreadableTitle;
+        subtitle = notice ? kNoticeSub : unreadableSubline(description, item.heldAt);
+        keyword = notice ? kNoticeTitle : kSpokenReadyCouldNotRead;
         foot = 'Received $age';
         action = null; // tap the row or Details to see how to paste it
         link = _remove();

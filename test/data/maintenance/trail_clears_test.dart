@@ -257,7 +257,7 @@ void main() {
         final json =
             jsonDecode(utf8.decode(await backupOf(db).exportToBytes()))
                 as Map<String, dynamic>;
-        expect(json['schema_version'], 5);
+        expect(json['schema_version'], 7);
         expect(
           utf8.decode(await backupOf(db).exportToBytes()),
           isNot(contains('autoread_airtime_trail')),
@@ -269,7 +269,7 @@ void main() {
         final tx = (json['transactions'] as List).cast<Map<String, dynamic>>();
         expect(tx.first.keys.toSet(), kBackupTransactionKeys.toSet());
         expect(kBackupTransactionKeys, hasLength(13));
-        expect(kBackupSchemaVersion, 5);
+        expect(kBackupSchemaVersion, 7);
         await db.close();
       },
     );
@@ -277,7 +277,7 @@ void main() {
     test(
       'db_version_still_5_fresh_and_migrated_equal (no schema drift: no new column; the equality test is migration_v5_test)',
       () async {
-        expect(kDbVersion, 5);
+        expect(kDbVersion, 7);
         final db = await openTestDb();
         final cols = [
           for (final r in await db.rawQuery('PRAGMA table_info(transactions)'))

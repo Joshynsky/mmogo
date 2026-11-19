@@ -492,6 +492,8 @@ class _CategorizeSheetState extends State<CategorizeSheet> {
                   Flexible(
                     child: Text(
                       c.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,

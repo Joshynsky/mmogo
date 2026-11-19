@@ -14,7 +14,14 @@ const int kBackupFormatVersion = 1;
 /// The `schema_version` the exporter writes (the database version it exports).
 /// Mirrors `kDbVersion` in `migrations.dart` (a test pins the two together);
 /// kept as a literal here so this file stays import-free.
-const int kBackupSchemaVersion = 5;
+///
+/// 7 (0.2.1) adds the group code `CASH_USE` (a withdrawal's own category list, no seeds); a
+/// file of schema 6 or lower never carries it and restores unchanged (the group stays empty).
+/// 6 (0.2.1) adds two row keys, `parent_id` and `cash_only_decided`. A 0.2.1 backup
+/// (schema 6) is refused by 0.2.0 as made by a newer version (its validator rejects
+/// `schema_version` above 5); a 0.2.0 backup (schema 5) restores in 0.2.1 with every
+/// entry unlinked (parent null, decided 0) and the same counts.
+const int kBackupSchemaVersion = 7;
 
 /// The lowest `schema_version` a file may carry (`seed_key` exists from v2).
 const int kBackupMinSchemaVersion = 2;
@@ -27,6 +34,14 @@ const int kBackupFirstSchemaWithAgentAndAirtime = 3;
 /// (0.2.0). A schema 3 file with the section, or a schema 4 file without it,
 /// is refused.
 const int kBackupFirstSchemaWithFuliza = 4;
+
+/// First schema whose transaction rows carry `parent_id` and `cash_only_decided`
+/// (0.2.1, withdrawal with a linked Cash entry). An older file with either key is
+/// refused (exact-key defence); a newer reader fills null / 0 for an older file.
+const int kBackupFirstSchemaWithLinkedCash = 6;
+
+/// First schema that may carry the group code `CASH_USE` (0.2.1, PM decision #33).
+const int kBackupFirstSchemaWithCashGroup = 7;
 
 /// Last top-level key of every file. Lets a reader (and the auto-backup
 /// prune) see the file was written to the end.
@@ -85,7 +100,7 @@ const int kBackupMaxFulizaCents = kBackupMaxAmountCents;
 
 // --- enums ----------------------------------------------------------------------
 
-/// Group codes of a schema >= 3 file (six).
+/// Group codes of a schema 3..6 file (six).
 const List<String> kBackupGroupCodes = [
   'SEND_MONEY',
   'PAYBILL',
@@ -93,6 +108,12 @@ const List<String> kBackupGroupCodes = [
   'POCHI_LA_BIASHARA',
   'AGENT_WITHDRAWAL',
   'AIRTIME',
+];
+
+/// Group codes of a schema >= 7 file (seven): the six plus `CASH_USE`.
+const List<String> kBackupGroupCodesV7 = [
+  ...kBackupGroupCodes,
+  'CASH_USE',
 ];
 
 /// Group codes a schema 2 file may carry (the original four, literal).
@@ -260,8 +281,19 @@ const List<String> kBackupClassificationKeys = [
   'created_at',
 ];
 
+/// The two OPTIONAL row keys of a schema >= 6 file (0.2.1): `parent_id` (the file-local
+/// `id` of the withdrawal a Cash entry is linked to) and `cash_only_decided` (1 = the
+/// user chose Cash only). The exporter writes a key ONLY when it is not the default
+/// (null / 0), so a file without links is byte-for-byte as small as before (the 20 MB cap
+/// still holds 50,000 ordinary rows); a reader fills the defaults. A file of schema 5 or
+/// older that carries either key is refused. Rule for a bad link: `backup_links.dart`.
+const List<String> kBackupTransactionLinkKeys = [
+  'parent_id',
+  'cash_only_decided',
+];
+
 /// Row keys of a schema >= 3 file (13): `agent_number` is always present
-/// (null allowed). The exporter writes these.
+/// (null allowed). The exporter writes these (plus the optional link keys above).
 const List<String> kBackupTransactionKeys = [
   'id',
   'display_code',

@@ -160,8 +160,8 @@ void main() {
 
   group('v2 -> v3 on a populated invented fixture', () {
     test('the ladder is registered and the live version is 3', () {
-      expect(kDbVersion, 5);
-      expect(AppMigrations.steps.keys, [2, 3, 4, 5]);
+      expect(kDbVersion, 7);
+      expect(AppMigrations.steps.keys, [2, 3, 4, 5, 6, 7]);
     });
 
     test('transactions are identical, agent_number is NULL, 14 columns, integrity ok, FK check empty',
@@ -175,11 +175,11 @@ void main() {
       await v2.close();
 
       final db = await _openLive(path);
-      expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 5);
+      expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 7);
       expect(await db.rawQuery('SELECT $cols FROM transactions ORDER BY id'), before);
       expect(await _count(db, 'SELECT COUNT(*) FROM transactions WHERE agent_number IS NOT NULL'), 0);
       final info = await db.rawQuery('PRAGMA table_info(transactions)');
-      expect(info, hasLength(14));
+      expect(info, hasLength(16), reason: '14 at v3 + parent_transaction_id and cash_only_decided (v6)');
       expect(info.firstWhere((c) => c['name'] == 'agent_number')['notnull'], 0);
       expect((await db.rawQuery('PRAGMA integrity_check')).first.values.first, 'ok');
       expect(await db.rawQuery('PRAGMA foreign_key_check'), isEmpty);
@@ -312,7 +312,7 @@ void main() {
           ];
       final a = await objects(db);
       expect(a, await objects(fresh));
-      expect(a, hasLength(19), reason: '5 tables + 11 indexes + 3 triggers (v4 adds fuliza_events and its unique index; v5 adds the airtime kind trigger)');
+      expect(a, hasLength(27), reason: '5 tables + 12 indexes + 10 triggers (v4 adds fuliza_events and its unique index; v5 adds the airtime kind trigger; v6 adds the parent index and seven triggers)');
       // negative control: a tampered migrated file differs
       await db.execute('CREATE INDEX idx_extra ON transactions(amount_cents)');
       expect(await objects(db), isNot(await objects(fresh)));
@@ -326,7 +326,7 @@ void main() {
         () async {
       final path = await _plainV1();
       final db = await _openLive(path);
-      expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 5);
+      expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 7);
       final rows = await db.rawQuery('SELECT id, seed_key FROM classifications ORDER BY id');
       expect(rows.map((r) => r['seed_key']).toList(), [...v3SeedKeys(), 'AIRTIME:for_another_number']);
       for (var i = 0; i < 12; i++) {
@@ -598,12 +598,12 @@ void main() {
       await db.close();
     });
 
-    test('it is NOT the live column list (the live v3 table has 14)', () async {
+    test('it is NOT the live column list (the live table has 16: 14 of v3 + the two v6 columns)', () async {
       final fresh = await _openLive(_path('fresh'));
       final live = (await fresh.rawQuery('PRAGMA table_info(transactions)'))
           .map((c) => c['name'] as String)
           .toList();
-      expect(live, hasLength(14));
+      expect(live, hasLength(16));
       expect(live, isNot(kV2TxColumns));
       expect(live, contains('agent_number'));
       await fresh.close();
@@ -662,7 +662,7 @@ void main() {
 
           // the same path (singleInstance: true, as in the app) opens normally next time
           final db = await _openLive(path, single: true);
-          expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 5, reason: label);
+          expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 7, reason: label);
           expect(firstIntOf(await db.rawQuery('PRAGMA foreign_keys')), 1, reason: label);
           expect((await db.rawQuery('PRAGMA integrity_check')).first.values.first, 'ok');
           expect(await db.rawQuery('PRAGMA foreign_key_check'), isEmpty);

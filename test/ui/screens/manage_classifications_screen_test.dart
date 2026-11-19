@@ -60,6 +60,7 @@ class _FakeDatabase implements Database {
           {'id': 4, 'code': 'POCHI_LA_BIASHARA', 'display_name': 'Pochi', 'enabled': 1},
           {'id': 5, 'code': 'AGENT_WITHDRAWAL', 'display_name': 'Withdrawal', 'enabled': 1},
           {'id': 6, 'code': 'AIRTIME', 'display_name': 'Airtime', 'enabled': 1},
+          {'id': 7, 'code': 'CASH_USE', 'display_name': 'Cash', 'enabled': 1},
         ],
         classifications = [
           {'id': 101, 'group_id': 1, 'name': 'Family/Friends', 'active': 1},
@@ -73,6 +74,7 @@ class _FakeDatabase implements Database {
           {'id': 108, 'group_id': 5, 'name': 'Cash withdrawal', 'active': 1},
           {'id': 109, 'group_id': 6, 'name': 'For myself', 'active': 1},
           {'id': 110, 'group_id': 6, 'name': 'For another number', 'active': 1},
+          {'id': 111, 'group_id': 7, 'name': 'Boda fare', 'active': 1},
         ],
         transactionCountByClassification = {102: 3};
 
@@ -413,6 +415,21 @@ void main() {
         expect(find.text('$name entries always use this category.'), findsOneWidget);
       });
     }
+
+    testWidgets("Cash group (0.2.1, PM #33): the user's own Cash categories can be renamed and deleted, and there is a create row", (tester) async {
+      await tester.pumpWidget(_harness(_FakeDatabase()));
+      await _settle(tester);
+      await tester.ensureVisible(find.byKey(const Key('manageTab-CASH_USE')));
+      await tester.tap(find.byKey(const Key('manageTab-CASH_USE')));
+      await _settle(tester);
+      expect(manageLockedGroupCodes, isNot(contains('CASH_USE')));
+      expect(find.text('Boda fare'), findsOneWidget);
+      expect(find.byKey(const Key('manageBuiltIn-Boda fare')), findsNothing);
+      expect(find.text('Built in'), findsNothing);
+      expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+      expect(find.byKey(const Key('manageCreateRow')), findsOneWidget);
+    });
 
     testWidgets('manage_airtime_two_locked_rows_no_rename_no_delete_no_create', (tester) async {
       await openTab(tester, _FakeDatabase(), 'AIRTIME');

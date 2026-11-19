@@ -1,6 +1,7 @@
 import '../../domain/counterparty/counterparty_key.dart';
 import '../../domain/parsing/parsed_sms_fields.dart';
 import 'backup_limits.dart';
+import 'backup_links.dart';
 
 /// One row left out of a backup, described WITHOUT its content: which table,
 /// which row id, which field and which rule it broke. Safe to show and log.
@@ -155,6 +156,9 @@ class BackupRepair {
       }
       transactions.add(row);
     }
+    // 0.2.1: a link whose withdrawal is not in the copy (deleted, or skipped above) is
+    // dropped and the Cash entry kept as plain Cash; counted as a repaired row.
+    repairedCount += resolveBackupLinks(transactions);
 
     for (final src in map) {
       final row = Map<String, Object?>.of(src);
@@ -345,7 +349,7 @@ class BackupRepair {
     if (!_isInt(id, 1, kBackupMaxClassificationFileId)) return const _Problem('id', 'range');
     if (!ids.add(id! as int)) return const _Problem('id', 'duplicate');
     final group = row['group'];
-    if (group is! String || !kBackupGroupCodes.contains(group)) {
+    if (group is! String || !kBackupGroupCodesV7.contains(group)) {
       return const _Problem('group', 'unknown value');
     }
     final name = _text(row['name'], 'name', kBackupMaxClassificationNameLength);
@@ -421,6 +425,11 @@ class BackupRepair {
     if (source == 'PAYBILL' && (label == null) != (account == null)) {
       return const _Problem('paybill_account_number', 'paired with label');
     }
+    // 0.2.1: shape of the two link keys (a missing key reads as no link / 0).
+    final pid = row['parent_id'];
+    if (pid != null && !_isInt(pid, 1, 9007199254740991)) return const _Problem('parent_id', 'range');
+    final decided = row['cash_only_decided'];
+    if (decided != null && !_isInt(decided, 0, 1)) return const _Problem('cash_only_decided', 'range');
     final raw = row['raw_parse_source'];
     if (raw is! String || !kBackupRawParseSources.contains(raw)) {
       return const _Problem('raw_parse_source', 'unknown value');

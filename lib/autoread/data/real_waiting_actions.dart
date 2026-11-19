@@ -19,7 +19,9 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../data/db/analytics_dao.dart' show AnalyticsTransactionRow;
 import '../../domain/format/money.dart';
+import '../../ui/widgets/withdrawal_use_block.dart' show WdChoice, WdCreateResult;
 import '../../ui/shell/routes.dart';
 import '../model/waiting_item.dart';
 import '../model/waiting_repository.dart';
@@ -32,6 +34,7 @@ import '../ui/remove_confirm.dart';
 import '../ui/todo_choose.dart';
 import '../ui/todo_copy.dart';
 import '../ui/waiting_section.dart';
+import '../ui/withdrawal_categorize_sheet.dart';
 import 'real_waiting_repository.dart';
 
 /// The "Recorded as Airtime" toast with Undo. `persist: false` is required:
@@ -126,6 +129,70 @@ WaitingActions buildRealWaitingActions(
     }
   }
 
+  // 0.2.1: withdrawals. A waiting withdrawal ITEM is recorded and decided in one step.
+  Future<void> reloadUndecided() => repo.refreshUndecided(); // the repository's own notifier: item, chip and bell
+
+  Future<List<WdChoice>> useChoices() async => [for (final c in await repo.withdrawalUseChoices()) WdChoice(c.id, c.name)];
+
+  Future<WdCreateResult> createUseCategory(String name) => repo.createWithdrawalUseCategory(name);
+
+  Future<String> withdrawalCategoryId(WaitingItem item) async =>
+      (await (await repo.categoryChoicesFor(item)).categories()).first.id;
+
+  Future<void> withdrawalCashOnly(WaitingItem item) async {
+    await repo.saveWithdrawal(item.id, await withdrawalCategoryId(item));
+    ids.remove(item.id);
+    final f = item.parsed;
+    if (f != null) quiet.value = noteRecorded(describeReadable(f));
+  }
+
+  Future<void> withdrawalCategorize(WaitingItem item) async {
+    final f = item.parsed;
+    if (f == null) return;
+    final wid = await withdrawalCategoryId(item);
+    final choices = await useChoices();
+    if (!context.mounted) return;
+    await showWithdrawalCategorizeSheet(
+      context,
+      title: describeReadable(f),
+      amountCents: f.amountCents,
+      choices: choices,
+      onCreate: createUseCategory,
+      onSave: (cat) async {
+        await repo.saveWithdrawal(item.id, wid, useCategoryId: cat);
+        ids.remove(item.id);
+        quiet.value = noteRecorded(describeReadable(f));
+      },
+    );
+  }
+
+  Future<void> decisionCashOnly(AnalyticsTransactionRow row) async {
+    await repo.decideWithdrawal(row.id);
+    await reloadUndecided();
+  }
+
+  /// "Cash only for all": one database transaction; a failure leaves everything as it was and rethrows
+  /// (the sheet shows its error).
+  Future<void> decisionCashOnlyAll(List<AnalyticsTransactionRow> rows) =>
+      repo.decideAllCashOnly([for (final r in rows) r.id]);
+
+  Future<void> decisionCategorize(AnalyticsTransactionRow row) async {
+    final choices = await useChoices();
+    if (!context.mounted) return;
+    final who = (row.counterpartyLabel ?? '').isEmpty ? '' : ' from ${row.counterpartyLabel}';
+    await showWithdrawalCategorizeSheet(
+      context,
+      title: 'Withdrew ${kshTrim(row.amountCents)}$who',
+      amountCents: row.amountCents,
+      choices: choices,
+      onCreate: createUseCategory,
+      onSave: (cat) async {
+        await repo.decideWithdrawal(row.id, useCategoryId: cat);
+        await reloadUndecided();
+      },
+    );
+  }
+
   Future<void> remove(WaitingItem item) async {
     try {
       await repo.remove(item.id);
@@ -190,5 +257,11 @@ WaitingActions buildRealWaitingActions(
     onPickCategory: pickCategory,
     onLater: later,
     choosing: ids,
+    undecided: repo.undecided,
+    onWithdrawalCashOnly: withdrawalCashOnly,
+    onWithdrawalCategorize: withdrawalCategorize,
+    onDecisionCashOnly: decisionCashOnly,
+    onDecisionCashOnlyAll: decisionCashOnlyAll,
+    onDecisionCategorize: decisionCategorize,
   );
 }

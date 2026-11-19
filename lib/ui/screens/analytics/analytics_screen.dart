@@ -35,6 +35,8 @@ import 'tour.dart';
 import 'transaction_list.dart';
 import 'type_breakdown.dart';
 import 'where_breakdown.dart';
+import 'linked_entry_flow.dart';
+import 'withdrawal_delete_flow.dart';
 
 /// Primary destination 3 of 5 — T21's reworked Analytics, built to the
 /// approved analytics mock (v4, view B, "Claude's take") and its place in
@@ -547,8 +549,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
 
   // §ANALYTICS.SHELL.EDIT — edit / delete (T13's data behaviour, T21's interaction).
 
+  /// 0.2.1: the linked Cash entry sheet (a Cash entry made from a withdrawal), also reached from the withdrawal sheet.
+  Future<void> _openLinked(int entryId) async {
+    final db = await _db();
+    if (!mounted) return;
+    final end = await openLinkedEntryFlow(context, db, AppPalette.of(context), entryId);
+    if (!mounted) return;
+    if (end == LinkedEntryEnd.deleteRequested) {
+      final row = await linkedEntryRow(db, entryId);
+      if (row != null) await _delete(row);
+    } else if (end == LinkedEntryEnd.saved) {
+      _pendingHighlightId = entryId;
+      await _load();
+    }
+  }
+
   Future<void> _openEdit(AnalyticsTransactionRow tx) async {
     setState(() => _openRowId = null);
+    if (tx.sourceType == 'CASH' && tx.fromWithdrawal) return _openLinked(tx.id);
     final db = await _db();
     // 0.2.0 S9: did a Fuliza borrowing pay for this row? (null, and no lookup cost, unless Fuliza data exists)
     final fuliza = await FulizaSource.load(db);
@@ -557,6 +575,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     final result = await showModalBottomSheet<Object>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true, // keep the header (title, Delete) below the status bar
       backgroundColor: Colors.transparent,
       barrierColor: const Color(0x59000000),
       builder: (ctx) => Theme(
@@ -576,6 +595,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     }
     if (result is AnalyticsDeleteRequest) {
       await _delete(tx);
+      return;
+    }
+    if (result is AnalyticsOpenLinked) {
+      await _openLinked(result.entryId);
       return;
     }
     if (result is! AnalyticsEditResult) return;
@@ -601,21 +624,32 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
       return;
     }
     if (!mounted) return;
+    final pick = result.withdrawalPick;
+    if (pick != null) {
+      try {
+        await applyWithdrawalPick(context, db, tx, pick);
+      } on ArgumentError {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not add the Cash entry. Pick another category.')));
+      }
+      if (!mounted) return;
+    }
     _pendingHighlightId = tx.id;
     await _load();
   }
 
-  /// No confirm step: soft-delete at once (it leaves every total), then a
+  /// Soft-delete at once (it leaves every total; a withdrawal and its Cash entry ask first, see withdrawal_delete_flow.dart), then a
   /// toast with Undo (PM-approved mock; replaces T13's confirm sheet).
   Future<void> _delete(AnalyticsTransactionRow tx) async {
     setState(() => _openRowId = null);
     final db = await _db();
-    await TransactionDao.softDelete(db, id: tx.id);
     if (!mounted) return;
+    final outcome = await deleteWithPrompt(context, db, tx);
+    if (!mounted || outcome == null) return;
     _toastTimer?.cancel();
     setState(() {
-      _toastMessage = '${tx.displayName} moved to Recently Deleted';
-      _undoId = tx.id;
+      _toastMessage = outcome.message;
+      _undoId = outcome.undoId;
     });
     _toastTimer = Timer(analyticsToastDuration, _hideToast);
     await _load();

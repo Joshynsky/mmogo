@@ -146,7 +146,9 @@ MessageDetails buildMessageDetails(
           DetailLine(kUnreadableTimeLabel, light?.time ?? kNotFound),
           DetailLine(kDetailsTimeLeftLabel, timeLeft),
         ],
-        note: light?.code != null
+        note: light?.notice == true
+            ? kNoticeNote
+            : light?.code != null
             ? kUnreadablePasteWithCode
             : '$kUnreadablePasteNoCodePrefix ${light?.time ?? clockText(item.heldAt)}.',
         fine: kUnreadableFine,

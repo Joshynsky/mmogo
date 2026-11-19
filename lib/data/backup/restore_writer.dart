@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../db/linked_cash_dao.dart';
 import 'backup_limits.dart' show kBackupLockedSeedKeys;
 import 'backup_validator.dart';
 import 'restore_plan.dart';
@@ -16,6 +17,8 @@ const List<String> kRestoreTxColumns = [
   'counterparty_label', 'counterparty_phone', 'paybill_account_number',
   'agent_number', 'classification_id', 'raw_parse_source',
   'transaction_occurred_at', 'created_at', 'deleted_at',
+  // 0.2.1 (appended): the link to the withdrawal (a NEW id, re-mapped) and the decision.
+  'parent_transaction_id', 'cash_only_decided',
 ];
 const List<String> kRestoreMapColumns = [
   'source_type', 'counterparty_key', 'classification_id', 'auto_apply', 'updated_at',
@@ -29,8 +32,9 @@ const String _insertTxSql =
     'INSERT INTO transactions (display_code, source_type, amount_cents, '
     'transaction_cost_cents, counterparty_label, counterparty_phone, '
     'paybill_account_number, agent_number, classification_id, raw_parse_source, '
-    'transaction_occurred_at, created_at, deleted_at) '
-    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)';
+    'transaction_occurred_at, created_at, deleted_at, '
+    'parent_transaction_id, cash_only_decided) '
+    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)';
 const String _insertMapSql =
     'INSERT INTO counterparty_classification_map (source_type, '
     'counterparty_key, classification_id, auto_apply, updated_at) '
@@ -54,6 +58,10 @@ const String _countSeedClassesSql =
 const String _countOneSeedSql =
     'SELECT COUNT(*) AS n FROM classifications WHERE seed_key = ?';
 const String _countMapSql = 'SELECT COUNT(*) AS n FROM counterparty_classification_map';
+const String _findWithdrawalSql =
+    'SELECT id, amount_cents, transaction_occurred_at, cash_only_decided FROM transactions '
+    "WHERE display_code = ? AND source_type = 'AGENT_WITHDRAWAL' AND deleted_at IS NULL "
+    'ORDER BY id LIMIT 1';
 const String _fkCheckSql = 'PRAGMA foreign_key_check';
 
 /// Rows a replace expects to find when its transaction opens (the counts of
@@ -243,13 +251,7 @@ class RestoreWriter {
     }
 
     // 2. transactions, always live (deleted_at NULL).
-    await _insertAll(txn, 'transactions', _insertTxSql, plan.newTransactions, (r) => [
-          r['display_code'], r['source_type'], r['amount_cents'],
-          r['transaction_cost_cents'], r['counterparty_label'],
-          r['counterparty_phone'], r['paybill_account_number'],
-          r['agent_number'], dbClassId(r['classification']), r['raw_parse_source'],
-          r['transaction_occurred_at'], r['created_at'],
-        ]);
+    await _insertTransactions(txn, plan.newTransactions, file.transactions, dbClassId);
 
     // 3. learned receivers.
     await _insertAll(txn, 'counterparty_map', _insertMapSql, plan.newMapRows, (r) => [
@@ -272,6 +274,101 @@ class RestoreWriter {
           added: plan.newFulizaEvents.length, skipped: plan.fulizaSkipped),
       fulizaLeftAlone: fulizaLeftAlone,
     );
+  }
+
+  /// Transactions in two passes so a linked Cash entry gets its withdrawal's NEW id:
+  /// first every row that is not a child of a row inserted by this restore (ids kept),
+  /// then the children. A child whose withdrawal was skipped (it was already on this phone)
+  /// is inserted as plain Cash, EXCEPT when it can be re-linked to the phone's own copy of that
+  /// withdrawal (see [_relinkTargets]). File order is kept inside each pass.
+  Future<void> _insertTransactions(
+    Transaction txn,
+    List<Map<String, Object?>> rows,
+    List<Map<String, Object?>> fileRows,
+    int Function(Object? fileId) dbClassId,
+  ) async {
+    final inFile = {for (final r in rows) r['id']};
+    bool isChild(Map<String, Object?> r) => r['parent_id'] != null && inFile.contains(r['parent_id']);
+    final first = [for (final r in rows) if (!isChild(r)) r];
+    final second = [for (final r in rows) if (isChild(r)) r];
+    final relink = await _relinkTargets(txn, rows, fileRows, inFile);
+    final newIdByFileId = <Object?, int>{};
+    var index = 0;
+    for (final pass in [first, second]) {
+      for (var start = 0; start < pass.length; start += chunkSize) {
+        final batch = txn.batch();
+        final end = _end(start, pass.length);
+        for (var i = start; i < end; i++) {
+          beforeRow?.call('transactions', index++);
+          final r = pass[i];
+          batch.rawInsert(_insertTxSql, [
+            r['display_code'], r['source_type'], r['amount_cents'],
+            r['transaction_cost_cents'], r['counterparty_label'],
+            r['counterparty_phone'], r['paybill_account_number'],
+            r['agent_number'], dbClassId(r['classification']), r['raw_parse_source'],
+            r['transaction_occurred_at'], r['created_at'],
+            isChild(r) ? newIdByFileId[r['parent_id']] : relink[r['id']],
+            r['cash_only_decided'] ?? 0,
+          ]);
+        }
+        final ids = await batch.commit(noResult: false, continueOnError: false);
+        for (var i = start; i < end; i++) {
+          newIdByFileId[pass[i]['id']] = ids[i - start]! as int;
+        }
+      }
+    }
+  }
+
+  /// MERGE re-link: a Cash row about to be inserted whose withdrawal was skipped because the phone
+  /// already has it gets that withdrawal's id, when the phone's row is a live AGENT_WITHDRAWAL, the
+  /// entry is on the same (local) day, and the phone's live entries plus the entries already
+  /// re-linked to it in this restore (file order) plus this one stay within its amount. Otherwise
+  /// the entry stays plain Cash. Only reads; the result maps file row id -> phone withdrawal id.
+  Future<Map<Object?, int>> _relinkTargets(
+    Transaction txn,
+    List<Map<String, Object?>> rows,
+    List<Map<String, Object?>> fileRows,
+    Set<Object?> insertedFileIds,
+  ) async {
+    final result = <Object?, int>{};
+    final fileById = {for (final r in fileRows) r['id']: r};
+    final left = <int, int>{}; // phone withdrawal id -> cents still free
+    final misses = <Object?>{}; // file parent ids with no usable phone withdrawal
+    final found = <Object?, ({int id, int amount, int at})>{};
+    for (final r in rows) {
+      final pid = r['parent_id'];
+      if (pid == null || insertedFileIds.contains(pid) || misses.contains(pid)) continue;
+      if (r['source_type'] != 'CASH') continue;
+      var w = found[pid];
+      if (w == null) {
+        final parent = fileById[pid];
+        if (parent == null || parent['source_type'] != 'AGENT_WITHDRAWAL') {
+          misses.add(pid);
+          continue;
+        }
+        final hit = await txn.rawQuery(_findWithdrawalSql, [parent['display_code']]);
+        if (hit.isEmpty || hit.first['cash_only_decided'] == 1) {
+          misses.add(pid);
+          continue;
+        }
+        w = (
+          id: hit.first['id']! as int,
+          amount: (hit.first['amount_cents']! as num).toInt(),
+          at: (hit.first['transaction_occurred_at']! as num).toInt(),
+        );
+        found[pid] = w;
+        left[w.id] = await LinkedCashDao.remainingCents(txn, w.id);
+      }
+      final amount = r['amount_cents'];
+      final at = r['transaction_occurred_at'];
+      if (amount is! int || at is! int || amount <= 0 || amount > left[w.id]!) continue;
+      final a = DateTime.fromMillisecondsSinceEpoch(at);
+      final b = DateTime.fromMillisecondsSinceEpoch(w.at);
+      if (a.year != b.year || a.month != b.month || a.day != b.day) continue;
+      left[w.id] = left[w.id]! - amount;
+      result[r['id']] = w.id;
+    }
+    return result;
   }
 
   Future<void> _insertAll(

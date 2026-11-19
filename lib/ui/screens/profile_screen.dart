@@ -263,7 +263,12 @@ class _ProfileScreenState extends State<ProfileScreen> with PrimaryTabRefresh<Pr
                     label: 'Settings',
                     subtitle: kProfileSettingsSubtitle,
                     first: true,
-                    onTap: () => Navigator.of(context).pushNamed(Routes.settings),
+                    // Back from Settings (a restore or delete may have run there):
+                    // re-read the count so it is never stale.
+                    onTap: () async {
+                      await Navigator.of(context).pushNamed(Routes.settings);
+                      if (mounted) _loadSummary();
+                    },
                   ),
                   SettingsLink(
                     palette: palette,

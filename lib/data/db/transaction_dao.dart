@@ -256,7 +256,12 @@ class TransactionDao {
   /// window). Every existing read in this codebase already filters
   /// `deleted_at IS NULL`, so the row disappears from every total/list the
   /// instant this commits — no other query needs to change.
-  static Future<void> softDelete(Database db, {required int id}) async {
+  ///
+  /// 0.2.1: deleting a WITHDRAWAL also soft-deletes its live linked Cash entries with the SAME
+  /// `deleted_at`, inside the same statement (trigger `trg_transactions_delete_pair`, see
+  /// `migration_v6_ddl.dart`); that shared stamp is what makes them one pair for [restore].
+  /// Deleting only a linked entry leaves its withdrawal alone.
+  static Future<void> softDelete(DatabaseExecutor db, {required int id}) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     await db.update(
       'transactions',
@@ -274,7 +279,15 @@ class TransactionDao {
   /// STILL soft-deleted counts, so a stale Undo (the row was purged, or
   /// Delete data removed it) changes nothing and returns 0; AUTOINCREMENT
   /// ids are never reused, so a stale id cannot hit a newer row.
-  static Future<int> restore(Database db, {required int id}) {
+  ///
+  /// 0.2.1: a withdrawal and its linked entries deleted together (same `deleted_at`) come back
+  /// together, whichever of them is restored (triggers `trg_transactions_restore_pair` and
+  /// `trg_transactions_restore_entry_guard`). The return value counts only THIS row (1), not the
+  /// partners the trigger restored. A linked entry deleted on its own comes back alone, but only
+  /// while its withdrawal is live and the entry still fits in what the withdrawal has left;
+  /// otherwise nothing changes and 0 is returned. A pair whose withdrawal was purged cannot come
+  /// back.
+  static Future<int> restore(DatabaseExecutor db, {required int id}) {
     return db.update(
       'transactions',
       {'deleted_at': null},
@@ -287,6 +300,9 @@ class TransactionDao {
   /// soft-delete layer — once the 1-hour grace window passes, the row is
   /// genuinely gone
   /// (`WHERE deleted_at IS NOT NULL AND deleted_at < now - 1h`).
+  /// 0.2.1: a withdrawal and its entries share one `deleted_at`, so they expire together;
+  /// if only the withdrawal is purged, a surviving entry keeps its place as plain Cash
+  /// (`parent_transaction_id` is `ON DELETE SET NULL`).
   /// Returns the number of rows purged — not consumed by any UI behavior
   /// (the sweep is silent per spec), but useful for a test assertion.
   static Future<int> purgeExpiredSoftDeletes(Database db) async {

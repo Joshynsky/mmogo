@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'backup_limits.dart';
+import 'backup_links.dart';
 import 'backup_setting_keys.dart';
 
 /// Why a file was refused. Names follow architecture D5.
@@ -70,7 +71,9 @@ class ValidatedBackup {
   /// Keys per `kBackupClassificationKeys`; `id` is a file-local handle only.
   final List<Map<String, Object?>> classifications;
 
-  /// Keys per `kBackupTransactionKeys`; `classification` is a file-local id.
+  /// Keys per `kBackupTransactionKeys`, plus `parent_id` / `cash_only_decided` ONLY when the
+  /// file wrote them (an absent key means null / 0, readers use `?? 0`); `classification`
+  /// and `parent_id` are file-local ids.
   final List<Map<String, Object?>> transactions;
 
   /// Keys per `kBackupMapKeys`.
@@ -234,6 +237,9 @@ class BackupValidator {
         _classifications(classRows, classGroupById, schemaVersion);
     final transactions =
         _transactions(txRows, classGroupById, enabledGroupCodes, schemaVersion);
+    // 0.2.1: a link to a missing or non-withdrawal row (or past the withdrawal's amount)
+    // is dropped, the Cash entry kept as plain Cash; never a refusal.
+    resolveBackupLinks(transactions);
     final counterpartyMap = _map(mapRows, classGroupById);
     final fulizaEvents = _fulizaEvents(fulizaRows);
     final prefs = _prefs(root['prefs'], schemaVersion);
@@ -261,7 +267,10 @@ class BackupValidator {
     const t = 'classifications';
     // New group codes and seed keys are valid only in a schema >= 3 file.
     final v3 = schemaVersion >= kBackupFirstSchemaWithAgentAndAirtime;
-    final groupCodes = v3 ? kBackupGroupCodes : kBackupGroupCodesV2;
+    // `CASH_USE` (the withdrawal Cash list) only from schema 7; older files never carry it.
+    final groupCodes = schemaVersion >= kBackupFirstSchemaWithCashGroup
+        ? kBackupGroupCodesV7
+        : (v3 ? kBackupGroupCodes : kBackupGroupCodesV2);
     final seedKeys = schemaVersion >= kBackupFirstSchemaWithAirtimeKinds
         ? kBackupSeedKeys
         : (v3 ? kBackupSeedKeysV3V4 : kBackupSeedKeysV2);
@@ -308,6 +317,7 @@ class BackupValidator {
     // Schema 2: the exact 12 keys and the original four source types; the row
     // is copied with `agent_number: null` so later code sees one shape.
     final v3 = schemaVersion >= kBackupFirstSchemaWithAgentAndAirtime;
+    final v6 = schemaVersion >= kBackupFirstSchemaWithLinkedCash;
     final rowKeys = v3 ? kBackupTransactionKeys : kBackupTransactionKeysV2;
     final sourceTypes = v3 ? kBackupSourceTypes : kBackupSourceTypesV2;
     final out = <Map<String, Object?>>[];
@@ -315,7 +325,8 @@ class BackupValidator {
     final mpesaCodes = <String>{};
     final cashKeys = <String>{};
     for (var i = 0; i < rows.length; i++) {
-      final row = _row(rows[i], rowKeys, t, i);
+      // Schema 6: the two link keys are optional (written only when not the default).
+      final row = _row(rows[i], rowKeys, t, i, optional: v6 ? kBackupTransactionLinkKeys : const []);
       final id = _int(row['id'], 1, 9007199254740991, t, i, 'id');
       if (!ids.add(id)) _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'id');
 
@@ -370,6 +381,11 @@ class BackupValidator {
       if (source == 'PAYBILL' && (label == null) != (account == null)) {
         _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'paybill_account_number');
       }
+
+      // Shape only; whether a link is usable is `resolveBackupLinks`' call.
+      final pid = row['parent_id'];
+      if (pid != null) _int(pid, 1, 9007199254740991, t, i, 'parent_id');
+      if (row.containsKey('cash_only_decided')) _int(row['cash_only_decided'], 0, 1, t, i, 'cash_only_decided');
 
       final raw = _enum(row['raw_parse_source'], kBackupRawParseSources, t, i, 'raw_parse_source');
       if (isCash && raw != 'MANUAL') {
@@ -506,6 +522,15 @@ class BackupValidator {
   }) =>
       throw RestoreRejected(reason, table: table, rowIndex: rowIndex, field: field);
 
+  /// Exactly [keys], plus any subset of [optional] and nothing else.
+  static bool _hasKeys(Map m, List<String> keys, List<String> optional) {
+    if (optional.isEmpty) return _hasExactKeys(m, keys);
+    for (final k in keys) {
+      if (!m.containsKey(k)) return false;
+    }
+    return m.keys.every((k) => keys.contains(k) || optional.contains(k));
+  }
+
   static bool _hasExactKeys(Map m, List<String> keys) {
     if (m.length != keys.length) return false;
     for (final k in keys) {
@@ -517,8 +542,8 @@ class BackupValidator {
   static bool _isEpoch(Object? v) =>
       v is int && v >= kBackupMinEpochMs && v < kBackupMaxEpochMs;
 
-  static Map _row(Object? raw, List<String> keys, String table, int i) {
-    if (raw is! Map || !_hasExactKeys(raw, keys)) {
+  static Map _row(Object? raw, List<String> keys, String table, int i, {List<String> optional = const []}) {
+    if (raw is! Map || !_hasKeys(raw, keys, optional)) {
       _fail(RestoreRejectReason.invalidRow, table: table, rowIndex: i, field: '(keys)');
     }
     return raw;

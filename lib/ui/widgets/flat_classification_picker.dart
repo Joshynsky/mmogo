@@ -238,7 +238,7 @@ class _FlatClassificationRow extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(item.name, style: TextStyle(fontSize: 14, color: palette.ink)),
+            Expanded(child: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, color: palette.ink))),
             Icon(Icons.chevron_right, size: 18, color: palette.mutedInk),
           ],
         ),

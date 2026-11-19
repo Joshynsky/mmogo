@@ -23,18 +23,22 @@ library;
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show ValueNotifier, visibleForTesting;
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../data/db/app_database.dart';
+import '../../data/db/analytics_dao.dart' show AnalyticsTransactionRow;
 import '../../data/db/classification_dao.dart';
+import '../../data/db/linked_cash_dao.dart';
 import '../../data/db/counterparty_dao.dart';
 import '../../data/db/transaction_dao.dart';
 import '../../data/prefs/app_prefs.dart';
 import '../../domain/airtime/airtime_kind.dart';
 import '../../domain/parsing/parsed_sms_fields.dart';
+import '../../ui/widgets/withdrawal_use_block.dart' show WdCreateResult;
+import '../../ui/widgets/withdrawal_use_create.dart' as wd_create;
 import '../../ui/screens/add/add_draft.dart';
 import '../bridge/autoread_bridge.dart';
 import '../held_window.dart';
@@ -198,7 +202,10 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
   }
 
   void dispose() {
+    final firstClose = !_closed;
     _closed = true;
+    // A second dispose() must stay harmless (tests and shutdown can both call it).
+    if (firstClose) undecided.dispose();
     _describer.clear();
     _timer?.cancel();
     unawaited(_changes.close());
@@ -402,6 +409,72 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
     if (type == null) throw StateError('Only a parsed item can be categorized.');
     return RealCategoryChoices(await _database(), type, airtimeOther: item.parsed!.airtimeOther);
   }
+
+  /// 0.2.1: a parsed withdrawal item is recorded as a withdrawal (under its own built-in category
+  /// [withdrawalCategoryId]) and decided in the same step: [useCategoryId] null = Cash only (the
+  /// withdrawal is marked decided), else a linked Cash entry for the full amount in that category.
+  /// Same save order as [saveCategory]; the decision follows the transaction, so a crash between
+  /// them leaves an undecided withdrawal that the "need a decision" item then shows.
+  Future<void> saveWithdrawal(String id, String withdrawalCategoryId, {int? useCategoryId}) => _locked(() async {
+        final cls = int.tryParse(withdrawalCategoryId);
+        if (cls == null) throw ArgumentError.value(withdrawalCategoryId, 'withdrawalCategoryId', 'not a category id');
+        final rowId = await _saveInner(id, cls);
+        if (rowId != null) {
+          final db = await _database();
+          if (useCategoryId == null) {
+            await LinkedCashDao.markCashOnly(db, withdrawalId: rowId);
+          } else {
+            await LinkedCashDao.setWithdrawalCategory(db, withdrawalId: rowId, classificationId: useCategoryId);
+          }
+        }
+        await _publish();
+      });
+
+  /// 0.2.1: every recorded withdrawal still waiting for "Cash only" or a category (newest first).
+  Future<List<AnalyticsTransactionRow>> undecidedWithdrawals() async =>
+      LinkedCashDao.undecidedWithdrawals(await _database());
+
+  /// 0.2.1: the undecided withdrawals, kept live for the Notifications item AND the bell (the bell
+  /// counts the decision item as ONE). Reloaded by [refreshUndecided].
+  final ValueNotifier<List<AnalyticsTransactionRow>> undecided = ValueNotifier(const []);
+
+  /// Reloads [undecided]; on a failure it keeps what it showed.
+  Future<void> refreshUndecided() async {
+    try {
+      final rows = await undecidedWithdrawals();
+      if (!_closed) undecided.value = rows;
+    } catch (_) {
+      // Keeps the last list.
+    }
+  }
+
+  /// 0.2.1: decides a recorded withdrawal from the "need a decision" item.
+  Future<void> decideWithdrawal(int withdrawalId, {int? useCategoryId}) async {
+    final db = await _database();
+    if (useCategoryId == null) {
+      await LinkedCashDao.markCashOnly(db, withdrawalId: withdrawalId);
+    } else {
+      await LinkedCashDao.setWithdrawalCategory(db, withdrawalId: withdrawalId, classificationId: useCategoryId);
+    }
+    _onSaved();
+    await refreshUndecided();
+  }
+
+  /// 0.2.1: "Cash only for all": every id in one database transaction (all or nothing).
+  Future<void> decideAllCashOnly(List<int> withdrawalIds) async {
+    final db = await _database();
+    await LinkedCashDao.markManyCashOnly(db, withdrawalIds: withdrawalIds);
+    _onSaved();
+    await refreshUndecided();
+  }
+
+  /// 0.2.1: the Cash list (and only it) for "What was this money for?"; empty until the user makes one.
+  Future<List<ClassificationItem>> withdrawalUseChoices() async =>
+      ClassificationDao.fetchCashUseClassifications(await _database());
+
+  /// 0.2.1: "+ New" in "What was this money for?" - creates INTO the Cash list (duplicates checked only there).
+  Future<WdCreateResult> createWithdrawalUseCategory(String name) async =>
+      wd_create.createWithdrawalUseCategory(await _database(), name);
 
   /// Saves the waiting item [id] as a real transaction under [categoryId] (a
   /// classification id in decimal), then removes it.

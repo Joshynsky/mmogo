@@ -14,6 +14,8 @@ class RecentTransaction {
     required this.occurredAt,
     this.feeCents = 0,
     this.agentNumber,
+    this.parentTransactionId,
+    this.linkedCategoryNames = const [],
   });
 
   final int id;
@@ -29,6 +31,16 @@ class RecentTransaction {
 
   /// The agent number of a withdrawal (null for every other row).
   final String? agentNumber;
+
+  /// 0.2.1: the withdrawal this Cash entry is linked to (`parent_transaction_id`), else null.
+  final int? parentTransactionId;
+
+  /// 0.2.1: true for a Cash entry added from a withdrawal ("Cash - Rent from withdrawal").
+  bool get fromWithdrawal => parentTransactionId != null;
+
+  /// 0.2.1: on a withdrawal, the category names of its live linked entries, oldest first,
+  /// each once (for the "-> Rent" line). Empty on every other row.
+  final List<String> linkedCategoryNames;
 
   bool get isWithdrawalRow => sourceType == 'AGENT_WITHDRAWAL';
 

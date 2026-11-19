@@ -20,6 +20,8 @@ class DeletedTransactionRow {
     required this.counterpartyLabel,
     required this.classificationName,
     required this.deletedAt,
+    this.parentTransactionId,
+    this.linkedCategoryNames = const [],
   });
 
   final int id;
@@ -29,6 +31,16 @@ class DeletedTransactionRow {
   final String? counterpartyLabel;
   final String classificationName;
   final DateTime deletedAt;
+
+  /// 0.2.1: the withdrawal this Cash entry was linked to, else null.
+  final int? parentTransactionId;
+
+  /// 0.2.1: true for a Cash entry that came from a withdrawal.
+  bool get fromWithdrawal => parentTransactionId != null;
+
+  /// 0.2.1: on a withdrawal, the category names of the linked entries deleted with it
+  /// (same `deleted_at`), oldest first, each once. Empty otherwise.
+  final List<String> linkedCategoryNames;
 
   /// Same rule `AnalyticsTransactionRow.displayName`/`recent_transaction
   /// .dart` already establish: Cash rows show their classification (no
@@ -41,6 +53,9 @@ class DeletedTransactionRow {
         : classificationName;
   }
 }
+
+List<String> _names(String? joined) =>
+    joined == null || joined.isEmpty ? const [] : {...joined.split('\u001f')}.toList();
 
 /// Recently Deleted's own query layer — same raw-SQL-against-`AppDatabase`
 /// idiom every other screen-scoped DAO in this codebase already follows.
@@ -57,7 +72,13 @@ class RecentlyDeletedDao {
   static Future<List<DeletedTransactionRow>> deletedTransactions(Database db) async {
     final rows = await db.rawQuery('''
       SELECT t.id, t.display_code, t.source_type, t.amount_cents,
-             t.counterparty_label, c.name AS classification_name, t.deleted_at
+             t.counterparty_label, c.name AS classification_name, t.deleted_at,
+             t.parent_transaction_id,
+             (SELECT group_concat(lname, char(31)) FROM
+                (SELECT lc.name AS lname FROM transactions ch
+                 JOIN classifications lc ON lc.id = ch.classification_id
+                 WHERE ch.parent_transaction_id = t.id AND ch.deleted_at = t.deleted_at
+                 ORDER BY ch.id)) AS linked_names
       FROM transactions t
       JOIN classifications c ON c.id = t.classification_id
       WHERE t.deleted_at IS NOT NULL
@@ -73,6 +94,8 @@ class RecentlyDeletedDao {
             counterpartyLabel: row['counterparty_label'] as String?,
             classificationName: row['classification_name'] as String,
             deletedAt: DateTime.fromMillisecondsSinceEpoch(row['deleted_at'] as int),
+            parentTransactionId: row['parent_transaction_id'] as int?,
+            linkedCategoryNames: _names(row['linked_names'] as String?),
           ),
         )
         .toList();

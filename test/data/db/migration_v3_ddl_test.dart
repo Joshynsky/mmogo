@@ -96,7 +96,7 @@ void main() {
     // live schema, so the same two tests now assert the SWITCH happened, and that
     // only the allowed live files read the frozen constants.
     test('the live schema IS v3: kDbVersion 3, 17 live seeds, 6-group live createSchema', () async {
-      expect(kDbVersion, 5);
+      expect(kDbVersion, 7);
       expect(AppSchema.seedClassifications, hasLength(18));
       sqfliteFfiInit();
       final db = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath,
@@ -107,7 +107,7 @@ void main() {
                 await AppSchema.createSchema(db);
                 await AppSchema.seed(db);
               }));
-      expect(firstIntOf(await db.rawQuery('SELECT COUNT(*) FROM classification_groups')), 6);
+      expect(firstIntOf(await db.rawQuery('SELECT COUNT(*) FROM classification_groups')), 7);
       expect(firstIntOf(await db.rawQuery('SELECT COUNT(*) FROM classifications')), 18);
       await db.close();
     });
@@ -117,6 +117,9 @@ void main() {
         'lib/data/db/migration_v3_ddl.dart',
         'lib/data/db/migration_v3.dart',
         'lib/data/db/schema.dart',
+        // Version 7 rebuilds the same group table and reuses the v3 triggers / schema text.
+        'lib/data/db/migration_v7.dart',
+        'lib/data/db/migration_v7_ddl.dart',
       };
       final offenders = <String>[];
       final users = <String>[];

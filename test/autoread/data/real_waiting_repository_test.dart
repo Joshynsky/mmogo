@@ -510,4 +510,53 @@ void main() {
       await expectLater(env.repo.saveCategory(_id(1), 'abc'), throwsArgumentError);
     });
   });
+
+  group('withdrawal Cash list (0.2.1, PM #33)', () {
+    Future<void> parsedWithdrawal() async {
+      env.bridge.hold(_id(1), kSampleWithdrawal, _t0.subtract(const Duration(minutes: 5)));
+      await env.repo.ingest();
+      expect(await env.repo.parse(_id(1)), ParseOutcome.parsed);
+    }
+
+    test('the use choices start EMPTY, "+ New" creates INTO the Cash list, the choices are the Cash list only', () async {
+      env = await _env();
+      expect(await env.repo.withdrawalUseChoices(), isEmpty);
+      final made = await env.repo.createWithdrawalUseCategory('Boda fare');
+      expect(made.error, isNull);
+      expect(made.choices!.map((c) => c.name), ['Boda fare']);
+      expect((await env.repo.withdrawalUseChoices()).map((c) => c.name), ['Boda fare']);
+      final dup = await env.repo.createWithdrawalUseCategory('boda FARE');
+      expect(dup.error, isNotNull);
+      // a name that exists in Send Money is NOT a duplicate here
+      expect((await env.repo.createWithdrawalUseCategory('Rent')).error, isNull);
+    });
+
+    test('saveWithdrawal with a Cash-list category records the withdrawal and a linked CASH entry in that category', () async {
+      env = await _env();
+      await parsedWithdrawal();
+      final made = await env.repo.createWithdrawalUseCategory('Boda fare');
+      final wd = (await env.db.rawQuery("SELECT id FROM classifications WHERE seed_key = 'AGENT_WITHDRAWAL:cash_withdrawal'"))
+          .first['id'] as int;
+      await env.repo.saveWithdrawal(_id(1), '$wd', useCategoryId: made.id);
+      final cash = await env.db.rawQuery("SELECT classification_id AS c, parent_transaction_id AS p FROM transactions WHERE source_type = 'CASH'");
+      expect(cash.single['c'], made.id);
+      expect(cash.single['p'], isNotNull);
+      expect(await env.db.rawQuery('PRAGMA foreign_key_check'), isEmpty);
+    });
+
+    test('decideWithdrawal (the "need a decision" item) takes a Cash-list category too', () async {
+      env = await _env();
+      await parsedWithdrawal();
+      final wd = (await env.db.rawQuery("SELECT id FROM classifications WHERE seed_key = 'AGENT_WITHDRAWAL:cash_withdrawal'"))
+          .first['id'] as int;
+      await env.repo.saveWithdrawal(_id(1), '$wd'); // Cash only: decided, no entry
+      final row = (await env.repo.undecidedWithdrawals());
+      expect(row, isEmpty);
+      final id = (await env.db.rawQuery("SELECT id FROM transactions WHERE source_type = 'AGENT_WITHDRAWAL'")).first['id'] as int;
+      final made = await env.repo.createWithdrawalUseCategory('Fuel');
+      await env.repo.decideWithdrawal(id, useCategoryId: made.id);
+      final cash = await env.db.rawQuery("SELECT classification_id AS c FROM transactions WHERE source_type = 'CASH'");
+      expect(cash.single['c'], made.id);
+    });
+  });
 }

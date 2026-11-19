@@ -1,5 +1,7 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'migration_v7_ddl.dart' show kCashUseGroupCode;
+
 /// B3: longest classification name the Add and Manage inputs accept (typing is
 /// cut here; longer names already saved are loaded as they are).
 const classificationNameMaxLength = 100;
@@ -256,6 +258,11 @@ class ClassificationDao {
   /// Final list is sorted alphabetically (case-insensitive) for display,
   /// matching the prototype's `list.sort((a,b) =>
   /// a.name.localeCompare(b.name))`.
+  /// 0.2.1 (PM #33): the Cash picker ALSO lists the user's own "Cash" categories (group
+  /// `CASH_USE`, the withdrawal list), so one made from a withdrawal can be reused on a
+  /// hand-entered Cash entry. Same name dedup as above (lowest id wins, so a Send Money
+  /// "Rent" hides a Cash-list "Rent"). The withdrawal chips do NOT use this method (they use
+  /// [fetchCashUseClassifications]).
   /// DB6 (Judge C-A9): only the three M-Pesa groups feed the Cash picker. From
   /// version 3 the Pochi, Withdrawal and Airtime groups are enabled too, and
   /// without this whitelist their categories (and a user's own Pochi ones) would
@@ -269,7 +276,7 @@ class ClassificationDao {
       FROM classifications c
       JOIN classification_groups g ON g.id = c.group_id
       WHERE c.active = 1 AND g.enabled = 1
-        AND g.code IN ('SEND_MONEY','PAYBILL','BUY_GOODS')
+        AND g.code IN ('SEND_MONEY','PAYBILL','BUY_GOODS','CASH_USE')
       ORDER BY c.id ASC
     ''');
     final seenNames = <String>{};
@@ -289,5 +296,31 @@ class ClassificationDao {
     }
     deduped.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     return deduped;
+  }
+
+  /// 0.2.1 (PM #33): the withdrawal "Cash" list (group `CASH_USE`), active only, name-ordered
+  /// (case-insensitive). Starts EMPTY for every user; empty also when the group row is missing.
+  static Future<List<ClassificationItem>> fetchCashUseClassifications(Database db) async {
+    final rows = await db.rawQuery('''
+      SELECT c.id, c.group_id, c.name
+      FROM classifications c
+      JOIN classification_groups g ON g.id = c.group_id
+      WHERE c.active = 1 AND g.code = ?
+      ORDER BY c.name COLLATE NOCASE
+    ''', [kCashUseGroupCode]);
+    return [
+      for (final r in rows)
+        ClassificationItem(id: r['id']! as int, groupId: r['group_id']! as int, name: r['name']! as String),
+    ];
+  }
+
+  /// 0.2.1 (PM #33): adds [name] to the withdrawal "Cash" list and returns its id. No Dart-side
+  /// duplicate check (same discipline as [createClassification]): a duplicate active name in the
+  /// group throws the real unique-constraint `DatabaseException`. Throws [StateError] when the
+  /// group row does not exist (a database below version 7, which the app never opens).
+  static Future<int> createCashUseClassification(Database db, {required String name}) async {
+    final g = await db.query('classification_groups', columns: ['id'], where: 'code = ?', whereArgs: [kCashUseGroupCode]);
+    if (g.isEmpty) throw StateError('The Cash category group is missing.');
+    return createClassification(db, groupId: g.first['id']! as int, name: name);
   }
 }

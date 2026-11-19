@@ -13,7 +13,9 @@ import 'package:mmogo/autoread/ui/quiet_note.dart';
 import 'package:mmogo/autoread/ui/todo_copy.dart';
 import 'package:mmogo/autoread/ui/waiting_bell_numbers.dart';
 import 'package:mmogo/autoread/ui/waiting_section.dart';
+import 'package:mmogo/data/db/analytics_dao.dart';
 import 'package:mmogo/domain/notifications/notif_chip.dart';
+import 'package:mmogo/ui/shell/bell_counts.dart' show WaitingBellNumbers;
 import 'package:mmogo/ui/screens/notifications/notifications_page.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:mmogo/ui/theme/app_theme.dart';
@@ -105,6 +107,53 @@ void main() {
             items.any((i) => i.kind == WaitingKind.readyToParse) ? findsOneWidget : findsNothing);
       }, skip: skip);
     }
+
+    testWidgets('the withdrawals-decision item counts as ONE in the To do number; Could not read still does not', (t) async {
+      t.view.devicePixelRatio = 1.0;
+      t.view.physicalSize = const Size(390, 900);
+      addTearDown(t.view.reset);
+      final undecided = ValueNotifier<List<AnalyticsTransactionRow>>([
+        for (final i in [1, 2])
+          AnalyticsTransactionRow(
+            id: i,
+            displayCode: 'WDU000000$i',
+            sourceType: 'AGENT_WITHDRAWAL',
+            amountCents: 100000,
+            counterpartyLabel: 'Test Agent',
+            counterpartyPhone: null,
+            paybillAccountNumber: null,
+            classificationId: 1,
+            classificationName: 'Withdrawal',
+            occurredAt: kFakeNow,
+            transactionCostCents: 0,
+          ),
+      ]);
+      final items = [ready(1), ready(2), unreadable(3), cat(4)];
+      await t.pumpWidget(_host(NotificationsPage(
+        news: FakeNotificationsRepository(const []),
+        waiting: FakeAutoReadWaitingRepository(items, now: () => kFakeNow),
+        initialChip: NotifChip.todo,
+        clock: () => kFakeNow,
+        waitingActions: WaitingActions(onParse: (_) {}, undecided: undecided, onDecisionCashOnly: (_) async {}, onDecisionCategorize: (_) async {}),
+      )));
+      await t.pump();
+      await t.pump();
+      expect(count(t), '4'); // 2 to parse + 1 to categorize + the ONE decision item (2 withdrawals)
+      // The bell (same source) shows the same total: the decision item is ONE in the amber number.
+      final repo = FakeAutoReadWaitingRepository(items, now: () => kFakeNow);
+      final seen = <WaitingBellNumbers>[];
+      final sub = waitingBellNumbers(repo, () => kFakeNow, undecided: undecided).listen(seen.add);
+      addTearDown(sub.cancel);
+      await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      expect(seen.last.waiting, 2); // 1 to categorize + the decision item
+      expect(seen.last.readyToParse, 2);
+      expect(seen.last.waiting + seen.last.readyToParse, int.parse(count(t)));
+      undecided.value = const [];
+      await t.pump();
+      await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      expect(count(t), '3');
+      expect(seen.last.waiting + seen.last.readyToParse, 3); // the bell dropped with the item
+    }, skip: skip);
 
     testWidgets('heading counts equal the rows under them', (t) async {
       await open(t, [ready(1), ready(2), unreadable(3), cat(4), cat(5), cat(6)]);

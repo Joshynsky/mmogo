@@ -30,6 +30,8 @@ class _NotificationsRouteState extends State<NotificationsRoute> {
   final ChoosingIds _choosing = ChoosingIds();
   final ValueNotifier<String?> _note = ValueNotifier<String?>(null);
 
+  bool _undecidedRequested = false;
+
   @override
   void dispose() {
     _choosing.dispose();
@@ -45,7 +47,13 @@ class _NotificationsRouteState extends State<NotificationsRoute> {
     var actions = const WaitingActions();
     if (kAutoReadCompiled) {
       final w = scope.waiting;
-      if (w is RealWaitingRepository) actions = buildRealWaitingActions(context, w, choosing: _choosing, note: _note);
+      if (w is RealWaitingRepository) {
+        actions = buildRealWaitingActions(context, w, choosing: _choosing, note: _note);
+        if (!_undecidedRequested) {
+          _undecidedRequested = true;
+          w.refreshUndecided();
+        }
+      }
     }
     return NotificationsPage(
       news: scope.news,

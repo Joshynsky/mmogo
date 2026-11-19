@@ -125,6 +125,8 @@ void main() {
                   },
                   4: AppMigrations.steps[4]!,
                   5: AppMigrations.steps[5]!,
+                  6: AppMigrations.steps[6]!,
+                  7: AppMigrations.steps[7]!,
                 }));
         await db.close();
         return null;
@@ -145,7 +147,7 @@ void main() {
       final path = await v2Path();
       expect(await openWithTamper(path, 'seq_restore', 'SELECT 1'), isNull);
       final up = await _openRaw(path, readOnly: true);
-      expect(firstIntOf(await up.rawQuery('PRAGMA user_version')), 5);
+      expect(firstIntOf(await up.rawQuery('PRAGMA user_version')), 7);
       await up.close();
     });
 
@@ -205,7 +207,7 @@ void main() {
       final path = _path('clean');
       await (await buildV2Database(path)).close();
       final db = await _openLive(path);
-      expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 5);
+      expect(firstIntOf(await db.rawQuery('PRAGMA user_version')), 7);
       await db.close();
     });
   });

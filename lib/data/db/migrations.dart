@@ -2,6 +2,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'migration_v3.dart';
 import 'migration_v5.dart';
+import 'migration_v6.dart';
+import 'migration_v7.dart';
 import 'schema.dart' show kFulizaEventsStatements;
 
 /// The database version this build creates and expects.
@@ -13,10 +15,14 @@ import 'schema.dart' show kFulizaEventsStatements;
 /// 5 = 0.2.0 (row 17): Airtime has two built-in categories ("For myself" =
 /// the renamed `AIRTIME:airtime`, "For another number" added) and the kind-lock
 /// trigger; data only, no table change (`migration_v5.dart`).
-/// Adding v6 later means: add its step, register it in [AppMigrations.steps],
+/// 6 = 0.2.1: a withdrawal can have linked Cash entries: `transactions.parent_transaction_id`
+/// and `cash_only_decided`, an index and guard triggers (additive, `migration_v6.dart`).
+/// 7 = 0.2.1: the empty "Cash" category group `CASH_USE` (a withdrawal's own category list;
+/// `classification_groups` is rebuilt for its 7-code CHECK, `migration_v7.dart`).
+/// Adding v8 later means: add its step, register it in [AppMigrations.steps],
 /// bump this constant, and update `AppSchema.createSchema` to the latest
 /// shape in the same change.
-const int kDbVersion = 5;
+const int kDbVersion = 7;
 
 /// The `onUpgrade` ladder.
 ///
@@ -26,7 +32,7 @@ const int kDbVersion = 5;
 ///    previous `user_version` if anything throws), so a step uses the
 ///    [DatabaseExecutor] it is given and never opens a nested transaction or
 ///    touches `AppDatabase.instance`;
-///  - idempotent; `_toV2` and `_toV4` are additive only. `_toV3` REBUILDS tables, so it
+///  - idempotent; `_toV2`, `_toV4` and `_toV6` are additive only. `_toV3` REBUILDS tables, so it
 ///    needs `PRAGMA foreign_keys = OFF` (set by `openMmogoDatabase`), drops and
 ///    recreates the guard triggers and indexes itself, and checks its work.
 class AppMigrations {
@@ -46,6 +52,8 @@ class AppMigrations {
     3: migrateToV3, // `_toV3`, see migration_v3.dart
     4: _toV4,
     5: migrateToV5, // `_toV5`, see migration_v5.dart
+    6: migrateToV6, // `_toV6`, see migration_v6.dart
+    7: migrateToV7, // `_toV7`, see migration_v7.dart
   };
 
   /// Wired as `openDatabase(onUpgrade: AppMigrations.migrate)`.

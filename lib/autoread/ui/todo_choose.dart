@@ -48,6 +48,8 @@ Widget buildChooseRow({
   required Future<CategoryChoices> Function(WaitingItem item) choicesFor,
   required Future<void> Function(WaitingItem item, String categoryId) onPickCategory,
   void Function(WaitingItem item)? onLater,
+  Future<void> Function(WaitingItem item)? onCashOnly,
+  Future<void> Function(WaitingItem item)? onCategorizeWithdrawal,
 }) =>
     KeyedSubtree(
       key: Key('waiting-row-${item.id}'),
@@ -62,6 +64,8 @@ Widget buildChooseRow({
             onPickCategory: onPickCategory,
             onLater: onLater,
             fresh: fresh,
+            onCashOnly: onCashOnly,
+            onCategorizeWithdrawal: onCategorizeWithdrawal,
           ),
         ],
       ),

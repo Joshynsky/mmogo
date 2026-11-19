@@ -11,6 +11,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../domain/parsing/parsed_sms_fields.dart';
+import '../../ui/copy/withdrawal_copy.dart';
 import '../../ui/theme/app_colors.dart';
 import '../model/waiting_item.dart';
 import 'categorize_sheet.dart';
@@ -27,7 +28,14 @@ class ChooseCategoryRow extends StatefulWidget {
     required this.onPickCategory,
     this.onLater,
     this.fresh = true,
+    this.onCashOnly,
+    this.onCategorizeWithdrawal,
   });
+
+  /// 0.2.1: both set + the item is a withdrawal: the row shows two side-by-side buttons,
+  /// Cash only | Categorize (no Later chip); Categorize opens the withdrawal sheet.
+  final Future<void> Function(WaitingItem item)? onCashOnly;
+  final Future<void> Function(WaitingItem item)? onCategorizeWithdrawal;
 
   final WaitingItem item;
 
@@ -67,9 +75,33 @@ class _ChooseCategoryRowState extends State<ChooseCategoryRow> {
     }
   }
 
+  bool get _withdrawalMode =>
+      widget.item.parsed?.sourceType == SmsSourceType.agentWithdrawal &&
+      widget.onCashOnly != null &&
+      widget.onCategorizeWithdrawal != null;
+
+  Future<void> _cashOnly() async {
+    if (_busy) return;
+    _busy = true;
+    try {
+      await widget.onCashOnly!(widget.item);
+    } catch (_) {
+      _busy = false; // the save failed: the row stays; after a success it leaves
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
   /// Opens the Categorize sheet for this item (the categories load when it opens).
   Future<void> _open() async {
     if (_busy) return;
+    if (_withdrawalMode) {
+      try {
+        await widget.onCategorizeWithdrawal!(widget.item);
+      } catch (_) {
+        if (mounted) setState(() => _failed = true);
+      }
+      return;
+    }
     try {
       final c = await widget.choicesFor(widget.item);
       if (!mounted) return;
@@ -109,7 +141,7 @@ class _ChooseCategoryRowState extends State<ChooseCategoryRow> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    kChooseCategoryTitle,
+                    _withdrawalMode ? kWdQuestion : kChooseCategoryTitle,
                     style: TextStyle(
                       color: p.ink,
                       fontSize: 14,
@@ -138,6 +170,16 @@ class _ChooseCategoryRowState extends State<ChooseCategoryRow> {
                   style: TextStyle(color: p.mutedInk, fontSize: 12.5),
                 ),
               ),
+            if (_withdrawalMode)
+              Row(
+                key: const Key('choose-actions'),
+                children: [
+                  Expanded(child: _Pill(key: const Key('choose-cash-only'), label: kWdTodoRowCashOnly, onTap: _cashOnly)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _Pill(key: const Key('choose-categorize'), label: kActionCategorize, fill: true, onTap: _open)),
+                ],
+              )
+            else
             SizedBox(
               width: double.infinity,
               child: Wrap(
@@ -157,6 +199,7 @@ class _ChooseCategoryRowState extends State<ChooseCategoryRow> {
                   _Pill(
                     key: const Key('choose-categorize'),
                     label: kActionCategorize,
+                    fill: true, // same filled look as the Parse button (PM 17-11-2026)
                     onTap: _open,
                   ),
                 ],
@@ -175,10 +218,14 @@ class _Pill extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.quiet = false,
+    this.fill = false,
   });
   final String label;
   final VoidCallback onTap;
   final bool quiet;
+
+  /// The filled primary pill, drawn like the Parse button on the same page.
+  final bool fill;
 
   @override
   Widget build(BuildContext context) {
@@ -189,9 +236,9 @@ class _Pill extends StatelessWidget {
       onTap: onTap,
       excludeSemantics: true,
       child: Material(
-        color: p.surface,
+        color: fill ? p.primary : p.surface,
         shape: StadiumBorder(
-          side: BorderSide(color: quiet ? p.mutedInk : p.line, width: 1.5),
+          side: BorderSide(color: fill ? p.primary : (quiet ? p.mutedInk : p.line), width: 1.5),
         ),
         child: InkWell(
           customBorder: const StadiumBorder(),
@@ -202,14 +249,15 @@ class _Pill extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Flexible(
                     child: Text(
                       label,
                       style: TextStyle(
                         fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: quiet ? p.mutedInk : p.ink,
+                        fontWeight: fill ? FontWeight.w800 : FontWeight.w700,
+                        color: fill ? p.onPrimary : (quiet ? p.mutedInk : p.ink),
                       ),
                     ),
                   ),

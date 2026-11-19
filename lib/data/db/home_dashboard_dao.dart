@@ -26,6 +26,9 @@ class SourceTypeTotal {
   final int count;
 }
 
+List<String> _names(String? joined) =>
+    joined == null || joined.isEmpty ? const [] : {...joined.split('\u001f')}.toList();
+
 /// Minimal, ad hoc query layer against `AppDatabase`/`AppSchema` directly —
 /// no repository/DAO abstraction existed before this slice (T1's own FLAGS
 /// said building one was out of its scope). Raw SQL was chosen over
@@ -106,7 +109,12 @@ class HomeDashboardDao {
       SELECT t.id, t.display_code, t.source_type, t.amount_cents,
              t.counterparty_label, t.transaction_occurred_at,
              t.transaction_cost_cents, t.agent_number,
-             c.name AS classification_name
+             c.name AS classification_name, t.parent_transaction_id,
+             (SELECT group_concat(lname, char(31)) FROM
+                (SELECT lc.name AS lname FROM transactions ch
+                 JOIN classifications lc ON lc.id = ch.classification_id
+                 WHERE ch.parent_transaction_id = t.id AND ch.deleted_at IS NULL
+                 ORDER BY ch.id)) AS linked_names
       FROM transactions t
       JOIN classifications c ON c.id = t.classification_id
       WHERE t.deleted_at IS NULL
@@ -125,6 +133,8 @@ class HomeDashboardDao {
             counterpartyLabel: row['counterparty_label'] as String?,
             feeCents: ((row['transaction_cost_cents'] ?? 0) as num).toInt(),
             agentNumber: row['agent_number'] as String?,
+            parentTransactionId: row['parent_transaction_id'] as int?,
+            linkedCategoryNames: _names(row['linked_names'] as String?),
             classificationName: row['classification_name'] as String,
             occurredAt: DateTime.fromMillisecondsSinceEpoch(
               row['transaction_occurred_at'] as int,

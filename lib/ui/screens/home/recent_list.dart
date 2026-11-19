@@ -6,6 +6,7 @@ import '../../../domain/format/money.dart';
 import '../../../domain/format/source_types.dart';
 import '../../../domain/home/recent_transaction.dart';
 import '../../copy/spend_copy.dart';
+import '../../copy/withdrawal_copy.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/tabular.dart';
 import 'home_consts.dart';
@@ -171,10 +172,13 @@ class _RecentRow extends StatelessWidget {
   /// Second line: `Type · agent number (when it has one) · date`.
   String get _subtitle {
     final agent = tx.agentNumber;
+    final arrow = tx.isWithdrawalRow && tx.linkedCategoryNames.isNotEmpty ? wdArrowText(tx.linkedCategoryNames) : null;
     return [
       sourceTypeName(tx.sourceType),
       if (agent != null && agent.isNotEmpty) agent,
-      formatShortDate(tx.occurredAt),
+      // 0.2.1: "Cash - Rent" says where it came from; a withdrawal says where it went.
+      arrow == null ? formatShortDate(tx.occurredAt) : '${formatShortDate(tx.occurredAt)} $arrow',
+      if (tx.fromWithdrawal) kWdFromWithdrawalTag,
     ].join(' · ');
   }
 
