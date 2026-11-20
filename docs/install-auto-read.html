@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="How to install mmogo auto-read when Google Play Protect blocks it: pause scanning, install, switch it back on.">
+<meta name="theme-color" content="#073B4C">
+<link rel="icon" type="image/png" href="img/icon.png">
+<title>Installing the auto-read version: mmogo</title>
+<link rel="stylesheet" href="style.css?v=20261028a">
+<style>
+html { color-scheme: light; }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+.guide .shot { display: block; height: auto; margin-top: 10px; width: min(300px, 100%); border-radius: 14px; border: 1px solid var(--line); }
+.guide .warn { margin-top: 20px; }
+.guide .back { margin-top: 28px; display: flex; gap: 12px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="index.html"><img alt="" src="img/icon.png"> mmogo</a>
+    <nav class="nav" aria-label="Main"><a href="index.html#versions" class="opt">Versions</a><a href="index.html#whats-new" class="opt">What's new</a><a href="news.html">News</a><a href="index.html#faq" class="opt">FAQ</a></nav>
+    <a class="btn btn-sm" href="index.html#versions">Download</a>
+  </div>
+</header>
+
+<main id="top" class="guide">
+  <section class="newshead">
+    <div class="wrap">
+      <p class="eyebrow">Install guide</p>
+      <h1 style="font-size: clamp(2rem, 7vw, 2.8rem); font-weight: 800; letter-spacing: -0.015em;">Installing the auto-read version</h1>
+      <p class="sec-lede">On some phones, Google Play Protect blocks the auto-read version with "App blocked to protect your device". It does this because the app asks for SMS permission and does not come from the Play Store. You can still install it. Pause Play Protect's scanning, install mmogo, then switch scanning back on. It takes about two minutes.</p>
+
+      <p class="heads-up"><b>Your data stays on your phone.</b> mmogo has no account and no ads, and your entries and messages are never sent anywhere. The only time it uses the internet is to check for updates, and you can switch that off in Settings.</p>
+      <p class="heads-up warn"><b>Choose Pause, never Turn off, and switch it back on afterwards.</b> Play Protect protects you from harmful apps. Only pause it for a file you downloaded from this site, and check the SHA-256 on the <a href="index.html#install">install section</a> first.</p>
+
+      <ol class="steps">
+        <li><div><b>Open the Play Store and choose Play Protect</b><span>Tap your profile picture at the top right, then Play Protect.<img class="shot" src="img/pp-1.webp" alt="The Play Store account menu with Play Protect in the list" loading="lazy" width="540" height="310"></span></div></li>
+        <li><div><b>Tap the gear at the top right</b><span>That opens Play Protect settings.<img class="shot" src="img/pp-2.webp" alt="The Play Protect screen with the gear at the top right" loading="lazy" width="540" height="460"></span></div></li>
+        <li><div><b>Turn off "Scan apps with Play Protect"</b><span>Two switches are on: Scan apps with Play Protect, and Improve harmful app detection. Tap the first one.<img class="shot" src="img/pp-3.webp" alt="Play Protect settings with both switches on" loading="lazy" width="540" height="560"></span></div></li>
+        <li><div><b>Tap Pause</b><span>A box asks "Pause app scanning instead?" Tap Pause. Do not tap Turn off.<img class="shot" src="img/pp-4.webp" alt="The Pause app scanning instead box with Pause, Turn off and Cancel" loading="lazy" width="540" height="595"></span></div></li>
+        <li><div><b>Check it says paused</b><span>On our phone both switches now showed off, with the note "App scanning is paused. It will automatically turn on again tomorrow."<img class="shot" src="img/pp-5.webp" alt="Play Protect settings with scanning paused" loading="lazy" width="540" height="635"></span></div></li>
+        <li><div><b>Install mmogo auto-read</b><span>Download it from the <a href="index.html#versions">versions section</a> and install it the usual way (<a href="index.html#install">install steps</a>). Check the SHA-256 first.</span></div></li>
+        <li><div><b>Switch scanning back on</b><span>Go back to Play Protect settings and turn on both switches again. Play Protect should switch itself on again the next day, but do not wait for that.</span></div></li>
+      </ol>
+
+      <p class="sec-lede" style="margin-top:24px">Your phone may use different words or a different order, especially Samsung phones. If your phone has no Pause button, tell us on <a href="https://github.com/Joshynsky/mmogo/issues">GitHub</a> (do not paste M-Pesa messages or phone numbers). The standard version needs none of this: it asks only for internet and installs without the SMS permission.</p>
+
+      <div class="back">
+        <a class="btn btn-sun" href="index.html#versions">Back to the downloads</a>
+        <a class="btn copy" href="index.html#install">Install steps and SHA-256</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><a href="index.html">Home</a> · <a href="news.html">News</a> · <a href="https://github.com/Joshynsky/mmogo">GitHub</a> · <a href="https://github.com/Joshynsky/mmogo/releases">All releases</a></p>
+    <p>mmogo is an independent project. It is not made by, or connected to, Safaricom, M-Pesa or Google.</p>
+  </div>
+</footer>
+<script>
+(function () { try { var t = localStorage.getItem('mmogo-theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {} })();
+</script>
+</body>
+</html>
