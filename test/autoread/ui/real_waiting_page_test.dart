@@ -11,6 +11,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
+import 'package:mmogo/ui/widgets/pill_toast.dart';
 import 'package:mmogo/autoread/model/waiting_item.dart';
 import 'package:mmogo/autoread/autoread_feature.dart';
 import 'package:mmogo/autoread/bridge/fake_autoread_bridge.dart';
@@ -64,6 +66,8 @@ void main() {
   late RealWaitingRepository repo;
   var now = kFakeNow;
 
+  setUp(PillToast.dismissNow); // a toast from an earlier test must not leak in
+
   Future<void> setup(WidgetTester t) async {
     await t.runAsync(() async {
       sqfliteFfiInit();
@@ -92,6 +96,7 @@ void main() {
       now: () => now,
       captureIdentity: () async => true,
       onSaved: () {},
+      queuedYes: false, // fake time cannot reach the phone's preferences; queued_yes_repo_test covers the step
       timer: (_, _) => _NoTimer(),
     );
     addTearDown(() async {
@@ -112,6 +117,7 @@ void main() {
     t.view.physicalSize = const Size(400, 900);
     addTearDown(t.view.reset);
     await t.pumpWidget(MaterialApp(
+      navigatorKey: appNavigatorKey,
       theme: AppTheme.theme,
       routes: {Routes.add: (_) => const Scaffold(body: Text('ADD SCREEN'))},
       home: Builder(
@@ -211,7 +217,7 @@ void main() {
     await openPage(t, chip: NotifChip.parse);
     await t.tap(find.byKey(const Key('parseAllBar')));
     await settle(t);
-    expect(find.byType(SnackBar), findsNothing); // the quiet note replaces the toast
+    expect(PillToast.isShowing, isFalse); // the quiet note replaces the toast
     expect(await t.runAsync(() => store.count()), 3);
     expect(bridge.isHeld(heldIdFor(4)), isTrue); // the unreadable one is not lost
     expect(row(4), findsOneWidget);
@@ -235,6 +241,7 @@ void main() {
       waiting: repo,
       counts: bell.value,
       child: MaterialApp(
+      navigatorKey: appNavigatorKey,
         theme: AppTheme.theme,
         initialRoute: Routes.notifications,
         routes: {Routes.notifications: (_) => const NotificationsRoute()},
@@ -261,6 +268,7 @@ void main() {
       database: () async => throw StateError('unused'),
       now: () => now,
       timer: (_, _) => _NoTimer(),
+      queuedYes: false,
     );
     addTearDown(r.dispose);
     final inner = _FakeSource();

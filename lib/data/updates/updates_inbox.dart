@@ -19,6 +19,7 @@ class Notice {
     this.backupPaused = false,
     this.otherVersion = false,
     this.whatsNew = false,
+    this.installHelp = false,
   });
 
   /// The tag of the greeting notice (B49). It is not a version.
@@ -30,6 +31,9 @@ class Notice {
   /// The tag of the "other version of mmogo" notice (standard build only). Not
   /// a version.
   static const otherVersionTag = 'OtherVersion';
+
+  /// The tag of the "install help" notice (auto-read build only). Not a version.
+  static const installHelpTag = 'InstallHelp';
 
   /// The tag prefix of the "What's new in mmogo X" notice; the version follows
   /// it. Not a release (never an update row).
@@ -59,6 +63,14 @@ class Notice {
   /// Its wording is not stored.
   final bool whatsNew;
 
+  /// The one-time install pointer (auto-read build only). Permanent like [otherVersion]: once
+  /// read it stays as a read item, never dismissed. Its wording is not stored
+  /// (see `install_help_copy.dart`).
+  final bool installHelp;
+
+  /// A real release notice (not welcome, backup-paused, other-version, install-help or What's new).
+  bool get isRelease => !welcome && !backupPaused && !otherVersion && !whatsNew && !installHelp;
+
   Notice copyWith({bool? read}) => Notice(
         tag: tag,
         notes: notes,
@@ -68,6 +80,7 @@ class Notice {
         backupPaused: backupPaused,
         otherVersion: otherVersion,
         whatsNew: whatsNew,
+        installHelp: installHelp,
       );
 
   Map<String, Object?> toJson() => {
@@ -79,6 +92,7 @@ class Notice {
         if (backupPaused) 'backup_paused': true,
         if (otherVersion) 'other_version': true,
         if (whatsNew) 'whats_new': true,
+        if (installHelp) 'install_help': true,
       };
 
   /// `null` when the stored map is unusable (wrong types, bad tag).
@@ -93,13 +107,18 @@ class Notice {
     if (tag is! String) return null;
     final otherVersion = raw['other_version'] == true;
     final whatsNew = raw['whats_new'] == true;
-    if ((welcome ? 1 : 0) + (backupPaused ? 1 : 0) + (otherVersion ? 1 : 0) + (whatsNew ? 1 : 0) > 1) return null;
+    final installHelp = raw['install_help'] == true;
+    if ((welcome ? 1 : 0) + (backupPaused ? 1 : 0) + (otherVersion ? 1 : 0) + (whatsNew ? 1 : 0) + (installHelp ? 1 : 0) > 1) {
+      return null;
+    }
     if (welcome) {
       if (tag != welcomeTag) return null;
     } else if (backupPaused) {
       if (tag != backupPausedTag) return null;
     } else if (otherVersion) {
       if (tag != otherVersionTag) return null;
+    } else if (installHelp) {
+      if (tag != installHelpTag) return null;
     } else if (whatsNew) {
       if (!tag.startsWith(whatsNewTagPrefix) || ReleaseInfo.parseVersion(tag.substring(whatsNewTagPrefix.length)) == null) return null;
     } else if (ReleaseInfo.parseVersion(tag) == null) {
@@ -115,6 +134,7 @@ class Notice {
       backupPaused: backupPaused,
       otherVersion: otherVersion,
       whatsNew: whatsNew,
+      installHelp: installHelp,
     );
   }
 }
@@ -156,6 +176,7 @@ class UpdatesInbox {
   /// Writes nothing.
   void resetForRestart() {
     _notices = const [];
+    _prunedReleases = const [];
     _loading = null;
     _hadStoredValue = false;
     unreadCount.value = 0;
@@ -168,13 +189,23 @@ class UpdatesInbox {
   /// Newest first.
   List<Notice> get notices => List.unmodifiable(_notices);
 
+  List<String> _prunedReleases = const [];
+
+  /// The release notices the last [load] dropped because the installed version is not older than
+  /// them: the update was installed. The What's new swap reads this (0.2.1 #3).
+  List<String> get prunedReleaseTags => _prunedReleases;
+
+  /// True when a release notice is held (the load already pruned any that is
+  /// not newer than the installed version): an update is available.
+  bool get updateAvailable => _notices.any((n) => n.isRelease);
+
   /// At most [maxNotices] notices; the permanent other-version one is kept
   /// whatever its age and does not count toward the limit.
   static List<Notice> _capped(Iterable<Notice> list) {
     var room = maxNotices;
     return [
       for (final n in list)
-        if (n.otherVersion || room-- > 0) n,
+        if (n.otherVersion || n.installHelp || room-- > 0) n,
     ];
   }
 
@@ -210,9 +241,10 @@ class UpdatesInbox {
       parsed = const [];
     }
     final installed = _installedVersion();
-    final current = _capped(parsed.where(
-      (n) => n.welcome || n.backupPaused || n.otherVersion || n.whatsNew || ReleaseInfo.isNewerVersion(n.tag, installed),
-    ));
+    bool keep(Notice n) =>
+        n.welcome || n.backupPaused || n.otherVersion || n.whatsNew || n.installHelp || ReleaseInfo.isNewerVersion(n.tag, installed);
+    _prunedReleases = [for (final n in parsed) if (!keep(n)) n.tag];
+    final current = _capped(parsed.where(keep));
     if (current.length != parsed.length) changedOnLoad = true;
     _notices = current;
     _publishCount();
@@ -226,7 +258,12 @@ class UpdatesInbox {
   Future<bool> add(Notice notice) async {
     try {
       await ensureLoaded();
-      if ((notice.welcome ? 1 : 0) + (notice.backupPaused ? 1 : 0) + (notice.otherVersion ? 1 : 0) + (notice.whatsNew ? 1 : 0) > 1) {
+      if ((notice.welcome ? 1 : 0) +
+              (notice.backupPaused ? 1 : 0) +
+              (notice.otherVersion ? 1 : 0) +
+              (notice.whatsNew ? 1 : 0) +
+              (notice.installHelp ? 1 : 0) >
+          1) {
         return false;
       }
       if (notice.welcome) {
@@ -235,6 +272,8 @@ class UpdatesInbox {
         if (notice.tag != Notice.backupPausedTag) return false;
       } else if (notice.otherVersion) {
         if (notice.tag != Notice.otherVersionTag) return false;
+      } else if (notice.installHelp) {
+        if (notice.tag != Notice.installHelpTag) return false;
       } else if (notice.whatsNew) {
         if (!notice.tag.startsWith(Notice.whatsNewTagPrefix) ||
             ReleaseInfo.parseVersion(notice.tag.substring(Notice.whatsNewTagPrefix.length)) == null) {
@@ -254,6 +293,7 @@ class UpdatesInbox {
         backupPaused: notice.backupPaused,
         otherVersion: notice.otherVersion,
         whatsNew: notice.whatsNew,
+        installHelp: notice.installHelp,
       );
       final others = notice.backupPaused ? _notices.where((n) => _key(n.tag) != key) : _notices;
       final next = [clean, ...others];

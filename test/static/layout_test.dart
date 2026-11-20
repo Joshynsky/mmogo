@@ -42,6 +42,7 @@ const kAutoReadHookFiles = <String>[
   'ui/screens/home/home_screen.dart',
   'ui/whats_new/whats_new_cards.dart',
   'ui/screens/privacy/privacy_screen.dart',
+  'ui/screens/updates/update_site_url.dart',
 ];
 
 const _codeMapPath = '../_pipeline/knowledge/code-map.md';

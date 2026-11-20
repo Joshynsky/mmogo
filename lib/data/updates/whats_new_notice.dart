@@ -24,4 +24,22 @@ class WhatsNewNotice {
       return false;
     }
   }
+
+  /// The swap on install (0.2.1 #3): when the last load dropped a release notice because the update
+  /// is now installed, and the installed version has What's new pages ([hasContentFor]), the
+  /// "What's new in mmogo X" item takes the update row's place. Returns true when it was added.
+  static Future<bool> swapIfInstalled(
+    UpdatesInbox inbox,
+    String installed, {
+    required bool Function(String versionName) hasContentFor,
+    DateTime? now,
+  }) async {
+    try {
+      await inbox.ensureLoaded();
+      if (inbox.prunedReleaseTags.isEmpty || !hasContentFor(installed)) return false;
+      return await addIfDue(inbox, installed, now: now);
+    } catch (_) {
+      return false;
+    }
+  }
 }

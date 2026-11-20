@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../widgets/pill_toast.dart';
 import '../../../data/backup/auto_backup_service.dart';
 import '../../../data/prefs/backup_prefs.dart';
 import '../../../platform/storage_bridge.dart';
@@ -68,10 +71,13 @@ class AutoBackupFlow {
   }
 
   /// The toast after a folder change or switch-off (A11), if any.
-  void _toastFor(BuildContext context, FolderChangeResult? r) {
-    if (r == null) return;
+  /// Returns true when a toast was shown.
+  bool _toastFor(BuildContext context, FolderChangeResult? r) {
+    if (r == null) return false;
     final text = folderChangeToast(r);
-    if (text != null) _say(context, text);
+    if (text == null) return false;
+    _say(context, text);
+    return true;
   }
 
   /// Setup sheet (W1) -> OS folder picker -> cloud notice (W2) -> use it.
@@ -145,9 +151,16 @@ class AutoBackupFlow {
         }
         onChanged();
         if (!context.mounted) return;
-        _toastFor(context, r);
+        final leftoverShown = _toastFor(context, r);
         if (r.busy) return;
-        _say(context, r.ok ? autoBackupIsOnToast(n) : 'Could not save the folder choice. Try again.');
+        final text = r.ok ? autoBackupIsOnToast(n) : 'Could not save the folder choice. Try again.';
+        // A pill toast replaces the one on screen; the old SnackBars queued. So the second message waits until
+        // the first has had its full time (the leftover message would otherwise never be seen).
+        if (leftoverShown) {
+          Timer(kPillToastMinDuration + const Duration(milliseconds: 400), () => PillToast.show(text));
+        } else {
+          PillToast.show(text);
+        }
         return;
       }
       await _svc.releaseUnused(pick); // declined: give the permission back
@@ -167,7 +180,7 @@ class AutoBackupFlow {
   }
 
   void _say(BuildContext context, String text) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(text)));
+    PillToast.show(text);
   }
 }
 

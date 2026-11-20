@@ -9,7 +9,9 @@ import '../../ui/screens/remembered/remembered_screen.dart';
 import '../../ui/screens/settings/remembered_hook_row.dart';
 import '../../ui/shell/routes.dart' show RememberedRouteArgs;
 import '../logic/airtime_auto.dart' show AirtimeAutoController;
-import 'auto_record_tab.dart' show autoRecordExtraTab;
+import '../rules/rule_cleanup.dart' show RuleCleanup;
+import 'levels/levels_deps.dart' show LevelsDeps;
+import 'levels/levels_tab.dart' show levelsExtraTab;
 
 /// The Settings row hook: how many of the two switches are on (0 to 2) and ONE
 /// count of kept names (a count only, never the names). [memory] is a test seam.
@@ -24,9 +26,13 @@ RememberedRowHook rememberedRowHookFor(AirtimeAutoController c, {RecipientMemory
 
 /// The Remembered page with its second tab. [args] is the route argument
 /// (a [RememberedRouteArgs] opens the second tab when asked).
-RememberedScreen rememberedPageFor(AirtimeAutoController c, {Object? args, RecipientMemory? memory}) =>
+/// [levels] null = the app's [LevelsDeps.instance]; when that is unset too, the
+/// second tab shows the airtime switches only. [cleanup] (the app passes its own) makes Forget, Change to
+/// Send Money and Forget all also remove the person's rule.
+RememberedScreen rememberedPageFor(AirtimeAutoController c,
+        {Object? args, RecipientMemory? memory, LevelsDeps? levels, RuleCleanup? cleanup}) =>
     RememberedScreen(
       memory: memory,
-      extraTab: autoRecordExtraTab(c),
+      extraTab: levelsExtraTab(c, deps: levels ?? LevelsDeps.instance, cleanup: cleanup),
       openExtraTab: args is RememberedRouteArgs && args.openAutoRecord,
     );

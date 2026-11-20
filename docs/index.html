@@ -324,6 +324,12 @@ img { max-width: 100%; }
 
 <script>
 (function () {
+  /* ?build=std or ?build=auto (from the app's Update button): highlight that version card. */
+  try {
+    var b = new URLSearchParams(location.search).get('build');
+    var card = b && document.querySelector('.vcard .dl[data-build="' + b + '"]');
+    if (card) card.closest('.vcard').classList.add('vcard-key');
+  } catch (e) {}
   var root = document.documentElement;
   try { var t = localStorage.getItem('mmogo-theme'); if (t) root.setAttribute('data-theme', t); } catch (e) {}
   document.getElementById('theme').addEventListener('click', function () {

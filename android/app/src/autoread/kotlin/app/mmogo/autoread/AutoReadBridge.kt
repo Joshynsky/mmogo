@@ -76,6 +76,7 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
                         AutoReadSwitch.parseOn(activity), BridgeLogic.autostartHelp(Build.MANUFACTURER),
                         AutoReadSwitch.consentVersion(activity),
                         AutoReadSwitch.alertDetails(activity), AutoReadSwitch.alertDetailsAbsent(activity),
+                        AutoReadSwitch.alertMinutes(activity),
                     ),
                 )
                 "setAlertDetails" -> {
@@ -88,6 +89,15 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
                         result.success(AutoReadSwitch.alertDetails(activity))
                     }
                 }
+                "setAlertMinutes" -> {
+                    // "Hide details after" (0 = Never). Alert only: the held message's window is not changed.
+                    val m = BridgeLogic.minutesArg(call.arguments)
+                    if (m == null) result.error(BridgeLogic.ERR_FAILED, "bad argument", null)
+                    else {
+                        AutoReadSwitch.setAlertMinutes(activity, m)
+                        result.success(AutoReadSwitch.alertMinutes(activity))
+                    }
+                }
                 "setEnabled" -> {
                     val enabled = BridgeLogic.enabledArg(call.arguments)
                     if (enabled == null) result.error(BridgeLogic.ERR_FAILED, "bad argument", null)
@@ -95,6 +105,7 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
                 }
                 "requestPermissions" -> requestPermissions(result)
                 "takeLaunchId" -> result.success(takeLaunchId())
+                "takeLaunchAction" -> result.success(takeLaunchAction())
                 "deleteAllHeld" -> {
                     store.deleteAll()
                     Notifier.cancelAll(activity)
@@ -202,11 +213,29 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
         return id
     }
 
+    /**
+     * "categorize" when the launching intent came from the Change category button of an Ask first alert (once:
+     * the action is cleared), else null. The app then opens the Categorize sheet for the id from [takeLaunchId].
+     */
+    private fun takeLaunchAction(): String? {
+        val intent = activity.intent ?: return null
+        val action = launchActionOf(intent) ?: return null
+        intent.action = null
+        return action
+    }
+
+    private fun launchActionOf(intent: Intent): String? =
+        if (intent.action == AskAlert.ACTION_CHANGE) AskAlert.LAUNCH_CATEGORIZE else null
+
     private fun handleNewIntent(intent: Intent) {
         try {
             activity.intent = intent
             val id = Notifier.heldIdFrom(intent)
-            if (id != null) channel.invokeMethod("onTapped", mapOf("id" to id))
+            val action = launchActionOf(intent)
+            if (id != null) {
+                if (action != null) intent.action = null
+                channel.invokeMethod("onTapped", if (action == null) mapOf("id" to id) else mapOf("id" to id, "action" to action))
+            }
         } catch (_: Throwable) {
         }
     }

@@ -5,6 +5,7 @@ import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/autoread/logic/reading_controller.dart';
 import 'package:mmogo/autoread/ui/consent_sheet.dart';
 import 'package:mmogo/autoread/ui/reading_settings_section.dart';
@@ -39,6 +40,7 @@ void _size(WidgetTester t, double w, [double h = 900]) {
 Future<void> _pump(WidgetTester t, _Rig r, {double w = 390, double scale = 1.0, double h = 900}) async {
   _size(t, w, h);
   await t.pumpWidget(MaterialApp(
+    navigatorKey: appNavigatorKey,
     theme: AppTheme.theme,
     builder: (context, c) => MediaQuery(
       data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
@@ -231,6 +233,7 @@ void main() {
     Future<void> open(WidgetTester t, {double scale = 1.0, double w = 390}) async {
       _size(t, w, 1400); // the third switch (Show details) makes the sheet taller; it scrolls on a phone
       await t.pumpWidget(MaterialApp(
+        navigatorKey: appNavigatorKey,
         theme: AppTheme.theme,
         builder: (context, c) => MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
@@ -292,6 +295,7 @@ void main() {
       var n = 0;
       _size(t, 390);
       await t.pumpWidget(MaterialApp(
+        navigatorKey: appNavigatorKey,
         theme: AppTheme.theme,
         home: Builder(
           builder: (c) => TextButton(
@@ -573,6 +577,7 @@ void main() {
     ReadingControllerHolder.instance = null;
     _size(t, 390);
     await t.pumpWidget(MaterialApp(
+      navigatorKey: appNavigatorKey,
       theme: AppTheme.theme,
       home: const Scaffold(body: ReadingSettingsSection()),
     ));

@@ -45,9 +45,6 @@ const String kAutoRecordMyselfSub = kAirKindMyselfSub;
 // DRAFT
 const String kAutoRecordOtherSub = kAirKindOtherSub;
 
-// [label] is the row label (For myself / For another number).
-// DRAFT (PM decision 12-11-2026): line one of the block under an opened row.
-String autoRecordExplainTap(String label) => 'You tap Parse on each message, then mmogo files it under $label.';
 // SIGNED (PM 13-11-2026): line two. The words that used to sit on the Notifications card.
 const String kAutoRecordExplainUndo = 'Each automatic record can be undone. You do not need to tap Categorize.';
 // SIGNED (PM 13-11-2026): line three, muted.

@@ -21,6 +21,7 @@ class DeletedTransactionRow {
     required this.classificationName,
     required this.deletedAt,
     this.parentTransactionId,
+    this.recordedAutomatically = false,
     this.linkedCategoryNames = const [],
   });
 
@@ -34,6 +35,9 @@ class DeletedTransactionRow {
 
   /// 0.2.1: the withdrawal this Cash entry was linked to, else null.
   final int? parentTransactionId;
+
+  /// 0.2.1: true when the row had been written with no tap (stays 1 through Undo).
+  final bool recordedAutomatically;
 
   /// 0.2.1: true for a Cash entry that came from a withdrawal.
   bool get fromWithdrawal => parentTransactionId != null;
@@ -73,7 +77,7 @@ class RecentlyDeletedDao {
     final rows = await db.rawQuery('''
       SELECT t.id, t.display_code, t.source_type, t.amount_cents,
              t.counterparty_label, c.name AS classification_name, t.deleted_at,
-             t.parent_transaction_id,
+             t.parent_transaction_id, t.recorded_automatically,
              (SELECT group_concat(lname, char(31)) FROM
                 (SELECT lc.name AS lname FROM transactions ch
                  JOIN classifications lc ON lc.id = ch.classification_id
@@ -95,6 +99,7 @@ class RecentlyDeletedDao {
             classificationName: row['classification_name'] as String,
             deletedAt: DateTime.fromMillisecondsSinceEpoch(row['deleted_at'] as int),
             parentTransactionId: row['parent_transaction_id'] as int?,
+            recordedAutomatically: row['recorded_automatically'] == 1,
             linkedCategoryNames: _names(row['linked_names'] as String?),
           ),
         )

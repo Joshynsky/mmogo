@@ -91,7 +91,7 @@ void main() {
       final export = await backupOf(db).export();
       expect(export.skippedCount, 0);
       final json = jsonDecode(utf8.decode(export.bytes)) as Map<String, Object?>;
-      expect(json['schema_version'], 7);
+      expect(json['schema_version'], 8);
       final rows = {for (final r in _txs(json)) r['display_code']! as String: r};
       final entries = _txs(json).where((r) => r['source_type'] == 'CASH').toList();
       expect(entries, hasLength(2));
@@ -320,9 +320,9 @@ void main() {
       }
     });
 
-    test('this build writes schema 7 and refuses schema 8 as newer (0.2.0, max schema 5, does the same with a 6: pinned by its own test)', () {
-      expect(kBackupSchemaVersion, 7);
-      final j = fileJson(classes: seedRowsV5(), schemaVersion: 8);
+    test('this build writes schema 8 and refuses schema 9 as newer (0.2.0, max schema 5, does the same with a 6: pinned by its own test)', () {
+      expect(kBackupSchemaVersion, 8);
+      final j = fileJson(classes: seedRowsV5(), schemaVersion: 9);
       expect(
         () => BackupValidator.validate(fileBytes(j)),
         throwsA(isA<RestoreRejected>().having((e) => e.reason, 'reason', RestoreRejectReason.newer)),

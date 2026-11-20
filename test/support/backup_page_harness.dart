@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/data/backup/backup_counts.dart';
 import 'package:mmogo/data/backup/backup_repair.dart';
 import 'package:mmogo/data/backup/backup_service.dart';
@@ -141,6 +142,7 @@ Future<void> pumpBackupPage(
     AppPaletteScope(
       controller: AppPaletteController('ocean', dark ? 'dark' : 'light'),
       child: MaterialApp(
+        navigatorKey: appNavigatorKey,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
           child: child!,

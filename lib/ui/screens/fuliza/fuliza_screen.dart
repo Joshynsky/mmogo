@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../widgets/pill_toast.dart';
 import '../../../data/db/analytics_dao.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/db/transaction_dao.dart';
@@ -163,13 +164,7 @@ class _FulizaScreenState extends State<FulizaScreen> {
         );
       } on DatabaseException {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Could not save the changes. If you fill in a name, fill in its phone or account number too.',
-            ),
-          ),
-        );
+        PillToast.show('Could not save the changes. If you fill in a name, fill in its phone or account number too.');
         return;
       }
     }

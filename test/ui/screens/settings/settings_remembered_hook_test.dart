@@ -66,7 +66,7 @@ void main() {
     await _pump(tester);
     expect(find.text('Remembered recipients'), findsOneWidget);
     expect(find.text('Name and type, kept on this phone'), findsOneWidget);
-    expect(find.text('Remembered: recipients and auto-record'), findsNothing);
+    expect(find.text('Remembered, suggestions and auto-record'), findsNothing);
     expect(find.byKey(const Key('settingsRemembered')), findsOneWidget);
     await tester.tap(find.text('Remembered recipients'));
     await tester.pumpAndSettle();
@@ -77,7 +77,7 @@ void main() {
     final f = _Fake();
     await _pump(tester, hook: f.hook);
     expect(find.text('Remembered recipients'), findsNothing);
-    expect(find.text('Remembered: recipients and auto-record'), findsOneWidget);
+    expect(find.text('Remembered, suggestions and auto-record'), findsOneWidget);
     expect(find.text('Auto-record airtime: 1 of 2 on · 3 names, kept on this phone'), findsOneWidget);
     expect(find.byKey(const Key('settingsRemembered')), findsOneWidget);
   });
@@ -85,7 +85,7 @@ void main() {
   testWidgets('opens the Remembered page and the sub-line refreshes after Back', (tester) async {
     final f = _Fake();
     await _pump(tester, hook: f.hook);
-    await tester.tap(find.text('Remembered: recipients and auto-record'));
+    await tester.tap(find.text('Remembered, suggestions and auto-record'));
     await tester.pumpAndSettle();
     expect(find.text('REMEMBERED PAGE'), findsOneWidget);
     f.on = 2;
@@ -107,14 +107,14 @@ void main() {
   testWidgets('a hook with nothing to say falls back to today\'s sub-line', (tester) async {
     await _pump(tester, hook: RememberedRowHook(load: () async => const RememberedRowInfo()));
     expect(find.text('Name and type, kept on this phone'), findsOneWidget);
-    expect(find.text('Remembered: recipients and auto-record'), findsOneWidget);
+    expect(find.text('Remembered, suggestions and auto-record'), findsOneWidget);
   });
 
   testWidgets('spoken label joins the row name and its sub-line, as a button', (tester) async {
     final handle = tester.ensureSemantics();
     await _pump(tester, hook: _Fake().hook);
     expect(
-      find.bySemanticsLabel('Remembered: recipients and auto-record. Auto-record airtime: 1 of 2 on · 3 names, kept on this phone'),
+      find.bySemanticsLabel('Remembered, suggestions and auto-record. Auto-record airtime: 1 of 2 on · 3 names, kept on this phone'),
       findsOneWidget,
     );
     handle.dispose();
@@ -124,13 +124,13 @@ void main() {
     testWidgets('no overflow at text $scale', (tester) async {
       await _pump(tester, hook: _Fake().hook, scale: scale);
       expect(tester.takeException(), isNull);
-      expect(find.text('Remembered: recipients and auto-record'), findsOneWidget);
+      expect(find.text('Remembered, suggestions and auto-record'), findsOneWidget);
     });
   }
 
   testWidgets('dark appearance: row shows, no overflow at 1.3', (tester) async {
     await _pump(tester, hook: _Fake().hook, scale: 1.3, appearance: 'dark');
     expect(tester.takeException(), isNull);
-    expect(find.text('Remembered: recipients and auto-record'), findsOneWidget);
+    expect(find.text('Remembered, suggestions and auto-record'), findsOneWidget);
   });
 }

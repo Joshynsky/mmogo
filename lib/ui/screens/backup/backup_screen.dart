@@ -5,6 +5,7 @@ import '../../../data/backup/backup_counts.dart';
 import '../../../data/backup/backup_service.dart';
 import '../../../data/backup/restore_service.dart';
 import '../../../data/db/app_database.dart';
+import '../../../data/db/ledger_hooks.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../../data/prefs/backup_prefs.dart';
 import '../../copy/backup_copy.dart';
@@ -89,6 +90,7 @@ class _BackupScreenState extends State<BackupScreen> {
   /// own numbers are refreshed.
   Future<void> _refreshApp() async {
     PrimaryShell.active?.dataChanged();
+    LedgerHooks.bulkChanged(); // many rows may have changed: the people summary is rebuilt
     AppPrefs.userDisplayNameRevision.value++;
     final palette = AppPaletteScope.maybeOf(context);
     if (palette != null) await palette.load();

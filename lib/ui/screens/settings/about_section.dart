@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/pill_toast.dart';
 import '../../../data/prefs/update_prefs.dart';
 import '../../../data/updates/updates_inbox.dart';
 import '../../../app_constants.dart';
@@ -91,7 +92,7 @@ class _AboutSectionState extends State<AboutSection> {
       opened = await StorageBridge.instance.openUrl(AppConstants.issuesUrl);
     } catch (_) {}
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(kSendFeedbackCouldNotOpen)));
+      PillToast.show(kSendFeedbackCouldNotOpen);
     }
   }
 
@@ -103,7 +104,7 @@ class _AboutSectionState extends State<AboutSection> {
       opened = await StorageBridge.instance.openUrl(AppConstants.siteUrl);
     } catch (_) {}
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(kOtherVersionCouldNotOpen)));
+      PillToast.show(kOtherVersionCouldNotOpen);
     }
   }
 

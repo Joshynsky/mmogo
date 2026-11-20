@@ -84,9 +84,9 @@ void main() {
     }
   });
 
-  test('the live version is 6 and the ladder has step 6', () {
-    expect(kDbVersion, 7);
-    expect(AppMigrations.steps.keys, [2, 3, 4, 5, 6, 7]);
+  test('the live version is 8 and the ladder has step 6', () {
+    expect(kDbVersion, 8);
+    expect(AppMigrations.steps.keys, [2, 3, 4, 5, 6, 7, 8]);
   });
 
   test('v5 -> v6 with real rows: every old row keeps its values and reads parent NULL, decided 0', () async {
@@ -101,13 +101,13 @@ void main() {
     await v5.close();
 
     final db = await _openLive(path);
-    expect(await _uv(db), 7);
+    expect(await _uv(db), 8);
     final after = [for (final r in await db.rawQuery('SELECT * FROM transactions ORDER BY id')) {...r}];
     expect(after.length, before.length);
     for (var i = 0; i < before.length; i++) {
       expect(after[i]['parent_transaction_id'], isNull);
       expect(after[i]['cash_only_decided'], 0);
-      expect({...after[i]}..remove('parent_transaction_id')..remove('cash_only_decided'), before[i]);
+      expect({...after[i]}..remove('parent_transaction_id')..remove('cash_only_decided')..remove('recorded_automatically'), before[i]);
     }
     expect(await db.rawQuery('PRAGMA foreign_key_check'), isEmpty);
     expect((await db.rawQuery('PRAGMA integrity_check')).first.values.first, 'ok');
@@ -163,7 +163,7 @@ void main() {
     expect(cols, isNot(contains('parent_transaction_id')));
     await raw.close();
     final db = await _openLive(path);
-    expect(await _uv(db), 7);
+    expect(await _uv(db), 8);
     await db.close();
   });
 

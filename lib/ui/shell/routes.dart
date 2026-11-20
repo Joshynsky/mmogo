@@ -74,9 +74,13 @@ class RememberedRouteArgs {
 /// Route arguments of [Routes.notifications]: the chip to open on. A chip that
 /// is not available in this flavor opens News (the page decides).
 class NotificationsRouteArgs {
-  const NotificationsRouteArgs({this.chip = NotifChip.todo, this.focusId});
+  const NotificationsRouteArgs({this.chip = NotifChip.todo, this.focusId, this.openCategorizeId});
   final NotifChip chip;
 
   /// Id of a row to bring into view and highlight; null or not listed = none.
   final String? focusId;
+
+  /// Id of a waiting row whose Categorize sheet opens as soon as the list has it (the Change category
+  /// button of an Ask first alert); null = none. Autoread build only.
+  final String? openCategorizeId;
 }

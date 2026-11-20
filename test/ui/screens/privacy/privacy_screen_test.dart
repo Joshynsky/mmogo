@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../../../support/mpesa_text.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/app_constants.dart';
 import 'package:mmogo/autoread/ui/privacy_autoread_copy.dart' show kPrivacyAutoRecordedTrail, kPrivacyHeldDescription, kPrivacyKeptNotShown;
 import 'package:mmogo/data/backup/backup_counts.dart';
@@ -38,6 +39,7 @@ Future<void> _pumpPage(WidgetTester tester, Widget home, {Size size = const Size
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MaterialApp(
+      navigatorKey: appNavigatorKey,
       routes: {
         Routes.privacy: (_) => const PrivacyScreen(),
         Routes.backup: (_) => BackupScreen(

@@ -46,6 +46,10 @@ import '../logic/airtime_auto.dart';
 import '../logic/message_details.dart';
 import '../model/held_description.dart';
 import '../model/waiting_item.dart';
+import '../rules/prefs_undone_codes.dart' show PrefsUndoneCodes;
+import '../rules/undone_codes.dart' show UndoneCodes;
+import 'queued_yes.dart';
+import 'queued_yes_toast.dart';
 import '../model/waiting_repository.dart';
 import '../service/autoread_service.dart';
 import '../ui/category_choices.dart';
@@ -91,7 +95,15 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
     Future<void> Function(bool on)? writeAirtimeAutoOther,
     FulizaEventSaver? fulizaSaver,
     AirtimeTrailStore? trailStore,
-  })  : _fulizaSaver = fulizaSaver,
+    YesMarks? yesMarks,
+    UndoneCodes? undoneCodes,
+    void Function(List<QueuedYesRecorded> recorded)? onQueuedYes,
+    bool queuedYes = true,
+  })  : _queuedYesOn = queuedYes,
+        _yesMarks = yesMarks,
+        _undoneCodes = undoneCodes,
+        _onQueuedYes = onQueuedYes,
+        _fulizaSaver = fulizaSaver,
         _trailStore = trailStore ?? AirtimeTrailStore(prefs: MemoryTrailPrefs(), now: now ?? DateTime.now),
         _bridge = bridge,
         _store = store,
@@ -123,6 +135,22 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
 
   /// Saves Fuliza events from held messages (S12 slice D); null = not saving.
   final FulizaEventSaver? _fulizaSaver;
+
+  // A Yes tapped on a phone alert is recorded here at ingest (see queued_yes.dart). Marks and undone codes
+  // default to the real preference stores; the callback default shows the toast with Undo.
+  /// False: the step is skipped (a widget test under fake time cannot reach the phone's preferences).
+  final bool _queuedYesOn;
+  final YesMarks? _yesMarks;
+  final UndoneCodes? _undoneCodes;
+  final void Function(List<QueuedYesRecorded> recorded)? _onQueuedYes;
+  late final QueuedYesImporter _queuedYes = QueuedYesImporter(
+    marks: _yesMarks ?? PrefsYesMarks(),
+    undone: _undoneCodes ?? PrefsUndoneCodes(),
+    categoryActive: _categoryActive,
+    record: _saveInner,
+    now: _now,
+  );
+  Map<int, String> _namesWritten = const {};
 
   /// The stored 24 h trail (row numbers and times). Written only by [_autoRecordPending].
   final AirtimeTrailStore _trailStore;
@@ -279,6 +307,7 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
       }
       await _reloadTrail();
       await _autoRecordPending();
+      await _importQueuedYes();
       await _publish();
       if (!_ready.isCompleted) _ready.complete();
     });
@@ -587,6 +616,7 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
           _stuck.add(item.id);
         } else {
           _stuck.remove(item.id);
+          await _markAutomatic(rowId);
           final at = _now();
           final shown = await _trailStore.add(rowId, at); // never throws; a failed write keeps the record
           await _reloadTrail(shown);
@@ -600,6 +630,70 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
         if (isAutoRecordEligible(i, myselfOn: airtime.on, otherOn: airtime.onOther)) _stuck.add(i.id);
       }
     }
+  }
+
+  // ------------------------------------------- queued Yes (Ask first, 0.2.1)
+
+  /// Records the Yes taps queued on phone alerts while the app was closed, then refreshes the category names
+  /// the alert shows. Inside [_locked]. Never throws; a failure leaves the items waiting.
+  Future<void> _importQueuedYes() async {
+    if (!_queuedYesOn) return;
+    try {
+      await _importQueuedYesWork().timeout(kQueuedYesBudget);
+    } catch (_) {
+      // Too slow or failed: the ingest goes on; a mark stays and is tried again at the next ingest.
+    }
+  }
+
+  Future<void> _importQueuedYesWork() async {
+    try {
+      final recorded = await _queuedYes.run(await _store.list());
+      if (recorded.isNotEmpty) {
+        final cb = _onQueuedYes;
+        if (cb != null) {
+          cb(recorded);
+        } else {
+          showQueuedYesToasts(recorded, undoQueuedYes);
+        }
+      }
+    } catch (_) {}
+    await _refreshCategoryNames();
+  }
+
+  Future<bool> _categoryActive(int id) async => (await (await _database())
+          .rawQuery('SELECT 1 FROM classifications WHERE id = ? AND active = 1', [id]))
+      .isNotEmpty;
+
+  /// Keeps the Kotlin alert's category names current (written only when they changed).
+  Future<void> _refreshCategoryNames() async {
+    try {
+      if (!await anyAskFirstRuleStored()) return; // no alert will ask a question: no names needed
+      final rows = await (await _database()).rawQuery('SELECT id, name FROM classifications WHERE active = 1');
+      final names = {for (final r in rows) if (r['id'] is int && r['name'] is String) r['id'] as int: r['name'] as String};
+      if (names.length == _namesWritten.length && names.entries.every((e) => _namesWritten[e.key] == e.value)) return;
+      await CategoryNameCache().write(names);
+      _namesWritten = names;
+    } catch (_) {}
+  }
+
+  /// Undo of one entry recorded from a queued Yes: Recently deleted (restorable for 1 hour). A row already
+  /// deleted or gone is left alone.
+  Future<void> undoQueuedYes(QueuedYesRecorded e) => _locked(() async {
+        final db = await _database();
+        final row = (await db.query('transactions', columns: ['deleted_at'], where: 'id = ?', whereArgs: [e.rowId]))
+            .firstOrNull;
+        if (row != null && row['deleted_at'] == null) {
+          await TransactionDao.softDelete(db, id: e.rowId);
+          _onSaved();
+        }
+      });
+
+  /// Marks the row "Recorded automatically" (0.2.1 on; older rows stay unmarked). The database only
+  /// allows it on a non-Cash row from an SMS parse; a refusal leaves the row recorded, unmarked.
+  Future<void> _markAutomatic(int rowId) async {
+    try {
+      await TransactionDao.markRecordedAutomatically(await _database(), id: rowId);
+    } catch (_) {}
   }
 
   /// The switch for airtime for another number (default OFF); same behaviour.

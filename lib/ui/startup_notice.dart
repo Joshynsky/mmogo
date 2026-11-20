@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/pill_toast.dart';
 import '../data/maintenance/reset_resume.dart';
 import 'copy/delete_data_copy.dart';
 import 'shell/app_messenger.dart';
@@ -16,21 +17,14 @@ class StartupNotice {
   /// True once the notice was shown (or decided against) in this process.
   static bool shown = false;
 
-  /// Call after the first frame; shows a SnackBar through the app messenger.
+  /// Call after the first frame; shows a pill toast.
   /// Returns whether a notice was shown.
   static bool maybeShow({ResetResumeOutcome? outcome}) {
     if (shown) return false;
     if ((outcome ?? ResetResume.lastOutcome) != ResetResumeOutcome.notFinished) return false;
-    final messenger = appMessengerKey.currentState;
-    if (messenger == null) return false;
+    if (appNavigatorKey.currentState?.overlay == null) return false;
     shown = true;
-    messenger.showSnackBar(
-      const SnackBar(
-        key: Key('startupNotice'),
-        content: Text(kDeleteStartupNotice),
-        duration: Duration(seconds: 10),
-      ),
-    );
+    PillToast.show(kDeleteStartupNotice, duration: const Duration(seconds: 10));
     return true;
   }
 

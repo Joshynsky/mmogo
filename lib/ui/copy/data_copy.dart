@@ -55,9 +55,10 @@ const kWhyRestoreAsks =
 /// §DATA.COPY.F3 — S10a F3 (orchestrator decision, PM to confirm): Replace and Undo do not
 /// touch the remembered recipients. PROSE ONLY (no key name: the guard test
 /// scans lib/data/backup). Shown in the Replace confirmation (S10b).
+// WORDING-DRAFT (0.2.1, PM picked option B 20-11-2026): the names kept, then the levels reset.
 const kRememberedRecipientsNotInBackup =
-    'Remembered recipients are a phone preference, not part of a backup. '
-    'Replace and Undo leave them alone. Delete data clears them.';
+    'The names mmogo remembers are kept. Replace and Undo leave them alone. Delete data clears them. '
+    "Each person's level (Suggested or Ask first) is not in a backup: Replace puts everyone back to Suggested.";
 
 /// XFER (amendment 8): the backup file is the only route to a new phone.
 const kPhoneTransferNotice =
@@ -70,6 +71,10 @@ const kBackupNotRestorableByOlder = 'A backup made with 0.1.2 cannot be restored
 
 /// 0.2.0 (S12): backups now carry Fuliza records (schema 4). WORDING-DRAFT, PM to sign at the wording gate.
 const kBackupNotRestorableByOlderV4 = 'A backup made with 0.2.0 cannot be restored by 0.1.3 or older.';
+
+/// 0.2.1: the What's new Backups item (signed mock 20-11-2026).
+// WORDING-DRAFT (0.2.1, signed mock 20-11-2026)
+const kBackupNotRestorableByOlderV5 = 'A backup made with 0.2.1 cannot be restored by 0.2.0 or older.';
 
 /// W3: why a backup matters (Backup page header, What's-new, Privacy page).
 const kUninstallErasesNotice =
@@ -194,6 +199,8 @@ const kNetworkSeenSentence =
 const kUpdatesTitle = 'Updates';
 const kUpdatesSwitchTitle = 'Check for updates when you open the app, at most once a week';
 const kUpdatesCheckNowLabel = 'Check for updates now';
+// WORDING-DRAFT (PM sign-off): the download button shown beside the check button when an update is waiting.
+const kUpdatesDownloadLabel = 'Update';
 const kUpdatesCheckingLabel = 'Checking...';
 const kUpdatesSeeWhatsNew = "See what's new";
 const kUpdatesShowAllNotes = 'Show all notes';

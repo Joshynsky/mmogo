@@ -14,7 +14,7 @@ import 'package:mmogo/autoread/logic/airtime_auto.dart';
 import 'package:mmogo/autoread/logic/waiting_logic.dart';
 import 'package:mmogo/autoread/model/waiting_item.dart';
 import 'package:mmogo/autoread/service/autoread_service.dart';
-import 'package:mmogo/autoread/ui/auto_record_tab.dart';
+import 'package:mmogo/autoread/ui/levels/airtime_switches.dart';
 import 'package:mmogo/autoread/ui/auto_recorded_row.dart';
 import 'package:mmogo/data/backup/backup_setting_keys.dart';
 import 'package:mmogo/data/db/schema.dart';
@@ -250,14 +250,13 @@ void main() {
       );
       await t.pumpWidget(AppPaletteScope(
         controller: AppPaletteController('ocean', 'light'),
-        child: MaterialApp(home: Scaffold(body: AutoRecordTab(controller: c))),
+        child: MaterialApp(home: Scaffold(body: AirtimeSwitches(controller: c))),
       ));
-      expect(find.textContaining('can be undone'), findsNothing);
       await t.tap(find.byKey(const Key('autoRecordMyself')));
       await t.pumpAndSettle();
       expect(writes, [true]);
       expect(c.on, isTrue);
-      expect(find.textContaining('can be undone'), findsOneWidget);
+      expect(find.textContaining('can be undone'), findsNothing); // the rules text lives in the "?" sheet
     });
 
     testWidgets('trail row: Undo fires; an undone row has no Undo and says where it went', (t) async {

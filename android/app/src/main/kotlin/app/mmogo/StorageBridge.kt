@@ -24,6 +24,9 @@ class StorageBridge(private val activity: Activity) : MethodChannel.MethodCallHa
     companion object {
         const val CHANNEL = "app.mmogo/storage"
         const val URL_SITE = "https://joshynsky.github.io/mmogo/"
+        const val URL_SITE_STD = "https://joshynsky.github.io/mmogo/?build=std#versions"
+        const val URL_SITE_AUTO = "https://joshynsky.github.io/mmogo/?build=auto#versions"
+        const val URL_INSTALL_HELP = "https://joshynsky.github.io/mmogo/install-auto-read.html"
         const val URL_ISSUES = "https://github.com/Joshynsky/mmogo/issues"
         private const val REQ_FOLDER = 7101
         private const val REQ_FILE = 7102
@@ -300,7 +303,7 @@ class StorageBridge(private val activity: Activity) : MethodChannel.MethodCallHa
     // ---- links ---------------------------------------------------------
 
     private fun openUrl(url: String?): Boolean {
-        if (url != URL_SITE && url != URL_ISSUES) return false
+        if (url != URL_SITE && url != URL_SITE_STD && url != URL_SITE_AUTO && url != URL_INSTALL_HELP && url != URL_ISSUES) return false
         return try {
             activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             true

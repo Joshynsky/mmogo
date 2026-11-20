@@ -119,7 +119,7 @@ void main() {
   }
 
   a11ySubject(
-    'Start-up notice (snackbar)',
+    'Start-up notice (pill toast)',
     home: () => const Scaffold(body: SizedBox()),
     before: () async => StartupNotice.resetForTest(),
     open: (t) async {
@@ -127,7 +127,7 @@ void main() {
       await a11ySettle(t);
     },
     actions: () => [
-      A11yAction('Notice text', _k('startupNotice')),
+      A11yAction('Notice text', find.byWidgetPredicate((w) => w is Material && w.shape is StadiumBorder)),
     ],
   );
 }

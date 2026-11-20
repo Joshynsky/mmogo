@@ -318,6 +318,7 @@ class BackupValidator {
     // is copied with `agent_number: null` so later code sees one shape.
     final v3 = schemaVersion >= kBackupFirstSchemaWithAgentAndAirtime;
     final v6 = schemaVersion >= kBackupFirstSchemaWithLinkedCash;
+    final v8 = schemaVersion >= kBackupFirstSchemaWithAutoMarker;
     final rowKeys = v3 ? kBackupTransactionKeys : kBackupTransactionKeysV2;
     final sourceTypes = v3 ? kBackupSourceTypes : kBackupSourceTypesV2;
     final out = <Map<String, Object?>>[];
@@ -326,7 +327,7 @@ class BackupValidator {
     final cashKeys = <String>{};
     for (var i = 0; i < rows.length; i++) {
       // Schema 6: the two link keys are optional (written only when not the default).
-      final row = _row(rows[i], rowKeys, t, i, optional: v6 ? kBackupTransactionLinkKeys : const []);
+      final row = _row(rows[i], rowKeys, t, i, optional: [if (v6) ...kBackupTransactionLinkKeys, if (v8) kBackupRecordedAutoKey]);
       final id = _int(row['id'], 1, 9007199254740991, t, i, 'id');
       if (!ids.add(id)) _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'id');
 
@@ -390,6 +391,13 @@ class BackupValidator {
       final raw = _enum(row['raw_parse_source'], kBackupRawParseSources, t, i, 'raw_parse_source');
       if (isCash && raw != 'MANUAL') {
         _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'raw_parse_source');
+      }
+      // Schema 8: the auto-record marker is 0 or 1, and 1 only on a non-Cash row from a parse.
+      if (row.containsKey(kBackupRecordedAutoKey)) {
+        final auto = _int(row[kBackupRecordedAutoKey], 0, 1, t, i, 'recorded_auto');
+        if (auto == 1 && (isCash || raw != 'SMS_PARSE')) {
+          _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'recorded_auto');
+        }
       }
       _int(row['transaction_occurred_at'], kBackupMinEpochMs, kBackupMaxEpochMs - 1, t, i, 'transaction_occurred_at');
       final createdAt = _int(row['created_at'], kBackupMinEpochMs, kBackupMaxEpochMs - 1, t, i, 'created_at');

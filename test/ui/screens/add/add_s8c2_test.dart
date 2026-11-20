@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/widgets/pill_toast.dart';
 import 'package:mmogo/data/prefs/recipient_memory.dart';
 import 'package:mmogo/domain/parsing/name_only_resolver.dart';
 import 'package:mmogo/domain/parsing/parsed_sms_fields.dart';
@@ -383,7 +384,7 @@ void main() {
       expect(find.text('Saved'), findsOneWidget);
     });
 
-    testWidgets('savedDroppedOldest adds a small note to "Saved", never a name; no snackbar or error text holds the name',
+    testWidgets('savedDroppedOldest adds a small note to "Saved", never a name; no toast or error text holds the name',
         (tester) async {
       final db = FakeAddDb();
       final mem = _RecMemory(db: db, result: RememberResult.savedDroppedOldest);
@@ -392,8 +393,8 @@ void main() {
       await _tap(tester, 'addAskPochi');
       await _saveWithChip(tester, 110);
       expect(find.text('Saved. The oldest remembered name was removed to make room.'), findsOneWidget);
-      final snack = find.byType(SnackBar);
-      expect(snack, findsOneWidget);
+      final snack = find.ancestor(of: find.text('Saved. The oldest remembered name was removed to make room.'), matching: find.byType(Row)).first;
+      expect(PillToast.isShowing, isTrue);
       expect(find.descendant(of: snack, matching: find.textContaining('Jane')), findsNothing);
       expect(find.descendant(of: snack, matching: find.textContaining('JANE')), findsNothing);
     });

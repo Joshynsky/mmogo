@@ -59,6 +59,7 @@ class FakeReadingBridge implements ReadingBridge {
       consentVersion: kotlinConsent,
       alertDetails: alertDetails,
       alertDetailsAbsent: alertDetailsAbsent,
+      alertMinutes: alertMinutes,
     );
   }
 
@@ -89,6 +90,16 @@ class FakeReadingBridge implements ReadingBridge {
     alertDetails = on;
     alertDetailsAbsent = false;
     return alertDetails;
+  }
+
+  /// "Hide details after", held by the pretend Kotlin side.
+  int alertMinutes = 15;
+
+  @override
+  Future<int> setAlertMinutes(int minutes) async {
+    calls.add('setAlertMinutes:$minutes');
+    alertMinutes = minutes;
+    return alertMinutes;
   }
 
   @override

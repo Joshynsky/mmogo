@@ -24,6 +24,8 @@
 // `testWidgets` (the exact wall T7 already root-caused).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
+import 'package:mmogo/ui/widgets/pill_toast.dart';
 import 'package:mmogo/ui/screens/manage_classifications_screen.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
@@ -202,6 +204,7 @@ class _FakeDatabase implements Database {
 
 Widget _harness(Database db) {
   return MaterialApp(
+    navigatorKey: appNavigatorKey,
     home: ManageClassificationsScreen(db: db),
   );
 }
@@ -213,7 +216,7 @@ Widget _harness(Database db) {
 Widget _harnessWithPalette(Database db, {required String paletteId}) {
   return AppPaletteScope(
     controller: AppPaletteController(paletteId),
-    child: MaterialApp(home: ManageClassificationsScreen(db: db)),
+    child: MaterialApp(navigatorKey: appNavigatorKey, home: ManageClassificationsScreen(db: db)),
   );
 }
 
@@ -230,6 +233,7 @@ Future<void> _settle(WidgetTester tester) async {
 }
 
 void main() {
+  setUp(PillToast.dismissNow);
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
@@ -473,7 +477,7 @@ void main() {
       expect(find.descendant(of: err, matching: find.byIcon(Icons.warning_amber_rounded)), findsOneWidget);
       final text = tester.widget<Text>(find.text('A category named "Rent" already exists in Send Money.'));
       expect(text.style!.color, AppPalette.light.error);
-      expect(find.byType(SnackBar), findsNothing);
+      expect(PillToast.isShowing, isFalse);
 
       await tester.enterText(find.byKey(const Key('manageCreateField')), 'Ren');
       await tester.pump();
@@ -499,7 +503,7 @@ void main() {
       await _settle(tester);
       expect(find.byKey(const Key('manageRestoreError')), findsOneWidget);
       expect(find.textContaining('a category named "Old Rent" already exists in Send Money.'), findsOneWidget);
-      expect(find.byType(SnackBar), findsNothing);
+      expect(PillToast.isShowing, isFalse);
     });
 
     testWidgets('Rename keeps the dialog open with the inline error on a duplicate', (tester) async {

@@ -9,6 +9,7 @@ object AutoReadSwitch {
     private const val KEY_CONSENT = "consent_version"
     private const val KEY_PARSE = "parse_from_notification"
     private const val KEY_ALERT_DETAILS = "alert_details"
+    private const val KEY_ALERT_MINUTES = "alert_details_minutes"
 
     /** The consent version the user agreed to (0 when none). Kept in this file, on this side. */
     fun consentVersion(context: Context): Int =
@@ -52,6 +53,23 @@ object AutoReadSwitch {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ALERT_DETAILS, AlertText.DEFAULT_SHOW_DETAILS)
         } catch (_: Throwable) {
             AlertText.DEFAULT_SHOW_DETAILS
+        }
+
+    /** "Hide details after", minutes: one of [AlertText.DETAILS_MINUTES_CHOICES] (0 = Never); absent or odd = 15. */
+    fun alertMinutes(context: Context): Int =
+        try {
+            AlertText.cleanMinutes(
+                context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_ALERT_MINUTES, AlertText.DETAILS_MINUTES_DEFAULT),
+            )
+        } catch (_: Throwable) {
+            AlertText.DETAILS_MINUTES_DEFAULT
+        }
+
+    fun setAlertMinutes(context: Context, minutes: Int): Boolean =
+        try {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_ALERT_MINUTES, AlertText.cleanMinutes(minutes)).commit()
+        } catch (_: Throwable) {
+            false
         }
 
     /** True when the details key was never written (a phone that agreed before the choice existed). */

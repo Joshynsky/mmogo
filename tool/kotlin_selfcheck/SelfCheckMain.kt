@@ -37,5 +37,10 @@ fun main() {
     println("AlertText (0.2.0 S10): " + (if (alert.isEmpty()) "ALL PASS" else "FAILS=" + alert.size))
     failed += alert.size
 
+    val ask = AskFirstSelfCheck.runAll()
+    ask.forEach { println("  FAIL: $it") }
+    println("AskFirst (0.2.1): " + (if (ask.isEmpty()) "ALL PASS" else "FAILS=" + ask.size))
+    failed += ask.size
+
     if (failed != 0) System.exit(1)
 }

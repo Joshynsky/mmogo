@@ -11,12 +11,15 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../ui/widgets/pill_toast.dart';
 import '../../ui/screens/settings/settings_widgets.dart';
 import '../../ui/theme/app_colors.dart';
 import '../logic/reading_controller.dart';
+import 'alert_minutes_dialog.dart';
 import 'consent_sheet.dart';
 import 'details_upgrade_card.dart';
 import 'restricted_help_sheet.dart';
+import 'settings/suggest_settings_section.dart';
 import 'settings_autoread_copy.dart';
 
 class ReadingSettingsSection extends StatefulWidget {
@@ -161,6 +164,18 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
     });
   }
 
+  Future<void> _onAlertMinutes() async {
+    final c = _c;
+    final s = _state;
+    if (c == null || s == null || _busy) return;
+    final pick = await showAlertMinutesDialog(context, s.alertMinutes);
+    if (pick == null || pick == s.alertMinutes || !mounted) return;
+    await _runBusy(() async {
+      _message = await c.setAlertMinutes(pick) ? null : kReadFailed;
+      await _refresh();
+    });
+  }
+
   /// Only ever called from the user's tap on "Open Autostart settings".
   Future<void> _openAutostart() async {
     await _c?.openAutostartSettings();
@@ -199,9 +214,7 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
     await _runBusy(() async {
       final ok = await c.deleteHeld();
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(SnackBar(content: Text(ok ? kDeleteHeldDone : kDeleteHeldFailed)));
+      PillToast.show(ok ? kDeleteHeldDone : kDeleteHeldFailed);
       await _refresh();
     });
   }
@@ -262,6 +275,15 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
                 subtitle: s.alertDetails ? kAlertsDetails : kAlertsGeneric,
                 onTap: (s.available && !_busy) ? _onAlerts : null,
               ),
+              if (s.alertDetails)
+                SettingsLink(
+                  key: const Key('alertMinutesRow'),
+                  palette: palette,
+                  icon: Icons.timer_outlined,
+                  label: kAlertMinutesLabel,
+                  subtitle: alertMinutesText(s.alertMinutes),
+                  onTap: (s.available && !_busy) ? _onAlertMinutes : null,
+                ),
               if (s.autostartHelp)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
@@ -296,6 +318,7 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
             ],
           ),
         ),
+        const SuggestSettingsSection(),
       ],
     );
   }

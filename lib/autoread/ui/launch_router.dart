@@ -36,9 +36,19 @@ abstract class AutoReadLaunchSource {
   Stream<String> get tapped;
 }
 
+/// A launch source that also knows the Change category button of an Ask first alert. The router uses it
+/// when the source offers it; a source without it simply never opens the Categorize sheet.
+abstract class CategorizeLaunchSource {
+  /// True when the launching intent was that button (once).
+  Future<bool> takeLaunchCategorize();
+
+  /// Ids among the tapped ids that came from that button; each is announced BEFORE its tapped event.
+  Stream<String> get categorizeTapped;
+}
+
 /// Adapts the real bridge. The launch id is read from the platform ONCE and the
 /// answer is shared by everyone who asks.
-class BridgeLaunchSource implements AutoReadLaunchSource {
+class BridgeLaunchSource implements AutoReadLaunchSource, CategorizeLaunchSource {
   BridgeLaunchSource(this._bridge);
   final MethodChannelAutoReadBridge _bridge;
   Future<String?>? _launch;
@@ -48,6 +58,14 @@ class BridgeLaunchSource implements AutoReadLaunchSource {
 
   @override
   Stream<String> get tapped => _bridge.tapped;
+
+  Future<bool>? _launchCategorize;
+
+  @override
+  Future<bool> takeLaunchCategorize() => _launchCategorize ??= _bridge.takeLaunchCategorize();
+
+  @override
+  Stream<String> get categorizeTapped => _bridge.categorizeTapped;
 }
 
 class AutoReadLaunchRouter {
@@ -69,6 +87,8 @@ class AutoReadLaunchRouter {
   late final NavigatorObserver observer = _HomeObserver(_onRoute);
 
   StreamSubscription<String>? _sub;
+  StreamSubscription<String>? _categorizeSub;
+  final Set<String> _categorizeIds = {};
   bool _started = false;
   bool _homeShown = false;
   _Target? _pending;
@@ -77,19 +97,31 @@ class AutoReadLaunchRouter {
   Future<void> start() async {
     if (_started) return;
     _started = true;
+    final s = source;
+    if (s is CategorizeLaunchSource) {
+      _categorizeSub = (s as CategorizeLaunchSource).categorizeTapped.listen(_categorizeIds.add, onError: (Object _) {});
+    }
     _sub = source.tapped.listen(
       (id) => unawaited(_handle(id)),
       onError: (Object _) {},
     );
     try {
+      final s = source;
+      final categorize = s is CategorizeLaunchSource && await (s as CategorizeLaunchSource).takeLaunchCategorize();
       final id = await source.takeLaunchId();
-      if (id != null) await _handle(id);
+      if (id != null) {
+        if (categorize) _categorizeIds.add(id);
+        await _handle(id);
+      }
     } catch (_) {
       // A failed launch read is "no tap".
     }
   }
 
-  void dispose() => _sub?.cancel();
+  void dispose() {
+    _sub?.cancel();
+    _categorizeSub?.cancel();
+  }
 
   void _onRoute(Route<dynamic>? route) {
     if (route?.settings.name != Routes.home) return;
@@ -105,7 +137,8 @@ class AutoReadLaunchRouter {
 
   Future<void> _handle(String id) async {
     if (!isValidHeldId(id)) return;
-    final target = await _targetFor(id);
+    final categorize = _categorizeIds.remove(id);
+    final target = (await _targetFor(id)).withCategorize(categorize);
     if (!_homeShown) {
       _pending = target; // newest tap wins
       return;
@@ -147,16 +180,25 @@ class AutoReadLaunchRouter {
     if (nav == null) return;
     nav.pushNamed(
       Routes.notifications,
-      arguments: NotificationsRouteArgs(chip: target.chip, focusId: target.focusId),
+      arguments: NotificationsRouteArgs(
+        chip: target.chip,
+        focusId: target.focusId,
+        openCategorizeId: target.categorize ? target.focusId : null,
+      ),
     );
   }
 }
 
 /// Where a tap goes: the chip, and the row to bring into view (null = none).
 class _Target {
-  const _Target(this.chip, this.focusId);
+  const _Target(this.chip, this.focusId, {this.categorize = false});
   final NotifChip chip;
   final String? focusId;
+
+  /// Open the Categorize sheet for [focusId] (the Change category button). Only meaningful with a row.
+  final bool categorize;
+
+  _Target withCategorize(bool on) => on && focusId != null ? _Target(chip, focusId, categorize: true) : this;
 }
 
 class _HomeObserver extends NavigatorObserver {

@@ -66,6 +66,7 @@ class BackupCodec {
         if (row['parent_id'] != null) 'parent_id': row['parent_id'],
         if (row['cash_only_decided'] != null && row['cash_only_decided'] != 0)
           'cash_only_decided': row['cash_only_decided'],
+        if (row['recorded_auto'] == 1) kBackupRecordedAutoKey: 1,
       };
 
   static Map<String, Object?> _pick(Map<String, Object?> row, List<String> keys) =>

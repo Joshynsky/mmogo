@@ -12,3 +12,9 @@ import 'package:flutter/material.dart';
 /// `main.dart`) shows it on whichever page is now on screen instead,
 /// regardless of which page that is.
 final GlobalKey<ScaffoldMessengerState> appMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
+/// 0.2.1 beta: the root navigator's key, so a toast can reach the root overlay from anywhere (no context
+/// needed). The app root (`MpesaTrackerApp`) makes a fresh key per instance and publishes it here, so a soft
+/// restart never reuses the old Navigator (and its routes) through a shared GlobalKey. `PillToast` inserts
+/// into this navigator's overlay; a test that needs the toast puts `navigatorKey: appNavigatorKey` on its app.
+GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();

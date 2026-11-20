@@ -2,6 +2,7 @@
 // fake: the service, the Back up now flow, the restart. Invented data only.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/ui/screens/settings/delete_data_row.dart';
 import 'package:mmogo/ui/screens/settings_screen.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
@@ -49,6 +50,7 @@ Future<void> pumpSettings(
     AppPaletteScope(
       controller: c,
       child: MaterialApp(
+        navigatorKey: appNavigatorKey,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
           child: child!,

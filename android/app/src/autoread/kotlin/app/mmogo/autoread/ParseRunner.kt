@@ -116,7 +116,7 @@ object ParseRunner {
                 }
                 "done" -> {
                     result.success(null)
-                    finish(job, ParsePolicy.outcomeOf(ParsePolicy.outcomeArg(call.arguments)).code, ParsePolicy.waitingArg(call.arguments), ParsePolicy.queuedCentsArg(call.arguments))
+                    finish(job, ParsePolicy.outcomeOf(ParsePolicy.outcomeArg(call.arguments)).code, ParsePolicy.waitingArg(call.arguments), ParsePolicy.queuedCentsArg(call.arguments), ParsePolicy.askCategoryArg(call.arguments))
                 }
                 else -> result.notImplemented()
             }
@@ -125,17 +125,23 @@ object ParseRunner {
         }
     }
 
-    private fun finish(job: Job, code: String, waiting: Int, queuedCents: Long? = null) {
+    private fun finish(job: Job, code: String, waiting: Int, queuedCents: Long? = null, askCategoryId: Long? = null) {
         if (job.finished) return
         job.finished = true
         val ctx = job.ctx
         try {
             job.watchdog?.let { main.removeCallbacks(it) }
             when (ParsePolicy.effectOf(ParsePolicy.outcomeOf(code))) {
-                ParsePolicy.Effect.SHOW_PARSED -> ParseNotifier.postParsed(ctx, job.id, waiting, queuedCents)
+                ParsePolicy.Effect.SHOW_PARSED ->
+                    // A freshly parsed item whose person is Ask first: ask the question; anything else: the plain Parsed line.
+                    if (askCategoryId != null && code == ParsePolicy.Outcome.PARSED.code) AskNotifier.postAsk(ctx, job.id, askCategoryId)
+                    else ParseNotifier.postParsed(ctx, job.id, waiting, queuedCents)
                 ParsePolicy.Effect.SHOW_COULD_NOT_READ -> ParseNotifier.postCouldNotRead(ctx, job.id)
                 ParsePolicy.Effect.CANCEL -> Notifier.cancel(ctx, job.id)
-                ParsePolicy.Effect.LEAVE -> {}
+                ParsePolicy.Effect.LEAVE ->
+                    // A parse that ends quietly must not leave the user with no alert at all: a message that
+                    // arrived with no "ready" alert (parse on arrival) and is still held gets the "ready" alert now.
+                    if (AutoReadStores.held(ctx).peek(job.id) != null && !Notifier.isActive(ctx, job.id)) Notifier.post(ctx, job.id)
             }
         } catch (_: Throwable) {
             // The notification is cosmetic; the data is already settled.

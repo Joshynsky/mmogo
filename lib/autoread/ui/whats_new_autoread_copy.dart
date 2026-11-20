@@ -1,59 +1,67 @@
-/// The auto-read build's words on the What's-new page (0.1.2 A5a): its banner,
-/// its intro and its Privacy item (0.1.3: the six items are the standard
-/// build's, so the Auto-read and Notifications items are gone).
+/// The auto-read build's words on the What's-new page (0.1.2 A5a): its banner, the
+/// items only it shows, the lines it adds to shared items and its Privacy item.
 /// The page reaches this file only inside `if (kAutoReadCompiled)`.
 ///
-/// Wording follows the signed mock `_pipeline/ui-rework/whats-new-page.html`
-/// (its COPY object) and the partner's file of 20-10-2026.
+/// 0.2.1: every text follows the PM-signed mock
+/// `_pipeline/v0.2.1/mock-whats-new-0.2.1/index.html` (ITEMS marked `autoOnly`, `auto`, `autoBody`),
+/// signed 20-11-2026. The intro is the same as the standard build's (kWhatsNewIntro).
 library;
-
-import '../../ui/copy/privacy_copy.dart' show kPrivacySentenceAutoRead;
-import 'privacy_autoread_copy.dart' show kPrivacyAutoRecordedTrail, kPrivacyKeptNotShown;
 
 const kWhatsNewAutoBannerHead = 'This is the auto-read version of mmogo';
 const kWhatsNewAutoBannerBody =
     'It reads your M\u2011Pesa messages and puts them on a waiting list for you to categorize and review. '
     'If you do not want SMS permission, the standard version works without it.';
 
-/// The intro: the same as the standard build's (kWhatsNewIntro), so there is no second copy here.
+// WORDING-DRAFT (0.2.1, signed mock 20-11-2026)
 
-// New in 0.2.0, this build only (SIGNED PM 14-11-2026). The sentences taken from the
-// 13-11 signed list are marked.
-const kWhatsNewTodoTitle = 'To do page';
-const kWhatsNewTodoSummary = 'Notifications now has one To do page.';
-const kWhatsNewTodoBody =
-    'Notifications now has one To do page with five lists: To parse, Could not read, To categorize, '
-    'Recorded by you and Recorded automatically.';
-const kWhatsNewTodoDescribes = 'Messages waiting for you now say what they are, for example Sent Ksh 200 to Wanjiru.';
+/// Added after the shared Withdrawals paragraphs in this build.
+const kWhatsNewAutoWithdrawalsExtra =
+    'In this version, mmogo also asks about your earlier withdrawals. They wait on the Notifications page as one item, '
+    'for example "3 withdrawals need a decision". For each one, choose Cash only or Categorize.';
 
-const kWhatsNewUnreadTitle = 'Messages mmogo cannot read';
-const kWhatsNewUnreadSummary = 'You now see its code, amount and time.';
-const kWhatsNewUnreadBody =
-    'If mmogo cannot read a message, it shows its code, amount and time in the app so you can paste it yourself.';
+/// Added after the shared Suggested categories paragraphs, before the last one.
+const kWhatsNewAutoSuggestBody = [
+  'For each person you choose a level: Suggested or Ask first.',
+  'A third level, Auto-record, where mmogo records without asking for people you choose, is planned for the next update. '
+      'It is not in this one.',
+];
 
-const kWhatsNewTrailTitle = 'Recorded automatically';
-const kWhatsNewTrailSummary = 'The list now stays for 24 hours.';
-const kWhatsNewTrailBody = 'The Recorded automatically list now stays for 24 hours, so you can see what mmogo recorded for you and undo it.';
+// Ask first (this build only)
+const kWhatsNewAskTitle = 'Ask first';
+const kWhatsNewAskSummary = 'mmogo reads a message from a person you choose and asks before it records.';
+const kWhatsNewAskBody = [
+  'For a person you set to Ask first, mmogo reads their message by itself when it arrives. '
+      'It shows one alert: "Record as Groceries?" with Not now, Change category and Yes.',
+  'A tap always decides. Nothing is recorded without a tap.',
+  'If you tap Yes while mmogo is closed, the alert says it is queued. '
+      'The entry is added when you next open mmogo, even after a phone restart.',
+  'Change category opens the Categorize sheet for that entry, even from another app.',
+  'People set to Ask first do not need the Tap to parse step.',
+];
 
-const kWhatsNewAutoSettingsTitle = 'Auto-record in Settings';
-const kWhatsNewAutoSettingsSummary = 'The airtime switches moved to Settings, under Remembered.';
-const kWhatsNewAutoSettingsBody =
-    'The Auto-record airtime switches are now in Settings, under Remembered. '
-    'Each automatic record can be undone. You do not need to tap Categorize.';
-const kWhatsNewAutoDefaults =
-    'Your existing choices for showing details and Parse from the notification are not changed.';
+// Notifications page (this build only). The line is the 20-11-2026 correction (four lists).
+const kWhatsNewNotifTitle = 'Notifications page';
+const kWhatsNewNotifSummary = 'Messages waiting for you are in lists, with a count on the bell.';
+const kWhatsNewNotifBody =
+    'The Notifications page groups what needs you into lists: To confirm, To parse, To categorize and Could not read. '
+    'The bell shows how many are waiting.';
 
-/// The Privacy item of this build: every sentence is SIGNED (13-11-2026) and comes from its one
-/// place; the first line is the permissions line.
+// Hide details after (this build only)
+const kWhatsNewHideTitle = 'Hide details after';
+const kWhatsNewHideSummary = 'Choose how long an alert shows the message details.';
+const kWhatsNewHideBody = [
+  'In Settings, under Reading, "Hide details after" sets how long an alert shows the message details: '
+      'Never, 5 minutes, 15 minutes, 30 minutes or 1 hour.',
+  'Only the alert goes away. The message stays for 24 hours.',
+];
+
+// Recorded automatically filter (this build only)
+const kWhatsNewRecordedTitle = 'Recorded automatically filter';
+const kWhatsNewRecordedSummary = 'A filter for entries mmogo recorded for you.';
+const kWhatsNewRecordedBody = 'A "Recorded automatically" filter now covers entries from 0.2.1 onward.';
+
+/// The Privacy item of this build: the closed line and the bold first paragraph are the
+/// signed permissions line (13-11-2026); the second paragraph is the shared kWhatsNewPrivacyRules.
 const kWhatsNewPrivacyAutoReadSummary =
     'This version asks for SMS and notification permission. Your messages stay on this phone.';
-const kWhatsNewPrivacyAutoReadBody = kPrivacySentenceAutoRead;
-
-/// Last paragraphs of the Privacy item in this build, signed sentences only.
-const kWhatsNewPrivacyAutoReadTrail = kPrivacyAutoRecordedTrail;
-const kWhatsNewPrivacyAutoReadKept = kPrivacyKeptNotShown;
-
-/// The last paragraph of the Privacy item in this build (WN-0.1.3 item 6).
-const kWhatsNewPrivacyAutoReadReceiverNote =
-    'The Privacy page now says exactly what is kept for your version, including the receiver details above. '
-    "A message waiting to be categorized also holds the receiver's name and number until you categorize or remove it.";
+const kWhatsNewPrivacyAutoReadBody = kWhatsNewPrivacyAutoReadSummary;

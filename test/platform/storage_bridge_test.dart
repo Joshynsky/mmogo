@@ -342,7 +342,7 @@ void main() {
       if (!path.endsWith('.dart') || path.contains('lib/platform/')) continue;
       for (final m in call.allMatches(f.readAsStringSync())) {
         final arg = m.group(1)!.trim();
-        if (arg != 'AppConstants.siteUrl' && arg != 'AppConstants.issuesUrl') bad.add('$path: openUrl($arg)');
+        if (!{'AppConstants.siteUrl', 'AppConstants.issuesUrl', 'AppConstants.installHelpUrl', 'updateSiteUrl('}.contains(arg)) bad.add('$path: openUrl($arg)');
       }
     }
     expect(bad, isEmpty);
@@ -352,6 +352,10 @@ void main() {
     final kt = File('android/app/src/main/kotlin/app/mmogo/StorageBridge.kt').readAsStringSync();
     expect(kt, contains('"${AppConstants.siteUrl}"'));
     expect(kt, contains('"${AppConstants.issuesUrl}"'));
+    expect(kt, contains('"${AppConstants.siteStdUrl}"'));
+    expect(kt, contains('"${AppConstants.siteOtherUrl}"'));
+    expect(kt, contains('"${AppConstants.installHelpUrl}"'));
+    expect(AppConstants.allowedUrls.length, 5);
     // "w" (write open) appears only inside createFile.
     final w = RegExp(r'"w"').allMatches(kt).length;
     expect(w, 1);

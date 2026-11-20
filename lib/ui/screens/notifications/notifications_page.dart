@@ -11,8 +11,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../widgets/pill_toast.dart';
 import '../../../autoread/autoread_feature.dart';
 import '../../../autoread/logic/all_view_logic.dart' as all;
+import '../../../autoread/logic/waiting_logic.dart' show effectiveKind, sortReadyToParse;
 import '../../../autoread/model/waiting_item.dart';
 import '../../../autoread/model/waiting_repository.dart';
 import '../../../autoread/ui/notifications_autoread_copy.dart';
@@ -24,6 +26,7 @@ import '../../../domain/notifications/news_logic.dart';
 import '../../../domain/notifications/notif_chip.dart';
 import '../../../domain/notifications/notifications_repository.dart';
 import '../../../app_constants.dart';
+import '../../../data/updates/updates_inbox.dart' show Notice;
 import '../../../platform/storage_bridge.dart';
 import '../../copy/notifications_copy.dart';
 import '../../copy/other_version_copy.dart';
@@ -40,6 +43,7 @@ class NotificationsPage extends StatefulWidget {
     this.waiting,
     this.initialChip = NotifChip.all,
     this.focusId,
+    this.openCategorizeId,
     this.clock,
     this.onBack,
     this.onOpenNews,
@@ -60,6 +64,9 @@ class NotificationsPage extends StatefulWidget {
 
   /// A waiting row to scroll to and highlight (autoread build only).
   final String? focusId;
+
+  /// A waiting row whose Categorize sheet opens once, as soon as it is listed (autoread build only).
+  final String? openCategorizeId;
 
   /// "Now" for ages, expiry and the 30-day read window. Default: the real clock.
   final DateTime Function()? clock;
@@ -95,6 +102,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
   List<WaitingItem>? _waiting;
   StreamSubscription<List<NewsItem>>? _newsSub;
   StreamSubscription<List<WaitingItem>>? _waitingSub;
+  bool _categorizeOpened = false;
 
   DateTime _now() => (widget.clock ?? DateTime.now)();
 
@@ -107,7 +115,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
     _chip = chips.contains(wanted) ? wanted : NotifChip.news;
     _newsSub = widget.news.watchNews().listen((v) => setState(() => _news = v));
     if (kAutoReadCompiled) {
-      _waitingSub = widget.waiting?.watch().listen((v) => setState(() => _waiting = v));
+      _waitingSub = widget.waiting?.watch().listen((v) {
+        setState(() => _waiting = v);
+        _openCategorizeOnce(v);
+      });
     }
   }
 
@@ -118,10 +129,21 @@ class _NotificationsPageState extends State<NotificationsPage> {
     super.dispose();
   }
 
+  /// The Change category button: opens the Categorize sheet for the named row, once, when it is listed.
+  void _openCategorizeOnce(List<WaitingItem> items) {
+    final id = widget.openCategorizeId;
+    if (id == null || _categorizeOpened) return;
+    final item = items.where((i) => i.id == id).firstOrNull;
+    final open = widget.waitingActions.onCategorize;
+    if (item == null || open == null) return;
+    _categorizeOpened = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) open(item);
+    });
+  }
+
   void _toast(String text) {
-    final m = ScaffoldMessenger.maybeOf(context);
-    m?.hideCurrentSnackBar();
-    m?.showSnackBar(SnackBar(content: Text(text)));
+    PillToast.show(text);
   }
 
   /// The permanent other-version item: opens the mmogo page (a constant) and
@@ -129,7 +151,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Future<void> _seeMore(NewsItem n) async {
     var opened = false;
     try {
-      opened = await StorageBridge.instance.openUrl(AppConstants.siteUrl);
+      opened = n.id == Notice.installHelpTag
+          ? await StorageBridge.instance.openUrl(AppConstants.installHelpUrl)
+          : await StorageBridge.instance.openUrl(AppConstants.siteUrl);
     } catch (_) {}
     if (!opened && mounted) _toast(kOtherVersionCouldNotOpen);
     await widget.news.markRead(n.id, _now());
@@ -143,7 +167,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
             ? widget.onOpenNews!(n)
             : widget.news.markRead(n.id, _now()),
         onSeeMore: n.permanent ? () => _seeMore(n) : null,
-        onUpdate: () => widget.onUpdate != null ? widget.onUpdate!(n) : widget.news.completeUpdate(n.id),
+        // The update row only opens the Updates page; it stays until the app is updated.
+        onUpdate: () => (widget.onUpdate ?? widget.onOpenNews)?.call(n),
         onDismiss: () {
           widget.news.remove(n.id);
           _toast(kNewsToastDismissed);
@@ -160,9 +185,19 @@ class _NotificationsPageState extends State<NotificationsPage> {
     if (kAutoReadCompiled) {
       final w = _waiting ?? const <WaitingItem>[];
       final n = all.todoCount(w, now,
-          undecidedWithdrawals: widget.waitingActions.undecided?.value.length ?? 0);
+          undecidedWithdrawals: widget.waitingActions.undecided?.value.length ?? 0,
+          offers: widget.waitingActions.suggestions?.offers.length ?? 0);
+      // Option B: the number stays (Could not read is not in it), but a zero over a listed
+      // Could not read row would read as empty, so the chip then shows no number.
+      // Same rule as TodoSection: the parse group rows that are not readable (unreadable or gone).
+      final couldNotRead = n == 0 &&
+          sortReadyToParse(w, now).any((i) => effectiveKind(i, now) != WaitingKind.readyToParse);
       specs.add(NotifChipSpec(
-          chip: NotifChip.todo, label: kTodoChipLabel, spokenName: kTodoChipSpoken, count: n));
+          chip: NotifChip.todo,
+          label: kTodoChipLabel,
+          spokenName: kTodoChipSpoken,
+          count: n,
+          hideCount: couldNotRead));
     }
     specs.add(NotifChipSpec(
         chip: NotifChip.news, label: kChipNews, spokenName: kChipNews, count: unreadNewsCount(news)));
@@ -240,7 +275,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
   @override
   Widget build(BuildContext context) => ListenableBuilder(
         // 0.2.1: the To do number follows the "need a decision" item.
-        listenable: Listenable.merge([?widget.waitingActions.undecided]),
+        listenable: Listenable.merge([?widget.waitingActions.undecided, ?widget.waitingActions.suggestions]),
         builder: (context, _) => _page(context),
       );
 

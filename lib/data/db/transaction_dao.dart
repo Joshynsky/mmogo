@@ -1,5 +1,7 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'ledger_hooks.dart';
+
 /// T14 — Add confirmation step.
 ///
 /// The exact set of already-resolved values needed to write one real row
@@ -164,6 +166,9 @@ class TransactionDao {
       'transaction_occurred_at': input.transactionOccurredAt,
       'created_at': now,
       'deleted_at': null,
+    }).then((id) {
+      LedgerHooks.inserted(id);
+      return id;
     });
   }
 
@@ -249,6 +254,7 @@ class TransactionDao {
     }
 
     await db.update('transactions', values, where: 'id = ?', whereArgs: [id]);
+    LedgerHooks.edited(id);
   }
 
   /// T13 — Delete swipe/edge-button action. `SET deleted_at = <now>` — a
@@ -269,6 +275,7 @@ class TransactionDao {
       where: 'id = ?',
       whereArgs: [id],
     );
+    LedgerHooks.removed(id);
   }
 
   /// T13 — Recently Deleted's Restore action. `SET deleted_at = NULL` —
@@ -287,14 +294,26 @@ class TransactionDao {
   /// while its withdrawal is live and the entry still fits in what the withdrawal has left;
   /// otherwise nothing changes and 0 is returned. A pair whose withdrawal was purged cannot come
   /// back.
-  static Future<int> restore(DatabaseExecutor db, {required int id}) {
-    return db.update(
+  static Future<int> restore(DatabaseExecutor db, {required int id}) async {
+    final changed = await db.update(
       'transactions',
       {'deleted_at': null},
       where: 'id = ? AND deleted_at IS NOT NULL',
       whereArgs: [id],
     );
+    if (changed > 0) LedgerHooks.restored(id);
+    return changed;
   }
+
+  /// 0.2.1: marks a row as written with no tap ("Recorded automatically"). The database itself
+  /// refuses it for a Cash row or a row that did not come from an SMS parse (a trigger), so a
+  /// refusal is a [DatabaseException] and the caller keeps the row as it is. Returns rows changed.
+  static Future<int> markRecordedAutomatically(DatabaseExecutor db, {required int id}) => db.update(
+        'transactions',
+        {'recorded_automatically': 1},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
 
   /// T13 — the app-launch purge sweep. A real hard `DELETE`, not another
   /// soft-delete layer — once the 1-hour grace window passes, the row is

@@ -78,7 +78,7 @@ object ParseNotifier {
 
     // --- private ---
 
-    private fun manager(context: Context, heldId: String): NotificationManager? {
+    internal fun manager(context: Context, heldId: String): NotificationManager? {
         if (!HeldId.isValid(heldId)) return null
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return null
         if (!nm.areNotificationsEnabled()) return null
@@ -88,14 +88,16 @@ object ParseNotifier {
         return nm
     }
 
-    private fun builder(context: Context, nm: NotificationManager, text: String): Notification.Builder {
+    /** [popup] true: the HIGH channel and no only-alert-once, so the question pops up again (Ask first alert). */
+    internal fun builder(context: Context, nm: NotificationManager, text: String, popup: Boolean = false): Notification.Builder {
         val title = context.getString(R.string.autoread_notification_title)
         val b: Notification.Builder
         val publicBuilder: Notification.Builder
         if (Build.VERSION.SDK_INT >= 26) {
-            Notifier.ensureChannel(context, nm)
-            b = Notification.Builder(context, Notifier.CHANNEL_ID)
-            publicBuilder = Notification.Builder(context, Notifier.CHANNEL_ID)
+            val channel = if (popup) Notifier.POPUP_CHANNEL_ID else Notifier.CHANNEL_ID
+            if (popup) Notifier.ensurePopupChannel(context, nm) else Notifier.ensureChannel(context, nm)
+            b = Notification.Builder(context, channel)
+            publicBuilder = Notification.Builder(context, channel)
         } else {
             @Suppress("DEPRECATION")
             b = Notification.Builder(context)
@@ -110,7 +112,7 @@ object ParseNotifier {
             .setContentTitle(title)
             .setContentText(text)
             .setAutoCancel(true)
-            .setOnlyAlertOnce(true)
+            .setOnlyAlertOnce(!popup)
             .setCategory(Notification.CATEGORY_MESSAGE)
             .setVisibility(Notification.VISIBILITY_PRIVATE)
             .setPublicVersion(publicBuilder.build())
@@ -118,11 +120,11 @@ object ParseNotifier {
     }
 
     @Suppress("DEPRECATION")
-    private fun action(context: Context, label: Int, pi: PendingIntent): Notification.Action =
+    internal fun action(context: Context, label: Int, pi: PendingIntent): Notification.Action =
         Notification.Action.Builder(0, context.getString(label), pi).build()
 
     /** Explicit, immutable. Unique per id and action (data URI), so one id's buttons never replace another's. */
-    private fun receiverIntent(context: Context, heldId: String, action: String): PendingIntent {
+    internal fun receiverIntent(context: Context, heldId: String, action: String): PendingIntent {
         val i = Intent(context, ParseActionReceiver::class.java).apply {
             this.action = action
             data = Uri.parse("$URI_SCHEME://$action/$heldId")
@@ -137,7 +139,7 @@ object ParseNotifier {
      * The app intent: the held id is the only extra (the app's launch router reads it). An action, never a
      * data URI, tells the body tap and Categorize now apart (a data URI could be read as a deep link).
      */
-    private fun openApp(context: Context, heldId: String, action: String?): PendingIntent {
+    internal fun openApp(context: Context, heldId: String, action: String?): PendingIntent {
         val i = Intent().apply {
             component = ComponentName(context, MAIN_ACTIVITY)
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP

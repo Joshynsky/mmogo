@@ -434,6 +434,10 @@ class BackupRepair {
     if (raw is! String || !kBackupRawParseSources.contains(raw)) {
       return const _Problem('raw_parse_source', 'unknown value');
     }
+    final auto = row['recorded_auto'];
+    if (auto != null && (!_isInt(auto, 0, 1) || (auto == 1 && (isCash || raw != 'SMS_PARSE')))) {
+      return const _Problem('recorded_auto', 'range');
+    }
     if (isCash && raw != 'MANUAL') return const _Problem('raw_parse_source', 'not allowed for source');
     if (!_isEpoch(row['transaction_occurred_at'])) {
       return const _Problem('transaction_occurred_at', 'range');

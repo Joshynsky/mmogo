@@ -1,6 +1,6 @@
 // 0.1.2 S9a: the Remembered recipients page (signed mock remembered.html).
-// Invented names only. Names must never reach a snackbar, an error line or a
-// log: those are checked by reading every Text on screen and every SnackBar.
+// Invented names only. Names must never reach a toast, an error line or a
+// log: those are checked by reading every Text on screen and every toast.
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,7 +8,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/data/prefs/recipient_memory.dart';
 import 'package:mmogo/domain/parsing/parsed_sms_fields.dart';
 import 'package:mmogo/ui/screens/remembered/remembered_screen.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
+import 'package:mmogo/ui/widgets/pill_toast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// A memory whose writes fail (the list still reads).
@@ -51,6 +53,7 @@ Future<void> _pump(WidgetTester tester, RecipientMemory memory, {double scale = 
     AppPaletteScope(
       controller: AppPaletteController('ocean', dark ? 'dark' : 'light'),
       child: MaterialApp(
+        navigatorKey: appNavigatorKey,
         builder: (c, child) =>
             MediaQuery(data: MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)), child: child!),
         home: Builder(
@@ -88,6 +91,7 @@ String _allTextOutsideRows(WidgetTester t) {
 }
 
 void main() {
+  setUp(PillToast.dismissNow);
   testWidgets('lists the stored names newest first, upper case, with their type; copy from the mock', (tester) async {
     await _pump(tester, await _seeded());
     expect(_rowNames(tester), ['OTIENO KIOSK', 'ZED STORES', 'JANE ATIENO']);
@@ -168,7 +172,7 @@ void main() {
     }
   });
 
-  testWidgets('R28: the "Forgot N" toast lasts about 2 seconds, then goes (no Undo)', (tester) async {
+  testWidgets('R28: the "Forgot N" pill toast lasts the 6 second minimum, then goes (no Undo)', (tester) async {
     final m = await _seeded();
     await _pump(tester, m);
     await tester.tap(find.byKey(const Key('rememberedForgetAll')));
@@ -177,12 +181,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Forgot 3 recipients'), findsOneWidget);
-    expect(tester.widget<SnackBar>(find.byType(SnackBar)).duration, const Duration(seconds: 2));
-    expect(find.widgetWithText(SnackBarAction, 'Undo'), findsNothing);
-    // Not yet gone at 1.5 s, gone shortly after 2 s (the default 4 s would still show it).
-    await tester.pump(const Duration(milliseconds: 1200));
+    expect(find.text('Undo'), findsNothing);
+    // Not yet gone at 2.5 s, gone after the 6 s minimum plus the slide-out.
+    await tester.pump(const Duration(milliseconds: 2200));
     expect(find.text('Forgot 3 recipients'), findsOneWidget);
-    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pump(const Duration(seconds: 4));
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Forgot 3 recipients'), findsNothing);
   });
@@ -252,14 +255,14 @@ void main() {
     await tester.tap(find.byKey(const Key('rememberedForget')));
     await tester.pumpAndSettle();
     expect(find.text('Could not update the remembered recipients. Please try again.'), findsOneWidget);
-    expect(find.byType(SnackBar), findsNothing);
+    expect(PillToast.isShowing, isFalse);
     expect(_rowNames(tester), [_names[0]], reason: 'nothing was forgotten');
     expect(_allTextOutsideRows(tester).contains(_names[0]), isFalse);
     // Change fails the same way (retype goes through setString).
     await tester.tap(find.byKey(const Key('rememberedChange')));
     await tester.pumpAndSettle();
     expect(find.text('Could not update the remembered recipients. Please try again.'), findsOneWidget);
-    expect(find.byType(SnackBar), findsNothing);
+    expect(PillToast.isShowing, isFalse);
   });
 
   testWidgets('screen-reader labels: "Forget NAME" is a label only', (tester) async {
@@ -291,8 +294,8 @@ void main() {
     expect(logCall.hasMatch(code), isFalse);
     expect(logCall.hasMatch("print('x');"), isTrue, reason: 'negative control: the guard sees a bad line');
     // A message built from a key or name would interpolate entry.key / e.key
-    // into a Text outside the row or into a SnackBar.
-    expect(RegExp(r'SnackBar\([^)]*(\.key|name)').hasMatch(code), isFalse);
+    // into a Text outside the row or into a toast.
+    expect(RegExp(r'PillToast\.show\([^)]*(\.key|name)').hasMatch(code), isFalse);
   });
 
   group('F3: the "?" help pattern on Remembered recipients (mock remembered-help.html)', () {

@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/data/backup/auto_backup_service.dart';
 import 'package:mmogo/data/backup/backup_counts.dart';
 import 'package:mmogo/data/prefs/backup_prefs.dart';
@@ -33,7 +34,7 @@ Future<void> _pump(WidgetTester t, {Map<String, Object> prefs = const {}}) async
   t.view.physicalSize = const Size(420, 3600);
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.reset);
-  await t.pumpWidget(MaterialApp(home: BackupScreen(key: UniqueKey(), loadCounts: () async => _counts)));
+  await t.pumpWidget(MaterialApp(navigatorKey: appNavigatorKey, home: BackupScreen(key: UniqueKey(), loadCounts: () async => _counts)));
   await t.pumpAndSettle();
 }
 

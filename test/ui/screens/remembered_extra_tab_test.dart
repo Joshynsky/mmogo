@@ -25,6 +25,8 @@ class _FakeTab extends ChangeNotifier implements RememberedExtraTab {
   @override
   String get forgetAllNote => 'The extra sentence.';
   @override
+  RememberedExtraHelp get help => const RememberedExtraHelp('Second help', ['second para']);
+  @override
   Widget buildBody(BuildContext context) => const Center(child: Text('SECOND BODY'));
   void bump() {
     count++;
@@ -92,6 +94,24 @@ void main() {
     expect(find.text('Second tab 1'), findsOneWidget);
     expect(find.text('Second tab 0'), findsNothing);
     expect(find.bySemanticsLabel('About this page'), findsOneWidget); // the help button stays
+  });
+
+  testWidgets('one question mark on each tab; the second tab opens its own help', (tester) async {
+    await _pump(tester, await _seeded(), _FakeTab());
+    expect(find.byKey(const Key('helpButton')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('helpButton')));
+    await tester.pumpAndSettle();
+    expect(find.text(kRememberedHelpTitle), findsOneWidget);
+    await tester.tap(find.byKey(const Key('helpSheetClose')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('rememberedTab1')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('helpButton')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('helpButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('Second help'), findsOneWidget);
+    expect(find.text('second para'), findsOneWidget);
+    expect(find.text(kRememberedHelpTitle), findsNothing);
   });
 
   testWidgets('Forget all bar and the list are on tab 1 only', (tester) async {

@@ -28,7 +28,7 @@ void main() {
     expect(obj.keys.toList(), kBackupTopLevelKeys);
     expect(obj['app'], 'mmogo');
     expect(obj['format_version'], 1);
-    expect(obj['schema_version'], 7); // 0.2.0 row 17: schema 5
+    expect(obj['schema_version'], 8); // 0.2.0 row 17: schema 5
     expect(obj['created_at'], tBase);
     expect(obj['end'], 'mmogo-v1');
     expect(obj['counts'], {

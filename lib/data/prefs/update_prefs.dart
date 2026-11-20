@@ -95,6 +95,27 @@ class UpdatePrefs {
     }
   }
 
+  /// Set once the "install help" notice has been added to the inbox (auto-read
+  /// build). The once-only guard, like [keyOtherVersionNoticeAdded]. Device-local,
+  /// never in a backup.
+  static const keyInstallHelpNoticeAdded = 'install_help_notice_added';
+
+  static Future<bool> readInstallHelpNoticeAdded() async {
+    try {
+      return (await _prefs()).getBool(keyInstallHelpNoticeAdded) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> writeInstallHelpNoticeAdded() async {
+    try {
+      return await (await _prefs()).setBool(keyInstallHelpNoticeAdded, true).timeout(_prefsTimeout);
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<bool> writeLastCheckAt(DateTime at) async {
     try {
       return await (await _prefs())

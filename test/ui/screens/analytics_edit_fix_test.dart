@@ -5,6 +5,7 @@
 // recently_deleted_screen_test.dart.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/ui/screens/analytics_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,7 +16,7 @@ Future<FakeAnalyticsDb> _pumpEdit(WidgetTester tester, String rowName) async {
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final db = FakeAnalyticsDb(analyticsSampleRows());
-  await tester.pumpWidget(MaterialApp(home: AnalyticsScreen(db: db, clock: () => analyticsTestNow)));
+  await tester.pumpWidget(MaterialApp(navigatorKey: appNavigatorKey, home: AnalyticsScreen(db: db, clock: () => analyticsTestNow)));
   await tester.pumpAndSettle();
   await tester.tap(find.text(rowName));
   await tester.pumpAndSettle();

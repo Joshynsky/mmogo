@@ -19,8 +19,20 @@ internal object AlertText {
     /** A details alert goes away after this long (PM 12-11-2026, J1 B3); the held message itself stays. */
     const val DETAILS_TIMEOUT_MS: Long = 15L * 60L * 1000L
 
-    /** The notification timeout: a details alert gets [DETAILS_TIMEOUT_MS], a generic one keeps [heldWindowMs]. */
-    fun timeoutMs(generic: Boolean, heldWindowMs: Long): Long = if (generic) heldWindowMs else DETAILS_TIMEOUT_MS
+    /** "Hide details after" choices in minutes; 0 = Never (PM 19-11-2026). Default 15. */
+    val DETAILS_MINUTES_CHOICES: List<Int> = listOf(0, 5, 15, 30, 60)
+    const val DETAILS_MINUTES_DEFAULT = 15
+
+    /** [minutes] if it is one of the offered choices, else the default. */
+    fun cleanMinutes(minutes: Int?): Int =
+        if (minutes != null && minutes in DETAILS_MINUTES_CHOICES) minutes else DETAILS_MINUTES_DEFAULT
+
+    /**
+     * The notification timeout: a details alert gets the chosen minutes ([detailsMinutes]; 0 = Never gives 0 = no
+     * timeout), a generic one keeps [heldWindowMs]. The alert only: the held message's own window is not touched.
+     */
+    fun timeoutMs(generic: Boolean, heldWindowMs: Long, detailsMinutes: Int = DETAILS_MINUTES_DEFAULT): Long =
+        if (generic) heldWindowMs else cleanMinutes(detailsMinutes) * 60L * 1000L
 
     /** [title] and [text] of one alert; [generic] is true when no detail was used. */
     data class Text(val title: String, val text: String, val generic: Boolean)

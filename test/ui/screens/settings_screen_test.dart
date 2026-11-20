@@ -9,7 +9,7 @@
 // and injects a fake `exportCsv` side effect (real `path_provider`/
 // `share_plus` platform channels aren't available in `testWidgets` here
 // either) to observe the button's enabled/disabled state at zero vs.
-// nonzero active transactions and the success SnackBar, without touching
+// nonzero active transactions and the success toast, without touching
 // either real plugin.
 //
 // The real `ExportDao` query/join/CSV-formatting logic is separately,
@@ -23,6 +23,7 @@
 // `SettingsScreen` bare.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/data/prefs/app_prefs.dart';
 import 'package:mmogo/data/prefs/backup_prefs.dart';
 import 'package:mmogo/ui/screens/settings_screen.dart';
@@ -113,7 +114,7 @@ Future<void> _settle(WidgetTester tester) async {
 /// unloaded — same starting state `AppPaletteController`'s own doc comment
 /// documents for a real app launch before `load()` resolves).
 Widget _wrap(SettingsScreen screen, {AppPaletteController? controller}) {
-  return MaterialApp(home: AppPaletteScope(controller: controller ?? AppPaletteController(), child: screen));
+  return MaterialApp(navigatorKey: appNavigatorKey, home: AppPaletteScope(controller: controller ?? AppPaletteController(), child: screen));
 }
 
 InkWell _rowInkWell(WidgetTester tester, String label) =>
@@ -278,7 +279,7 @@ void main() {
 
   testWidgets(
     'tapping an enabled Export CSV row calls the export side effect with the real CSV content and '
-    'shows the "CSV exported — N transactions" SnackBar',
+    'shows the "CSV exported — N transactions" toast',
     (tester) async {
       final db = _FakeDb(
         transactions: [_tx(displayCode: 'S1', occurredAt: 1758546600000), _tx(displayCode: 'S2', occurredAt: 1758546700000)],
@@ -313,7 +314,7 @@ void main() {
 
   testWidgets(
     'a single active transaction shows the singular "transaction" (not "transactions") in both '
-    'the subtitle and the success SnackBar',
+    'the subtitle and the success toast',
     (tester) async {
       final db = _FakeDb(transactions: [_tx(displayCode: 'S1')]);
       await tester.pumpWidget(_wrap(SettingsScreen(db: db, exportCsv: (_, _) async {})));
@@ -327,7 +328,7 @@ void main() {
   );
 
   testWidgets(
-    'a failing export side effect shows a failure SnackBar instead of crashing',
+    'a failing export side effect shows a failure toast instead of crashing',
     (tester) async {
       final db = _FakeDb(transactions: [_tx(displayCode: 'S1')]);
       await tester.pumpWidget(

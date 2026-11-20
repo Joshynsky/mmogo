@@ -224,6 +224,35 @@ void main() {
     expect(await bridge.takeLaunchId(), isNull);
   });
 
+  // 0.2.1 Ask first: the Change category button.
+  test('a tap pushed with action categorize is announced on categorizeTapped BEFORE it reaches tapped', () async {
+    final order = <String>[];
+    final s1 = bridge.categorizeTapped.listen((id) => order.add('categorize:$id'));
+    final s2 = bridge.tapped.listen((id) => order.add('tapped:$id'));
+    await push('onTapped', {'id': _id, 'action': kLaunchCategorize});
+    await push('onTapped', {'id': _id2});
+    await push('onTapped', {'id': _id2, 'action': 'something else'});
+    await pumpEventQueue();
+    expect(order, ['categorize:$_id', 'tapped:$_id', 'tapped:$_id2', 'tapped:$_id2']);
+    await s1.cancel();
+    await s2.cancel();
+  });
+
+  test('takeLaunchCategorize is true only for the categorize action, and false on any failure', () async {
+    reply = (_) => kLaunchCategorize;
+    expect(await bridge.takeLaunchCategorize(), isTrue);
+    expect(calls.single.method, 'takeLaunchAction');
+    expect(calls.single.arguments, isNull);
+    reply = (_) => null;
+    expect(await bridge.takeLaunchCategorize(), isFalse);
+    reply = (_) => 'other';
+    expect(await bridge.takeLaunchCategorize(), isFalse);
+    reply = (_) => throw PlatformException(code: 'failed');
+    expect(await bridge.takeLaunchCategorize(), isFalse);
+    reply = (_) => throw MissingPluginException();
+    expect(await bridge.takeLaunchCategorize(), isFalse);
+  });
+
   test('deleteAllHeld and openAppSettings send bare calls', () async {
     await bridge.deleteAllHeld();
     await bridge.openAppSettings();

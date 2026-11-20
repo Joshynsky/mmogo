@@ -8,6 +8,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/data/backup/auto_backup_leftovers.dart';
 import 'package:mmogo/data/prefs/backup_prefs.dart';
 import 'package:mmogo/platform/storage_bridge.dart';
@@ -188,8 +189,10 @@ void main() {
       expect(releases, ['releaseGrant:$_old']);
       expect(await BackupPrefs.readFolderUri(), _new);
       expect(find.text('Kept 3 files.'), findsOneWidget);
-      // The "Auto-backup is on" toast follows the leftover toast.
+      // The "Auto-backup is on" toast follows the leftover toast, after the leftover one's full 6 s.
       await t.pump(const Duration(seconds: 5));
+      expect(find.text('Kept 3 files.'), findsOneWidget);
+      await t.pump(const Duration(seconds: 2));
       await t.pumpAndSettle();
       expect(find.text(autoBackupIsOnToast(10)), findsOneWidget);
     });
@@ -205,6 +208,7 @@ void main() {
       }
       expect(find.text('Deleted 3 files.'), findsOneWidget);
       expect(await BackupPrefs.readFolderUri(), _new);
+      await t.pump(const Duration(seconds: 7)); // lets the follow-on "Auto-backup is on" toast run
     });
 
     testWidgets('one file: "Kept 1 file." and "Deleted 1 file." (singular)', (t) async {
@@ -214,6 +218,7 @@ void main() {
       expect(find.text('Keep it'), findsOneWidget);
       await tapKey(t, 'leftoverContinue');
       expect(find.text('Kept 1 file.'), findsOneWidget);
+      await t.pump(const Duration(seconds: 7)); // lets the follow-on "Auto-backup is on" toast run
       expect(keptToast(1), 'Kept 1 file.');
       expect(deletedToast(1), 'Deleted 1 file.');
     });
@@ -225,6 +230,7 @@ void main() {
       await tapKey(t, 'leftoverDelete');
       await tapKey(t, 'leftoverContinue');
       expect(find.text('Deleted 2. 1 could not be deleted.'), findsOneWidget);
+      await t.pump(const Duration(seconds: 7)); // lets the follow-on "Auto-backup is on" toast run
     });
 
     testWidgets('none can be deleted: "Deleted 0. 3 could not be deleted." (also when D is 0)', (t) async {
@@ -234,6 +240,7 @@ void main() {
       await tapKey(t, 'leftoverDelete');
       await tapKey(t, 'leftoverContinue');
       expect(find.text('Deleted 0. 3 could not be deleted.'), findsOneWidget);
+      await t.pump(const Duration(seconds: 7)); // lets the follow-on "Auto-backup is on" toast run
     });
 
     testWidgets('Keep access: the old permission is NOT released', (t) async {
@@ -244,6 +251,7 @@ void main() {
       expect(releases, isEmpty);
       expect(await BackupPrefs.readFolderUri(), _new);
       expect(find.text('Kept 3 files.'), findsOneWidget);
+      await t.pump(const Duration(seconds: 7)); // lets the follow-on "Auto-backup is on" toast run
     });
 
     for (final how in ['outside tap', 'Back', 'swipe']) {
@@ -264,6 +272,7 @@ void main() {
         expect(releases, isEmpty);
         expect(await BackupPrefs.readFolderUri(), _new, reason: 'the change still happened');
         expect(await BackupPrefs.readEnabled(), isTrue);
+        await t.pump(const Duration(seconds: 7)); // the follow-on "Auto-backup is on" toast
       });
     }
 
@@ -381,6 +390,7 @@ void main() {
       await t.pump(const Duration(seconds: 31));
       await t.pumpAndSettle();
       expect(find.byKey(const Key('folderWorking')), findsNothing);
+      await t.pump(const Duration(seconds: 7)); // the follow-on toast
     });
 
     testWidgets('another data change holds the service: "Another change is in progress", nothing changed', (t) async {
@@ -403,6 +413,7 @@ void main() {
       var toggles = 0, folders = 0;
       await t.pumpWidget(
         MaterialApp(
+          navigatorKey: appNavigatorKey,
           home: Scaffold(
             body: SingleChildScrollView(
               child: AutoBackupCard(

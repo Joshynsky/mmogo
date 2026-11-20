@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../widgets/pill_toast.dart';
 import '../../../app_constants.dart';
 import '../../../data/prefs/update_prefs.dart';
 import '../../../data/updates/update_check_service.dart';
@@ -15,9 +16,11 @@ import '../../theme/app_colors.dart';
 import '../backup/backup_format.dart';
 import '../settings/settings_widgets.dart';
 import '../../whats_new/whats_new_entry.dart';
-import '../../whats_new/whats_new_hook.dart' show openWhatsNewToRead;
+import '../../whats_new/whats_new_hook.dart' show openSettingsAt, openWhatsNewToRead;
 import '../../whats_new/whats_new_pager.dart';
 import 'notice_card.dart';
+import 'update_buttons.dart';
+import 'update_site_url.dart';
 
 /// The Updates page (B27; it replaced the "Coming soon" notifications page).
 /// Top: the update-check switch, "Check for updates now" and "Last checked"
@@ -45,7 +48,7 @@ class UpdatesScreen extends StatefulWidget {
   final Future<String?> Function()? readSeenVersion;
   final Future<void> Function(String versionName)? writeSeenVersion;
   final String? installedVersionName;
-  final VoidCallback? openSettings;
+  final void Function(String? target)? openSettings;
   final VoidCallback? openBackup;
 
   @override
@@ -114,7 +117,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
       context,
       installedVersionName: widget.installedVersionName,
       writeSeenVersion: widget.writeSeenVersion,
-      openSettings: widget.openSettings ?? () => Navigator.of(context).pushNamed(Routes.settings),
+      openSettings: widget.openSettings ?? (target) => openSettingsAt(context, target),
       openBackup: widget.openBackup ?? () => Navigator.of(context).pushNamed(Routes.backup),
       inbox: _inbox,
     );
@@ -157,7 +160,29 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
       opened = await StorageBridge.instance.openUrl(AppConstants.siteUrl);
     } catch (_) {}
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(kUpdatesCouldNotOpen)));
+      PillToast.show(kUpdatesCouldNotOpen);
+    }
+  }
+
+  /// The install-help notice's button: the auto-read install guide (a constant URL).
+  Future<void> _openInstallHelp() async {
+    var opened = false;
+    try {
+      opened = await StorageBridge.instance.openUrl(AppConstants.installHelpUrl);
+    } catch (_) {}
+    if (!opened && mounted) {
+      PillToast.show(kUpdatesCouldNotOpen);
+    }
+  }
+
+  /// The Update button: the mmogo page at the version cards for this build.
+  Future<void> _openUpdate() async {
+    var opened = false;
+    try {
+      opened = await StorageBridge.instance.openUrl(updateSiteUrl());
+    } catch (_) {}
+    if (!opened && mounted) {
+      PillToast.show(kUpdatesCouldNotOpen);
     }
   }
 
@@ -178,6 +203,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
             NoticeCard(
               notice: n,
               onSeeWhatsNew: _seeWhatsNew,
+              onOpenInstallHelp: _openInstallHelp,
               onOpenBackup: () => Navigator.of(context).pushNamed(Routes.backup),
             ),
           // The one synthetic What's-new entry: always there, even with no notices.
@@ -218,15 +244,12 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(
-                  height: 44, // S11b: was 42; 44 is the hit-area floor
-                  child: OutlinedButton.icon(
-                    key: const Key('checkNowButton'),
-                    onPressed: _checking ? null : _checkNow,
-                    icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                    label: Text(_checking ? kUpdatesCheckingLabel : kUpdatesCheckNowLabel),
-                    style: OutlinedButton.styleFrom(foregroundColor: palette.primary),
-                  ),
+                UpdateButtons(
+                  palette: palette,
+                  checking: _checking,
+                  updateAvailable: _inbox.updateAvailable,
+                  onCheck: _checkNow,
+                  onUpdate: _openUpdate,
                 ),
                 // Only while the automatic switch is off (Q2): the button still
                 // goes online once, and this says so. Hidden mid-check.

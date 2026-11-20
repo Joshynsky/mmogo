@@ -17,6 +17,7 @@
 // directly and unconditionally.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/ui/screens/recently_deleted_screen.dart';
 
 import '../../support/fake_analytics_db.dart' show FakeDatabaseException;
@@ -119,7 +120,7 @@ Map<String, Object?> _deletedTx({
       'deleted_at': deletedAt,
     };
 
-Widget _harness(Database db) => MaterialApp(home: RecentlyDeletedScreen(db: db));
+Widget _harness(Database db) => MaterialApp(navigatorKey: appNavigatorKey, home: RecentlyDeletedScreen(db: db));
 
 Future<void> _settle(WidgetTester tester) async {
   await tester.pump();
@@ -249,7 +250,7 @@ void main() {
         transactions: [_deletedTx(id: 1, deletedAt: fixedNow.millisecondsSinceEpoch - 1000)],
       );
       await tester.pumpWidget(
-        MaterialApp(home: RecentlyDeletedScreen(db: db, now: () => injectedNow)),
+        MaterialApp(navigatorKey: appNavigatorKey, home: RecentlyDeletedScreen(db: db, now: () => injectedNow)),
       );
       await _settle(tester);
 

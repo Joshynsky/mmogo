@@ -2,6 +2,28 @@
 
 What changed in each version of mmogo, newest first. Written for the people who use the app, so it says what you will notice, not how it was built. Dates are when the version was released.
 
+## 0.2.1 (not released)
+
+### Added
+- **Withdrawals stay withdrawals.** Pick what the cash was for and mmogo adds a linked Cash entry under that category. Earlier withdrawals are not changed; open one to say what the cash was for. In the auto-read version, withdrawals that still need a decision appear in Notifications.
+- **Ask first and Suggested (auto-read version).** For people you choose, mmogo reads the message and asks "Record as...?" Nothing is recorded without your tap. The alert has three buttons: Not now, Change category and Yes. Change category opens the Categorize sheet for that entry. A Yes tapped while the app is busy is kept and carried out. For these people the "Tap to parse" alert is skipped.
+- **Suggested categories and a Remembered page.** mmogo can suggest a category for a person, and Remembered in Settings lists each person's level. The rules you set stay on this phone and are not in backups.
+- **Notifications lists (auto-read version).** The Notifications page has lists for the messages waiting, and one for entries recorded automatically.
+- **Paid to: choose an account.** Paid to lets you pick which account to look at.
+- **Update button.** The Updates page has an Update button that opens the mmogo page for your version, and a link to it.
+- **Install help (auto-read version).** A card on the Updates page and a guide on the mmogo website explain how to install past a Google Play Protect warning.
+- **Hide details after (auto-read version).** Choose how long an alert shows details: Never, 5, 15, 30 minutes or 1 hour.
+
+### Changed
+- **What's new links.** Links in What's new open the right page, and Back brings you back.
+- **Pop-up messages** (such as Undo) now follow your light or dark theme.
+- **Updates page.** The buttons sit side by side.
+- **Replace restore** now says that each person's level (Suggested or Ask first) is not in a backup and goes back to Suggested.
+- **Pochi or Send Money.** The choice for a name with no phone number appears in the To do list (auto-read version) as before and is kept for next time if you tick the box.
+
+### Good to know
+- A backup made with 0.2.1 cannot be restored by 0.2.0 or older. Backups from 0.2.0 and earlier still restore.
+
 ## 0.2.0 (not released)
 
 0.1.3 was never released, so 0.2.0 includes its changes (listed under 0.1.3 below).

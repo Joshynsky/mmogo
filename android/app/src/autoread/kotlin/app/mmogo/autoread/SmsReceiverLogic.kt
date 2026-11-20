@@ -25,6 +25,13 @@ internal object SmsReceiverLogic {
      */
     const val ALERT_REPEAT_AFTER_MS = 4000L
 
+    /**
+     * True when the "message ready / Tap to parse" alert goes up before anything else. False when a parse is
+     * due on arrival (Ask first): the parse starts at once and its result is the first alert; the "ready" alert
+     * is only the fallback if the parse cannot start or ends quietly.
+     */
+    fun readyAlertFirst(parseNow: Boolean): Boolean = !parseNow
+
     /** True for a body of 1 to HeldStore.MAX_BODY_CHARS characters. */
     fun bodyAcceptable(body: String?): Boolean =
         body != null && body.isNotEmpty() && body.length <= HeldStore.MAX_BODY_CHARS

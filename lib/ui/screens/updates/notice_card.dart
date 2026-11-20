@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../data/updates/untrusted_text.dart';
 import '../../../data/updates/updates_inbox.dart';
 import '../../copy/data_copy.dart';
+import '../../copy/install_help_copy.dart';
 import '../../copy/other_version_copy.dart';
 import '../../theme/app_colors.dart';
 import '../backup/backup_format.dart';
@@ -14,13 +15,16 @@ import 'notes_text.dart';
 /// view, and "See what's new" (which opens the mmogo page, a constant) on a
 /// release notice. The welcome notice has no "See what's new".
 class NoticeCard extends StatefulWidget {
-  const NoticeCard({super.key, required this.notice, required this.onSeeWhatsNew, this.onOpenBackup});
+  const NoticeCard({super.key, required this.notice, required this.onSeeWhatsNew, this.onOpenBackup, this.onOpenInstallHelp});
 
   final Notice notice;
   final VoidCallback onSeeWhatsNew;
 
   /// Opens Backup and restore (the backup-paused notice's button).
   final VoidCallback? onOpenBackup;
+
+  /// Opens the install guide in the browser (the install-help notice's button).
+  final VoidCallback? onOpenInstallHelp;
 
   /// Lines shown before "Show all notes".
   static const collapsedLines = 6;
@@ -42,7 +46,9 @@ class _NoticeCardState extends State<NoticeCard> {
             ? kBackupPausedNoticeTitle
             : n.otherVersion
                 ? kOtherVersionNoticeTitle
-                : updateNoticeTitle(n.tag);
+                : n.installHelp
+                    ? kInstallHelpNoticeTitle
+                    : updateNoticeTitle(n.tag);
     // The welcome and backup-paused wording lives in data_copy.dart, not in storage.
     final notes = n.welcome
         ? kWelcomeNoticeNotes
@@ -50,7 +56,9 @@ class _NoticeCardState extends State<NoticeCard> {
             ? kBackupPausedNoticeNotes
             : n.otherVersion
                 ? kOtherVersionNoticeBody
-                : plainReleaseNotes(n.notes);
+                : n.installHelp
+                    ? kInstallHelpNoticeBody
+                    : plainReleaseNotes(n.notes);
     final notesStyle = TextStyle(fontSize: 13, height: 1.5, color: palette.softInk);
 
     return Container(
@@ -73,7 +81,9 @@ class _NoticeCardState extends State<NoticeCard> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(color: palette.tint, borderRadius: BorderRadius.circular(8)),
                 child: Text(
-                  n.backupPaused ? 'Backup' : (n.otherVersion ? 'Other version' : n.tag),
+                  n.backupPaused
+                      ? 'Backup'
+                      : (n.otherVersion ? 'Other version' : (n.installHelp ? kInstallHelpNoticeChip : n.tag)),
                   style: TextStyle(fontSize: 11.5, fontFamily: 'monospace', color: palette.tintInk),
                 ),
               ),
@@ -160,6 +170,24 @@ class _NoticeCardState extends State<NoticeCard> {
                 onPressed: widget.onOpenBackup,
                 style: FilledButton.styleFrom(backgroundColor: palette.primary, foregroundColor: palette.onPrimary),
                 child: const Text(kBackupPausedNoticeButton),
+              ),
+            ),
+          ] else if (n.installHelp) ...[
+            const SizedBox(height: 6),
+            Semantics(
+              label: kInstallHelpNoticeActionSpoken,
+              button: true,
+              container: true, // QA 20-11-2026: its own node, not merged into the card
+              onTap: widget.onOpenInstallHelp,
+              excludeSemantics: true,
+              child: SizedBox(
+                height: 44,
+                child: FilledButton(
+                  key: const Key('noticeInstallHelp'),
+                  onPressed: widget.onOpenInstallHelp,
+                  style: FilledButton.styleFrom(backgroundColor: palette.primary, foregroundColor: palette.onPrimary),
+                  child: const Text(kInstallHelpNoticeAction),
+                ),
               ),
             ),
           ] else if (!n.welcome) ...[

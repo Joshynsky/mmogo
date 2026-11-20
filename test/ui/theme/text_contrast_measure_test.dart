@@ -131,12 +131,12 @@ void main() {
           theme: AppTheme.forPalette(p),
           home: Scaffold(
             body: WhatsNewItemView(
-              item: whatsNewItems().firstWhere((i) => i.id == 'receiver'),
+              item: whatsNewItems().firstWhere((i) => i.id == 'suggest'),
               number: 2,
               open: true,
               palette: p,
               onToggle: () {},
-              onOpenSettings: () {},
+              onOpenSettings: (_) {},
             ),
           ),
         ),

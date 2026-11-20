@@ -15,6 +15,7 @@ class RecentTransaction {
     this.feeCents = 0,
     this.agentNumber,
     this.parentTransactionId,
+    this.recordedAutomatically = false,
     this.linkedCategoryNames = const [],
   });
 
@@ -34,6 +35,9 @@ class RecentTransaction {
 
   /// 0.2.1: the withdrawal this Cash entry is linked to (`parent_transaction_id`), else null.
   final int? parentTransactionId;
+
+  /// 0.2.1: true when the row was written with no tap (Auto-record level).
+  final bool recordedAutomatically;
 
   /// 0.2.1: true for a Cash entry added from a withdrawal ("Cash - Rent from withdrawal").
   bool get fromWithdrawal => parentTransactionId != null;

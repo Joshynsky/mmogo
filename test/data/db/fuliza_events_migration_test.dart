@@ -45,7 +45,7 @@ Future<Map<String, List<Map<String, Object?>>>> _rows(Database db) async => {
     };
 
 Map<String, Object?> _withoutV6Columns(Map<String, Object?> r) =>
-    {...r}..remove('parent_transaction_id')..remove('cash_only_decided');
+    {...r}..remove('parent_transaction_id')..remove('cash_only_decided')..remove('recorded_automatically');
 
 /// After the v5 step the data tables equal [before] except for the Airtime
 /// seed rename and ONE added classification row (WBS row 17).
@@ -125,8 +125,8 @@ void main() {
   });
 
   test('the live version is 5 and the ladder has step 5', () {
-    expect(kDbVersion, 7);
-    expect(AppMigrations.steps.keys, [2, 3, 4, 5, 6, 7]);
+    expect(kDbVersion, 8);
+    expect(AppMigrations.steps.keys, [2, 3, 4, 5, 6, 7, 8]);
   });
 
   group('upgrade', () {
@@ -140,7 +140,7 @@ void main() {
       await v3.close();
 
       final db = await _openLive(path);
-      expect(await _uv(db), 7);
+      expect(await _uv(db), 8);
       _expectRowsAfterV5(await _rows(db), before);
       expect(await _hasTable(db, 'fuliza_events'), isTrue);
       expect(firstIntOf(await db.rawQuery('SELECT COUNT(*) FROM fuliza_events')), 0);
@@ -159,7 +159,7 @@ void main() {
       final path = _path('v2');
       await (await buildV2Database(path)).close();
       final db = await _openLive(path);
-      expect(await _uv(db), 7);
+      expect(await _uv(db), 8);
       expect(await _hasTable(db, 'fuliza_events'), isTrue);
       expect(firstIntOf(await db.rawQuery('SELECT COUNT(*) FROM transactions')), greaterThan(0));
       expect(await db.rawQuery('PRAGMA foreign_key_check'), isEmpty);
@@ -179,7 +179,7 @@ void main() {
               }));
       await v1.close();
       final db = await _openLive(path);
-      expect(await _uv(db), 7);
+      expect(await _uv(db), 8);
       expect(await _hasTable(db, 'fuliza_events'), isTrue);
       expect(await db.rawQuery('PRAGMA foreign_key_check'), isEmpty);
       await db.close();
@@ -213,7 +213,7 @@ void main() {
       await still.close();
 
       final db = await _openLive(path);
-      expect(await _uv(db), 7);
+      expect(await _uv(db), 8);
       expect(await _hasTable(db, 'fuliza_events'), isTrue);
       _expectRowsAfterV5(await _rows(db), before);
       await db.close();
@@ -298,7 +298,7 @@ void main() {
       final db = await openMmogoDatabase(databaseFactoryFfi, path,
           singleInstance: false, onUpgrade: (db, a, b) async => upgraded = true);
       expect(upgraded, isFalse);
-      expect(await _uv(db), 7);
+      expect(await _uv(db), 8);
       expect(firstIntOf(await db.rawQuery('SELECT COUNT(*) FROM fuliza_events')), 1);
       await db.close();
     });
@@ -306,10 +306,10 @@ void main() {
     // S12 slice B: `openMmogoDatabase` has an `onDowngrade` that throws, so a
     // database NEWER than this build is refused and never rewritten (sqflite
     // would otherwise open it and write the lower user_version into the header).
-    test('a v8 file is REFUSED by openMmogoDatabase; user_version and rows are unchanged', () async {
-      final path = _path('v8');
+    test('a v9 file is REFUSED by openMmogoDatabase; user_version and rows are unchanged', () async {
+      final path = _path('v9');
       final seed = await openMmogoDatabase(databaseFactoryFfi, path,
-          singleInstance: false, version: 8, onCreate: (db, v) async {
+          singleInstance: false, version: 9, onCreate: (db, v) async {
         await AppSchema.createSchema(db);
         await AppSchema.seed(db);
       });
@@ -320,21 +320,21 @@ void main() {
       await expectLater(_openLive(path), throwsA(isA<StateError>()));
 
       // Read the file back with a plain open (no version, so no callbacks):
-      // the header still says 7 and the row is still there.
+      // the header still says 9 and the row is still there.
       final raw = await databaseFactoryFfi.openDatabase(path,
           options: OpenDatabaseOptions(singleInstance: false));
-      expect(await _uv(raw), 8);
+      expect(await _uv(raw), 9);
       expect(firstIntOf(await raw.rawQuery('SELECT COUNT(*) FROM fuliza_events')), 1);
       expect(firstIntOf(await raw.rawQuery('SELECT COUNT(*) FROM classifications')), 18);
       await raw.close();
       expect(await File(path).readAsBytes(), before, reason: 'the refused open wrote nothing');
     });
 
-    test('a v8 file is refused with the default onDowngrade, so the classifier sees a plain failure (OPN-1)',
+    test('a v9 file is refused with the default onDowngrade, so the classifier sees a plain failure (OPN-1)',
         () async {
-      final path = _path('v8b');
+      final path = _path('v9b');
       await (await openMmogoDatabase(databaseFactoryFfi, path,
-              singleInstance: false, version: 8, onCreate: (db, v) async {}))
+              singleInstance: false, version: 9, onCreate: (db, v) async {}))
           .close();
       Object? error;
       try {

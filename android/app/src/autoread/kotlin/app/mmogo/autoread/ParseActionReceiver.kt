@@ -24,11 +24,22 @@ class ParseActionReceiver : BroadcastReceiver() {
             when (intent.action) {
                 ParseNotifier.ACTION_LATER -> Notifier.cancel(ctx, id)
                 ParseNotifier.ACTION_PARSE -> parse(ctx, id)
+                AskAlert.ACTION_YES -> yes(ctx, id)
                 else -> return
             }
         } catch (_: Throwable) {
             // A receiver must never crash.
         }
+    }
+
+    /**
+     * The Yes button of an Ask first alert: a deliberate tap, nothing else. Same guards as Parse. It only
+     * QUEUES the answer (one preference key, see [AskFirstPrefs.writeYes]); the app records it when it next
+     * opens, from its own copy of the hint. No hint any more (item gone): the alert is removed.
+     */
+    private fun yes(ctx: Context, id: String) {
+        if (!ParseGuard.mayParse(ctx)) return
+        if (AskFirstPrefs.writeYes(ctx, id, System.currentTimeMillis())) AskNotifier.postQueued(ctx, id) else Notifier.cancel(ctx, id)
     }
 
     private fun parse(ctx: Context, id: String) {

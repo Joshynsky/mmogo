@@ -22,7 +22,7 @@ Widget _host() => Builder(
     body: Center(
       child: TextButton(
         key: const Key('openPager'),
-        onPressed: () => showWhatsNewPager(context, onOpenSettings: () {}, onOpenBackup: () {}, onOpenSite: () {}),
+        onPressed: () => showWhatsNewPager(context, onOpenSettings: (_) {}, onOpenBackup: () {}, onOpenSite: () {}),
         child: const Text('HOME'),
       ),
     ),
@@ -53,14 +53,14 @@ void main() {
     open: (t) async {
       await t.tap(_k('openPager'));
       await a11ySettle(t);
-      await t.ensureVisible(_k('whatsNewItemHead-receiver'));
+      await t.ensureVisible(_k('whatsNewItemHead-suggest'));
       await a11ySettle(t);
-      await t.tap(_k('whatsNewItemHead-receiver'));
+      await t.tap(_k('whatsNewItemHead-suggest'));
       await a11ySettle(t);
     },
     actions: () => [
       A11yAction('Got it', _k('whatsNewGotIt')),
-      A11yAction('Change in Settings', _k('whatsNewCalSettings')),
+      A11yAction('Open in Settings', _k('whatsNewCalSettings')),
       if (!kAutoReadCompiled) A11yAction('Open the mmogo page', _k('whatsNewBannerLink')),
     ],
   );

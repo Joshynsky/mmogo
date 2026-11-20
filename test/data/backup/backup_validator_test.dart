@@ -116,7 +116,7 @@ void main() {
     });
 
     test('reject_newer_schema_version', () {
-      for (final v in [8, 9, 99, 2147483647]) {
+      for (final v in [9, 10, 99, 2147483647]) {
         _rejectJson(validBackupJson()..['schema_version'] = v,
             RestoreRejectReason.newer, field: 'schema_version');
       }
@@ -845,7 +845,7 @@ void main() {
     });
 
     test('runs in Isolate.run: a rejection crosses back with its reason', () async {
-      final bytes = bytesOf(validBackupJson()..['schema_version'] = 8);
+      final bytes = bytesOf(validBackupJson()..['schema_version'] = 9);
       await expectLater(
         Isolate.run(() => BackupValidator.validate(bytes)),
         throwsA(isA<RestoreRejected>()

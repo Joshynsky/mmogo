@@ -13,17 +13,21 @@
 library;
 
 import '../logic/reading_controller.dart';
+import '../rules/rule_backup_guard.dart';
 
 class AutoReadWipe {
   AutoReadWipe({
     ReadingController? Function()? controller,
     ReadingPrefs? prefs,
     this.refresh,
+    RuleBackupGuard? rules,
   })  : _controller = controller ?? (() => ReadingControllerHolder.instance),
-        _prefs = prefs ?? SharedReadingPrefs();
+        _prefs = prefs ?? SharedReadingPrefs(),
+        _rules = rules;
 
   final ReadingController? Function() _controller;
   final ReadingPrefs _prefs;
+  final RuleBackupGuard? _rules;
 
   /// Called after a verified wipe so the in-memory rows are rebuilt (the real
   /// waiting repository's `ingest`). A failure here is not a failed wipe: the
@@ -41,6 +45,8 @@ class AutoReadWipe {
       // the Dart consent key goes; hasConsent() then asks again (it needs both sides).
       await _prefs.remove(kReadingConsentKey);
       if ((await _prefs.keys()).contains(kReadingConsentKey)) return false;
+      // Every person's rule, the undone codes and the history summary go too.
+      if (!await (_rules ?? RuleBackupGuard(prefs: _prefs)).wipe()) return false;
       final s = await c.state();
       if (!s.available || s.on || s.heldCount != 0) return false;
     } catch (_) {

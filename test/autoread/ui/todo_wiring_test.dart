@@ -10,6 +10,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
+import 'package:mmogo/ui/widgets/pill_toast.dart';
 import 'package:mmogo/autoread/autoread_feature.dart';
 import 'package:mmogo/autoread/bridge/fake_autoread_bridge.dart';
 import 'package:mmogo/autoread/data/real_waiting_actions.dart';
@@ -116,6 +118,7 @@ class _Env {
         waiting: repo,
         counts: bell.value,
         child: MaterialApp(
+      navigatorKey: appNavigatorKey,
           theme: AppTheme.theme,
           initialRoute: Routes.notifications,
           navigatorObservers: [pushes],
@@ -183,6 +186,8 @@ class _Env {
 void main() {
   final skip = !kAutoReadCompiled;
 
+  setUp(PillToast.dismissNow); // a toast from an earlier test must not leak in
+
   testWidgets(
     'Parse in place: no toast, the row becomes a choose row with Later, nothing saved',
     (t) async {
@@ -194,7 +199,7 @@ void main() {
       );
       await e.settle(t);
       expect(find.text(kToastParsed), findsNothing);
-      expect(find.byType(SnackBar), findsNothing);
+      expect(PillToast.isShowing, isFalse);
       expect(find.text(kChooseCategoryTitle), findsOneWidget);
       expect(find.byKey(const Key('choose-later')), findsOneWidget);
       expect(find.byKey(const Key('choose-categorize')), findsOneWidget);
@@ -226,7 +231,7 @@ void main() {
         find.text(noteRecorded('Sent Ksh 500 to JANE DOE')),
         findsOneWidget,
       ); // the quiet note
-      expect(find.byType(SnackBar), findsNothing);
+      expect(PillToast.isShowing, isFalse);
       expect(a.row(1), findsNothing);
       // The same pick called again (a stale tap) writes nothing more.
       final stale = WaitingItem(
@@ -310,9 +315,9 @@ void main() {
       await e.settle(t);
       expect(find.text(kChooseCategoryTitle), findsNothing);
       expect(
-        find.byType(SnackBar),
+        find.text(autoRecordedToast('Ksh 200')),
         findsOneWidget,
-      ); // the auto-recorded snackbar stays
+      ); // the auto-recorded pill toast shows
       expect(
         find.text(autoRecordedTitle('Ksh 200', other: false)),
         findsOneWidget,
@@ -426,7 +431,7 @@ void main() {
       await t.tap(find.byKey(const Key('parseAllBar')));
       await e.settle(t);
       expect(find.text(kChooseCategoryTitle), findsNWidgets(2));
-      expect(find.byType(SnackBar), findsNothing);
+      expect(PillToast.isShowing, isFalse);
       expect(find.text(noteReadMany(2)), findsOneWidget);
     },
     skip: skip,

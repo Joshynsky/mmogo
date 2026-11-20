@@ -41,15 +41,31 @@ class SmsReceiver : BroadcastReceiver() {
                     Notifier.post(context, id)
                 } else {
                     val app = context.applicationContext ?: context
+                    // Ask first (0.2.1): with such a rule stored, the Parse starts by itself after the
+                    // "ready" alert, so the item is labelled before the user looks. Decided here, once.
+                    val parseNow = ArrivalParser.wanted(app, true)
                     val t = Thread {
+                        // True once the runner owns the broadcast (it finishes it); then this thread must not.
+                        var handedOver = false
                         try {
                             try {
                                 Thread.sleep(SmsReceiverLogic.ALERT_DELAY_MS)
                             } catch (_: InterruptedException) {
                                 // Carry on: the held check below decides.
                             }
-                            // Still held (not parsed or removed meanwhile): post; else stay silent.
-                            if (AutoReadStores.held(app).peek(id) != null) Notifier.post(app, id)
+                            // Still held (not parsed or removed meanwhile): go on; else stay silent.
+                            if (AutoReadStores.held(app).peek(id) != null) {
+                                // A parse due on arrival (an Ask first rule): no "Tap to parse" alert first. The runner
+                                // posts the question (or the plain Parsed line) as the first alert. Only when the parse
+                                // cannot start (or ends quietly, see ParseRunner) does the "ready" alert go up.
+                                if (SmsReceiverLogic.readyAlertFirst(parseNow)) {
+                                    Notifier.post(app, id)
+                                } else {
+                                    handedOver = ArrivalParser.start(app, id, pending)
+                                    if (handedOver) return@Thread
+                                    Notifier.post(app, id)
+                                }
+                            }
                             try {
                                 Thread.sleep(SmsReceiverLogic.ALERT_REPEAT_AFTER_MS)
                             } catch (_: InterruptedException) {
@@ -63,9 +79,11 @@ class SmsReceiver : BroadcastReceiver() {
                         } catch (_: Throwable) {
                             // Never crash on the late post.
                         } finally {
-                            try {
-                                pending.finish()
-                            } catch (_: Throwable) {
+                            if (!handedOver) {
+                                try {
+                                    pending.finish()
+                                } catch (_: Throwable) {
+                                }
                             }
                         }
                     }

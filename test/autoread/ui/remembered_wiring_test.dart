@@ -28,7 +28,7 @@ class _CountDb implements Database {
 
 const _sub2 = 'Auto-record airtime: 2 of 2 on · 1 name, kept on this phone';
 const _sub0 = 'Auto-record airtime: 0 of 2 on · 1 name, kept on this phone';
-const _row = 'Remembered: recipients and auto-record';
+const _row = 'Remembered, suggestions and auto-record';
 
 Future<void> _put(String k, bool v) async => (await SharedPreferences.getInstance()).setBool(k, v);
 
@@ -99,28 +99,34 @@ bool _sw(WidgetTester t, String key) => t.widget<Switch>(find.byKey(Key(key))).v
 Future<void> _openTab2(WidgetTester t) async {
   await t.tap(find.text(_row));
   await t.pumpAndSettle();
-  await t.tap(find.textContaining('Recorded automatically'));
+  await t.tap(find.text('Suggest and auto-record'));
+  await t.pumpAndSettle();
+  await _showAirtime(t);
+}
+
+/// Send Money is the open type by default; the airtime switches sit under the Airtime chip (when chips show).
+Future<void> _showAirtime(WidgetTester t) async {
+  final chip = find.byKey(const Key('typeChipAirtime'));
+  if (chip.evaluate().isEmpty) return;
+  await t.tap(chip);
   await t.pumpAndSettle();
 }
 
 void main() {
   setUp(() => useFakeDeleteData());
 
-  testWidgets('one controller: flip on the tab, the label and Settings sub follow; flip back, they follow again', (t) async {
+  testWidgets('one controller: flip on the tab, the Settings sub follows; flip back, they follow again', (t) async {
     final mem = await _seeded();
     final c = _controller();
     await _pump(t, c, mem);
     await _openTab2(t);
-    expect(find.text('Recorded automatically · 0'), findsOneWidget);
     await t.tap(find.byKey(const Key('autoRecordMyself')));
     await t.pumpAndSettle();
-    expect(find.text('Recorded automatically · 1'), findsOneWidget);
     expect(c.on, isTrue);
     expect(c.onOther, isFalse);
     await t.tap(find.byKey(const Key('autoRecordOther')));
     await t.pumpAndSettle();
     expect(c.onOther, isTrue);
-    expect(find.text('Recorded automatically · 2'), findsOneWidget);
     expect(_sw(t, 'autoRecordOtherSwitch'), isTrue);
     await t.pageBack();
     await t.pumpAndSettle();
@@ -130,7 +136,6 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Auto-record airtime: 1 of 2 on · 1 name, kept on this phone'), findsOneWidget);
     await _openTab2(t);
-    expect(find.text('Recorded automatically · 1'), findsOneWidget);
     expect(_sw(t, 'autoRecordMyselfSwitch'), isFalse);
     expect(find.byKey(const Key('autoAirtimeCard')), findsNothing);
   });
@@ -166,7 +171,6 @@ void main() {
     await _pump(t, c2, mem);
     expect(find.text(_sub2), findsOneWidget);
     await _openTab2(t);
-    expect(find.text('Recorded automatically · 2'), findsOneWidget);
     expect(_sw(t, 'autoRecordMyselfSwitch'), isTrue);
     expect(_sw(t, 'autoRecordOtherSwitch'), isTrue);
   });
@@ -180,6 +184,7 @@ void main() {
       arguments: const RememberedRouteArgs(openAutoRecord: true),
     );
     await t.pumpAndSettle();
+    await _showAirtime(t);
     expect(find.byKey(const Key('autoRecordMyself')).hitTestable(), findsOneWidget);
   });
 
@@ -192,7 +197,7 @@ void main() {
     await t.tap(find.text('Remembered recipients'));
     await t.pumpAndSettle();
     expect(find.text('Remembered recipients'), findsOneWidget); // the page title
-    expect(find.textContaining('Recorded automatically'), findsNothing);
+    expect(find.text('Suggest and auto-record'), findsNothing);
     expect(find.text('Forget all'), findsOneWidget);
   });
 }

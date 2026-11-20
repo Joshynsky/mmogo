@@ -63,7 +63,7 @@ Widget _app(_Rig rig, {String home = 'HOME'}) => MaterialApp(
           readOnboardingComplete: () async => rig.onboarded,
           writeSeenVersion: rig.write ?? (v) async => rig.written.add(v),
           startupNoticeShown: () => rig.noticeShown,
-          openSettings: () {
+          openSettings: (_) {
             rig.opened.add('settings');
             Navigator.of(context).pushNamed('/settings');
           },
@@ -92,7 +92,7 @@ void main() {
       await _pump(tester, seen: '0.1.1');
       expect(find.byKey(_pager), findsOneWidget);
       expect(find.text(kWhatsNewPagerTitle), findsOneWidget);
-      expect(find.text(kWhatsNewNavTitle), findsOneWidget);
+      expect(find.text(kWhatsNewWithdrawalsTitle), findsOneWidget);
     });
 
     testWidgets('an upgrade from 0.1.0 (nothing stored, onboarding done) sees it', (tester) async {
@@ -188,7 +188,7 @@ void main() {
 
     testWidgets('the Settings route button opens its route and marks nothing seen', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1');
-      await _openRow(tester, 'receiver');
+      await _openRow(tester, 'suggest');
       await tester.tap(find.byKey(const Key('whatsNewCalSettings')));
       await tester.pumpAndSettle();
       expect(rig.opened, ['settings']);

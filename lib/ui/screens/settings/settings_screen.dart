@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../widgets/pill_toast.dart';
 import '../../../app_info.dart';
 import '../../../autoread/autoread_feature.dart';
 import '../../../autoread/ui/reading_settings_section.dart';
@@ -24,6 +25,9 @@ import '../../shell/secondary_scaffold.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_palette_scope.dart';
 import '../../widgets/coach_tour.dart';
+import '../../widgets/highlight_pulse.dart';
+import 'debug_update_seed_tap.dart';
+import 'settings_targets.dart';
 import '../backup/backup_export_flow.dart';
 import '../backup/backup_format.dart';
 import '../fuliza/fuliza_source.dart';
@@ -108,28 +112,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _backupSubtitle = 'Never backed up';
   bool _backupPaused = false;
 
-  /// The messenger that shows the First day toast (R22); kept so the toast is removed the
-  /// moment Settings starts to close (a SnackBar alive during the route change makes the
-  /// pages under Settings, which are all mounted, each draw a hero with the same tag).
-  ScaffoldMessengerState? _messenger;
-
   // Coach-tour anchors.
   final _paletteTourKey = GlobalKey();
   final _dataTourKey = GlobalKey();
   final _addingTourKey = GlobalKey();
   bool _tourOffered = false;
 
+  /// A What's new link's area, taken once when the page opens; the first-visit tour waits for
+  /// another visit while it is set.
+  final String? _highlight = HighlightRequest.take();
+
   @override
   void initState() {
     super.initState();
     BackupPrefs.pausedNotifier.addListener(_onPausedChanged);
     _bootstrap();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _messenger = ScaffoldMessenger.maybeOf(context);
   }
 
   @override
@@ -166,7 +163,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
     if (!_tourOffered) {
       _tourOffered = true;
-      _offerTour();
+      if (_highlight == null) _offerTour();
     }
   }
 
@@ -198,11 +195,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _lookChanged();
     // R22: a short toast when the day really changed (not for the same day again).
     if (changed && mounted) {
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(content: Text(weeksNowStartOnText(kFirstDayNames[day - 1])), duration: kWeeksToastDuration),
-        );
+      PillToast.show(weeksNowStartOnText(kFirstDayNames[day - 1]), duration: kWeeksToastDuration);
     }
   }
 
@@ -324,12 +317,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final exportFn = widget.exportCsv ?? _defaultExportCsv;
       await exportFn(csv, rows.length);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('CSV exported — ${rows.length} transaction${rows.length == 1 ? '' : 's'}')),
-      );
+      PillToast.show('CSV exported — ${rows.length} transaction${rows.length == 1 ? '' : 's'}');
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('CSV export failed — please try again')));
+      PillToast.show('CSV export failed — please try again');
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
@@ -376,7 +367,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return PopScope(
       // R22: the First day toast goes the moment Settings starts to close.
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) _messenger?.removeCurrentSnackBar();
+        if (didPop) PillToast.dismissNow();
       },
       child: SecondaryScaffold(
         title: kSettingsTitle,
@@ -385,6 +376,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // nothing here changes from elapsed time the way Home/Analytics do.
         body: ListView(
           key: const Key('settingsScroll'),
+          cacheExtent: 2000, // a linked row below the fold is built, so it can be scrolled to
           padding: const EdgeInsets.fromLTRB(14, 6, 14, 32),
           children: [
             LookSection(
@@ -414,6 +406,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               showFuliza: _showFuliza,
               onShowFulizaChanged: _loading ? null : _handleShowFulizaChanged,
               rememberedHook: widget.rememberedHook,
+              highlight: _highlight,
             ),
             const SizedBox(height: 14),
             DataSection(
@@ -430,13 +423,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               backupFlow: widget.backupFlow,
             ),
             const SizedBox(height: 14),
-            if (kAutoReadCompiled) ...[const ReadingSettingsSection(), const SizedBox(height: 14)],
+            if (kAutoReadCompiled) ...[
+              HighlightPulse(active: _highlight == kSettingsTargetReading, alignment: 0, child: const ReadingSettingsSection()),
+              const SizedBox(height: 14),
+            ],
             AboutSection(palette: palette),
             const SizedBox(height: 14),
-            Text(
-              '${AppInfo.name} ${AppInfo.versionName} · your data stays on this phone',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11.5, color: palette.mutedInk),
+            DebugUpdateSeedTap(
+              child: Text(
+                '${AppInfo.name} ${AppInfo.versionName} · your data stays on this phone',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11.5, color: palette.mutedInk),
+              ),
             ),
           ],
         ),

@@ -35,6 +35,7 @@ class AnalyticsTransactionRow {
     this.fromMessage = false,
     this.parentTransactionId,
     this.cashOnlyDecided = false,
+    this.recordedAutomatically = false,
     this.linkedCategoryNames = const [],
     this.linkedCents = 0,
   });
@@ -76,6 +77,9 @@ class AnalyticsTransactionRow {
 
   /// 0.2.1: the withdrawal this Cash entry is linked to (`parent_transaction_id`), else null.
   final int? parentTransactionId;
+
+  /// 0.2.1: true when the row was written with no tap (Auto-record level). Undo keeps it 1.
+  final bool recordedAutomatically;
 
   /// 0.2.1: true for a Cash entry added from a withdrawal (shows "from withdrawal").
   bool get fromWithdrawal => parentTransactionId != null;
@@ -159,7 +163,7 @@ t.id, t.display_code, t.source_type, t.amount_cents,
              t.counterparty_label, t.counterparty_phone, t.paybill_account_number,
              t.classification_id, c.name AS classification_name,
              t.transaction_occurred_at, t.transaction_cost_cents, t.agent_number, t.raw_parse_source,
-             t.parent_transaction_id, t.cash_only_decided,
+             t.parent_transaction_id, t.cash_only_decided, t.recorded_automatically,
              (SELECT group_concat(lname, char(31)) FROM
                 (SELECT lc.name AS lname FROM transactions ch
                  JOIN classifications lc ON lc.id = ch.classification_id
@@ -192,6 +196,7 @@ t.id, t.display_code, t.source_type, t.amount_cents,
       fromMessage: row['raw_parse_source'] == 'SMS_PARSE',
       parentTransactionId: row['parent_transaction_id'] as int?,
       cashOnlyDecided: row['cash_only_decided'] == 1,
+      recordedAutomatically: row['recorded_automatically'] == 1,
       linkedCategoryNames:
           names == null || names.isEmpty ? const [] : {...names.split('\u001f')}.toList(),
       linkedCents: linked,
@@ -373,6 +378,38 @@ t.id, t.display_code, t.source_type, t.amount_cents,
       ORDER BY t.transaction_occurred_at DESC
       ''',
       codes.toList(),
+    );
+    return rows.map(rowFrom).toList();
+  }
+
+  /// 0.2.1: the "Recorded automatically" history filter: live rows written with no tap, newest
+  /// written first (`created_at DESC, id DESC`, the order the app wrote them). Optional window
+  /// on `created_at`: [sinceCreatedMs] inclusive, [untilCreatedMs] exclusive. Uses
+  /// `idx_transactions_auto`. Totals and the spend rule do not read this.
+  static Future<List<AnalyticsTransactionRow>> recordedAutomatically(
+    Database db, {
+    int? sinceCreatedMs,
+    int? untilCreatedMs,
+  }) async {
+    final args = <Object?>[];
+    final range = StringBuffer();
+    if (sinceCreatedMs != null) {
+      range.write(' AND t.created_at >= ?');
+      args.add(sinceCreatedMs);
+    }
+    if (untilCreatedMs != null) {
+      range.write(' AND t.created_at < ?');
+      args.add(untilCreatedMs);
+    }
+    final rows = await db.rawQuery(
+      '''
+      SELECT $rowColumns
+      FROM transactions t
+      JOIN classifications c ON c.id = t.classification_id
+      WHERE t.recorded_automatically = 1 AND t.deleted_at IS NULL$range
+      ORDER BY t.created_at DESC, t.id DESC
+      ''',
+      args,
     );
     return rows.map(rowFrom).toList();
   }

@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 
 import 'app_startup.dart';
@@ -11,6 +13,7 @@ import 'autoread/data/real_waiting_repository.dart';
 import 'autoread/model/waiting_repository.dart';
 import 'autoread/runtime.dart';
 import 'autoread/service/autoread_service.dart';
+import 'autoread/wiring/rules_wiring.dart';
 import 'autoread/ui/launch_router.dart';
 import 'autoread/ui/remembered_wiring.dart';
 import 'autoread/ui/waiting_bell_numbers.dart';
@@ -60,7 +63,12 @@ Future<void> main() async {
   // Auto-read: the one bridge and controller, and the Delete data wipe hook,
   // are set BEFORE the reset resume so a cut-short Delete data is finished with
   // the auto-read wipe too.
-  if (kAutoReadCompiled) AutoReadRuntime.install();
+  if (kAutoReadCompiled) {
+    AutoReadRuntime.install();
+    // 0.2.1 rules (Suggested + Ask first): the rules store, history, offers and the Settings and
+    // Remembered rows are joined to the app here (preferences only; the database opens later).
+    RulesWiring.install();
+  }
   // 0.2.0 S8: Paid to groups a named Paybill by name (accounts paged in its sheet) in the debug flavor only.
   PaidToGrouping.paybillByName = kAutoReadCompiled;
   // 0.2.0 S9: the edit sheet shows a message row's own figures read-only, debug flavor only.
@@ -131,6 +139,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
   @override
   void initState() {
     super.initState();
+    appNavigatorKey = _autoReadNavigatorKey; // the pill toast reaches the root overlay through this
     if (kAutoReadCompiled) {
       // The ONE shared bridge and store (AutoReadRuntime), also used by the
       // Settings controller and the Delete data wipe.
@@ -144,7 +153,8 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
         store: AutoReadRuntime.store,
         service: AutoReadService(
           bridge: AutoReadRuntime.bridge,
-          store: AutoReadRuntime.store,
+          // The in-app Parse labels what it saves (who, level, up to 2 categories), as the background does.
+          store: RulesWiring.labelling(AutoReadRuntime.store),
           savedCodes: TransactionCodeLookup(() => AppDatabase.instance.database),
           now: DateTime.now,
         ),
@@ -155,13 +165,18 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
       );
       _waiting = _realWaiting;
       AutoReadRuntime.airtime = _realWaiting!.airtime; // the ONE switch controller: Notifications card, Remembered tab, Settings row
-      AirtimeTrailRestoreHook.clearMemory = _realWaiting!.airtime.clearTrail; // a Replace restore empties the shown trail
+      // A Replace restore empties the shown trail AND sends every person back to Suggested (rules wiped,
+      // history summary rebuilt). The hook is CHAINED, never overwritten. Merge never reaches it.
+      final priorClear = AirtimeTrailRestoreHook.clearMemory;
+      AirtimeTrailRestoreHook.clearMemory =
+          RulesWiring.restoreHook(prior: priorClear, clearTrail: () => _realWaiting?.airtime.clearTrail());
       FulizaRebuild.hook = _realWaiting!.rebuildFromHeld; // S12: the Rebuild button on the Fuliza page
       WidgetsBinding.instance.addObserver(this);
       // Delete data rebuilds the rows through this once it has wiped.
       AutoReadRuntime.refresh = () async {
         _realWaiting!.airtime.clearTrail(); // the in-memory auto-record trail goes with the data
         _realWaiting!.clearDescriptions(); // so do the in-memory held-message descriptions
+        await RulesWiring.afterDeleteData(); // the offers list and the summary follow the wipe
         await _realWaiting!.ingest();
         await _realWaiting!.refreshUndecided();
       };
@@ -171,11 +186,21 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
         await AutoReadRuntime.reconcile();
         await _realWaiting?.ingest();
         await _realWaiting?.refreshUndecided();
+        unawaited(RulesWiring.rebuildSummary()); // the people summary follows the ledger on open
       });
     }
     _bell = BellCountsTracker(
       news: _news.watchNews(),
-      waiting: kAutoReadCompiled ? waitingBellNumbers(_waiting!, DateTime.now, undecided: _realWaiting?.undecided) : null,
+      waiting: kAutoReadCompiled
+          ? waitingBellNumbers(
+              _waiting!,
+              DateTime.now,
+              undecided: _realWaiting?.undecided,
+              // each "Ask first next time?" offer adds one to the pill, as on the To do chip
+              offersChanged: RulesWiring.suggestions,
+              offerCount: () => RulesWiring.suggestions?.offers.length ?? 0,
+            )
+          : null,
     );
     if (kAutoReadCompiled) {
       // F8: a tap on a phone notification opens the Notifications page.
@@ -195,6 +220,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (kAutoReadCompiled && state == AppLifecycleState.resumed) {
       AutoReadRuntime.reconcile().then((_) => _realWaiting?.ingest()).then((_) => _realWaiting?.refreshUndecided());
+      unawaited(RulesWiring.rebuildSummary());
     }
   }
 
@@ -246,7 +272,7 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
         _ => ThemeMode.system,
       },
       debugShowCheckedModeBanner: false,
-      navigatorKey: kAutoReadCompiled ? _autoReadNavigatorKey : null,
+      navigatorKey: _autoReadNavigatorKey,
       navigatorObservers: [if (kAutoReadCompiled) _launchRouter!.observer],
       // T27 — see app_messenger.dart's own doc comment.
       scaffoldMessengerKey: appMessengerKey,
@@ -275,7 +301,8 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
         Routes.notifications: (_) => const NotificationsRoute(),
         Routes.privacy: (_) => const PrivacyScreen(),
         Routes.rememberedRecipients: (ctx) => kAutoReadCompiled && AutoReadRuntime.airtime != null
-            ? rememberedPageFor(AutoReadRuntime.airtime!, args: ModalRoute.of(ctx)?.settings.arguments)
+            ? rememberedPageFor(AutoReadRuntime.airtime!,
+                args: ModalRoute.of(ctx)?.settings.arguments, cleanup: AutoReadRuntime.ruleCleanup)
             : const RememberedScreen(), // standard build: the page as it was
       },
     );

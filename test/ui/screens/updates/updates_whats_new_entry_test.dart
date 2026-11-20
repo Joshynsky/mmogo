@@ -64,7 +64,7 @@ Widget _app(_Rig rig) => MaterialApp(
       readSeenVersion: () async => rig.seen,
       writeSeenVersion: (v) async => rig.written.add(v),
       installedVersionName: '0.1.1',
-      openSettings: () {
+      openSettings: (_) {
         rig.opened.add('settings');
         Navigator.of(ctx).pushNamed('/settings');
       },
@@ -168,14 +168,14 @@ void main() {
   });
 
   group('the NEW pill', () {
-    testWidgets('shown while the seen version is not 0.2.0', (tester) async {
+    testWidgets('shown while the seen version is not 0.2.1', (tester) async {
       await _pump(tester, seen: '0.1.1');
       await _openUpdates(tester);
       expect(find.byKey(_pill), findsOneWidget);
     });
 
-    testWidgets('not shown once 0.2.0 is stored as seen', (tester) async {
-      await _pump(tester, seen: '0.2.0');
+    testWidgets('not shown once 0.2.1 is stored as seen', (tester) async {
+      await _pump(tester, seen: '0.2.1');
       await _openUpdates(tester);
       expect(find.byKey(_pill), findsNothing);
       expect(find.byKey(_entry), findsOneWidget);
@@ -231,11 +231,11 @@ void main() {
       expect(rig.written, ['0.1.1']);
     });
 
-    testWidgets('Change in Settings pushes the stub route over the page; Back returns to the open Receiver details row; nothing more is marked', (tester) async {
+    testWidgets('Open in Settings pushes the stub route over the page; Back returns to the open Suggested categories row; nothing more is marked', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1');
       await _openUpdates(tester);
       await _openPager(tester);
-      await tester.tap(find.byKey(const Key('whatsNewItemHead-receiver')));
+      await tester.tap(find.byKey(const Key('whatsNewItemHead-suggest')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('whatsNewCalSettings')));
       await tester.pumpAndSettle();
@@ -244,7 +244,7 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsOneWidget);
-      expect(find.byKey(const Key('whatsNewItemBody-receiver')), findsOneWidget);
+      expect(find.byKey(const Key('whatsNewItemBody-suggest')), findsOneWidget);
       expect(rig.written, ['0.1.1']); // opening the pages is what counted as seen, once
       expect(WhatsNewProcess.pillCleared, isTrue);
     });

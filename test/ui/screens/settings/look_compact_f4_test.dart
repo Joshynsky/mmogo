@@ -7,6 +7,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/widgets/pill_toast.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/ui/copy/settings_copy.dart';
 import 'package:mmogo/ui/screens/settings/compact_choice_row.dart';
 import 'package:mmogo/ui/screens/settings/look_section.dart';
@@ -52,6 +54,7 @@ Future<void> _pump(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MaterialApp(
+      navigatorKey: appNavigatorKey,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
         child: child!,
@@ -71,6 +74,7 @@ Finder _in(String rowKey, String childKey) =>
 bool _stacked(WidgetTester t, String rowKey) => _in(rowKey, 'compactStacked').evaluate().isNotEmpty;
 
 void main() {
+  setUp(PillToast.dismissNow);
   setUp(() => useFakeDeleteData());
 
   group('A1/A2: one compact row each, one column, equal controls (text 1.0, a wide card)', () {
@@ -404,7 +408,7 @@ void main() {
   });
 
   group('A7: the toast after the day changes (R22)', () {
-    testWidgets('a changed day shows "Weeks now start on Sunday." for about 2 seconds, no spinner', (tester) async {
+    testWidgets('a changed day shows "Weeks now start on Sunday." as a pill toast for the 6 second minimum, no spinner', (tester) async {
       await _pump(tester, width: 800);
       await tester.tap(find.byKey(const Key('settingsFirstDayRow')));
       await tester.pumpAndSettle();
@@ -413,11 +417,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Weeks now start on Sunday.'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsNothing);
-      expect(tester.widget<SnackBar>(find.byType(SnackBar)).duration, const Duration(seconds: 2));
       expect(kWeeksToastDuration, const Duration(seconds: 2));
       await tester.pump(const Duration(seconds: 3));
+      expect(find.text('Weeks now start on Sunday.'), findsOneWidget, reason: 'the pill stays 6 s at least');
+      await tester.pump(const Duration(seconds: 4));
       await tester.pumpAndSettle();
-      expect(find.text('Weeks now start on Sunday.'), findsNothing, reason: 'gone after about 2 seconds');
+      expect(find.text('Weeks now start on Sunday.'), findsNothing, reason: 'gone after the 6 s minimum');
     });
 
     testWidgets('the toast names the chosen day (Wednesday)', (tester) async {
@@ -438,7 +443,7 @@ void main() {
       await tester.tap(find.byKey(const Key('firstDay-1')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.byType(SnackBar), findsNothing);
+      expect(PillToast.isShowing, isFalse);
       expect((await SharedPreferences.getInstance()).get('first_day_of_week'), 1);
     });
 
@@ -448,7 +453,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('firstDayCancel')));
       await tester.pumpAndSettle();
-      expect(find.byType(SnackBar), findsNothing);
+      expect(PillToast.isShowing, isFalse);
     });
   });
 

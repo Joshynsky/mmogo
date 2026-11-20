@@ -6,6 +6,7 @@ import '../../../data/db/app_database.dart';
 import '../../../data/prefs/app_prefs.dart';
 import '../../../domain/analytics/analytics_period.dart';
 import '../../../domain/paid_to/paid_to.dart';
+import '../../../domain/paid_to/paid_to_account_view.dart';
 import '../../../domain/paid_to/paid_to_counts.dart';
 import '../../../domain/paid_to/paid_to_sheet.dart';
 import '../../shell/primary_scaffold.dart';
@@ -14,10 +15,13 @@ import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/coach_tour.dart';
+import '../../widgets/highlight_pulse.dart';
 import '../../widgets/period_pill.dart';
 import '../analytics_screen.dart' show AnalyticsRouteArgs;
+import '../settings/settings_targets.dart';
 import 'filter_sheet.dart';
 import 'hero_card.dart';
+import 'not_recorded_explainer.dart';
 import 'not_recorded_line.dart';
 import 'recipient_section.dart';
 import 'recipient_sheet.dart';
@@ -288,21 +292,24 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
   Future<void> _openRecipient(PaidToRecipient r, FocusNode row) async {
     final today = dateOnly(_now());
     final shown = _shown ?? _period;
-    final data = paidToSheetData(
+    PaidToSheetData dataFor(int? account) => paidToSheetData(
       r,
       range: shown.range(today: today, first: _first),
       month: shown.granularity == AnalyticsGranularity.month,
+      allTime: shown.granularity == AnalyticsGranularity.all,
+      account: account,
     );
-    final goAnalytics = await showPaidToRecipientSheet(
+    final exit = await showPaidToRecipientSheet(
       context,
       palette: AppPalette.of(context),
       recipient: r,
-      data: data,
+      data: dataFor(null),
+      dataFor: dataFor,
       periodWords: shown.words(today: today, first: _first).value,
     );
     if (!mounted) return;
-    if (goAnalytics == true) {
-      _openAnalytics(r);
+    if (exit != null) {
+      _openAnalytics(r, account: exit.account);
     } else if (row.context != null) {
       row.requestFocus();
     }
@@ -311,16 +318,20 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
   /// The 0.1.1 hand-off (kept): the Analytics recipient view on this period's length and anchor,
   /// with the active category as its filter. Works for all five types (S7b: Pochi by phone key
   /// else name, Withdrawal by agent number else name).
-  Future<void> _openAnalytics(PaidToRecipient r) async {
+  ///
+  /// 0.2.1 #4: [account] = the one account chosen in the sheet (a Paybill name with several
+  /// accounts): the party view is then that name + account.
+  Future<void> _openAnalytics(PaidToRecipient r, {String? account}) async {
     final today = dateOnly(_now());
     // Read fresh: the setting may have changed since this page last loaded.
     final firstDay = await AppPrefs.readFirstDayOfWeek();
     if (!mounted) return;
     final period = analyticsPeriodForPaidTo(_shown ?? _period, today, firstDay: firstDay);
+    final accountKey = account == null ? null : paidToAccountPartyKey(r, account);
     final args = AnalyticsRouteArgs(
       type: r.sourceType,
-      partyKey: r.partyKey,
-      partyName: r.name,
+      partyKey: accountKey ?? r.partyKey,
+      partyName: account == null ? r.name : '${r.name} · $account',
       period: period,
       classification: _cls,
     );
@@ -330,6 +341,15 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
       return;
     }
     Navigator.of(context).pushNamed(Routes.analytics, arguments: args);
+  }
+
+  /// 0.2.1 #4: a tap on the "Receiver not saved" line explains why and can open Settings with the
+  /// "Record receiver details" switch outlined (the same link What's new uses).
+  Future<void> _explainNotRecorded() async {
+    final open = await showPaidToNotRecordedExplainer(context, palette: AppPalette.of(context));
+    if (open != true || !mounted) return;
+    HighlightRequest.set(kSettingsTargetCaptureReceiver);
+    Navigator.of(context).pushNamed(Routes.settings);
   }
 
   // §PAIDTO.SHELL.TOUR ---- coach tour --------------------------------------------
@@ -502,6 +522,7 @@ class _PaidToScreenState extends State<PaidToScreen> with PrimaryTabRefresh<Paid
         type: type,
         summary: nr,
         withType: withType,
+        onTap: _explainNotRecorded,
       );
       if (part.isEmpty) {
         // mock: a type without recipients still shows its Not recorded line, with the type name.

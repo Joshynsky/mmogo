@@ -30,6 +30,8 @@ class _FakeTab implements RememberedExtraTab {
   @override
   String get forgetAllNote => 'N';
   @override
+  RememberedExtraHelp get help => const RememberedExtraHelp('Second help', ['second para']);
+  @override
   Widget buildBody(BuildContext context) => const SizedBox();
 }
 

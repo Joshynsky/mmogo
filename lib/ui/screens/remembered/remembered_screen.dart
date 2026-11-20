@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/pill_toast.dart';
 import '../../../data/prefs/recipient_memory.dart';
 import '../../../domain/parsing/parsed_sms_fields.dart';
 import '../../copy/settings_copy.dart';
-import '../../shell/app_messenger.dart';
 import '../../shell/secondary_scaffold.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_card.dart';
@@ -64,10 +64,8 @@ class _RememberedScreenState extends State<RememberedScreen> {
 
   void _toast(String text) {
     // Counts only, never a name.
-    final messenger = appMessengerKey.currentState ?? ScaffoldMessenger.maybeOf(context);
-    messenger?.hideCurrentSnackBar();
-    // R28 (F2): about 2 seconds, so it does not linger over the pinned Forget all button.
-    messenger?.showSnackBar(SnackBar(content: Text(text), duration: const Duration(seconds: 2)));
+    // The pill stays at least 6 s (it sits at the top, clear of the pinned Forget all button).
+    PillToast.show(text);
   }
 
   Future<void> _run(Future<bool> Function() op, {String? done}) async {
@@ -94,10 +92,24 @@ class _RememberedScreenState extends State<RememberedScreen> {
 
   Future<void> _change(RecipientEntry e) {
     final other = e.rule.type == SmsSourceType.pochi ? SmsSourceType.sendMoney : SmsSourceType.pochi;
-    return _run(() => _memory.retype(e.key, other));
+    return _run(() async {
+      final ok = await _memory.retype(e.key, other);
+      if (ok && other == SmsSourceType.sendMoney) await _hooks?.onNameChangedToSendMoney(e.key);
+      return ok;
+    });
   }
 
-  Future<void> _forget(RecipientEntry e) => _run(() => _memory.forget(e.key), done: forgotRecipientsText(1));
+  Future<void> _forget(RecipientEntry e) => _run(() async {
+        final ok = await _memory.forget(e.key);
+        if (ok) await _hooks?.onNameForgotten(e.key);
+        return ok;
+      }, done: forgotRecipientsText(1));
+
+  /// The second tab's own clean-up, when it has one (what it keeps about a name goes with the name).
+  RememberedForgetHooks? get _hooks {
+    final t = widget.extraTab;
+    return t is RememberedForgetHooks ? t as RememberedForgetHooks : null;
+  }
 
   Future<void> _forgetAll() async {
     final n = _entries.length;
@@ -131,7 +143,11 @@ class _RememberedScreenState extends State<RememberedScreen> {
       },
     );
     if (go != true || !mounted) return; // outside tap and Back arrive here as null
-    await _run(_memory.forgetAll, done: forgotRecipientsText(n));
+    await _run(() async {
+      final ok = await _memory.forgetAll();
+      if (ok) await _hooks?.onAllNamesForgotten();
+      return ok;
+    }, done: forgotRecipientsText(n));
   }
 
   @override
@@ -142,7 +158,13 @@ class _RememberedScreenState extends State<RememberedScreen> {
     return SecondaryScaffold(
       title: extra?.pageTitle ?? kRememberedTitle,
       followPalette: true,
-      actions: const [HelpPageButton(title: kRememberedHelpTitle, paragraphs: kRememberedHelpParagraphs)],
+      // ONE "?" per screen; on the second tab it explains that tab.
+      actions: [
+        if (extra != null && _tab == 1)
+          HelpPageButton(title: extra.help.title, paragraphs: extra.help.paragraphs)
+        else
+          const HelpPageButton(title: kRememberedHelpTitle, paragraphs: kRememberedHelpParagraphs),
+      ],
       body: extra == null
           ? recipients
           : Column(

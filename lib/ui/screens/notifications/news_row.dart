@@ -9,6 +9,8 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../domain/notifications/news_item.dart';
+import '../../../data/updates/updates_inbox.dart' show Notice;
+import '../../copy/install_help_copy.dart';
 import '../../copy/notifications_copy.dart';
 import '../../copy/other_version_copy.dart';
 import '../../theme/app_colors.dart';
@@ -71,7 +73,12 @@ class NotifRowShell extends StatelessWidget {
     this.extra,
     this.dimmed = false,
     this.onOpen,
+    this.chip,
   });
+
+  /// A small tinted label above the title (the Updates card's chip, e.g. "Install help"). Spoken through
+  /// [spokenLabel], so the caller puts it there.
+  final String? chip;
 
   /// The kind icon (about 34 px box). Faded when [dimmed].
   final Widget icon;
@@ -111,6 +118,16 @@ class NotifRowShell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (chip != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 3),
+              child: Container(
+                key: const Key('notifRowChip'),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: p.tint, borderRadius: BorderRadius.circular(8)),
+                child: Text(chip!, style: TextStyle(fontSize: 11.5, fontFamily: 'monospace', color: p.tintInk)),
+              ),
+            ),
           Text.rich(
             TextSpan(
               children: [
@@ -336,6 +353,8 @@ class NewsRow extends StatelessWidget {
     final style = styleFor(item);
     final shape = item.kind == NewsKind.notice ? NotifShape.star : NotifShape.arrow;
     final age = rowAgeText(item.createdAt, now) + (item.isUnread ? '' : kNewsAgeReadSuffix);
+    // QA 20-11-2026: the Install help row carries the same chip as its Updates card.
+    final chip = item.id == Notice.installHelpTag ? kInstallHelpNoticeChip : null;
 
     final NotifRowAction? action;
     NotifRowAction? link;
@@ -343,11 +362,22 @@ class NewsRow extends StatelessWidget {
       // Never dismissed or removed: no pill, only the link under the text (the
       // long body needs the full width).
       action = null;
+      final help = item.id == Notice.installHelpTag;
       link = NotifRowAction(
-        label: kOtherVersionNoticeAction,
-        semantics: kOtherVersionNoticeActionSpoken,
+        label: help ? kInstallHelpNoticeAction : kOtherVersionNoticeAction,
+        semantics: help ? kInstallHelpNoticeActionSpoken : kOtherVersionNoticeActionSpoken,
         onTap: onSeeMore,
       );
+    } else if (item.kind == NewsKind.update) {
+      // The update row is a constant link to the Updates page (read or not): no
+      // Dismiss, no Remove. It goes when the app is updated (the inbox prunes it).
+      action = NotifRowAction(
+        label: kNewsActionUpdate,
+        semantics: '$kNewsActionUpdate: ${item.title}',
+        onTap: onUpdate,
+        fill: item.isUnread,
+      );
+      link = null;
     } else if (!item.isUnread) {
       action = NotifRowAction(
         label: kNewsActionRemove,
@@ -391,7 +421,8 @@ class NewsRow extends StatelessWidget {
       action: action,
       link: link,
       onOpen: onOpen,
-      spokenLabel: '${style.spokenPrefix}. ${item.title}. ${item.body == null ? '' : '${item.body} '}${spokenTime(age)}.',
+      chip: chip,
+      spokenLabel: '${style.spokenPrefix}. ${chip == null ? '' : '$chip. '}${item.title}. ${item.body == null ? '' : '${item.body} '}${spokenTime(age)}.',
     );
   }
 }

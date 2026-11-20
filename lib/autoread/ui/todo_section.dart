@@ -11,8 +11,10 @@ import '../../domain/notifications/news_logic.dart' show capCount;
 import '../../ui/theme/app_colors.dart';
 import '../logic/waiting_logic.dart';
 import '../model/waiting_item.dart';
+import 'notifications/nothing_waiting_line.dart';
+import 'notifications/notifications_rule_copy.dart';
 import 'notifications_autoread_copy.dart';
-import 'todo_copy.dart';
+import 'row_parts.dart' show SectionHeading;
 
 class TodoSection extends StatelessWidget {
   const TodoSection({
@@ -23,7 +25,29 @@ class TodoSection extends StatelessWidget {
     this.parseAllBar,
     this.trail,
     this.decision,
+    this.isAskFirst,
+    this.toChoose,
+    this.hasToChoose = false,
+    this.suggestions,
+    this.hasSuggestions = false,
+    this.hasTrail = false,
   });
+
+  /// 0.2.1: true for a waiting item whose person is on Ask first; those rows go under To confirm,
+  /// first. Null: none.
+  final bool Function(WaitingItem item)? isAskFirst;
+
+  /// The To choose section ("Choose Pochi or Send Money"), built elsewhere; shown after To parse and
+  /// before To categorize. [hasToChoose] says it is not empty.
+  final Widget? toChoose;
+  final bool hasToChoose;
+
+  /// The Suggestions section, last. [hasSuggestions]: at least one offer.
+  final Widget? suggestions;
+  final bool hasSuggestions;
+
+  /// True when [trail] holds at least one row (decides where Nothing waiting sits).
+  final bool hasTrail;
 
   /// 0.2.1: the ONE "N withdrawals need a decision" item (counts as 1 row in To categorize). Null: none.
   final Widget? decision;
@@ -45,8 +69,22 @@ class TodoSection extends StatelessWidget {
     final toParse = sortReadyToParse(waiting, now);
     final readable = [for (final w in toParse) if (effectiveKind(w, now) == WaitingKind.readyToParse) w];
     final unreadable = [for (final w in toParse) if (effectiveKind(w, now) != WaitingKind.readyToParse) w];
-    final toCategorize = sortWaitingCategory(waiting, now);
+    final allCategorize = sortWaitingCategory(waiting, now);
+    final ask = isAskFirst;
+    final confirm = ask == null ? const <WaitingItem>[] : [for (final w in allCategorize) if (ask(w)) w];
+    final toCategorize = ask == null ? allCategorize : [for (final w in allCategorize) if (!ask(w)) w];
+    final nothing = readable.isEmpty &&
+        unreadable.isEmpty &&
+        toCategorize.isEmpty &&
+        confirm.isEmpty &&
+        decision == null &&
+        !hasToChoose &&
+        !hasSuggestions;
     final children = <Widget>[
+      if (confirm.isNotEmpty) ...[
+        SectionHeading('$kHeadingToConfirm (${capCount(confirm.length)})'),
+        ...confirm.map(rowBuilder),
+      ],
       if (readable.isNotEmpty) ...[
         _TodoHeading('$kHeadingToParse (${capCount(readable.length)})', trailing: parseAllBar),
         ...readable.map(rowBuilder),
@@ -55,14 +93,16 @@ class TodoSection extends StatelessWidget {
         _TodoHeading('$kHeadingCouldNotRead (${capCount(unreadable.length)})', small: readable.isNotEmpty),
         ...unreadable.map(rowBuilder),
       ],
+      if (hasToChoose) ?toChoose,
       if (toCategorize.isNotEmpty || decision != null) ...[
         _TodoHeading('$kHeadingToCategorize (${capCount(toCategorize.length + (decision == null ? 0 : 1))})'),
         const _Quiet(kWaitingNotCounted),
         if (decision != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: decision),
         ...toCategorize.map(rowBuilder),
       ],
-      if (readable.isEmpty && unreadable.isEmpty && toCategorize.isEmpty && decision == null) const _EmptyCard(),
+      if (nothing) NothingWaitingLine(top: hasTrail),
       ?trail,
+      if (hasSuggestions) ?suggestions,
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
   }
@@ -110,29 +150,4 @@ class _Quiet extends StatelessWidget {
           style: TextStyle(fontSize: 12, height: 1.4, fontWeight: FontWeight.w600, color: AppPalette.of(context).mutedInk),
         ),
       );
-}
-
-class _EmptyCard extends StatelessWidget {
-  const _EmptyCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final p = AppPalette.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 12),
-      child: Semantics(
-        container: true,
-        key: const Key('todo-empty'),
-        child: Column(
-          children: [
-            Text(kTodoEmptyTitle,
-                textAlign: TextAlign.center, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: p.ink)),
-            const SizedBox(height: 4),
-            Text(kTodoEmptyBody,
-                textAlign: TextAlign.center, style: TextStyle(fontSize: 13, height: 1.4, color: p.mutedInk)),
-          ],
-        ),
-      ),
-    );
-  }
 }

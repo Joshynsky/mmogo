@@ -380,12 +380,19 @@ class AppPrefs {
     }
   }
 
+  /// Set once by the auto-read build: told after the switch is saved (so a receiver-details OFF can
+  /// wipe what is kept about people). Null in the standard build. A failure inside is dropped.
+  static void Function(bool on)? onCaptureIdentityWritten;
+
   static Future<void> writeCaptureIdentityPreference(bool value) async {
     try {
       final prefs = await SharedPreferences.getInstance().timeout(
         _prefsTimeout,
       );
       await prefs.setBool(keyCaptureIdentityPreference, value);
+      try {
+        onCaptureIdentityWritten?.call(value);
+      } catch (_) {}
     } catch (_) {
       // Defensive: a failed/stuck write just means the preference may not
       // stick for the next entry — never crash the form dismissing it.

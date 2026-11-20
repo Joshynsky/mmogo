@@ -170,7 +170,7 @@ void main() {
       expect(k, OpenFailureKind.other);
     });
 
-    test('negative controls: planted journal, header 7, snapshot read-only open failing', () async {
+    test('negative controls: planted journal, header 8, snapshot read-only open failing', () async {
       final snap = await prepareOpenSnapshot(ev(), proofOnRecord: true);
       File('$path-journal').writeAsBytesSync([9]);
       expect(
@@ -180,7 +180,7 @@ void main() {
       File('$path-journal').deleteSync();
 
       final db = await databaseFactoryFfi.openDatabase(path, options: OpenDatabaseOptions(singleInstance: false));
-      await db.execute('PRAGMA user_version = 7');
+      await db.execute('PRAGMA user_version = 8');
       await db.close();
       expect(await prepareOpenSnapshot(ev(), proofOnRecord: true), isNull);
       expect(

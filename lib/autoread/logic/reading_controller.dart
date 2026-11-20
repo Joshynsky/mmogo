@@ -31,6 +31,14 @@ const int kReadingConsentVersion = 2;
 /// this and the Kotlin `AlertText.DEFAULT_SHOW_DETAILS`.
 const bool kAlertDetailsDefault = false;
 
+/// "Hide details after" choices in minutes; 0 = Never (PM 19-11-2026). 15 is
+/// what 0.2.0 used, so nothing changes until the user picks. Kotlin holds the
+/// same list (`AlertText.DETAILS_MINUTES_CHOICES`); a test pins both. This
+/// never changes how long a held message is kept (`kHeldWindow`).
+const List<int> kAlertMinutesChoices = [0, 5, 15, 30, 60];
+const int kAlertMinutesDefault = 15;
+const int kAlertMinutesNever = 0;
+
 /// What the Settings rows need from the platform bridge. The real
 /// implementation wraps `MethodChannelAutoReadBridge`; tests use a fake.
 abstract class ReadingBridge {
@@ -50,6 +58,10 @@ abstract class ReadingBridge {
   /// "What alerts show": true = Show details, false = Generic (kept in the
   /// auto-read prefs on the Kotlin side). Answers the value now held.
   Future<bool> setAlertDetails(bool on);
+
+  /// "Hide details after" (minutes, 0 = Never). The alert only, never the held
+  /// message's window. Answers the minutes now held.
+  Future<int> setAlertMinutes(int minutes);
 
   /// Opens the phone's Autostart screen (Xiaomi family) or, failing that,
   /// the app's own page in Android settings. Never called automatically.
@@ -77,6 +89,8 @@ class ChannelReadingBridge implements ReadingBridge {
   Future<bool> setParseOn(bool on) => _bridge.setParseOn(on);
   @override
   Future<bool> setAlertDetails(bool on) => _bridge.setAlertDetails(on);
+  @override
+  Future<int> setAlertMinutes(int minutes) => _bridge.setAlertMinutes(minutes);
   @override
   Future<void> openAutostartSettings() => _bridge.openAutostartSettings();
 }
@@ -160,6 +174,9 @@ class ReadingState {
   /// ([kAlertDetailsDefault]).
   final bool alertDetails;
 
+  /// "Hide details after": one of [kAlertMinutesChoices] (0 = Never).
+  final int alertMinutes;
+
   /// Consent is current on the Kotlin side and the details key was never
   /// written: the one-time card asks this phone to choose (J1 B4). Writing the
   /// key, either answer, ends it.
@@ -175,6 +192,7 @@ class ReadingState {
     this.autostartHelp = false,
     this.alertDetails = kAlertDetailsDefault,
     this.detailsChoiceNeeded = false,
+    this.alertMinutes = kAlertMinutesDefault,
   });
 
   /// The platform could not be asked: treated as off and not available.
@@ -220,6 +238,7 @@ class ReadingController {
         parseOn: s.parseOn,
         autostartHelp: s.autostartHelp,
         alertDetails: s.alertDetails,
+        alertMinutes: kAlertMinutesChoices.contains(s.alertMinutes) ? s.alertMinutes : kAlertMinutesDefault,
         detailsChoiceNeeded: s.alertDetailsAbsent && s.consentVersion == kReadingConsentVersion,
       );
     } catch (_) {
@@ -365,6 +384,17 @@ class ReadingController {
   Future<bool> setAlertDetails(bool on) async {
     try {
       return await _bridge.setAlertDetails(on) == on;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Sets "Hide details after". False when it could not be stored. Only the
+  /// alert is affected; held messages keep their own window.
+  Future<bool> setAlertMinutes(int minutes) async {
+    if (!kAlertMinutesChoices.contains(minutes)) return false;
+    try {
+      return await _bridge.setAlertMinutes(minutes) == minutes;
     } catch (_) {
       return false;
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../widgets/pill_toast.dart';
 import '../../../data/backup/auto_backup_service.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/db/classification_dao.dart';
@@ -15,7 +16,6 @@ import '../../../domain/format/ksh_amount.dart';
 import '../../../domain/parsing/name_only_fields.dart';
 import '../../../domain/parsing/name_only_resolver.dart';
 import '../../../domain/parsing/parsed_sms_fields.dart';
-import '../../shell/app_messenger.dart';
 import '../../shell/chrome_widgets.dart';
 import '../../shell/primary_shell.dart';
 import '../../theme/app_colors.dart';
@@ -129,6 +129,14 @@ class _AddScreenState extends State<AddScreen> {
 
   DateTime _occurredAt = DateTime.now();
 
+  /// 0.2.1 QA: false while When is just the page's opening time; it then follows "now" at review and save.
+  /// True once a message filled it or the person picked a time.
+  bool _whenSet = false;
+
+  void _refreshDefaultWhen() {
+    if (!_whenSet) _occurredAt = DateTime.now();
+  }
+
   /// D3 — "Also record …", a REMEMBERED preference across entries
   /// (`AppPrefs.readCaptureIdentityPreference`/`writeCaptureIdentityPreference`),
   /// default ticked the first time. A parse never changes it.
@@ -224,6 +232,7 @@ class _AddScreenState extends State<AddScreen> {
       // Airtime has no Fee field: its parsed fee is kept here, silently.
       _feeController.text = (fields.transactionCostCents / 100).toStringAsFixed(2);
       _occurredAt = DateTime.fromMillisecondsSinceEpoch(fields.transactionOccurredAt);
+      _whenSet = true;
       _nameController.text = fields.counterpartyLabel ?? '';
       _subController.text =
           fields.counterpartyPhone ?? fields.paybillAccountNumber ?? (agentOk ? (agent ?? '') : '');
@@ -263,6 +272,7 @@ class _AddScreenState extends State<AddScreen> {
       _nameController.clear();
       _subController.clear();
       _occurredAt = DateTime.now();
+      _whenSet = false;
       _classificationId = null;
       _wdChoiceId = null;
       _classificationName = null;
@@ -294,6 +304,7 @@ class _AddScreenState extends State<AddScreen> {
       _amountController.text = groupKshText((f.amountCents / 100).toStringAsFixed(2));
       _feeController.text = (f.transactionCostCents / 100).toStringAsFixed(2);
       _occurredAt = DateTime.fromMillisecondsSinceEpoch(f.transactionOccurredAt);
+      _whenSet = true;
       _nameController.clear();
       _subController.clear();
       _classificationId = null;
@@ -522,7 +533,10 @@ class _AddScreenState extends State<AddScreen> {
     if (date == null || !mounted) return;
     final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(_occurredAt));
     if (time == null || !mounted) return;
-    setState(() => _occurredAt = DateTime(date.year, date.month, date.day, time.hour, time.minute));
+    setState(() {
+      _occurredAt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      _whenSet = true;
+    });
   }
 
   // §ADD.SHELL.DERIVED — the rules live in add_draft.dart (§ADD.DRAFT).
@@ -551,6 +565,7 @@ class _AddScreenState extends State<AddScreen> {
 
   Future<void> _openReview() async {
     if (!_canReview) return;
+    setState(_refreshDefaultWhen);
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -577,7 +592,7 @@ class _AddScreenState extends State<AddScreen> {
       Navigator.of(context).pop();
       // S8c-2: a suffix on "Saved" (one snackbar), never a name.
       final note = _droppedOldest ? 'Saved. The oldest remembered name was removed to make room.' : 'Saved';
-      appMessengerKey.currentState?.showSnackBar(SnackBar(content: Text(note)));
+      PillToast.show(note);
     }
   }
 
@@ -590,6 +605,7 @@ class _AddScreenState extends State<AddScreen> {
     if (db == null) return 'Not ready yet — try again.';
     final cash = _src == 'CASH';
     final draft = _draft;
+    _refreshDefaultWhen();
     int? wdLinkId;
     var wdAmount = 0;
     try {

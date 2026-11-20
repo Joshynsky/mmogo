@@ -96,7 +96,7 @@ void main() {
     // live schema, so the same two tests now assert the SWITCH happened, and that
     // only the allowed live files read the frozen constants.
     test('the live schema IS v3: kDbVersion 3, 17 live seeds, 6-group live createSchema', () async {
-      expect(kDbVersion, 7);
+      expect(kDbVersion, 8);
       expect(AppSchema.seedClassifications, hasLength(18));
       sqfliteFfiInit();
       final db = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath,

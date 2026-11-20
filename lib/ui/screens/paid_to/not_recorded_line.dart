@@ -31,11 +31,16 @@ class PaidToAirtimeLine extends StatelessWidget {
 }
 
 /// §PAIDTO.NOT_RECORDED — the ONE muted line per type section (mock `nrLine`):
-/// "Not recorded · N payments · Ksh X" (with the type name first, "Send Money · Not recorded ...",
-/// in the overview and for a type that has no recipients; plain in a type view that has some).
-/// Payments with no captured receiver are not recipients: NO tap, no recipient sheet, not in the
+/// "Receiver not saved · N payments · Ksh X" (with the type name first, "Send Money · Receiver not
+/// saved ...", in the overview and for a type that has no recipients; plain in a type view that has
+/// some). Payments with no captured receiver are not recipients: no recipient sheet, not in the
 /// pills, the hero's recipient count or "Show N". Hidden while a search is typed (the caller
 /// passes an empty summary then).
+///
+/// 0.2.1 #4 (was "Not recorded"; PM contender 4, recommendation A): the words say what is missing
+/// (the receiver), and with [onTap] the line is a button (44 px high, an info icon) that explains why
+/// and offers the "Record receiver details" switch (`showPaidToNotRecordedExplainer`).
+/// WORDING-DRAFT: "Receiver not saved".
 class PaidToNotRecordedLine extends StatelessWidget {
   const PaidToNotRecordedLine({
     super.key,
@@ -43,6 +48,7 @@ class PaidToNotRecordedLine extends StatelessWidget {
     required this.type,
     required this.summary,
     required this.withType,
+    this.onTap,
   });
 
   final AppPalette palette;
@@ -50,17 +56,39 @@ class PaidToNotRecordedLine extends StatelessWidget {
   final PaidToNotRecorded summary;
   final bool withType;
 
+  /// Opens the explanation; null = a plain muted line.
+  final VoidCallback? onTap;
+
   /// The line's words (also what a test pins).
   static String text(String type, PaidToNotRecorded s, {required bool withType}) =>
-      '${withType ? '${sourceTypeName(type)} · ' : ''}Not recorded · ${s.count} ${paidToPayWord(type, s.count)} · ${kshTrim(s.totalCents)}';
+      '${withType ? '${sourceTypeName(type)} · ' : ''}Receiver not saved · ${s.count} ${paidToPayWord(type, s.count)} · ${kshTrim(s.totalCents)}';
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      child: Text(
-        text(type, summary, withType: withType),
-        style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: palette.softInk),
+    final words = text(type, summary, withType: withType);
+    final line = Text(words, style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: palette.softInk));
+    if (onTap == null) {
+      return Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: line);
+    }
+    return Semantics(
+      button: true,
+      label: '$words. Tap to see why',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Row(
+              children: [
+                Flexible(child: line),
+                const SizedBox(width: 6),
+                Icon(Icons.info_outline_rounded, size: 15, color: palette.softInk),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

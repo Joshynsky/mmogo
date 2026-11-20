@@ -29,9 +29,9 @@ void main() {
     expect(AppInfo.version, '${AppInfo.versionName}+${AppInfo.buildNumber}');
   });
 
-  test('B6: this build is v0.2.0 (build 5)', () {
-    expect(AppInfo.version, '0.2.0+5');
-    expect(AppInfo.versionName, '0.2.0');
-    expect(AppInfo.displayVersion, 'Version 0.2.0 (build 5)');
+  test('B6: this build is v0.2.1 (build 6)', () {
+    expect(AppInfo.version, '0.2.1+6');
+    expect(AppInfo.versionName, '0.2.1');
+    expect(AppInfo.displayVersion, 'Version 0.2.1 (build 6)');
   });
 }

@@ -7,6 +7,7 @@ library;
 
 import '../../domain/parsing/parsed_sms_fields.dart';
 import '../held_window.dart';
+import 'rule_hint.dart';
 
 /// What state a waiting item is in, as stored.
 ///
@@ -39,12 +40,18 @@ class WaitingItem {
   /// Both are kept and this one is flagged ("same code, different details").
   final bool sameCodeDifferentDetails;
 
+  /// Labels from the background Parse (who the receiver is, their level, up to 2 categories to offer).
+  /// Null for an item without one (every item stored before 0.2.1 and every item with no person key).
+  /// Labels and ids only, never message text.
+  final RuleHint? hint;
+
   WaitingItem({
     required this.id,
     required this.kind,
     required this.heldAt,
     this.parsed,
     this.sameCodeDifferentDetails = false,
+    this.hint,
   }) {
     if (!isValidHeldId(id)) {
       throw ArgumentError.value(id, 'id', 'must be 32 lowercase hex characters');

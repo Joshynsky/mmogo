@@ -190,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
     final starter = widget.startUpdates;
     final whatsNew = widget.showWhatsNew;
     if (starter != null || widget.db == null) {
-      unawaited(_startUpdatesThenWhatsNew(starter ?? () => startUpdates(otherVersionNotice: !kAutoReadCompiled), whatsNew));
+      unawaited(_startUpdatesThenWhatsNew(starter ?? () => startUpdates(otherVersionNotice: !kAutoReadCompiled, installHelpNotice: kAutoReadCompiled), whatsNew));
     } else if (whatsNew != null && mounted) {
       unawaited(whatsNew(context));
     }

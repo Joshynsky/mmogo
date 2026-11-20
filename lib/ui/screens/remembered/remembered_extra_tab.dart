@@ -25,4 +25,28 @@ abstract class RememberedExtraTab {
 
   /// The body of the second tab.
   Widget buildBody(BuildContext context);
+
+  /// The text of the page's one "?" while the second tab is showing.
+  RememberedExtraHelp get help;
+}
+
+/// A help sheet's title and paragraphs (plain strings; the page draws them).
+class RememberedExtraHelp {
+  const RememberedExtraHelp(this.title, this.paragraphs);
+  final String title;
+  final List<String> paragraphs;
+}
+
+/// Optional: an extra tab that also wants to hear what happens on the recipients list, so what it keeps
+/// about a name goes with the name. The page calls these AFTER the change was stored. Plain Dart; a
+/// tab without it simply hears nothing. [key] is the remembered-name key (never shown or logged).
+abstract class RememberedForgetHooks {
+  /// One name was forgotten.
+  Future<void> onNameForgotten(String key);
+
+  /// A name was changed to Send Money.
+  Future<void> onNameChangedToSendMoney(String key);
+
+  /// Every name was forgotten.
+  Future<void> onAllNamesForgotten();
 }

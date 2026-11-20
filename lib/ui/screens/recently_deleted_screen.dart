@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../widgets/pill_toast.dart';
 import '../../data/db/app_database.dart';
 import '../../data/db/recently_deleted_dao.dart';
 import '../../data/db/transaction_dao.dart';
@@ -135,14 +136,12 @@ class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
       // Its M-Pesa code was recorded again while it was deleted (the unique
       // index); the row stays here.
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('That code is already recorded')));
+      PillToast.show('That code is already recorded');
       return;
     }
     if (!mounted) return;
     // S9b-1: 0 rows = a stale restore (the entry is gone): never "restored".
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(changed == 0 ? kEntryNoLongerThere : 'Transaction restored')),
-    );
+    PillToast.show(changed == 0 ? kEntryNoLongerThere : 'Transaction restored');
     await _load();
   }
 

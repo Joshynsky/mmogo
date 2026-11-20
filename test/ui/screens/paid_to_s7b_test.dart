@@ -208,9 +208,9 @@ void main() {
     for (final t in ['SEND_MONEY', _pochi, _wd]) {
       expect(find.byKey(Key('paidToNotRecorded-$t')), findsOneWidget, reason: t);
     }
-    expect(_text(tester, const Key('paidToNotRecorded-SEND_MONEY')), 'Not recorded · 1 payment · Ksh 300');
-    expect(_text(tester, const Key('paidToNotRecorded-$_pochi')), 'Not recorded · 1 payment · Ksh 100');
-    expect(_text(tester, const Key('paidToNotRecorded-$_wd')), 'Not recorded · 1 withdrawal · Ksh 500');
+    expect(_text(tester, const Key('paidToNotRecorded-SEND_MONEY')), 'Receiver not saved · 1 payment · Ksh 300');
+    expect(_text(tester, const Key('paidToNotRecorded-$_pochi')), 'Receiver not saved · 1 payment · Ksh 100');
+    expect(_text(tester, const Key('paidToNotRecorded-$_wd')), 'Receiver not saved · 1 withdrawal · Ksh 500');
     expect(find.byKey(const Key('paidToNotRecorded-PAYBILL')), findsNothing, reason: 'nothing unrecorded there');
     // 0.1.3 F3: airtime has no recipient, so it is ONE muted summary line (no tap, no sheet).
     expect(_text(tester, const Key('paidToAirtimeLine')), 'Airtime · 1 purchase · Ksh 100');
@@ -238,14 +238,14 @@ void main() {
     // Withdrawal list: both agents, the agent Not recorded line in its plain form (the type has agents).
     expect(find.text('JOY AGENT'), findsOneWidget);
     expect(find.text('KAMAU AGENT'), findsOneWidget);
-    expect(find.text('Not recorded · 1 withdrawal · Ksh 500'), findsOneWidget);
+    expect(find.text('Receiver not saved · 1 withdrawal · Ksh 500'), findsOneWidget);
     expect(
       find.byKey(const Key('paidToNotRecorded-SEND_MONEY')),
       findsNothing,
       reason: 'other types leave a type view',
     );
     expect(find.byKey(const Key('paidToNotRecorded-$_pochi')), findsNothing);
-    expect(find.textContaining('Send Money · Not recorded'), findsNothing);
+    expect(find.textContaining('Send Money · Receiver not saved'), findsNothing);
 
     await _tab(tester, null);
     expect(_text(tester, const Key('paidToHeroLabel')), 'Paid out');
@@ -305,7 +305,7 @@ void main() {
           _tx(2, 'BUY_GOODS', 6, 300, cost: 3),
         ],
       );
-      expect(_text(tester, const Key('paidToNotRecorded-BUY_GOODS')), 'Buy Goods · Not recorded · 1 payment · Ksh 300');
+      expect(_text(tester, const Key('paidToNotRecorded-BUY_GOODS')), 'Buy Goods · Receiver not saved · 1 payment · Ksh 300');
       expect(find.text('BUY GOODS'), findsNothing, reason: 'no section for a type without recipients');
       expect(find.byKey(const Key('paidToEmpty')), findsNothing);
       // The money and cost stay in the hero; the payment is not a recipient.
@@ -318,7 +318,7 @@ void main() {
       // BG type view: still with the type name (the type has no recipients); the pill count is 0.
       await _tab(tester, 'BUY_GOODS');
       expect(_rich('Buy Goods 0'), findsOneWidget);
-      expect(_text(tester, const Key('paidToNotRecorded-BUY_GOODS')), 'Buy Goods · Not recorded · 1 payment · Ksh 300');
+      expect(_text(tester, const Key('paidToNotRecorded-BUY_GOODS')), 'Buy Goods · Receiver not saved · 1 payment · Ksh 300');
       expect(await _showLabel(tester), 'Show 0');
 
       // No tap: not a button, nothing opens.
@@ -338,7 +338,7 @@ void main() {
   testWidgets('a type view with recipients shows the Not recorded line in its plain form', (tester) async {
     await _pump(tester);
     await _tab(tester, 'SEND_MONEY');
-    expect(_text(tester, const Key('paidToNotRecorded-SEND_MONEY')), 'Not recorded · 1 payment · Ksh 300');
+    expect(_text(tester, const Key('paidToNotRecorded-SEND_MONEY')), 'Receiver not saved · 1 payment · Ksh 300');
   });
 
   testWidgets('the Not recorded amounts follow the category; a term hides them', (tester) async {
@@ -356,7 +356,7 @@ void main() {
     );
     await tester.enterText(find.byKey(const Key('paidToSearch')), 'ann');
     await tester.pumpAndSettle();
-    expect(find.textContaining('Not recorded'), findsNothing);
+    expect(find.textContaining('Receiver not saved'), findsNothing);
   });
 
   testWidgets('sorts: Transaction cost shows the fee first; Amount and Times paid keep the fee note; no note at 0', (

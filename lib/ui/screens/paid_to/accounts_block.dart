@@ -6,6 +6,8 @@ import '../../../domain/paid_to/paid_to.dart';
 import '../../../domain/paid_to/paid_to_pages.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/tabular.dart';
+import 'account_shade.dart';
+import 'pager_dots.dart';
 
 /// §PAIDTO.ACCOUNTS — 0.2.0 S8 (PM 03-11-2026): the ACCOUNTS block of a Paybill name with several
 /// accounts, inside the recipient sheet. Up to 5 accounts are listed; more are PAGES of 5 records,
@@ -13,11 +15,24 @@ import '../../widgets/tabular.dart';
 /// buttons (the pattern of Analytics' By type strip, `type_strip.dart`). A Total row closes the block.
 /// WORDING-DRAFT labels: "ACCOUNTS", "under this name, biggest first", "No account saved", "Total",
 /// "N accounts", "Page n of N", "swipe sideways", "no fee", "fee X", "Last".
+///
+/// 0.2.1 #4 (MK-12): with [onSelect] each row is a button: tap one to see it alone (tint, check and
+/// the word "Selected"), tap it again to go back to all accounts. [selected] is the index into the
+/// recipient's accounts (null = all). The Total row and the list stay combined. The two alternating
+/// shades come from [paidToAccountShade]. WORDING-DRAFT: "tap one to see it alone", "Selected".
 class PaidToAccountsBlock extends StatefulWidget {
-  const PaidToAccountsBlock({super.key, required this.palette, required this.recipient});
+  const PaidToAccountsBlock({
+    super.key,
+    required this.palette,
+    required this.recipient,
+    this.selected,
+    this.onSelect,
+  });
 
   final AppPalette palette;
   final PaidToRecipient recipient;
+  final int? selected;
+  final ValueChanged<int?>? onSelect;
 
   @override
   State<PaidToAccountsBlock> createState() => _PaidToAccountsBlockState();
@@ -60,11 +75,6 @@ class _PaidToAccountsBlockState extends State<PaidToAccountsBlock> {
     return false;
   }
 
-  Color _shade(int i) {
-    final p = widget.palette;
-    return i < 6 ? Color.lerp(p.typePaybill, p.card, i * 0.13)! : p.line;
-  }
-
   Widget _amounts(int cents, int fee) {
     final p = widget.palette;
     return Column(
@@ -85,11 +95,17 @@ class _PaidToAccountsBlockState extends State<PaidToAccountsBlock> {
   Widget _row(PaidToAccount a, int i) {
     final p = widget.palette;
     final sub = '${a.count} ${a.count == 1 ? 'payment' : 'payments'} · Last ${fmtDayMonth(a.last)} ${a.last.year}';
-    return Container(
+    final name = a.account.isEmpty ? 'No account saved' : a.account;
+    final on = widget.selected == i;
+    final pick = widget.onSelect;
+    final row = Container(
       key: Key('paidToAccount-$i'),
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      constraints: pick == null ? null : const BoxConstraints(minHeight: 54),
+      padding: EdgeInsets.symmetric(vertical: 6, horizontal: pick == null ? 0 : 8),
       decoration: BoxDecoration(
-        border: i % paidToPageSize == 0 ? null : Border(top: BorderSide(color: p.line)),
+        color: on ? p.primary.withValues(alpha: 0.16) : null,
+        borderRadius: pick == null ? null : const BorderRadius.all(Radius.circular(10)),
+        border: on || i % paidToPageSize == 0 ? null : Border(top: BorderSide(color: p.line)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,9 +113,9 @@ class _PaidToAccountsBlockState extends State<PaidToAccountsBlock> {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(color: _shade(i), shape: BoxShape.circle),
+              width: pick == null ? 10 : 12,
+              height: pick == null ? 10 : 12,
+              decoration: BoxDecoration(color: paidToAccountShade(p, i), shape: BoxShape.circle),
             ),
           ),
           const SizedBox(width: 8),
@@ -107,17 +123,43 @@ class _PaidToAccountsBlockState extends State<PaidToAccountsBlock> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  a.account.isEmpty ? 'No account saved' : a.account,
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.ink),
-                ),
+                Text(name, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.ink)),
                 Text(sub, style: TextStyle(fontSize: 11, color: p.mutedInk)),
+                if (on)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Row(
+                      key: Key('paidToAccountSelected-$i'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_rounded, size: 14, color: p.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Selected', // WORDING-DRAFT
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: p.primary),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
           const SizedBox(width: 10),
           _amounts(a.totalCents, a.feeCents),
         ],
+      ),
+    );
+    if (pick == null) return row;
+    return Semantics(
+      button: true,
+      selected: on,
+      label: '$name, ${a.count} ${a.count == 1 ? 'payment' : 'payments'}${on ? ', selected' : ''}',
+      excludeSemantics: true,
+      child: InkWell(
+        key: Key('paidToAccountTap-$i'),
+        borderRadius: const BorderRadius.all(Radius.circular(10)),
+        onTap: () => pick(on ? null : i),
+        child: row,
       ),
     );
   }
@@ -153,37 +195,6 @@ class _PaidToAccountsBlockState extends State<PaidToAccountsBlock> {
           const SizedBox(width: 10),
           _amounts(r.totalCents, r.feeCents),
         ],
-      ),
-    );
-  }
-
-  Widget _dot(int k) {
-    final p = widget.palette;
-    final on = k == _page;
-    return Semantics(
-      button: true,
-      selected: on,
-      label: paidToPageLabel(k, _pages),
-      excludeSemantics: true,
-      child: GestureDetector(
-        key: Key('paidToAccountsDot-$k'),
-        behavior: HitTestBehavior.opaque,
-        onTap: () => _goTo(k),
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Center(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: on ? 16 : 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: on ? p.primary : p.line,
-                borderRadius: const BorderRadius.all(Radius.circular(4)),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -226,7 +237,14 @@ class _PaidToAccountsBlockState extends State<PaidToAccountsBlock> {
             );
           },
         ),
-        Wrap(alignment: WrapAlignment.center, children: [for (var k = 0; k < _pages; k++) _dot(k)]),
+        PaidToPagerDots(
+          palette: p,
+          count: _pages,
+          current: _page,
+          keyPrefix: 'paidToAccountsDot-',
+          labelOf: (k) => paidToPageLabel(k, _pages),
+          onTap: _goTo,
+        ),
         Text(
           '${paidToPageLabel(_page, _pages)} · swipe sideways',
           key: const Key('paidToAccountsPageLabel'),
@@ -250,7 +268,9 @@ class _PaidToAccountsBlockState extends State<PaidToAccountsBlock> {
             children: [
               const TextSpan(text: 'ACCOUNTS '),
               TextSpan(
-                text: '· $n under this name, biggest first',
+                text: widget.onSelect == null
+                    ? '· $n under this name, biggest first'
+                    : '· $n under this name, biggest first · tap one to see it alone',
                 style: const TextStyle(letterSpacing: 0, fontWeight: FontWeight.w600),
               ),
             ],

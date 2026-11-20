@@ -29,10 +29,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../bridge/autoread_bridge.dart';
 import '../bridge/method_channel_autoread_bridge.dart';
+import '../../data/prefs/app_prefs.dart' show AppPrefs;
 import '../data/pending_items_store.dart';
+import '../history/fallback_history_reader.dart';
+import '../history/ffi_history_reader.dart';
+import '../history/history_reader.dart';
+import '../history/rule_labeler.dart';
+import '../history/summary_history_reader.dart';
 import '../logic/airtime_auto.dart';
-import '../model/waiting_item.dart' show isValidHeldId;
+import '../model/rule_hint.dart';
+import '../model/waiting_item.dart' show WaitingKind, isValidHeldId;
+import '../rules/rule_model.dart' show RuleLevel;
+import '../rules/prefs_rule_store.dart' show PrefsRuleStore;
+import '../rules/prefs_undone_codes.dart' show PrefsUndoneCodes;
+import '../rules/rule_store.dart';
+import '../rules/undone_codes.dart';
 import '../service/autoread_service.dart';
+import 'labelling_pending_store.dart';
 
 /// The headless channel. Kotlin mirror: ParsePolicy.BG_CHANNEL (a test pins them).
 const String kBackgroundChannel = 'app.mmogo/autoread_bg';
@@ -61,7 +74,7 @@ const List<String> kBackgroundOutcomeCodes = [
 
 /// What a background parse ended as: a code and how many parsed items are now waiting (a number).
 class BackgroundResult {
-  const BackgroundResult(this.code, this.waiting, {this.queuedAirtimeCents});
+  const BackgroundResult(this.code, this.waiting, {this.queuedAirtimeCents, this.askCategoryId});
   final String code;
 
   /// Items that still need the user to pick a category. A parsed airtime item that the app will
@@ -72,9 +85,18 @@ class BackgroundResult {
   /// cents (a number, never text). The notification words it as queued.
   final int? queuedAirtimeCents;
 
+  /// Set only when the item just parsed belongs to a person at the Ask first level: the category its hint
+  /// offers (an id, a number, never text). Kotlin then asks "Record as [Category]?" instead of "Parsed".
+  final int? askCategoryId;
+
   @override
-  String toString() => 'BackgroundResult($code, $waiting, $queuedAirtimeCents)';
+  String toString() => 'BackgroundResult($code, $waiting, $queuedAirtimeCents, $askCategoryId)';
 }
+
+/// The category an Ask first [hint] offers, or null (no hint, another level, nothing offered). Only the
+/// Ask first level asks a question; Suggested hints stay labels for the app.
+int? askCategoryOf(RuleHint? hint) =>
+    hint != null && hint.level == RuleLevel.askFirst && hint.suggested.isNotEmpty ? hint.suggested.first : null;
 
 /// The two airtime switches as the app saved them (both default OFF).
 typedef AirtimeSwitches = ({bool myself, bool other});
@@ -90,6 +112,17 @@ class NoSavedCodes implements CodeLookup {
   const NoSavedCodes();
   @override
   Future<bool> contains(String displayCode) async => false;
+}
+
+/// The "Record receiver details" switch as the app saved it (default ON). Read only.
+Future<bool> readRecordReceiverDetails() async {
+  try {
+    final p = await SharedPreferences.getInstance();
+    await p.reload();
+    return p.getBool(AppPrefs.keyCaptureIdentityPreference) ?? true;
+  } catch (_) {
+    return true;
+  }
 }
 
 /// The channel to Kotlin's runner. It answers for ONE id (the one it started with) and reports whether
@@ -120,12 +153,16 @@ Future<BackgroundResult> runBackgroundParse({
   bool Function()? wasStale,
   SmsParseFn? parser,
   Future<AirtimeSwitches> Function()? readSwitches,
+  RuleLabeler? labeler,
+  UndoneCodes? undone,
 }) async {
   if (!isValidHeldId(id)) return const BackgroundResult(kBgGone, 0);
+  // Auto-record 0.2.1: the background only LABELS the item (who, level, up to 2 categories) and skips a
+  // code the user just undid. It never writes a rule, the summary or the database.
   final service = AutoReadService(
     bridge: bridge,
-    store: store,
-    savedCodes: const NoSavedCodes(),
+    store: labeler == null ? store : LabellingPendingStore(store, labeler),
+    savedCodes: undone == null ? const NoSavedCodes() : UndoneCodeLookup(undone, DateTime.now),
     now: DateTime.now,
     parser: parser,
   );
@@ -140,6 +177,7 @@ Future<BackgroundResult> runBackgroundParse({
   }
   var waiting = 0;
   int? queuedCents;
+  int? askCategory;
   try {
     final items = await store.list();
     var sw = (myself: false, other: false);
@@ -151,6 +189,7 @@ Future<BackgroundResult> runBackgroundParse({
       if (i.id == id && isAutoRecordEligible(i, myselfOn: sw.myself, otherOn: sw.other)) {
         queuedCents = i.parsed!.amountCents;
       }
+      if (i.id == id && i.kind == WaitingKind.waitingCategory) askCategory = askCategoryOf(i.hint);
     }
   } catch (_) {
     try {
@@ -159,7 +198,7 @@ Future<BackgroundResult> runBackgroundParse({
   }
   switch (outcome) {
     case ParseOutcome.parsed:
-      return BackgroundResult(kBgParsed, waiting, queuedAirtimeCents: queuedCents);
+      return BackgroundResult(kBgParsed, waiting, queuedAirtimeCents: queuedCents, askCategoryId: askCategory);
     case ParseOutcome.duplicate:
       return BackgroundResult(kBgDuplicate, waiting, queuedAirtimeCents: queuedCents);
     case ParseOutcome.gone:
@@ -185,7 +224,7 @@ class BackgroundReporter {
 
   bool get sent => _sent;
 
-  Future<void> done(String code, int waiting, {int? queuedAirtimeCents}) async {
+  Future<void> done(String code, int waiting, {int? queuedAirtimeCents, int? askCategoryId}) async {
     if (_sent) return;
     _sent = true;
     try {
@@ -193,13 +232,26 @@ class BackgroundReporter {
         'outcome': code,
         'waiting': waiting,
         'queuedAirtimeCents': ?queuedAirtimeCents,
+        'askCategoryId': ?askCategoryId,
       });
     } catch (_) {}
   }
 }
 
 /// The whole entry, testable: [args] is `[heldId]`.
-Future<void> runBackgroundEntry(List<String> args, {MethodChannel? channel, BackgroundReporter? reporter}) async {
+///
+/// [rules] and [undone] are the device-local rule store and undone-codes list (both read only here);
+/// null means no labelling. [history] defaults to the live database read (FFI, 1.5 s cap) with the
+/// preferences summary as the fallback. A test may pass a ready [labeler].
+Future<void> runBackgroundEntry(
+  List<String> args, {
+  MethodChannel? channel,
+  BackgroundReporter? reporter,
+  RuleStore? rules,
+  UndoneCodes? undone,
+  HistoryReader? history,
+  RuleLabeler? labeler,
+}) async {
   final ch = channel ?? const MethodChannel(kBackgroundChannel);
   final out = reporter ?? BackgroundReporter(ch);
   final id = args.isEmpty ? '' : args.first;
@@ -207,8 +259,23 @@ Future<void> runBackgroundEntry(List<String> args, {MethodChannel? channel, Back
   final store = SharedPrefsPendingItemsStore();
   final bridge = BackgroundBridge(channel: ch, generation: store.readGeneration);
   try {
-    final r = await runBackgroundParse(id: id, bridge: bridge, store: store, wasStale: () => bridge.stale);
-    await out.done(r.code, r.waiting, queuedAirtimeCents: r.queuedAirtimeCents);
+    final lab = labeler ??
+        (rules == null
+            ? null
+            : RuleLabeler(
+            rules: rules,
+            history: history ?? FallbackHistoryReader(FfiHistoryReader(), SummaryHistoryReader()),
+            recordReceiverDetails: readRecordReceiverDetails,
+          ));
+    final r = await runBackgroundParse(
+      id: id,
+      bridge: bridge,
+      store: store,
+      wasStale: () => bridge.stale,
+      labeler: lab,
+      undone: undone,
+    );
+    await out.done(r.code, r.waiting, queuedAirtimeCents: r.queuedAirtimeCents, askCategoryId: r.askCategoryId);
   } catch (_) {
     // Only the fact of a failure goes back; never the error text (it could carry the message).
     await out.done(kBgError, 0);
@@ -225,7 +292,10 @@ void parseEntry(List<String> args) {
   };
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
-    await runBackgroundEntry(args, reporter: out);
+    // The background engine has no app objects: it builds the preferences-backed rule store and undone
+    // codes itself (read only here). The history reader defaults to the live database read with the
+    // preferences summary as the fallback.
+    await runBackgroundEntry(args, reporter: out, rules: PrefsRuleStore(), undone: PrefsUndoneCodes());
   }, (Object e, StackTrace s) {
     unawaited(out.done(kBgError, 0));
   });

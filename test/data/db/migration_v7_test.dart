@@ -83,14 +83,14 @@ void main() {
     }
   });
 
-  test('the live version is 7 and the ladder has step 7', () {
-    expect(kDbVersion, 7);
-    expect(AppMigrations.steps.keys.last, 7);
+  test('the live version is 8 and the ladder has step 7', () {
+    expect(kDbVersion, 8);
+    expect(AppMigrations.steps.keys.last, 8);
   });
 
   test('a fresh install has the Cash group (enabled, last) and ZERO categories in it', () async {
     final db = await _openLive(_path('fresh'));
-    expect(await _uv(db), 7);
+    expect(await _uv(db), 8);
     final groups = await _groups(db);
     expect(groups.map((g) => g['code']).last, kCashUseGroupCode);
     final g = groups.last;
@@ -122,7 +122,7 @@ void main() {
     await v5.close();
 
     final db = await _openLive(path);
-    expect(await _uv(db), 7);
+    expect(await _uv(db), 8);
     final after = await _groups(db);
     expect(after.length, before.length + 1);
     expect(after.take(before.length).toList(), before, reason: 'ids, codes, names, flags kept');
@@ -139,7 +139,7 @@ void main() {
   test('upgrade from a v6 file keeps a linked Cash entry whose category is in another group', () async {
     final path = await _v6File();
     final db = await _openLive(path);
-    expect(await _uv(db), 7);
+    expect(await _uv(db), 8);
     final rows = await db.rawQuery("SELECT t.display_code AS code, t.parent_transaction_id AS p, g.code AS grp "
         'FROM transactions t JOIN classifications c ON c.id = t.classification_id '
         "JOIN classification_groups g ON g.id = c.group_id WHERE t.display_code IN ('WDR0000001', 'CASH-20260101-0199') ORDER BY t.id");
@@ -156,7 +156,7 @@ void main() {
     final p2 = _path('v2');
     await (await buildV2Database(p2)).close();
     final d2 = await _openLive(p2);
-    expect(await _uv(d2), 7);
+    expect(await _uv(d2), 8);
     expect((await _groups(d2)).map((g) => g['code']).last, kCashUseGroupCode);
     expect(await _count(d2, "SELECT COUNT(*) FROM classifications WHERE group_id = (SELECT id FROM classification_groups WHERE code = 'CASH_USE')"), 0);
     await d2.close();
@@ -166,7 +166,7 @@ void main() {
     final d3 = await _openAt(p3, 3);
     await d3.close();
     final d3b = await _openLive(p3);
-    expect(await _uv(d3b), 7);
+    expect(await _uv(d3b), 8);
     expect(await _count(d3b, "SELECT COUNT(*) FROM classification_groups WHERE code = 'CASH_USE'"), 1);
     await d3b.close();
   });
@@ -278,7 +278,7 @@ void main() {
     expect(await _groups(raw), groupsBefore);
     await raw.close();
     final ok = await _openLive(path);
-    expect(await _uv(ok), 7);
+    expect(await _uv(ok), 8);
     expect(await _count(ok, "SELECT COUNT(*) FROM classification_groups WHERE code = 'CASH_USE'"), 1);
     await ok.close();
   });

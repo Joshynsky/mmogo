@@ -14,7 +14,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/autoread/autoread_feature.dart';
 import 'package:mmogo/autoread/ui/whats_new_autoread_copy.dart';
-import 'package:mmogo/ui/copy/data_copy.dart';
 import 'package:mmogo/ui/copy/privacy_copy.dart';
 import 'package:mmogo/ui/copy/whats_new_copy.dart';
 import 'package:mmogo/ui/copy/whats_new_pager_copy.dart';
@@ -37,7 +36,9 @@ Key _head(String id) => Key('whatsNewItemHead-$id');
 Key _body(String id) => Key('whatsNewItemBody-$id');
 Key _summary(String id) => Key('whatsNewItemSummary-$id');
 
-const _ids = ['airother', 'backups', 'nav', 'airtime', 'receiver', 'deleted', 'exports', 'privacy'];
+const _headIds = ['withdrawals', 'suggest', 'paidto', 'backups'];
+const _moreIds = ['pochi', 'updates', 'links', 'pill'];
+const _ids = [..._headIds, ..._moreIds, 'privacy'];
 
 Future<_Host> _pump(
   WidgetTester tester, {
@@ -75,7 +76,7 @@ Future<_Host> _pump(
               onPressed: () async {
                 host.result = await showWhatsNewPager(
                   context,
-                  onOpenSettings: () {
+                  onOpenSettings: (_) {
                     host.opened.add('settings');
                     Navigator.of(context).pushNamed('/settings');
                   },
@@ -100,8 +101,20 @@ Future<_Host> _pump(
   return host;
 }
 
-/// Opens a row (scrolling to it first); a closed row's header is tapped.
+/// Opens the "More changes" fold if it is closed.
+Future<void> _showMore(WidgetTester tester) async {
+  if (find.byKey(const Key('whatsNewMoreLabel')).evaluate().isNotEmpty) return;
+  await tester.ensureVisible(find.byKey(const Key('whatsNewMoreToggle')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('whatsNewMoreToggle')));
+  await tester.pumpAndSettle();
+}
+
+List<String> _titles(WidgetTester tester, List<String> ids) => [for (final id in ids) _text(tester, Key('whatsNewItemTitle-$id'))];
+
+/// Opens a row (scrolling to it first); a closed row's header is tapped. A row in the fold opens the fold first.
 Future<void> _toggle(WidgetTester tester, String id) async {
+  if (find.byKey(_head(id)).evaluate().isEmpty) await _showMore(tester); // the row is in the fold
   await tester.ensureVisible(find.byKey(_head(id)));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(_head(id)));
@@ -119,37 +132,51 @@ void main() {
   const autoreadOnly = kAutoReadCompiled ? null : 'run with --dart-define=MMOGO_AUTOREAD=true';
 
   group('the page, in the signed order (standard build)', () {
-    testWidgets('banner, title, intro and eight rows, with the mock\'s words', (tester) async {
+    testWidgets('banner, title, intro, four headline rows, the fold, and the mock words', (tester) async {
       await _pump(tester);
       expect(find.byKey(_pager), findsOneWidget);
-      expect(_text(tester, const Key('whatsNewPagerTitle')), "What's new in mmogo 0.2.0");
-      expect(_text(tester, const Key('whatsNewIntro')), kWhatsNewIntro);
+      expect(_text(tester, const Key('whatsNewPagerTitle')), "What's new in mmogo 0.2.1");
+      expect(_text(tester, const Key('whatsNewIntro')), 'Tap one to read it.');
       // The banner is above the title.
       expect(tester.getTopLeft(find.byKey(const Key('whatsNewBanner'))).dy, lessThan(tester.getTopLeft(find.byKey(const Key('whatsNewPagerTitle'))).dy));
       expect(_text(tester, const Key('whatsNewBannerHead')), 'This is the standard version of mmogo');
       expect(
         _text(tester, const Key('whatsNewBannerBody')),
-        'There is a second version that can read and parse your M\u2011Pesa messages for you. '
+        'There is a second version that can read and parse your M‑Pesa messages for you. '
         'It puts them on a waiting list for you to categorize and review. '
         'It asks for SMS permission, so it is separate and optional.',
       );
       expect(find.text('Open the mmogo page'), findsOneWidget);
-      final titles = <String>[];
-      for (final id in _ids) {
-        await tester.ensureVisible(find.byKey(Key('whatsNewItemTitle-$id')));
-        titles.add(_text(tester, Key('whatsNewItemTitle-$id')));
+      // Folded: the four headline rows, then Privacy; the "More changes" rows are not built.
+      expect(find.byType(WhatsNewItemView), findsNWidgets(5));
+      expect(_titles(tester, _headIds), ['Withdrawals', 'Suggested categories', 'Paid to: choose an account', 'Backups']);
+      for (final id in _moreIds) {
+        expect(find.byKey(_head(id)), findsNothing, reason: id);
       }
-      expect(titles, [
-        'Airtime for another number',
-        'Backups',
-        'Navigation bar',
-        'Airtime on Paid to',
-        'Receiver details',
-        'Recently deleted',
-        'Exports',
-        'Privacy',
-      ]);
-      expect(find.byType(WhatsNewItemView), findsNWidgets(8));
+      await tester.ensureVisible(find.byKey(const Key('whatsNewMoreToggle')));
+      expect(find.text('Show more changes'), findsOneWidget);
+      expect(_text(tester, const Key('whatsNewStill')), 'Everything from 0.2.0 is still here.');
+      // After the fold button, in order: the line, then Privacy.
+      expect(tester.getTopLeft(find.byKey(const Key('whatsNewMoreToggle'))).dy, lessThan(tester.getTopLeft(find.byKey(const Key('whatsNewStill'))).dy));
+      expect(tester.getTopLeft(find.byKey(const Key('whatsNewStill'))).dy, lessThan(tester.getTopLeft(find.byKey(_head('privacy'))).dy));
+      await tester.tap(find.byKey(const Key('whatsNewMoreToggle')));
+      await tester.pumpAndSettle();
+      expect(find.text('Hide more changes'), findsOneWidget);
+      expect(_text(tester, const Key('whatsNewMoreLabel')), 'MORE CHANGES');
+      expect(_titles(tester, _moreIds), ['Pochi', 'Updates', 'What’s new links to Settings', 'Pop-up messages']);
+      expect(find.byType(WhatsNewItemView), findsNWidgets(9));
+      await tester.tap(find.byKey(const Key('whatsNewMoreToggle')));
+      await tester.pumpAndSettle();
+      expect(find.byType(WhatsNewItemView), findsNWidgets(5), reason: 'the fold closes again');
+    }, skip: standardOnly != null);
+
+    testWidgets('every item carries the tag "New in 0.2.1"', (tester) async {
+      await _pump(tester);
+      await _showMore(tester);
+      for (final id in _ids) {
+        await tester.ensureVisible(find.byKey(Key('whatsNewItemTag-$id')));
+        expect(_text(tester, Key('whatsNewItemTag-$id')), 'New in 0.2.1', reason: id);
+      }
     }, skip: standardOnly != null);
 
     testWidgets('the standard banner says nothing of auto-read, even in its spoken words', (tester) async {
@@ -163,103 +190,119 @@ void main() {
       h.dispose();
     }, skip: standardOnly != null);
 
+    testWidgets('the standard page never shows an auto-read only item or line', (tester) async {
+      await _pump(tester);
+      await _showMore(tester);
+      for (final id in ['ask', 'notif', 'hide', 'recorded']) {
+        expect(find.byKey(_head(id)), findsNothing, reason: id);
+      }
+      await _openRow(tester, 'withdrawals');
+      expect(find.byKey(const Key('whatsNewPara-withdrawals-6')), findsNothing, reason: 'the extra Notifications line is for the other build');
+      expect(find.byKey(const Key('whatsNewPara-withdrawals-5')), findsOneWidget);
+      await _openRow(tester, 'suggest');
+      expect(find.byKey(const Key('whatsNewPara-suggest-3')), findsNothing, reason: 'two shared paragraphs and the last one: three');
+      expect(find.textContaining('planned for the next update'), findsNothing);
+      expect(find.textContaining('Ask first'), findsNothing);
+    }, skip: standardOnly != null);
+
     testWidgets('the first row starts open, the others closed; each closed row shows its one-line summary', (tester) async {
       await _pump(tester);
-      expect(find.byKey(_body('airother')), findsOneWidget);
-      expect(find.byKey(_summary('airother')), findsNothing, reason: 'open: the summary is not repeated');
+      await _showMore(tester);
+      expect(find.byKey(_body('withdrawals')), findsOneWidget);
+      expect(find.byKey(_summary('withdrawals')), findsNothing, reason: 'open: the summary is not repeated');
       for (final id in _ids.skip(1)) {
         expect(find.byKey(_body(id)), findsNothing, reason: id);
         await tester.ensureVisible(find.byKey(_summary(id)));
         expect(find.byKey(_summary(id)), findsOneWidget, reason: id);
       }
-      expect(_text(tester, _summary('airtime')), 'Paid to now counts airtime.');
-      expect(_text(tester, _summary('receiver')), 'You choose whether receiver names and numbers are kept.');
-      expect(_text(tester, _summary('deleted')), 'Recently deleted says how long you can restore.');
-      expect(_text(tester, _summary('exports')), 'Exports no longer leave copies behind.');
-      expect(_text(tester, _summary('privacy')), 'No permissions except internet, used only to check for updates.');
+      expect(_text(tester, _summary('suggest')), 'mmogo suggests the categories you use most for each person.');
+      expect(_text(tester, _summary('paidto')), 'When one person has several accounts, you choose which one to look at.');
+      expect(_text(tester, _summary('backups')), 'A backup made with 0.2.1 cannot be restored by 0.2.0 or older.');
+      expect(_text(tester, _summary('pochi')), 'When a Pochi message is read, you choose Pochi or Send Money.');
+      expect(_text(tester, _summary('updates')), 'Check for updates from Settings, under About.');
+      expect(_text(tester, _summary('links')), 'Items now open the Settings area they describe.');
+      expect(_text(tester, _summary('pill')), 'Messages like Undo now show at the top and follow your theme.');
+      expect(_text(tester, _summary('privacy')), 'No permissions except internet, used only to check for updates (switchable off).');
     }, skip: standardOnly != null);
 
     testWidgets('a tap opens a row and a second tap closes it; only one row is open at a time', (tester) async {
       await _pump(tester);
-      await _toggle(tester, 'receiver');
-      expect(find.byKey(_body('receiver')), findsOneWidget);
-      expect(find.byKey(_body('airother')), findsNothing, reason: 'opening a row closes the one that was open');
-      expect(find.byKey(_summary('airother')), findsOneWidget);
-      await _toggle(tester, 'exports');
-      expect(find.byKey(_body('exports')), findsOneWidget);
-      expect(find.byKey(_body('receiver')), findsNothing);
-      await _toggle(tester, 'exports');
-      expect(find.byKey(_body('exports')), findsNothing, reason: 'tapping the open row closes it');
-      expect(find.byKey(_summary('exports')), findsOneWidget);
+      await _toggle(tester, 'suggest');
+      expect(find.byKey(_body('suggest')), findsOneWidget);
+      expect(find.byKey(_body('withdrawals')), findsNothing, reason: 'opening a row closes the one that was open');
+      expect(find.byKey(_summary('withdrawals')), findsOneWidget);
+      await _toggle(tester, 'backups');
+      expect(find.byKey(_body('backups')), findsOneWidget);
+      expect(find.byKey(_body('suggest')), findsNothing);
+      await _toggle(tester, 'backups');
+      expect(find.byKey(_body('backups')), findsNothing, reason: 'tapping the open row closes it');
+      expect(find.byKey(_summary('backups')), findsOneWidget);
     }, skip: standardOnly != null);
 
-    testWidgets('item 1: the bottom bar text', (tester) async {
+    testWidgets('Withdrawals: the six paragraphs of the mock, in order', (tester) async {
       await _pump(tester);
-      await _toggle(tester, 'nav');
-      final body = _text(tester, const Key('whatsNewPara-nav-0'));
-      expect(body, kWhatsNewNavBody);
-      expect(body, contains('the Home, Analytics, Paid to and Profile tabs were covered'));
-      expect(body, contains('They now sit above the buttons.'));
+      final paras = [for (var i = 0; i < 6; i++) _text(tester, Key('whatsNewPara-withdrawals-$i'))];
+      expect(paras, kWhatsNewWithdrawalsBody);
+      expect(paras.first, 'A cash withdrawal stays a withdrawal. It is not counted as spending.');
+      expect(paras[1], contains('"Cash only" is the default: nothing is added.'));
+      expect(paras[3], contains('Recently deleted brings them all back within 1 hour.'));
+      expect(paras.last, 'Withdrawals you saved before this update are not changed. Open one to say what the cash was for.');
     }, skip: standardOnly != null);
 
-    testWidgets('item 2: airtime on Paid to, the overview line and when it is hidden', (tester) async {
+    testWidgets('Suggested categories: the text and the Open in Settings button (no auto-record line)', (tester) async {
       await _pump(tester);
-      await _openRow(tester, 'airtime');
-      final body = _text(tester, const Key('whatsNewPara-airtime-0'));
-      expect(body, kWhatsNewAirtimeBody);
-      expect(body, contains('Paid out on Paid to now matches This month on Home.'));
-      expect(body, contains('It is hidden while you search or filter by category.'));
-    }, skip: standardOnly != null);
-
-    testWidgets('item 3: receiver details text and the Change in Settings button', (tester) async {
-      await _pump(tester);
-      await _openRow(tester, 'receiver');
-      final body = _text(tester, const Key('whatsNewPara-receiver-0'));
-      expect(body, kWhatsNewReceiverBody);
-      expect(body, contains('In Settings, Record receiver details is on or off.'));
-      expect(body, contains('Entries you already saved are not changed.'));
+      await _openRow(tester, 'suggest');
+      expect(_text(tester, const Key('whatsNewPara-suggest-0')), kWhatsNewSuggestBody[0]);
+      expect(_text(tester, const Key('whatsNewPara-suggest-1')), contains('Pick one type at a time: Send Money, Paybill, Buy Goods, Pochi, Withdrawals (muted) or Airtime.'));
+      expect(
+        _text(tester, const Key('whatsNewPara-suggest-2')),
+        'These rules stay on this phone and are not in backups. If you restore a backup with Replace, everyone goes back to Suggested.',
+      );
       expect(find.byKey(const Key('whatsNewCalSettings')), findsOneWidget);
-      expect(find.text('Change in Settings'), findsOneWidget);
+      expect(find.text('Open in Settings'), findsOneWidget);
       expect(find.byType(Switch), findsNothing);
     }, skip: standardOnly != null);
 
-    testWidgets('item 4: Recently deleted says 1 hour and that the web row is gone', (tester) async {
+    testWidgets('Backups says 0.2.1 / 0.2.0 and has no button; Paid to and the More rows say what the mock says', (tester) async {
       await _pump(tester);
-      await _openRow(tester, 'deleted');
-      final body = _text(tester, const Key('whatsNewPara-deleted-0'));
-      expect(body, kWhatsNewDeletedBody);
-      expect(body, contains('You can restore a deleted entry for 1 hour.'));
+      await _showMore(tester);
+      await _openRow(tester, 'backups');
+      expect(
+        _text(tester, const Key('whatsNewPara-backups-0')),
+        'A backup made with 0.2.1 cannot be restored by 0.2.0 or older. Older backups still restore.',
+      );
+      expect(find.byKey(const Key('whatsNewOpenBackup')), findsNothing);
+      await _openRow(tester, 'paidto');
+      expect(_text(tester, const Key('whatsNewPara-paidto-0')), kWhatsNewPaidToBody);
+      await _openRow(tester, 'pochi');
+      expect(_text(tester, const Key('whatsNewPara-pochi-0')), 'When mmogo reads a Pochi message, you choose whether it is Pochi or Send Money.');
+      await _openRow(tester, 'updates');
+      expect(_text(tester, const Key('whatsNewPara-updates-0')), contains('"Check for updates now"'));
+      await _openRow(tester, 'links');
+      expect(_text(tester, const Key('whatsNewPara-links-0')), contains('Back returns you to the item you were reading.'));
+      await _openRow(tester, 'pill');
+      expect(_text(tester, const Key('whatsNewPara-pill-0')), contains('It follows your light or dark theme.'));
     }, skip: standardOnly != null);
 
-    testWidgets('item 5: exports say the temporary copies are removed, and Delete data clears old ones', (tester) async {
-      await _pump(tester);
-      await _openRow(tester, 'exports');
-      final body = _text(tester, const Key('whatsNewPara-exports-0'));
-      expect(body, kWhatsNewExportsBody);
-      expect(body, contains('the temporary copies mmogo made are removed'));
-      expect(body, contains('Delete data also removes any left over from an earlier version.'));
-    }, skip: standardOnly != null);
-
-    testWidgets('R13 (F4): "Change in Settings" is a real button, 44 px high, not a link', (tester) async {
+    testWidgets('R13 (F4): "Open in Settings" is a real button, 44 px high, not a link', (tester) async {
       final h = tester.ensureSemantics();
       await _pump(tester);
-      await _openRow(tester, 'receiver');
+      await _openRow(tester, 'suggest');
       const k = Key('whatsNewCalSettings');
       await tester.ensureVisible(find.byKey(k));
       await tester.pumpAndSettle();
       final b = tester.widget<FilledButton>(find.byKey(k));
-      final text = tester.widget<Text>(find.descendant(of: find.byKey(k), matching: find.text('Change in Settings')));
+      final text = tester.widget<Text>(find.descendant(of: find.byKey(k), matching: find.text('Open in Settings')));
       final sem = tester.getSemantics(find.byKey(k));
       expect(sem.flagsCollection.isButton, isTrue);
-      expect(sem.label, 'Change in Settings');
+      expect(sem.label, 'Open in Settings');
       expect(tester.getSize(find.byKey(k)).height, greaterThanOrEqualTo(44));
       expect(b.style?.backgroundColor?.resolve({}), isNotNull);
       expect(text.style?.decoration, isNull, reason: 'no underline: not a link');
-      expect(find.byKey(const Key('whatsNewOpenBackup')), findsNothing, reason: 'no item has the Backup button in 0.1.3');
       h.dispose();
     });
 
-    testWidgets('item 6: the signed sentence in bold, then W7\'s second half; sign-off last; no expander', (tester) async {
+    testWidgets('Privacy: the signed sentence in bold, then the rules line; sign-off last; no expander', (tester) async {
       await _pump(tester);
       await _openRow(tester, 'privacy');
       expect(_text(tester, const Key('whatsNewPara-privacy-0')), kPrivacySentenceStandard);
@@ -267,12 +310,8 @@ void main() {
         _text(tester, const Key('whatsNewPara-privacy-0')),
         'No permissions except internet, used only to check for updates (switchable off).',
       );
-      expect(_text(tester, const Key('whatsNewPara-privacy-1')), kNetworkSeenSentence);
-      expect(
-        _text(tester, const Key('whatsNewPara-privacy-1')),
-        'GitHub sees your IP address and that the request comes from the mmogo app. No entries, names or messages are sent.',
-      );
-      expect(_text(tester, const Key('whatsNewPara-privacy-2')), kWhatsNewCard5Receiver);
+      expect(_text(tester, const Key('whatsNewPara-privacy-1')), 'The rules you set for each person stay on this phone. They are not in backups.');
+      expect(find.byKey(const Key('whatsNewPara-privacy-2')), findsNothing);
       expect(tester.widget<Text>(find.byKey(const Key('whatsNewPara-privacy-0'))).style!.fontWeight, FontWeight.w700);
       await tester.ensureVisible(find.byKey(const Key('whatsNewSignOff')));
       expect(_text(tester, const Key('whatsNewSignOff')), kWhatsNewSignOff);
@@ -318,7 +357,7 @@ void main() {
 
     testWidgets('system Back closes the page and returns false (unseen), at any scroll position', (tester) async {
       final host = await _pump(tester);
-      await _toggle(tester, 'receiver');
+      await _toggle(tester, 'suggest');
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsNothing);
@@ -328,7 +367,7 @@ void main() {
     testWidgets('a second page cannot be opened while one is on screen', (tester) async {
       await _pump(tester);
       final ctx = tester.element(find.byKey(_pager));
-      final second = await showWhatsNewPager(ctx, onOpenSettings: () {}, onOpenBackup: () {});
+      final second = await showWhatsNewPager(ctx, onOpenSettings: (_) {}, onOpenBackup: () {});
       await tester.pumpAndSettle();
       expect(second, isFalse);
       expect(find.byKey(_pager), findsOneWidget);
@@ -344,9 +383,9 @@ void main() {
   });
 
   group('the Settings route button (injected, pushed over the page)', () {
-    testWidgets('Change in Settings opens the stub route; Back returns to the same page and rows; nothing is marked', (tester) async {
+    testWidgets('Open in Settings opens the stub route; Back returns to the same page and rows; nothing is marked', (tester) async {
       final host = await _pump(tester);
-      await _openRow(tester, 'receiver');
+      await _openRow(tester, 'suggest');
       await tester.tap(find.byKey(const Key('whatsNewCalSettings')));
       await tester.pumpAndSettle();
       expect(host.opened, ['settings']);
@@ -354,7 +393,7 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsOneWidget);
-      expect(find.byKey(_body('receiver')), findsOneWidget);
+      expect(find.byKey(_body('suggest')), findsOneWidget);
       expect(host.result, isNull);
     }, skip: standardOnly != null);
   });
@@ -394,7 +433,7 @@ void main() {
 
     testWidgets('dark: the row text contrasts with the row surface (4.5:1)', (tester) async {
       await _pump(tester, dark: true);
-      await _openRow(tester, 'nav');
+      await _openRow(tester, 'suggest');
       final palette = AppPalette.of(tester.element(find.byKey(_pager)));
       expect(palette.brightness, Brightness.dark);
       double ratio(Color a, Color b) {
@@ -403,8 +442,8 @@ void main() {
         return (x > y ? x + 0.05 : y + 0.05) / (x > y ? y + 0.05 : x + 0.05);
       }
 
-      final body = tester.widget<Text>(find.byKey(const Key('whatsNewPara-nav-0'))).style!.color!;
-      final title = tester.widget<Text>(find.byKey(const Key('whatsNewItemTitle-nav'))).style!.color!;
+      final body = tester.widget<Text>(find.byKey(const Key('whatsNewPara-suggest-0'))).style!.color!;
+      final title = tester.widget<Text>(find.byKey(const Key('whatsNewItemTitle-suggest'))).style!.color!;
       expect(ratio(palette.card, body), greaterThan(4.5));
       expect(ratio(palette.card, title), greaterThan(4.5));
       final bannerInk = tester.widget<Text>(find.byKey(const Key('whatsNewBannerBody'))).style!.color!;
@@ -416,15 +455,15 @@ void main() {
     testWidgets('each row header is a button that says whether it is expanded, and follows a tap', (tester) async {
       final handle = tester.ensureSemantics();
       await _pump(tester);
-      expect(tester.getSemantics(find.byKey(_head('airother'))).flagsCollection.isExpanded, ui.Tristate.isTrue);
-      await tester.ensureVisible(find.byKey(_head('receiver')));
-      final closed = tester.getSemantics(find.byKey(_head('receiver')));
+      expect(tester.getSemantics(find.byKey(_head('withdrawals'))).flagsCollection.isExpanded, ui.Tristate.isTrue);
+      await tester.ensureVisible(find.byKey(_head('suggest')));
+      final closed = tester.getSemantics(find.byKey(_head('suggest')));
       expect(closed.flagsCollection.isButton, isTrue);
       expect(closed.flagsCollection.isExpanded, ui.Tristate.isFalse);
-      expect(closed.label, contains('Receiver details'));
-      expect(closed.label, contains(kWhatsNewReceiverSummary));
-      await _toggle(tester, 'receiver');
-      expect(tester.getSemantics(find.byKey(_head('receiver'))).flagsCollection.isExpanded, ui.Tristate.isTrue);
+      expect(closed.label, contains('Suggested categories'));
+      expect(closed.label, contains(kWhatsNewSuggestSummary));
+      await _toggle(tester, 'suggest');
+      expect(tester.getSemantics(find.byKey(_head('suggest'))).flagsCollection.isExpanded, ui.Tristate.isTrue);
       handle.dispose();
     }, skip: standardOnly != null);
 
@@ -439,40 +478,89 @@ void main() {
     testWidgets('the number badge and the chevron are not spoken', (tester) async {
       final handle = tester.ensureSemantics();
       await _pump(tester);
-      await tester.ensureVisible(find.byKey(_head('receiver')));
-      final label = tester.getSemantics(find.byKey(_head('receiver'))).label;
-      expect(label, isNot(contains('5')), reason: 'receiver is item 5; the badge is not spoken');
-      expect(label, contains(kWhatsNewTagFrom013), reason: 'the origin tag is spoken');
+      await tester.ensureVisible(find.byKey(_head('backups')));
+      final label = tester.getSemantics(find.byKey(_head('backups'))).label;
+      expect(label, isNot(contains('4')), reason: 'backups is item 4; the badge is not spoken');
+      expect(label, contains(kWhatsNewTagNew), reason: 'the origin tag is spoken');
       handle.dispose();
     });
 
     test('the title is a fixed constant, not the app version', () {
-      expect(kWhatsNewPagerVersion, '0.2.0');
+      expect(kWhatsNewPagerVersion, '0.2.1');
     });
   });
 
   group('the auto-read build (flag on)', () {
-    testWidgets('banner, twelve items (new in 0.2.0 first, then the 0.1.3 six) and its signed Privacy item', (tester) async {
+    testWidgets('banner, four headline rows (Ask first among them), the fold of eight, and its signed Privacy item', (tester) async {
       await _pump(tester);
       expect(_text(tester, const Key('whatsNewBannerHead')), 'This is the auto-read version of mmogo');
       expect(
         _text(tester, const Key('whatsNewBannerBody')),
-        'It reads your M\u2011Pesa messages and puts them on a waiting list for you to categorize and review. '
+        'It reads your M‑Pesa messages and puts them on a waiting list for you to categorize and review. '
         'If you do not want SMS permission, the standard version works without it.',
       );
       expect(find.byKey(const Key('whatsNewBannerLink')), findsNothing, reason: 'no link on this banner');
       expect(_text(tester, const Key('whatsNewIntro')), kWhatsNewIntro);
-      expect(find.byType(WhatsNewItemView), findsNWidgets(12));
-      expect(find.byKey(const Key('whatsNewItemTitle-reading')), findsNothing);
-      expect(find.byKey(_body('airother')), findsOneWidget, reason: 'the first row starts open');
+      expect(find.byType(WhatsNewItemView), findsNWidgets(5), reason: 'four headline rows and Privacy; the fold is closed');
+      expect(_titles(tester, ['withdrawals', 'ask', 'suggest', 'backups']), ['Withdrawals', 'Ask first', 'Suggested categories', 'Backups']);
+      await _showMore(tester);
+      const more = ['notif', 'paidto', 'pochi', 'hide', 'recorded', 'updates', 'links', 'pill'];
+      expect(
+        _titles(tester, more),
+        [
+          'Notifications page',
+          'Paid to: choose an account',
+          'Pochi',
+          'Hide details after',
+          'Recorded automatically filter',
+          'Updates',
+          'What’s new links to Settings',
+          'Pop-up messages',
+        ],
+      );
+      expect(find.byType(WhatsNewItemView), findsNWidgets(13));
+      await tester.ensureVisible(find.byKey(const Key('whatsNewItemTag-privacy')));
+      expect(_text(tester, const Key('whatsNewItemTag-privacy')), 'New in 0.2.1');
+      expect(find.byKey(_body('withdrawals')), findsOneWidget, reason: 'the first row starts open');
       await _openRow(tester, 'privacy');
       final privacy = _text(tester, const Key('whatsNewPara-privacy-0'));
+      expect(privacy, 'This version asks for SMS and notification permission. Your messages stay on this phone.');
       expect(privacy, kWhatsNewPrivacyAutoReadBody);
       expect(privacy, isNot(contains(kPrivacySentenceStandard)));
-      expect(_text(tester, const Key('whatsNewPara-privacy-1')), kWhatsNewPrivacyAutoReadTrail);
-      expect(_text(tester, const Key('whatsNewPara-privacy-2')), kWhatsNewPrivacyAutoReadKept);
-      expect(_text(tester, const Key('whatsNewPara-privacy-3')), kWhatsNewPrivacyAutoReadReceiverNote);
-      expect(find.byKey(const Key('whatsNewPara-privacy-4')), findsNothing);
+      expect(_text(tester, const Key('whatsNewPara-privacy-1')), 'The rules you set for each person stay on this phone. They are not in backups.');
+      expect(find.byKey(const Key('whatsNewPara-privacy-2')), findsNothing);
+    }, skip: autoreadOnly != null);
+
+    testWidgets('Withdrawals adds the Notifications paragraph; Suggested adds the level lines and says Auto-record is planned', (tester) async {
+      await _pump(tester);
+      expect(_text(tester, const Key('whatsNewPara-withdrawals-6')), kWhatsNewAutoWithdrawalsExtra);
+      expect(_text(tester, const Key('whatsNewPara-withdrawals-6')), contains('"3 withdrawals need a decision"'));
+      await _openRow(tester, 'suggest');
+      expect(_text(tester, const Key('whatsNewPara-suggest-2')), 'For each person you choose a level: Suggested or Ask first.');
+      expect(
+        _text(tester, const Key('whatsNewPara-suggest-3')),
+        'A third level, Auto-record, where mmogo records without asking for people you choose, is planned for the next update. It is not in this one.',
+      );
+      expect(_text(tester, const Key('whatsNewPara-suggest-4')), kWhatsNewSuggestLast);
+      expect(find.byKey(const Key('whatsNewCalSettings')), findsOneWidget);
+    }, skip: autoreadOnly != null);
+
+    testWidgets('Ask first, Notifications page (the four lists), Hide details after and the filter say what the mock says', (tester) async {
+      await _pump(tester);
+      await _openRow(tester, 'ask');
+      expect([for (var i = 0; i < 5; i++) _text(tester, Key('whatsNewPara-ask-$i'))], kWhatsNewAskBody);
+      expect(_text(tester, const Key('whatsNewPara-ask-1')), 'A tap always decides. Nothing is recorded without a tap.');
+      await _openRow(tester, 'notif');
+      expect(
+        _text(tester, const Key('whatsNewPara-notif-0')),
+        'The Notifications page groups what needs you into lists: To confirm, To parse, To categorize and Could not read. '
+        'The bell shows how many are waiting.',
+      );
+      await _openRow(tester, 'hide');
+      expect(_text(tester, const Key('whatsNewPara-hide-0')), contains('Never, 5 minutes, 15 minutes, 30 minutes or 1 hour.'));
+      expect(_text(tester, const Key('whatsNewPara-hide-1')), 'Only the alert goes away. The message stays for 24 hours.');
+      await _openRow(tester, 'recorded');
+      expect(_text(tester, const Key('whatsNewPara-recorded-0')), 'A "Recorded automatically" filter now covers entries from 0.2.1 onward.');
     }, skip: autoreadOnly != null);
   });
 }

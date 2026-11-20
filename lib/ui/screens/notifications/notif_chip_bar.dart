@@ -12,12 +12,17 @@ class NotifChipSpec {
     required this.label,
     required this.spokenName,
     required this.count,
+    this.hideCount = false,
   });
 
   final NotifChip chip;
   final String label;
   final String spokenName;
   final int count;
+
+  /// No number (visible or spoken) and not drawn as empty: the chip has items under it
+  /// that its count leaves out (the To do chip with only Could not read items).
+  final bool hideCount;
 }
 
 /// The one-row chip bar of the Notifications page: never wraps, never
@@ -92,7 +97,7 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zero = spec.count == 0;
+    final zero = spec.count == 0 && !spec.hideCount;
     final fg = selected
         ? palette.onPrimary
         : (zero ? palette.mutedInk : palette.ink);
@@ -126,18 +131,20 @@ class _Chip extends StatelessWidget {
         color: fg,
       ),
     );
-    final content = stacked
-        ? Column(mainAxisSize: MainAxisSize.min, children: [label, count])
-        : Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [label, const SizedBox(width: 4), count],
-          );
+    final content = spec.hideCount
+        ? label
+        : stacked
+            ? Column(mainAxisSize: MainAxisSize.min, children: [label, count])
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [label, const SizedBox(width: 4), count],
+              );
 
     return Semantics(
       container: true,
       button: true,
       selected: selected,
-      label: '${spec.spokenName}, ${capCount(spec.count)}',
+      label: spec.hideCount ? spec.spokenName : '${spec.spokenName}, ${capCount(spec.count)}',
       onTap: onTap,
       child: ExcludeSemantics(
         child: Opacity(

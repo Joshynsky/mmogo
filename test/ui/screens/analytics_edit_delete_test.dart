@@ -14,6 +14,7 @@
 // carried over unchanged in substance.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/ui/screens/analytics_screen.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,6 +30,7 @@ Future<FakeAnalyticsDb> _pump(WidgetTester tester, {Brightness brightness = Brig
   final db = FakeAnalyticsDb(analyticsSampleRows());
   await tester.pumpWidget(
     MaterialApp(
+      navigatorKey: appNavigatorKey,
       home: AnalyticsScreen(db: db, clock: () => analyticsTestNow),
     ),
   );

@@ -99,50 +99,63 @@ void main() {
       kWhatsNewEntryBody,
       kWhatsNewEntryButton,
       kWhatsNewIntro,
+      kWhatsNewStill,
+      kWhatsNewMoreLabel,
+      kWhatsNewMoreShow,
+      kWhatsNewMoreHide,
+      kWhatsNewOpenInSettings,
       kWhatsNewBannerHead,
       kWhatsNewBannerBody,
       kWhatsNewBannerLink,
-      kWhatsNewNavTitle,
-      kWhatsNewNavSummary,
-      kWhatsNewNavBody,
-      kWhatsNewAirtimeTitle,
-      kWhatsNewAirtimeSummary,
-      kWhatsNewAirtimeBody,
-      kWhatsNewReceiverTitle,
-      kWhatsNewReceiverSummary,
-      kWhatsNewReceiverBody,
-      kWhatsNewDeletedTitle,
-      kWhatsNewDeletedSummary,
-      kWhatsNewDeletedBody,
-      kWhatsNewExportsTitle,
-      kWhatsNewExportsSummary,
-      kWhatsNewExportsBody,
+      kWhatsNewWithdrawalsTitle,
+      kWhatsNewWithdrawalsSummary,
+      ...kWhatsNewWithdrawalsBody,
+      kWhatsNewSuggestTitle,
+      kWhatsNewSuggestSummary,
+      ...kWhatsNewSuggestBody,
+      kWhatsNewSuggestLast,
+      kWhatsNewPaidToTitle,
+      kWhatsNewPaidToSummary,
+      kWhatsNewPaidToBody,
+      kWhatsNewBackupsTitle,
+      kWhatsNewBackupsSummary,
+      kWhatsNewBackupsBody,
+      kWhatsNewPochiTitle,
+      kWhatsNewPochiSummary,
+      kWhatsNewPochiBody,
+      kWhatsNewUpdatesTitle,
+      kWhatsNewUpdatesSummary,
+      kWhatsNewUpdatesBody,
+      kWhatsNewLinksTitle,
+      kWhatsNewLinksSummary,
+      kWhatsNewLinksBody,
+      kWhatsNewPillTitle,
+      kWhatsNewPillSummary,
+      kWhatsNewPillBody,
       kWhatsNewCard5Title,
       kWhatsNewCard5Summary,
       kWhatsNewCard5Body,
-      kWhatsNewCard5Network,
-      kWhatsNewCard5Receiver,
-      // The auto-read build's words (and the provisional Privacy pair) follow the same rules.
+      kWhatsNewPrivacyRules,
+      // The auto-read build's words follow the same rules.
       kWhatsNewAutoBannerHead,
       kWhatsNewAutoBannerBody,
-      kWhatsNewTodoTitle,
-      kWhatsNewTodoSummary,
-      kWhatsNewTodoBody,
-      kWhatsNewTodoDescribes,
-      kWhatsNewUnreadTitle,
-      kWhatsNewUnreadSummary,
-      kWhatsNewUnreadBody,
-      kWhatsNewTrailTitle,
-      kWhatsNewTrailSummary,
-      kWhatsNewTrailBody,
-      kWhatsNewAutoSettingsTitle,
-      kWhatsNewAutoSettingsSummary,
-      kWhatsNewAutoSettingsBody,
-      kWhatsNewAutoDefaults,
+      kWhatsNewAutoWithdrawalsExtra,
+      ...kWhatsNewAutoSuggestBody,
+      kWhatsNewAskTitle,
+      kWhatsNewAskSummary,
+      ...kWhatsNewAskBody,
+      kWhatsNewNotifTitle,
+      kWhatsNewNotifSummary,
+      kWhatsNewNotifBody,
+      kWhatsNewHideTitle,
+      kWhatsNewHideSummary,
+      ...kWhatsNewHideBody,
+      kWhatsNewRecordedTitle,
+      kWhatsNewRecordedSummary,
+      kWhatsNewRecordedBody,
       kWhatsNewPrivacyAutoReadSummary,
       kWhatsNewPrivacyAutoReadBody,
-      kWhatsNewPrivacyAutoReadReceiverNote,
-    ].join('\n').replaceAll(kUninstallErasesNotice, '').replaceAll(kPrivacySentenceStandard, '').replaceAll(kWhatsNewCard5Summary, '');
+    ].join('\n').replaceAll(kUninstallErasesNotice, '').replaceAll(kPrivacySentenceStandard, '');
     expect(bannedHits(shown), isEmpty);
   });
 
@@ -155,10 +168,9 @@ void main() {
     expect(shared.toLowerCase(), isNot(contains('auto-read')) , reason: 'the shared copy file holds the standard words only');
   });
 
-  test('the closed Privacy line is the signed sentence without its parenthetical', () {
-    expect(kWhatsNewCard5Summary, 'No permissions except internet, used only to check for updates.');
-    expect(kPrivacySentenceStandard, startsWith(kWhatsNewCard5Summary.substring(0, kWhatsNewCard5Summary.length - 1)));
-    // The auto-read build never shows the standard sentence: its Privacy words are the provisional pair.
+  test('the Privacy item: the closed line is the signed sentence (mock), the auto-read build has its own words', () {
+    expect(kWhatsNewCard5Summary, kPrivacySentenceStandard);
+    expect(kWhatsNewCard5Body, kPrivacySentenceStandard);
     expect(kWhatsNewPrivacyAutoReadBody, isNot(contains('No permissions')));
     expect(kWhatsNewPrivacyAutoReadSummary, isNot(contains('No permissions')));
   });
@@ -169,8 +181,8 @@ void main() {
 
   test('the page copy never retypes a fixed sentence: it uses the named constants', () {
     final src = _noLineComments(_lib()['lib/ui/copy/whats_new_pager_copy.dart']!);
-    expect(src, contains('kNetworkSeenSentence'), reason: 'privacy (F4 R14): only the second half of W7');
     expect(src, isNot(contains(r'$kNetworkSentence')), reason: 'the full W7 would repeat the canonical sentence');
+    expect(src, contains('kBackupNotRestorableByOlderV5'), reason: 'the backup sentence has one source');
     expect(src, contains('kPrivacySentenceStandard'));
     expect(src, isNot(contains(r'$kFirstDayRegrouped')), reason: 'F4 R4: card 2 has its own text; the line is for the First day dialog');
     expect(src, isNot(contains('GitHub sees your IP')));

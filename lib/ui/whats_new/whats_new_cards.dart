@@ -4,6 +4,7 @@ import '../../autoread/autoread_feature.dart';
 import '../../autoread/ui/whats_new_autoread_copy.dart';
 import '../copy/whats_new_copy.dart';
 import '../copy/whats_new_pager_copy.dart';
+import '../screens/settings/settings_targets.dart';
 import '../theme/app_colors.dart';
 import '../widgets/tap_target.dart';
 
@@ -15,6 +16,15 @@ import '../widgets/tap_target.dart';
 /// One item = a closed row (number, title, one-line summary) that opens to its
 /// full text. The page owns which rows are open.
 
+/// A second "open this Settings area" button on an item (0.2.1 #10): its [target] id, its [label] and its [key].
+class WhatsNewLink {
+  const WhatsNewLink({required this.target, required this.label, required this.key});
+
+  final String target;
+  final String label;
+  final Key key;
+}
+
 /// What one item says. [paragraphs] come first; the two route buttons and the
 /// privacy emphasis are item extras.
 class WhatsNewItem {
@@ -24,9 +34,11 @@ class WhatsNewItem {
     required this.summary,
     required this.origin,
     this.paragraphs = const [],
-    this.settingsButton = false,
+    this.settingsTarget,
+    this.extraLinks = const [],
     this.backupButton = false,
     this.boldFirst = false,
+    this.group = WhatsNewGroup.headline,
   });
 
   final String id;
@@ -36,121 +48,157 @@ class WhatsNewItem {
   /// Which update the item came from: [kWhatsNewTagNew] or [kWhatsNewTagFrom013].
   final String origin;
   final List<String> paragraphs;
-  final bool settingsButton;
+
+  /// The Settings area the "Change in Settings" button opens and outlines (null: no button).
+  final String? settingsTarget;
+
+  /// More Settings buttons, after the first one.
+  final List<WhatsNewLink> extraLinks;
   final bool backupButton;
 
   /// The first paragraph is the signed Privacy sentence: shown in the ink colour, bold.
   final bool boldFirst;
+
+  /// Where the page puts the item: always shown, in the "More changes" fold, or last (Privacy).
+  final WhatsNewGroup group;
 }
 
-/// The page's items for this build (PM 14-11-2026: 0.1.3 folded into 0.2.0). Items new in 0.2.0
-/// come first, then the 0.1.3 items; each carries its origin tag. The shared items are the same in
-/// both builds; the auto-read build adds its own and says its own Privacy words.
+/// The three places an item can sit on the page (signed mock 20-11-2026).
+enum WhatsNewGroup { headline, more, last }
+
+/// The page's items for this build (signed mock 20-11-2026). Four headline items, then the
+/// "More changes" fold, then Privacy last. The standard build never gets the auto-read-only items
+/// or the lines that auto-read adds to shared items: they are reached only inside
+/// `if (kAutoReadCompiled)`.
 List<WhatsNewItem> whatsNewItems() => [
-  const WhatsNewItem(
-    id: 'airother',
+  // Headline.
+  WhatsNewItem(
+    id: 'withdrawals',
     origin: kWhatsNewTagNew,
-    title: kWhatsNewAirOtherTitle,
-    summary: kWhatsNewAirOtherSummary,
-    paragraphs: [kWhatsNewAirOtherBody],
+    title: kWhatsNewWithdrawalsTitle,
+    summary: kWhatsNewWithdrawalsSummary,
+    paragraphs: [...kWhatsNewWithdrawalsBody, if (kAutoReadCompiled) kWhatsNewAutoWithdrawalsExtra],
   ),
-  if (kAutoReadCompiled) ...const [
-    WhatsNewItem(
-      id: 'todo',
+  if (kAutoReadCompiled)
+    const WhatsNewItem(
+      id: 'ask',
       origin: kWhatsNewTagNew,
-      title: kWhatsNewTodoTitle,
-      summary: kWhatsNewTodoSummary,
-      paragraphs: [kWhatsNewTodoBody, kWhatsNewTodoDescribes],
+      title: kWhatsNewAskTitle,
+      summary: kWhatsNewAskSummary,
+      paragraphs: kWhatsNewAskBody,
     ),
-    WhatsNewItem(
-      id: 'unread',
+  WhatsNewItem(
+    id: 'suggest',
+    origin: kWhatsNewTagNew,
+    title: kWhatsNewSuggestTitle,
+    summary: kWhatsNewSuggestSummary,
+    paragraphs: [...kWhatsNewSuggestBody, if (kAutoReadCompiled) ...kWhatsNewAutoSuggestBody, kWhatsNewSuggestLast],
+    settingsTarget: kSettingsTargetRemembered,
+  ),
+  if (!kAutoReadCompiled)
+    const WhatsNewItem(
+      id: 'paidto',
       origin: kWhatsNewTagNew,
-      title: kWhatsNewUnreadTitle,
-      summary: kWhatsNewUnreadSummary,
-      paragraphs: [kWhatsNewUnreadBody],
+      title: kWhatsNewPaidToTitle,
+      summary: kWhatsNewPaidToSummary,
+      paragraphs: [kWhatsNewPaidToBody],
     ),
-    WhatsNewItem(
-      id: 'trail',
-      origin: kWhatsNewTagNew,
-      title: kWhatsNewTrailTitle,
-      summary: kWhatsNewTrailSummary,
-      paragraphs: [kWhatsNewTrailBody],
-    ),
-    WhatsNewItem(
-      id: 'autosettings',
-      origin: kWhatsNewTagNew,
-      title: kWhatsNewAutoSettingsTitle,
-      summary: kWhatsNewAutoSettingsSummary,
-      paragraphs: [kWhatsNewAutoSettingsBody, kWhatsNewAutoDefaults],
-      settingsButton: true,
-    ),
-  ],
   const WhatsNewItem(
     id: 'backups',
     origin: kWhatsNewTagNew,
     title: kWhatsNewBackupsTitle,
     summary: kWhatsNewBackupsSummary,
     paragraphs: [kWhatsNewBackupsBody],
-    backupButton: true,
+  ),
+  // More changes.
+  if (kAutoReadCompiled) ...const [
+    WhatsNewItem(
+      id: 'notif',
+      origin: kWhatsNewTagNew,
+      title: kWhatsNewNotifTitle,
+      summary: kWhatsNewNotifSummary,
+      paragraphs: [kWhatsNewNotifBody],
+      group: WhatsNewGroup.more,
+    ),
+    WhatsNewItem(
+      id: 'paidto',
+      origin: kWhatsNewTagNew,
+      title: kWhatsNewPaidToTitle,
+      summary: kWhatsNewPaidToSummary,
+      paragraphs: [kWhatsNewPaidToBody],
+      group: WhatsNewGroup.more,
+    ),
+  ],
+  const WhatsNewItem(
+    id: 'pochi',
+    origin: kWhatsNewTagNew,
+    title: kWhatsNewPochiTitle,
+    summary: kWhatsNewPochiSummary,
+    paragraphs: [kWhatsNewPochiBody],
+    group: WhatsNewGroup.more,
+  ),
+  if (kAutoReadCompiled) ...const [
+    WhatsNewItem(
+      id: 'hide',
+      origin: kWhatsNewTagNew,
+      title: kWhatsNewHideTitle,
+      summary: kWhatsNewHideSummary,
+      paragraphs: kWhatsNewHideBody,
+      group: WhatsNewGroup.more,
+    ),
+    WhatsNewItem(
+      id: 'recorded',
+      origin: kWhatsNewTagNew,
+      title: kWhatsNewRecordedTitle,
+      summary: kWhatsNewRecordedSummary,
+      paragraphs: [kWhatsNewRecordedBody],
+      group: WhatsNewGroup.more,
+    ),
+  ],
+  const WhatsNewItem(
+    id: 'updates',
+    origin: kWhatsNewTagNew,
+    title: kWhatsNewUpdatesTitle,
+    summary: kWhatsNewUpdatesSummary,
+    paragraphs: [kWhatsNewUpdatesBody],
+    group: WhatsNewGroup.more,
   ),
   const WhatsNewItem(
-    id: 'nav',
-    origin: kWhatsNewTagFrom013,
-    title: kWhatsNewNavTitle,
-    summary: kWhatsNewNavSummary,
-    paragraphs: [kWhatsNewNavBody],
+    id: 'links',
+    origin: kWhatsNewTagNew,
+    title: kWhatsNewLinksTitle,
+    summary: kWhatsNewLinksSummary,
+    paragraphs: [kWhatsNewLinksBody],
+    group: WhatsNewGroup.more,
   ),
   const WhatsNewItem(
-    id: 'airtime',
-    origin: kWhatsNewTagFrom013,
-    title: kWhatsNewAirtimeTitle,
-    summary: kWhatsNewAirtimeSummary,
-    paragraphs: [kWhatsNewAirtimeBody],
+    id: 'pill',
+    origin: kWhatsNewTagNew,
+    title: kWhatsNewPillTitle,
+    summary: kWhatsNewPillSummary,
+    paragraphs: [kWhatsNewPillBody],
+    group: WhatsNewGroup.more,
   ),
-  const WhatsNewItem(
-    id: 'receiver',
-    origin: kWhatsNewTagFrom013,
-    title: kWhatsNewReceiverTitle,
-    summary: kWhatsNewReceiverSummary,
-    paragraphs: [kWhatsNewReceiverBody],
-    settingsButton: true,
-  ),
-  const WhatsNewItem(
-    id: 'deleted',
-    origin: kWhatsNewTagFrom013,
-    title: kWhatsNewDeletedTitle,
-    summary: kWhatsNewDeletedSummary,
-    paragraphs: [kWhatsNewDeletedBody],
-  ),
-  const WhatsNewItem(
-    id: 'exports',
-    origin: kWhatsNewTagFrom013,
-    title: kWhatsNewExportsTitle,
-    summary: kWhatsNewExportsSummary,
-    paragraphs: [kWhatsNewExportsBody],
-  ),
+  // Last.
   if (kAutoReadCompiled)
     const WhatsNewItem(
       id: 'privacy',
-      origin: kWhatsNewTagFrom013,
+      origin: kWhatsNewTagNew,
       title: kWhatsNewCard5Title,
       summary: kWhatsNewPrivacyAutoReadSummary,
-      paragraphs: [
-        kWhatsNewPrivacyAutoReadBody,
-        kWhatsNewPrivacyAutoReadTrail,
-        kWhatsNewPrivacyAutoReadKept,
-        kWhatsNewPrivacyAutoReadReceiverNote,
-      ],
+      paragraphs: [kWhatsNewPrivacyAutoReadBody, kWhatsNewPrivacyRules],
       boldFirst: true,
+      group: WhatsNewGroup.last,
     )
   else
-    WhatsNewItem(
+    const WhatsNewItem(
       id: 'privacy',
-      origin: kWhatsNewTagFrom013,
+      origin: kWhatsNewTagNew,
       title: kWhatsNewCard5Title,
       summary: kWhatsNewCard5Summary,
-      paragraphs: [kWhatsNewCard5Body, kWhatsNewCard5Network, kWhatsNewCard5Receiver],
+      paragraphs: [kWhatsNewCard5Body, kWhatsNewPrivacyRules],
       boldFirst: true,
+      group: WhatsNewGroup.last,
     ),
 ];
 
@@ -241,7 +289,7 @@ class WhatsNewItemView extends StatelessWidget {
 
   /// "Change in Settings" (Weeks) and "Open Backup and restore" (Backups):
   /// injected, they push the route OVER the page and mark nothing seen.
-  final VoidCallback? onOpenSettings;
+  final void Function(String? target)? onOpenSettings;
   final VoidCallback? onOpenBackup;
 
   @override
@@ -343,8 +391,14 @@ class WhatsNewItemView extends StatelessWidget {
             if (i > 0) const SizedBox(height: 10),
             Text(item.paragraphs[i], key: Key('whatsNewPara-$id-$i'), style: i == 0 && item.boldFirst ? strong : body),
           ],
-          if (item.settingsButton)
-            _button(const Key('whatsNewCalSettings'), kWhatsNewChangeInSettings, onOpenSettings),
+          if (item.settingsTarget != null)
+            _button(
+              const Key('whatsNewCalSettings'),
+              kWhatsNewOpenInSettings,
+              onOpenSettings == null ? null : () => onOpenSettings!(item.settingsTarget),
+            ),
+          for (final l in item.extraLinks)
+            _button(l.key, l.label, onOpenSettings == null ? null : () => onOpenSettings!(l.target)),
           if (item.backupButton) _button(const Key('whatsNewOpenBackup'), kWhatsNewOpenBackup, onOpenBackup),
         ],
       ),

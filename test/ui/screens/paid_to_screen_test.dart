@@ -95,7 +95,7 @@ void main() {
     // S7b: no "Unnamed" rows; one muted Not recorded line under the section instead.
     expect(find.textContaining('Unnamed'), findsNothing);
     expect(find.textContaining('Receiver not recorded'), findsNothing);
-    expect(find.text('Not recorded · 2 payments · Ksh 800'), findsOneWidget);
+    expect(find.text('Receiver not saved · 2 payments · Ksh 800'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('paidToSeeAll-SEND_MONEY')));
     await tester.pumpAndSettle();
@@ -198,12 +198,12 @@ void main() {
 
   testWidgets('search narrows by name or phone; no match says so; the Not recorded line hides', (tester) async {
     await _pump(tester);
-    expect(find.text('Not recorded · 2 payments · Ksh 800'), findsOneWidget);
+    expect(find.text('Receiver not saved · 2 payments · Ksh 800'), findsOneWidget);
     await tester.enterText(find.byKey(const Key('paidToSearch')), 'mary');
     await tester.pumpAndSettle();
     expect(find.text('MARY WANJIKU'), findsOneWidget);
     expect(find.text('JOHN KAMAU'), findsNothing);
-    expect(find.textContaining('Not recorded'), findsNothing, reason: 'hidden while a term is typed');
+    expect(find.textContaining('Receiver not saved'), findsNothing, reason: 'hidden while a term is typed');
     await tester.enterText(find.byKey(const Key('paidToSearch')), 'zzz');
     await tester.pumpAndSettle();
     expect(find.text('No one matches “zzz”.'), findsOneWidget);
@@ -229,7 +229,7 @@ void main() {
     Navigator.of(tester.element(find.text('ANALYTICS'))).pop();
     await tester.pumpAndSettle();
     // The Not recorded line is not a recipient: no tap, no sheet, no hand-off.
-    await tester.tap(find.text('Not recorded · 2 payments · Ksh 800'));
+    await tester.tap(find.text('Receiver not saved · 2 payments · Ksh 800'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('paidToSheetName')), findsNothing);
     expect(_opened, hasLength(1));

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../widgets/pill_toast.dart';
 import '../../app_constants.dart';
 import '../../platform/storage_bridge.dart';
 import '../copy/data_copy.dart';
@@ -57,7 +58,7 @@ class WhatsNewProcess {
 /// storage bridge, the site URL only).
 Future<bool> showWhatsNewPager(
   BuildContext context, {
-  required VoidCallback onOpenSettings,
+  required void Function(String? target) onOpenSettings,
   required VoidCallback onOpenBackup,
   VoidCallback? onOpenSite,
   bool readOnly = false,
@@ -101,7 +102,7 @@ class WhatsNewPage extends StatefulWidget {
     this.readOnly = false,
   });
 
-  final VoidCallback onOpenSettings;
+  final void Function(String? target) onOpenSettings;
   final VoidCallback onOpenBackup;
   final VoidCallback? onOpenSite;
 
@@ -116,6 +117,9 @@ class _WhatsNewPageState extends State<WhatsNewPage> {
   final _titleFocus = FocusNode(debugLabel: 'whatsNewTitle');
   final _items = whatsNewItems();
   late final Set<String> _open = {_items.first.id};
+
+  /// The "More changes" fold: closed until the user taps "Show more changes".
+  bool _showMore = false;
 
   @override
   void initState() {
@@ -144,6 +148,82 @@ class _WhatsNewPageState extends State<WhatsNewPage> {
     }
   });
 
+  /// The rows in the signed order: headline items, the fold button (and, when it is open, the
+  /// "More changes" items), the line that says 0.2.0 is still here, then the last item (Privacy).
+  /// Numbers run over the rows that are on screen.
+  List<Widget> _rows(AppPalette palette) {
+    var n = 0;
+    final out = <Widget>[];
+    void add(WhatsNewItem item) {
+      if (out.isNotEmpty) out.add(const SizedBox(height: 10));
+      out.add(
+        WhatsNewItemView(
+          item: item,
+          number: ++n,
+          open: _open.contains(item.id),
+          palette: palette,
+          onToggle: () => _toggle(item.id),
+          onOpenSettings: widget.onOpenSettings,
+          onOpenBackup: widget.onOpenBackup,
+        ),
+      );
+    }
+
+    _items.where((i) => i.group == WhatsNewGroup.headline).forEach(add);
+    final more = _items.where((i) => i.group == WhatsNewGroup.more).toList();
+    if (more.isNotEmpty) {
+      out
+        ..add(const SizedBox(height: 10))
+        ..add(
+          OutlinedButton(
+            key: const Key('whatsNewMoreToggle'),
+            onPressed: () => setState(() => _showMore = !_showMore),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(kMinTapTarget, 48),
+              foregroundColor: palette.primary,
+              side: BorderSide(color: palette.line, width: 1.5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: Semantics(
+              expanded: _showMore,
+              child: Text(
+                _showMore ? kWhatsNewMoreHide : kWhatsNewMoreShow,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+        );
+      if (_showMore) {
+        out.add(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 12, 2, 0),
+            child: Semantics(
+              header: true,
+              child: Text(
+                kWhatsNewMoreLabel.toUpperCase(),
+                key: const Key('whatsNewMoreLabel'),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: palette.mutedInk),
+              ),
+            ),
+          ),
+        );
+        more.forEach(add);
+      }
+    }
+    out.add(
+      Padding(
+        padding: const EdgeInsets.fromLTRB(2, 12, 2, 2),
+        child: Text(
+          kWhatsNewStill,
+          key: const Key('whatsNewStill'),
+          style: TextStyle(fontSize: 13, height: 1.5, color: palette.softInk),
+        ),
+      ),
+    );
+    _items.where((i) => i.group == WhatsNewGroup.last).forEach(add);
+    return out;
+  }
+
   void _gotIt() => Navigator.of(context).pop(true);
 
   void _back() => Navigator.of(context).pop(false);
@@ -159,7 +239,7 @@ class _WhatsNewPageState extends State<WhatsNewPage> {
       opened = await StorageBridge.instance.openUrl(AppConstants.siteUrl);
     } catch (_) {}
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(kUpdatesCouldNotOpen)));
+      PillToast.show(kUpdatesCouldNotOpen);
     }
   }
 
@@ -203,18 +283,7 @@ class _WhatsNewPageState extends State<WhatsNewPage> {
                   style: TextStyle(fontSize: 13, height: 1.5, color: palette.softInk),
                 ),
               ),
-              for (var i = 0; i < _items.length; i++) ...[
-                if (i > 0) const SizedBox(height: 10),
-                WhatsNewItemView(
-                  item: _items[i],
-                  number: i + 1,
-                  open: _open.contains(_items[i].id),
-                  palette: palette,
-                  onToggle: () => _toggle(_items[i].id),
-                  onOpenSettings: widget.onOpenSettings,
-                  onOpenBackup: widget.onOpenBackup,
-                ),
-              ],
+              ..._rows(palette),
               Padding(
                 padding: const EdgeInsets.fromLTRB(2, 14, 2, 0),
                 child: Text(

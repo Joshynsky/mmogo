@@ -14,6 +14,10 @@ import 'autoread_bridge.dart';
 
 /// A channel failure. Carries only the code (`bad_id`, `not_available`,
 /// `permission`, `failed`); never the platform message or any argument.
+/// What `takeLaunchAction` and a pushed tap's `action` say for the Change category button.
+/// Kotlin mirror: AskAlert.LAUNCH_CATEGORIZE (a test pins them).
+const String kLaunchCategorize = 'categorize';
+
 class AutoReadBridgeException implements Exception {
   final String code;
   const AutoReadBridgeException(this.code);
@@ -47,6 +51,10 @@ class AutoReadState {
   /// agreed before the choice existed). Absent or unknown = false.
   final bool alertDetailsAbsent;
 
+  /// "Hide details after", in minutes (0 = Never, else 5, 15, 30 or 60; default
+  /// 15). The alert only: how long a held message is kept does not change.
+  final int alertMinutes;
+
   const AutoReadState({
     required this.enabled,
     required this.smsGranted,
@@ -57,6 +65,7 @@ class AutoReadState {
     this.consentVersion = 0,
     this.alertDetails = false,
     this.alertDetailsAbsent = false,
+    this.alertMinutes = 15,
   });
 
   @override
@@ -78,6 +87,7 @@ class MethodChannelAutoReadBridge implements AutoReadBridge {
   final Future<int> Function() _generation;
   final MethodChannel _channel;
   final StreamController<String> _tapped = StreamController<String>.broadcast();
+  final StreamController<String> _categorizeTapped = StreamController<String>.broadcast();
 
   MethodChannelAutoReadBridge({
     required Future<int> Function() generation,
@@ -93,6 +103,10 @@ class MethodChannelAutoReadBridge implements AutoReadBridge {
   /// to are dropped, not buffered.
   Stream<String> get tapped => _tapped.stream;
 
+  /// The ids among [tapped] that came from the Change category button of an Ask first alert. Each id is
+  /// added here BEFORE it is added to [tapped], so a listener of both knows the reason when the tap arrives.
+  Stream<String> get categorizeTapped => _categorizeTapped.stream;
+
   /// Handles pushed calls. Unknown methods are ignored.
   Future<dynamic> _onCall(MethodCall call) async {
     if (call.method != 'onTapped') return null;
@@ -100,6 +114,7 @@ class MethodChannelAutoReadBridge implements AutoReadBridge {
     if (args is! Map) return null;
     final id = args['id'];
     if (id is String && isValidHeldId(id) && _tapped.hasListener) {
+      if (args['action'] == kLaunchCategorize) _categorizeTapped.add(id);
       _tapped.add(id);
     }
     return null;
@@ -179,6 +194,7 @@ class MethodChannelAutoReadBridge implements AutoReadBridge {
           consentVersion: r['consentVersion'] is int ? r['consentVersion'] as int : 0,
           alertDetails: r['alertDetails'] == true,
           alertDetailsAbsent: r['alertDetailsAbsent'] == true,
+          alertMinutes: r['alertMinutes'] is int ? r['alertMinutes'] as int : 15,
         );
       }
     }
@@ -208,6 +224,16 @@ class MethodChannelAutoReadBridge implements AutoReadBridge {
     return (r is String && isValidHeldId(r)) ? r : null;
   }
 
+  /// True when the app was launched by the Change category button of an Ask first alert (once). Any
+  /// failure, or an older platform side without the call, answers false.
+  Future<bool> takeLaunchCategorize() async {
+    try {
+      return await _invoke('takeLaunchAction') == kLaunchCategorize;
+    } on AutoReadBridgeException {
+      return false;
+    }
+  }
+
   Future<void> deleteAllHeld() async {
     await _invoke('deleteAllHeld');
   }
@@ -235,6 +261,13 @@ class MethodChannelAutoReadBridge implements AutoReadBridge {
   Future<bool> setAlertDetails(bool on) async {
     final r = await _invoke('setAlertDetails', {'on': on});
     if (r is bool) return r;
+    throw const AutoReadBridgeException('failed');
+  }
+
+  /// Writes "Hide details after" (minutes, 0 = Never); answers the minutes now held.
+  Future<int> setAlertMinutes(int minutes) async {
+    final r = await _invoke('setAlertMinutes', {'minutes': minutes});
+    if (r is int) return r;
     throw const AutoReadBridgeException('failed');
   }
 

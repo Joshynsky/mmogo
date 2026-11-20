@@ -7,7 +7,7 @@ library;
 import '../ui/launch_router.dart';
 import 'real_waiting_repository.dart';
 
-class IngestingLaunchSource implements AutoReadLaunchSource {
+class IngestingLaunchSource implements AutoReadLaunchSource, CategorizeLaunchSource {
   IngestingLaunchSource(this._inner, this._repo);
 
   final AutoReadLaunchSource _inner;
@@ -15,6 +15,18 @@ class IngestingLaunchSource implements AutoReadLaunchSource {
 
   @override
   Future<String?> takeLaunchId() => _inner.takeLaunchId();
+
+  @override
+  Future<bool> takeLaunchCategorize() {
+    final s = _inner;
+    return s is CategorizeLaunchSource ? (s as CategorizeLaunchSource).takeLaunchCategorize() : Future.value(false);
+  }
+
+  @override
+  Stream<String> get categorizeTapped {
+    final s = _inner;
+    return s is CategorizeLaunchSource ? (s as CategorizeLaunchSource).categorizeTapped : const Stream<String>.empty();
+  }
 
   @override
   Stream<String> get tapped => _inner.tapped.asyncMap((id) async {

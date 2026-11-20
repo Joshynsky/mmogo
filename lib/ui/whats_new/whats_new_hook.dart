@@ -9,6 +9,7 @@ import '../../data/updates/updates_inbox.dart';
 import '../../data/updates/whats_new_notice.dart';
 import '../../domain/whats_new/whats_new_gate.dart';
 import '../shell/routes.dart';
+import '../widgets/highlight_pulse.dart';
 import '../startup_notice.dart';
 import 'whats_new_content.dart';
 import 'whats_new_pager.dart';
@@ -39,7 +40,7 @@ Future<void> maybeShowWhatsNew(
   Future<void> Function(String versionName)? writeSeenVersion,
   Future<bool> Function()? readOnboardingComplete,
   bool Function()? startupNoticeShown,
-  VoidCallback? openSettings,
+  void Function(String? target)? openSettings,
   VoidCallback? openBackup,
   UpdatesInbox? inbox,
 }) async {
@@ -63,7 +64,7 @@ Future<void> maybeShowWhatsNew(
     WhatsNewProcess.autoShown = true;
     final gotIt = await showWhatsNewPager(
       context,
-      onOpenSettings: openSettings ?? () => _push(context, Routes.settings),
+      onOpenSettings: openSettings ?? (target) => openSettingsAt(context, target),
       onOpenBackup: openBackup ?? () => _push(context, Routes.backup),
     );
     if (gotIt) {
@@ -84,7 +85,7 @@ Future<void> openWhatsNewToRead(
   BuildContext context, {
   String? installedVersionName,
   Future<void> Function(String versionName)? writeSeenVersion,
-  VoidCallback? openSettings,
+  void Function(String? target)? openSettings,
   VoidCallback? openBackup,
   UpdatesInbox? inbox,
 }) async {
@@ -98,10 +99,17 @@ Future<void> openWhatsNewToRead(
     await showWhatsNewPager(
       context,
       readOnly: true,
-      onOpenSettings: openSettings ?? () => _push(context, Routes.settings),
+      onOpenSettings: openSettings ?? (target) => openSettingsAt(context, target),
       onOpenBackup: openBackup ?? () => _push(context, Routes.backup),
     );
   } catch (_) {}
+}
+
+/// A Settings link: the area to outline is left for Settings to take as it opens.
+void openSettingsAt(BuildContext context, String? target) {
+  if (!context.mounted) return;
+  HighlightRequest.set(target);
+  Navigator.of(context).pushNamed(Routes.settings);
 }
 
 void _push(BuildContext context, String route) {

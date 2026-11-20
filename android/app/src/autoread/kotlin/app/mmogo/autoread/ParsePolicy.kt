@@ -88,6 +88,18 @@ internal object ParsePolicy {
         return if (n < 0L || n > 100_000_000_000L) null else n
     }
 
+    /**
+     * The `askCategoryId` argument of done: the category an Ask first hint offers for the item just parsed, or
+     * null when missing, not positive or odd. A number only, never content.
+     */
+    fun askCategoryArg(args: Any?): Long? {
+        if (args !is Map<*, *>) return null
+        val a = args["askCategoryId"]
+        if (a !is Number) return null
+        val n = a.toLong()
+        return if (n < 1L || n > 2_000_000_000L) null else n
+    }
+
     /** What the Dart side reports at the end. Dart mirror: kBackgroundOutcomeCodes (a test pins the codes). */
     enum class Outcome(val code: String) {
         PARSED("parsed"),

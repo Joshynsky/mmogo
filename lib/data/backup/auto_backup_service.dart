@@ -2,10 +2,9 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
-import 'package:flutter/material.dart' show SnackBar, Text;
 
+import '../../ui/widgets/pill_toast.dart';
 import '../../platform/storage_bridge.dart';
-import '../../ui/shell/app_messenger.dart';
 import '../db/app_database.dart';
 import '../prefs/backup_prefs.dart';
 import '../updates/updates_inbox.dart';
@@ -135,7 +134,7 @@ class AutoBackupService {
       BackupService(db: () => AppDatabase.instance.database).exportToBytes();
 
   static void _snackbar(String message) {
-    appMessengerKey.currentState?.showSnackBar(SnackBar(content: Text(message)));
+    PillToast.show(message);
   }
 
   /// `mmogo-auto-YYYYMMDD-HHMMSS.json` from the local fields of [t]. Only a

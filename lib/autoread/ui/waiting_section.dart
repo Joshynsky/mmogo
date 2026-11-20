@@ -8,13 +8,19 @@ import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
 import '../../data/db/analytics_dao.dart' show AnalyticsTransactionRow;
+import '../../ui/widgets/pill_toast.dart';
 
 import '../logic/airtime_auto.dart';
 import '../model/held_description.dart';
+import '../model/rule_hint.dart';
 import '../model/waiting_item.dart';
-import 'auto_group.dart';
 import 'category_choices.dart';
 import 'decision_item.dart';
+import 'notifications/ask_first_row.dart';
+import 'notifications/notifications_rule_copy.dart';
+import 'notifications/recorded_auto_section.dart';
+import 'notifications/suggestion_card.dart';
+import 'notifications/suggestions_controller.dart';
 import 'parse_all_bar.dart';
 import 'paste_sheet.dart';
 import 'remove_confirm.dart';
@@ -27,7 +33,7 @@ import 'waiting_row.dart';
 /// What a tap on a waiting row does. All optional: an unwired action is a
 /// no-op (an UNREADABLE row is shown with Details and Remove either way).
 class WaitingActions {
-  const WaitingActions({this.onParse, this.onCategorize, this.onPaste, this.onRemove, this.onParseAll, this.onDetails, this.airtime, this.describe, this.onChangeInSettings, this.clearDescriptions, this.onPickCategory, this.choicesFor, this.onLater, this.choosing, this.undecided, this.onWithdrawalCashOnly, this.onWithdrawalCategorize, this.onDecisionCashOnly, this.onDecisionCashOnlyAll, this.onDecisionCategorize});
+  const WaitingActions({this.onParse, this.onCategorize, this.onPaste, this.onRemove, this.onParseAll, this.onDetails, this.airtime, this.describe, this.onChangeInSettings, this.clearDescriptions, this.onPickCategory, this.choicesFor, this.onLater, this.choosing, this.undecided, this.onWithdrawalCashOnly, this.onWithdrawalCategorize, this.onDecisionCashOnly, this.onDecisionCashOnlyAll, this.onDecisionCategorize, this.suggestions, this.ruleHintFor, this.categoryNameOf, this.onAskFirstYes, this.onAskFirstChange, this.onAskFirstLater, this.askFirstChanges, this.toChoose});
 
   final void Function(WaitingItem item)? onParse;
   final void Function(WaitingItem item)? onCategorize;
@@ -79,6 +85,29 @@ class WaitingActions {
   /// "Cash only for all" on the Review sheet (every undecided withdrawal in one go). Null: no button.
   final Future<void> Function(List<AnalyticsTransactionRow> rows)? onDecisionCashOnlyAll;
   final Future<void> Function(AnalyticsTransactionRow row)? onDecisionCategorize;
+
+  /// 0.2.1 rules (Suggested + Ask first only). The "Ask first next time?" offers. Null: no Suggestions section.
+  final SuggestionsController? suggestions;
+
+  /// The rule hint of a waiting item (labels only). Null: no item is asked about.
+  final RuleHint? Function(WaitingItem item)? ruleHintFor;
+
+  /// Name of a category id, or null when unknown (an Ask first row then shows as a normal row).
+  final String? Function(int categoryId)? categoryNameOf;
+
+  /// Ask first row answers. Yes records the item as the hint's first category. Change category opens
+  /// the Categorize sheet. Categorize later must make [ruleHintFor] return null for the item (it then
+  /// shows under To categorize). All three needed for the row; any null: normal row.
+  final Future<void> Function(WaitingItem item, RuleHint hint)? onAskFirstYes;
+  final void Function(WaitingItem item, RuleHint hint)? onAskFirstChange;
+  final void Function(WaitingItem item, RuleHint hint)? onAskFirstLater;
+
+  /// Fires when what [ruleHintFor] or [categoryNameOf] answer may have changed (names loaded, a row sent
+  /// to Categorize later). Null: they never change.
+  final Listenable? askFirstChanges;
+
+  /// The To choose section ("Choose Pochi or Send Money"), built by its own code. Null: none. Only placed here.
+  final ({Widget section, bool isEmpty})? toChoose;
 }
 
 /// The body of the To do view: the lists of readable, unreadable and waiting
@@ -100,7 +129,38 @@ class WaitingSection extends StatelessWidget {
   /// A row to scroll into view when it is listed (a phone-notification tap).
   final String? focusId;
 
+  /// The Ask first hint and category name for [w], or null when it is a normal row.
+  (RuleHint, String)? _ask(WaitingItem w) {
+    final names = actions.categoryNameOf;
+    if (names == null || actions.ruleHintFor == null) return null;
+    if (actions.onAskFirstYes == null || actions.onAskFirstChange == null || actions.onAskFirstLater == null) return null;
+    final hint = actions.ruleHintFor!(w);
+    final cat = askFirstCategory(w, hint, now, names);
+    return cat == null ? null : (hint!, cat);
+  }
+
   Widget _row(BuildContext context, WaitingItem w) {
+    final ask = _ask(w);
+    if (ask != null) {
+      final (hint, cat) = ask;
+      return Padding(
+        key: ValueKey('row-${w.id}'),
+        padding: const EdgeInsets.only(bottom: 8),
+        child: RowFocus(
+          key: ValueKey('focus-${w.id}-ask'),
+          on: w.id == focusId,
+          child: AskFirstRow(
+            key: Key('waiting-row-${w.id}'),
+            item: w,
+            now: now,
+            categoryName: cat,
+            onChange: () => actions.onAskFirstChange!(w, hint),
+            onLater: () => actions.onAskFirstLater!(w, hint),
+            onYes: () => actions.onAskFirstYes!(w, hint),
+          ),
+        ),
+      );
+    }
     final choose = actions.onPickCategory != null && actions.choicesFor != null && showsChooseRow(w, now);
     final fresh = actions.choosing?.contains(w.id) ?? false;
     return Padding(
@@ -162,12 +222,26 @@ class WaitingSection extends StatelessWidget {
     );
   }
 
+  /// The Recorded automatically rows; empty without the trail wiring.
+  List<AutoRecorded> _trail() => actions.airtime == null || actions.onChangeInSettings == null
+      ? const <AutoRecorded>[]
+      : actions.airtime!.trailNewestFirst;
+
+  Widget _suggestions(BuildContext context, SuggestionsController c) => SuggestionsSection(
+        offers: c.offers,
+        categoryName: actions.categoryNameOf ?? (_) => null,
+        onNotNow: (o) => c.notNow(o),
+        onConfirm: (o) async {
+          if (!await c.confirm(o)) PillToast.show(kSuggestionNotSaved);
+        },
+      );
+
   @override
   Widget build(BuildContext context) {
     // It listens to the choosing ids so a row parsed on this page turns into a
     // choose row.
     return ListenableBuilder(
-      listenable: Listenable.merge([?actions.choosing, ?actions.undecided]),
+      listenable: Listenable.merge([?actions.choosing, ?actions.undecided, ?actions.suggestions, ?actions.airtime, ?actions.askFirstChanges]),
       builder: (context, _) => TodoSection(
         waiting: waiting,
         now: now,
@@ -176,9 +250,20 @@ class WaitingSection extends StatelessWidget {
         parseAllBar: actions.onParseAll == null || readableReady(waiting, now).isEmpty
             ? null
             : ParseAllBar(waiting: waiting, now: now, onParseAll: actions.onParseAll!),
-        trail: actions.airtime == null || actions.onChangeInSettings == null
+        isAskFirst: (w) => _ask(w) != null,
+        toChoose: actions.toChoose?.section,
+        hasToChoose: actions.toChoose != null && !actions.toChoose!.isEmpty,
+        hasTrail: _trail().isNotEmpty,
+        trail: _trail().isEmpty
             ? null
-            : AutoGroup(actions.airtime!, now, onChangeInSettings: actions.onChangeInSettings!),
+            : RecordedAutoSection(
+                entries: _trail(),
+                now: now,
+                onUndo: actions.airtime!.onUndo,
+                onChangeInSettings: actions.onChangeInSettings!,
+              ),
+        hasSuggestions: (actions.suggestions?.offers ?? const []).isNotEmpty,
+        suggestions: actions.suggestions == null ? null : _suggestions(context, actions.suggestions!),
       ),
     );
   }

@@ -70,7 +70,7 @@ Future<void> pumpA11y(
     AppPaletteScope(
       controller: AppPaletteController('ocean', variant.dark ? 'dark' : 'light'),
       child: MaterialApp(
-        scaffoldMessengerKey: appMessengerKey,
+        navigatorKey: appNavigatorKey,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(variant.scale)),
           child: child!,

@@ -12,7 +12,9 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/parsing/parsed_sms_fields.dart';
+import '../model/rule_hint.dart';
 import '../model/waiting_item.dart';
+import '../rules/rule_model.dart';
 
 /// Key prefix of one stored item: the prefix plus the 32-hex id.
 const String kPendingItemPrefix = 'autoread_pending_v1.';
@@ -70,7 +72,45 @@ String encodePendingItem(WaitingItem item) {
     // Airtime kind (WBS row 17): only the fact, never the number or any text.
     'other': p.sourceType == SmsSourceType.airtime && p.airtimeOther,
     'occurredAt': p.transactionOccurredAt,
+    ..._encodeHint(item.hint),
   });
+}
+
+/// The optional hint fields (contract section 4): `rl` ask or auto (absent = Suggested), `rc` the receiver
+/// type code, `rk` the person key, `sg` up to 2 category ids. Never message text.
+Map<String, Object?> _encodeHint(RuleHint? h) {
+  if (h == null) return const {};
+  return <String, Object?>{
+    if (h.level == RuleLevel.askFirst) 'rl': 'ask',
+    if (h.level == RuleLevel.autoRecord) 'rl': 'auto',
+    'rc': h.type.code,
+    'rk': h.key,
+    'sg': h.suggested.length > 2 ? h.suggested.sublist(0, 2) : h.suggested,
+  };
+}
+
+/// Null when the fields are absent or bad: an old item, or a damaged hint, decodes without one.
+RuleHint? _decodeHint(Map<String, dynamic> m) {
+  final rk = m['rk'];
+  final rc = m['rc'];
+  if (rk is! String || rk.isEmpty || rk.length > 200 || rc is! String) return null;
+  final type = ReceiverType.values.where((t) => t.code == rc).firstOrNull;
+  if (type == null) return null;
+  final level = switch (m['rl']) {
+    null => RuleLevel.suggested,
+    'ask' => RuleLevel.askFirst,
+    'auto' => RuleLevel.autoRecord,
+    _ => null,
+  };
+  if (level == null) return null;
+  final sg = m['sg'];
+  final ids = <int>[];
+  if (sg is List) {
+    for (final x in sg) {
+      if (x is int && ids.length < 2) ids.add(x);
+    }
+  }
+  return RuleHint(level: level, type: type, key: rk, suggested: ids);
 }
 
 /// Null when the JSON is corrupt or incomplete (treated as absent).
@@ -112,6 +152,7 @@ WaitingItem? decodePendingItem(String json) {
         airtimeOther: type == SmsSourceType.airtime && m['other'] == true,
         transactionOccurredAt: occurred,
       ),
+      hint: _decodeHint(m),
     );
   } catch (_) {
     return null;
@@ -191,6 +232,7 @@ class SharedPrefsPendingItemsStore implements PendingItemsStore {
             heldAt: item.heldAt,
             parsed: parsed,
             sameCodeDifferentDetails: true,
+            hint: item.hint,
           )
         : item;
     final ok = await prefs.setString(key, encodePendingItem(toStore));

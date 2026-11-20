@@ -4,6 +4,7 @@ import 'migration_v3.dart';
 import 'migration_v5.dart';
 import 'migration_v6.dart';
 import 'migration_v7.dart';
+import 'migration_v8.dart';
 import 'schema.dart' show kFulizaEventsStatements;
 
 /// The database version this build creates and expects.
@@ -19,10 +20,12 @@ import 'schema.dart' show kFulizaEventsStatements;
 /// and `cash_only_decided`, an index and guard triggers (additive, `migration_v6.dart`).
 /// 7 = 0.2.1: the empty "Cash" category group `CASH_USE` (a withdrawal's own category list;
 /// `classification_groups` is rebuilt for its 7-code CHECK, `migration_v7.dart`).
-/// Adding v8 later means: add its step, register it in [AppMigrations.steps],
+/// 8 = 0.2.1: `transactions.recorded_automatically` (1 = written with no tap), a partial index
+/// and two guard triggers (additive, `migration_v8.dart`).
+/// Adding v9 later means: add its step, register it in [AppMigrations.steps],
 /// bump this constant, and update `AppSchema.createSchema` to the latest
 /// shape in the same change.
-const int kDbVersion = 7;
+const int kDbVersion = 8;
 
 /// The `onUpgrade` ladder.
 ///
@@ -32,7 +35,7 @@ const int kDbVersion = 7;
 ///    previous `user_version` if anything throws), so a step uses the
 ///    [DatabaseExecutor] it is given and never opens a nested transaction or
 ///    touches `AppDatabase.instance`;
-///  - idempotent; `_toV2`, `_toV4` and `_toV6` are additive only. `_toV3` REBUILDS tables, so it
+///  - idempotent; `_toV2`, `_toV4`, `_toV6` and `_toV8` are additive only. `_toV3` REBUILDS tables, so it
 ///    needs `PRAGMA foreign_keys = OFF` (set by `openMmogoDatabase`), drops and
 ///    recreates the guard triggers and indexes itself, and checks its work.
 class AppMigrations {
@@ -54,6 +57,7 @@ class AppMigrations {
     5: migrateToV5, // `_toV5`, see migration_v5.dart
     6: migrateToV6, // `_toV6`, see migration_v6.dart
     7: migrateToV7, // `_toV7`, see migration_v7.dart
+    8: migrateToV8, // `_toV8`, see migration_v8.dart
   };
 
   /// Wired as `openDatabase(onUpgrade: AppMigrations.migrate)`.

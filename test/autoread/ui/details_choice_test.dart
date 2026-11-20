@@ -167,7 +167,7 @@ void main() {
     });
 
     test('the timeout is chosen by whether the alert is generic; the held window is not used directly', () {
-      expect(notifier, contains('setTimeoutAfter(AlertText.timeoutMs(shown.generic, HeldWindow.WINDOW_MS))'));
+      expect(notifier, contains('setTimeoutAfter(AlertText.timeoutMs(shown.generic, HeldWindow.WINDOW_MS, AutoReadSwitch.alertMinutes(context)))'));
       expect(notifier, isNot(contains('setTimeoutAfter(HeldWindow.WINDOW_MS)')));
     });
 

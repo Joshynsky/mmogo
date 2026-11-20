@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../widgets/pill_toast.dart';
 import '../../../data/db/analytics_dao.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/db/transaction_dao.dart';
@@ -618,9 +619,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
     } on DatabaseException {
       // Plain wording only; the raw database text means nothing to the user.
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not save the changes. If you fill in a name, fill in its phone or account number too.')),
-      );
+      PillToast.show('Could not save the changes. If you fill in a name, fill in its phone or account number too.');
       return;
     }
     if (!mounted) return;
@@ -630,7 +629,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
         await applyWithdrawalPick(context, db, tx, pick);
       } on ArgumentError {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not add the Cash entry. Pick another category.')));
+        PillToast.show('Could not add the Cash entry. Pick another category.');
       }
       if (!mounted) return;
     }
@@ -675,13 +674,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with PrimaryTabRefres
       // Its M-Pesa code was recorded again while it was deleted (the unique
       // index); the row stays in Recently Deleted.
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('That code is already recorded')));
+      PillToast.show('That code is already recorded');
       return;
     }
     if (!mounted) return;
     if (changed == 0) {
       // S9b-1: a stale Undo (the entry was purged or Delete data removed it).
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(kEntryNoLongerThere)));
+      PillToast.show(kEntryNoLongerThere);
       await _load();
       return;
     }

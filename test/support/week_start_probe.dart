@@ -4,6 +4,7 @@
 // week_start_oracle.dart, never from production helpers.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/ui/screens/analytics_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -26,6 +27,7 @@ Future<void> pumpAnalytics(WidgetTester tester, FakeAnalyticsDb db, DateTime now
   await tester.pumpWidget(const SizedBox());
   await tester.pumpWidget(
     MaterialApp(
+      navigatorKey: appNavigatorKey,
       onGenerateRoute: (settings) => MaterialPageRoute(
         settings: RouteSettings(name: settings.name, arguments: args),
         builder: (_) => AnalyticsScreen(db: db, clock: () => now),

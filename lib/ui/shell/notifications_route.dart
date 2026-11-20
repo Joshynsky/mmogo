@@ -8,7 +8,10 @@ import 'package:flutter/material.dart';
 import '../../autoread/autoread_feature.dart';
 import '../../autoread/data/real_waiting_actions.dart';
 import '../../autoread/data/real_waiting_repository.dart';
+import '../../autoread/ui/levels/levels_deps.dart' show LevelsDeps;
+import '../../autoread/ui/notifications/rules_page_state.dart' show RulesPageState;
 import '../../autoread/ui/todo_choose.dart' show ChoosingIds;
+import '../../autoread/wiring/rules_wiring.dart' show RulesWiring;
 import '../../autoread/ui/waiting_section.dart' show WaitingActions;
 import '../../domain/notifications/news_item.dart';
 import '../../domain/notifications/notif_chip.dart';
@@ -32,8 +35,23 @@ class _NotificationsRouteState extends State<NotificationsRoute> {
 
   bool _undecidedRequested = false;
 
+  // 0.2.1 rules: the Ask first rows' page state (rows sent to "later", category names). Autoread only.
+  RulesPageState? _rules;
+
+  @override
+  void initState() {
+    super.initState();
+    if (kAutoReadCompiled) {
+      final r = _rules = RulesPageState();
+      final cats = LevelsDeps.instance?.categories;
+      if (cats != null) r.load(cats);
+      RulesWiring.suggestions?.refresh(); // the offers are read fresh each time the page opens
+    }
+  }
+
   @override
   void dispose() {
+    _rules?.dispose();
     _choosing.dispose();
     _note.dispose();
     super.dispose();
@@ -48,7 +66,7 @@ class _NotificationsRouteState extends State<NotificationsRoute> {
     if (kAutoReadCompiled) {
       final w = scope.waiting;
       if (w is RealWaitingRepository) {
-        actions = buildRealWaitingActions(context, w, choosing: _choosing, note: _note);
+        actions = buildRealWaitingActions(context, w, choosing: _choosing, note: _note, rules: _rules);
         if (!_undecidedRequested) {
           _undecidedRequested = true;
           w.refreshUndecided();
@@ -62,6 +80,7 @@ class _NotificationsRouteState extends State<NotificationsRoute> {
       quietNote: kAutoReadCompiled ? _note : null,
       initialChip: args is NotificationsRouteArgs ? args.chip : NotifChip.todo,
       focusId: args is NotificationsRouteArgs ? args.focusId : null,
+      openCategorizeId: args is NotificationsRouteArgs ? args.openCategorizeId : null,
       // A tap on a notice or update row opens the existing Updates page, which
       // holds the full text; the What's new row opens the pages to read.
       onOpenNews: (n) {

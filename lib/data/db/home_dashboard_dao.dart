@@ -110,6 +110,7 @@ class HomeDashboardDao {
              t.counterparty_label, t.transaction_occurred_at,
              t.transaction_cost_cents, t.agent_number,
              c.name AS classification_name, t.parent_transaction_id,
+             t.recorded_automatically,
              (SELECT group_concat(lname, char(31)) FROM
                 (SELECT lc.name AS lname FROM transactions ch
                  JOIN classifications lc ON lc.id = ch.classification_id
@@ -134,6 +135,7 @@ class HomeDashboardDao {
             feeCents: ((row['transaction_cost_cents'] ?? 0) as num).toInt(),
             agentNumber: row['agent_number'] as String?,
             parentTransactionId: row['parent_transaction_id'] as int?,
+            recordedAutomatically: row['recorded_automatically'] == 1,
             linkedCategoryNames: _names(row['linked_names'] as String?),
             classificationName: row['classification_name'] as String,
             occurredAt: DateTime.fromMillisecondsSinceEpoch(

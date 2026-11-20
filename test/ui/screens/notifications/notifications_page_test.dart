@@ -3,6 +3,7 @@
 // only make sense without auto-read are skipped in the autoread flavor.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/autoread/autoread_feature.dart';
 import 'package:mmogo/autoread/ui/notifications_autoread_copy.dart';
 import 'package:mmogo/domain/notifications/news_item.dart';
@@ -16,6 +17,7 @@ import '../../../support/news_fakes.dart';
 import '../../../support/waiting_fakes.dart';
 
 Widget _host(Widget page, {double scale = 1.0}) => MaterialApp(
+      navigatorKey: appNavigatorKey,
       theme: AppTheme.theme,
       builder: (context, c) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
@@ -122,15 +124,23 @@ void main() {
       expect(_heading(t), 'News (3)');
     });
 
-    testWidgets('Update on the update row swaps it for an unread What\'s new row', (t) async {
-      await _open(t, typicalNews());
+    testWidgets('Update on the update row opens the Updates page and keeps the row', (t) async {
+      _size(t, 360);
+      final repo = FakeNotificationsRepository(typicalNews());
+      final opened = <String>[];
+      await t.pumpWidget(_host(NotificationsPage(
+        news: repo,
+        initialChip: NotifChip.news,
+        clock: () => kFakeNow,
+        onOpenNews: (n) => opened.add(n.id),
+      )));
+      await t.pump();
+      await t.pump();
       await t.tap(find.bySemanticsLabel('$kNewsActionUpdate: $kUpdateRowTitle'));
       await t.pump();
-      await t.pump();
-      expect(_row('upd1'), findsNothing);
-      expect(_row('wn-upd1'), findsOneWidget);
-      expect(_row('wn1'), findsOneWidget);
-      expect(_heading(t), 'News (4)');
+      expect(opened, ['upd1']);
+      expect(_row('upd1'), findsOneWidget);
+      expect(repo.items.any((i) => i.id == 'upd1'), isTrue);
     });
 
     testWidgets('99+ cap on the News heading', (t) async {

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/autoread/logic/airtime_auto.dart';
 import 'package:mmogo/autoread/ui/airtime_kind_copy.dart';
-import 'package:mmogo/autoread/ui/auto_record_tab.dart';
+import 'package:mmogo/autoread/ui/levels/airtime_switches.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
 
 Widget _host(Widget child) => AppPaletteScope(
@@ -41,7 +41,7 @@ void main() {
 
   testWidgets('two switches with the kind labels, both default off, no Hard line', (t) async {
     phone(t);
-    await t.pumpWidget(_host(AutoRecordTab(controller: _controller([]))));
+    await t.pumpWidget(_host(AirtimeSwitches(controller: _controller([]))));
     expect(find.text(kAirKindMyselfLabel), findsOneWidget);
     expect(find.text(kAirKindOtherLabel), findsOneWidget);
     expect(find.text('For myself'), findsOneWidget);
@@ -54,7 +54,7 @@ void main() {
   testWidgets('other switch default off even when the first one is on', (t) async {
     phone(t);
     final c = _controller([])..setOn(true);
-    await t.pumpWidget(_host(AutoRecordTab(controller: c)));
+    await t.pumpWidget(_host(AirtimeSwitches(controller: c)));
     expect(_value(t, 'autoRecordMyselfSwitch'), isTrue);
     expect(_value(t, 'autoRecordOtherSwitch'), isFalse);
   });
@@ -63,7 +63,7 @@ void main() {
     phone(t);
     final calls = <String>[];
     final c = _controller(calls);
-    await t.pumpWidget(_host(AutoRecordTab(controller: c)));
+    await t.pumpWidget(_host(AirtimeSwitches(controller: c)));
     await t.tap(find.byKey(const Key('autoRecordOther')));
     await t.pumpAndSettle();
     expect(c.onOther, isTrue);

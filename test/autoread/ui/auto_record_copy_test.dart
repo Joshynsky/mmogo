@@ -17,8 +17,6 @@ void main() {
     kAutoRecordChipsGroup,
     kAutoRecordMyselfSub,
     kAutoRecordOtherSub,
-    autoRecordExplainTap(kAirKindMyselfLabel),
-    autoRecordExplainTap(kAirKindOtherLabel),
     kAutoRecordExplainUndo,
     kAutoRecordExplainLater,
     kAutoRecordLaterTypes,
@@ -34,12 +32,9 @@ void main() {
     }
   });
 
-  test('labels are the category names; explainer files under them', () {
+  test('labels are the category names; the signed explainer lines', () {
     expect(kAirKindMyselfLabel, 'For myself');
     expect(kAirKindOtherLabel, 'For another number');
-    expect(autoRecordExplainTap(kAirKindMyselfLabel),
-        'You tap Parse on each message, then mmogo files it under For myself.');
-    expect(autoRecordExplainTap(kAirKindOtherLabel), contains('under For another number.'));
     expect(kAutoRecordExplainLater, 'Filing without a tap comes in a later version.');
     expect(kAutoRecordExplainUndo, 'Each automatic record can be undone. You do not need to tap Categorize.');
   });

@@ -155,6 +155,32 @@ void main() {
       expect(seen.last.waiting + seen.last.readyToParse, 3); // the bell dropped with the item
     }, skip: skip);
 
+    testWidgets('zero number with a Could not read row listed: chip shows To do with no number', (t) async {
+      final h = t.ensureSemantics();
+      await open(t, [unreadable(1)]);
+      expect(todoCount([unreadable(1)], kFakeNow), 0); // the number itself is unchanged
+      expect(find.byKey(const Key('notif-chip-count-todo')), findsNothing);
+      expect(find.text('$kHeadingCouldNotRead (1)'), findsOneWidget);
+      expect(t.getSemantics(find.byKey(const Key('notif-chip-todo'))).label, kTodoChipSpoken);
+      h.dispose();
+    }, skip: skip);
+
+    testWidgets('zero number and nothing listed: To do 0 as before; nonzero unchanged', (t) async {
+      final h = t.ensureSemantics();
+      await open(t, []);
+      expect(count(t), '0');
+      expect(t.getSemantics(find.byKey(const Key('notif-chip-todo'))).label, '$kTodoChipSpoken, 0');
+      h.dispose();
+    }, skip: skip);
+
+    testWidgets('nonzero number with a Could not read row: number and spoken number unchanged', (t) async {
+      final h = t.ensureSemantics();
+      await open(t, [ready(1), unreadable(2)]);
+      expect(count(t), '1');
+      expect(t.getSemantics(find.byKey(const Key('notif-chip-todo'))).label, '$kTodoChipSpoken, 1');
+      h.dispose();
+    }, skip: skip);
+
     testWidgets('heading counts equal the rows under them', (t) async {
       await open(t, [ready(1), ready(2), unreadable(3), cat(4), cat(5), cat(6)]);
       expect(find.text('$kHeadingToParse (2)'), findsOneWidget);

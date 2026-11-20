@@ -4,13 +4,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/widgets/pill_toast.dart';
 import 'package:mmogo/data/maintenance/delete_data_service.dart';
 import 'package:mmogo/data/maintenance/reset_resume.dart';
 import 'package:mmogo/main.dart';
 import 'package:mmogo/ui/copy/delete_data_copy.dart';
 import 'package:mmogo/ui/restart_scope.dart';
 import 'package:mmogo/ui/screens/welcome_screen.dart';
-import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/ui/startup_notice.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
 import 'package:mmogo/ui/widgets/error_notes.dart';
@@ -228,20 +228,20 @@ void main() {
     testWidgets('a start-up reset that did not finish shows the notice once; two restarts add none', (tester) async {
       ResetResume.lastOutcome = ResetResumeOutcome.notFinished;
       await pumpApp(tester);
-      expect(find.byKey(const Key('startupNotice')), findsOneWidget);
+      expect(find.text(kDeleteDataNotFinished), findsOneWidget);
       expect(find.text(kDeleteDataNotFinished), findsOneWidget);
       // The messenger key survives a restart (GlobalKey), so the shown notice is
       // dismissed first: whatever appears after is a NEW notice.
-      appMessengerKey.currentState!.hideCurrentSnackBar();
+      PillToast.dismissNow();
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('startupNotice')), findsNothing);
+      expect(find.text(kDeleteDataNotFinished), findsNothing);
       for (var i = 0; i < 2; i++) {
         await tester.runAsync(() async {
           expect(await RestartScope.restart(tester.element(find.byType(WelcomeScreen))), isTrue);
         });
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
-        expect(find.byKey(const Key('startupNotice')), findsNothing, reason: 'restart ${i + 1}: no second notice');
+        expect(find.text(kDeleteDataNotFinished), findsNothing, reason: 'restart ${i + 1}: no second notice');
       }
     });
 
@@ -249,7 +249,7 @@ void main() {
       testWidgets('${o.name} shows nothing', (tester) async {
         ResetResume.lastOutcome = o;
         await pumpApp(tester);
-        expect(find.byKey(const Key('startupNotice')), findsNothing);
+        expect(find.text(kDeleteDataNotFinished), findsNothing);
       });
     }
   });

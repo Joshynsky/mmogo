@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../widgets/pill_toast.dart';
 import '../../app_info.dart';
 import '../../data/db/app_database.dart';
 import '../../data/db/local_data_summary_dao.dart';
@@ -115,18 +116,12 @@ class _ProfileScreenState extends State<ProfileScreen> with PrimaryTabRefresh<Pr
     if (!mounted) return;
     setState(() => _saving = false);
     if (ok) _nameController.text = trimmed;
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          !ok
-              ? 'Couldn\'t save your name — please try again'
-              : trimmed.isEmpty
-                  ? 'Name cleared — Home will greet you without a name'
-                  : 'Saved — Home will greet you as $trimmed',
-        ),
-      ),
+    PillToast.show(
+      !ok
+          ? 'Couldn\'t save your name — please try again'
+          : trimmed.isEmpty
+              ? 'Name cleared — Home will greet you without a name'
+              : 'Saved — Home will greet you as $trimmed',
     );
   }
 
@@ -136,11 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> with PrimaryTabRefresh<Pr
   Future<void> _showTipsAgain() async {
     await AppPrefs.resetAllTours();
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Tips reset. The guides will show again on every page.')),
-    );
+    PillToast.show('Tips reset. The guides will show again on every page.');
   }
 
   String get _countText {

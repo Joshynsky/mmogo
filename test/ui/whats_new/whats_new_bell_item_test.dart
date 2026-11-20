@@ -93,7 +93,7 @@ void main() {
                 context,
                 installedVersionName: '0.1.2',
                 writeSeenVersion: (v) async => written.add(v),
-                openSettings: () {},
+                openSettings: (_) {},
                 openBackup: () {},
                 inbox: box,
               ),
@@ -142,7 +142,7 @@ void main() {
                 readOnboardingComplete: () async => true,
                 writeSeenVersion: (v) async => written.add(v),
                 startupNoticeShown: () => false,
-                openSettings: () {},
+                openSettings: (_) {},
                 openBackup: () {},
                 inbox: box,
               );
@@ -180,7 +180,7 @@ void main() {
                 readOnboardingComplete: () async => true,
                 writeSeenVersion: (v) async {},
                 startupNoticeShown: () => false,
-                openSettings: () {},
+                openSettings: (_) {},
                 openBackup: () {},
                 inbox: box,
               );

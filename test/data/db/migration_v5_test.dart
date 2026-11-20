@@ -104,8 +104,8 @@ void main() {
   });
 
   test('the live version is 5, the ladder has step 5, the backup schema equals it', () {
-    expect(kDbVersion, 7);
-    expect(AppMigrations.steps.keys, [2, 3, 4, 5, 6, 7]);
+    expect(kDbVersion, 8);
+    expect(AppMigrations.steps.keys, [2, 3, 4, 5, 6, 7, 8]);
     expect(kBackupSchemaVersion, kDbVersion); // backup_schema_version_equals_db_version_5
   });
 
@@ -155,7 +155,7 @@ void main() {
     await v4.close();
 
     final db = await _openLive(path);
-    expect(await _uv(db), 7);
+    expect(await _uv(db), 8);
     expect(await _id(db, kAirtimeSeedMyself), oppoId, reason: 'the id does not change');
     expect(await _count(db, 'SELECT COUNT(*) FROM transactions WHERE classification_id = ?', [oppoId]), 11);
     expect((await db.rawQuery('SELECT name FROM classifications WHERE id = ?', [oppoId])).single['name'], 'For myself');
@@ -324,15 +324,15 @@ void main() {
     await expectLater(_openLive(path), throwsA(isA<StateError>()));
   });
 
-  test('open_newer_than_7_refused_unchanged', () async {
+  test('open_newer_than_8_refused_unchanged', () async {
     final path = _path('fresh');
     final fresh = await _openLive(path);
-    await fresh.execute('PRAGMA user_version = 8');
+    await fresh.execute('PRAGMA user_version = 9');
     final before = await _all(fresh, 'classifications');
     await fresh.close();
     await expectLater(_openLive(path), throwsA(isA<StateError>()));
     final raw = await databaseFactoryFfi.openDatabase(path, options: OpenDatabaseOptions(singleInstance: false));
-    expect(await _uv(raw), 8);
+    expect(await _uv(raw), 9);
     expect(await _all(raw, 'classifications'), before);
     await raw.close();
   });
@@ -341,7 +341,7 @@ void main() {
     final p2 = _path('v2');
     await (await buildV2Database(p2)).close();
     final d2 = await _openLive(p2);
-    expect(await _uv(d2), 7);
+    expect(await _uv(d2), 8);
     expect(await _count(d2, 'SELECT COUNT(*) FROM classifications WHERE seed_key IS NOT NULL'), 18);
     expect(await _id(d2, kAirtimeSeedOther), isPositive);
     expect(await _triggerText(d2), _norm(kAirtimeKindTriggerDdl.replaceFirst(' IF NOT EXISTS', '')));
@@ -359,7 +359,7 @@ void main() {
             }));
     await v1.close();
     final d1 = await _openLive(p1);
-    expect(await _uv(d1), 7);
+    expect(await _uv(d1), 8);
     expect(await _count(d1, 'SELECT COUNT(*) FROM classifications WHERE seed_key IS NOT NULL'), 18);
     expect((await d1.rawQuery('SELECT name FROM classifications WHERE seed_key = ?', [kAirtimeSeedMyself])).single['name'],
         'For myself');
@@ -376,7 +376,7 @@ void main() {
     // A v5 file needs no snapshot.
     final db = await _openLive(path);
     await db.close();
-    expect(await evidence.headerUserVersion(), 7);
+    expect(await evidence.headerUserVersion(), 8);
     expect(await prepareOpenSnapshot(evidence, proofOnRecord: true), isNull);
   });
 
@@ -442,7 +442,7 @@ void main() {
 
   test('fresh_v5_seeds_18_classifications_both_airtime_active', () async {
     final db = await _openLive(_path('fresh'));
-    expect(await _uv(db), 7);
+    expect(await _uv(db), 8);
     expect(await _count(db, 'SELECT COUNT(*) FROM classifications'), 18);
     final rows = await db.rawQuery('SELECT id, name, active, seed_key FROM classifications WHERE id IN (14, 18) ORDER BY id');
     expect(rows.map((r) => r.values.join('|')), ['14|For myself|1|AIRTIME:airtime', '18|For another number|1|AIRTIME:for_another_number']);

@@ -28,7 +28,7 @@ Future<void> pumpAdd(
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(MaterialApp(
-    scaffoldMessengerKey: appMessengerKey,
+    navigatorKey: appNavigatorKey,
     home: Builder(
       builder: (context) => Scaffold(
         body: Center(

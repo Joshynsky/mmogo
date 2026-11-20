@@ -57,15 +57,28 @@ class PrimaryShellController {
   /// pop back to it).
   ModalRoute<Object?>? route;
 
+  /// The tab Analytics was opened from by a hand-off (Paid to): system Back returns there, not to Home.
+  /// Any tab chosen by hand forgets it.
+  int? returnTo;
+
   void select(int i) {
     if (i == 2) return; // Add is a pushed page, never a shell tab.
+    returnTo = null;
     index.value = i;
+  }
+
+  /// Back from a non-Home tab: to the tab a hand-off came from, else Home.
+  void goBack() {
+    final to = returnTo;
+    select(to ?? 0);
   }
 
   /// Switches to Analytics and retargets it (no second Analytics is stacked).
   void openAnalytics(Object args) {
+    final from = index.value;
     analyticsRequest.value = AnalyticsRequest(args);
     index.value = analyticsIndex;
+    returnTo = from == analyticsIndex || from == 0 ? null : from;
   }
 
   void dispose() {
@@ -159,7 +172,7 @@ class _PrimaryShellState extends State<PrimaryShell> {
     return PopScope(
       canPop: index == 0,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _controller.select(0);
+        if (!didPop) _controller.goBack();
       },
       child: _ShellScope(
         controller: _controller,

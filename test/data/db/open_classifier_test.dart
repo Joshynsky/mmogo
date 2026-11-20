@@ -116,8 +116,8 @@ void main() {
     test('flag true, header 1..kDbVersion-1: the snapshot', () async {
       expect(await prepareOpenSnapshot(FakeEvidence(), proofOnRecord: true), _snap);
     });
-    test('header at or above kDbVersion (7, 6) or 0 or unreadable: null, no snapshot taken', () async {
-      for (final h in <int?>[7, kDbVersion, 0, null]) {
+    test('header at or above kDbVersion (8, 7) or 0 or unreadable: null, no snapshot taken', () async {
+      for (final h in <int?>[8, kDbVersion, 0, null]) {
         final e = FakeEvidence()..header = h;
         expect(await prepareOpenSnapshot(e, proofOnRecord: true), isNull, reason: 'h=$h');
         expect(e.calls, 1, reason: 'only the header was read');

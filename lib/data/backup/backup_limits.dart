@@ -15,13 +15,16 @@ const int kBackupFormatVersion = 1;
 /// Mirrors `kDbVersion` in `migrations.dart` (a test pins the two together);
 /// kept as a literal here so this file stays import-free.
 ///
+/// 8 (0.2.1) adds one optional row key, `recorded_auto` (1 = recorded with no tap), written only
+/// when 1. A 0.2.0 or older app refuses a schema 8 file as made by a newer version (nothing is
+/// written); a file of schema 7 or lower restores with every flag 0. `format_version` stays 1.
 /// 7 (0.2.1) adds the group code `CASH_USE` (a withdrawal's own category list, no seeds); a
 /// file of schema 6 or lower never carries it and restores unchanged (the group stays empty).
 /// 6 (0.2.1) adds two row keys, `parent_id` and `cash_only_decided`. A 0.2.1 backup
 /// (schema 6) is refused by 0.2.0 as made by a newer version (its validator rejects
 /// `schema_version` above 5); a 0.2.0 backup (schema 5) restores in 0.2.1 with every
 /// entry unlinked (parent null, decided 0) and the same counts.
-const int kBackupSchemaVersion = 7;
+const int kBackupSchemaVersion = 8;
 
 /// The lowest `schema_version` a file may carry (`seed_key` exists from v2).
 const int kBackupMinSchemaVersion = 2;
@@ -291,6 +294,14 @@ const List<String> kBackupTransactionLinkKeys = [
   'parent_id',
   'cash_only_decided',
 ];
+
+/// First schema whose transaction rows may carry `recorded_auto` (0.2.1, auto-record marker).
+const int kBackupFirstSchemaWithAutoMarker = 8;
+
+/// The ONE optional row key of a schema >= 8 file: `recorded_auto`, int 0 or 1, written only
+/// when 1 (so a file without auto-recorded rows keeps its size). 1 on a CASH or MANUAL row is
+/// refused by the validator. A file of schema 7 or older that carries it is refused.
+const String kBackupRecordedAutoKey = 'recorded_auto';
 
 /// Row keys of a schema >= 3 file (13): `agent_number` is always present
 /// (null allowed). The exporter writes these (plus the optional link keys above).

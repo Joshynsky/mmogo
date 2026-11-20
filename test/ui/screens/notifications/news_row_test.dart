@@ -84,7 +84,14 @@ void main() {
             : {NewsKind.notice: kSpokenNewNotice, NewsKind.update: kSpokenUpdateAvailable, NewsKind.whatsNew: kSpokenNewWhatsNew}[kind]!;
         expect(find.bySemanticsLabel('$prefix. T $name. 3 hours ago${read ? ' · Read' : ''}.'), findsOneWidget);
 
-        if (read) {
+        if (kind == NewsKind.update) {
+          // A constant link to the Updates page, read or not: no Dismiss, no Remove.
+          expect(find.text(kNewsActionUpdate), findsOneWidget);
+          expect(find.text(kNewsActionDismiss), findsNothing);
+          expect(find.text(kNewsActionRemove), findsNothing);
+          await t.tap(find.text(kNewsActionUpdate));
+          expect(calls, ['update']);
+        } else if (read) {
           expect(find.text(kNewsActionRemove), findsOneWidget);
           expect(find.text(kNewsActionRead), findsNothing);
           expect(find.text(kNewsActionDismiss), findsNothing);
@@ -110,6 +117,20 @@ void main() {
     }
   }
 
+  testWidgets('Install help row shows the Install help chip and speaks it', (t) async {
+    final h = t.ensureSemantics();
+    final it = NewsItem(
+      id: 'InstallHelp', kind: NewsKind.notice, title: 'Installing', body: 'Body text', createdAt: _now, permanent: true);
+    await t.pumpWidget(host(NewsRow(it, _now)));
+    expect(find.text('Install help'), findsOneWidget);
+    expect(find.byKey(const Key('notifRowChip')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp(r'Install help\. Installing')), findsOneWidget);
+    // Other rows have no chip.
+    await t.pumpWidget(host(NewsRow(item(NewsKind.notice), _now)));
+    expect(find.byKey(const Key('notifRowChip')), findsNothing);
+    h.dispose();
+  });
+
   testWidgets('a row with no callbacks does not throw', (t) async {
     await t.pumpWidget(host(NewsRow(item(NewsKind.notice), _now)));
     await t.tap(find.text(kNewsActionRead));
@@ -130,7 +151,7 @@ void main() {
         ));
         expect(t.takeException(), isNull);
         final wells = find.byType(InkWell);
-        expect(wells, findsNWidgets(3));
+        expect(wells, findsNWidgets(kind == NewsKind.update ? 2 : 3));
         for (final e in wells.evaluate()) {
           final s = t.getSize(find.byElementPredicate((x) => x == e));
           expect(s.width, greaterThanOrEqualTo(44));

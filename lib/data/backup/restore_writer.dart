@@ -19,6 +19,8 @@ const List<String> kRestoreTxColumns = [
   'transaction_occurred_at', 'created_at', 'deleted_at',
   // 0.2.1 (appended): the link to the withdrawal (a NEW id, re-mapped) and the decision.
   'parent_transaction_id', 'cash_only_decided',
+  // 0.2.1 (appended): the auto-record marker (0 for a file without the key).
+  'recorded_automatically',
 ];
 const List<String> kRestoreMapColumns = [
   'source_type', 'counterparty_key', 'classification_id', 'auto_apply', 'updated_at',
@@ -33,8 +35,8 @@ const String _insertTxSql =
     'transaction_cost_cents, counterparty_label, counterparty_phone, '
     'paybill_account_number, agent_number, classification_id, raw_parse_source, '
     'transaction_occurred_at, created_at, deleted_at, '
-    'parent_transaction_id, cash_only_decided) '
-    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)';
+    'parent_transaction_id, cash_only_decided, recorded_automatically) '
+    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)';
 const String _insertMapSql =
     'INSERT INTO counterparty_classification_map (source_type, '
     'counterparty_key, classification_id, auto_apply, updated_at) '
@@ -309,6 +311,7 @@ class RestoreWriter {
             r['transaction_occurred_at'], r['created_at'],
             isChild(r) ? newIdByFileId[r['parent_id']] : relink[r['id']],
             r['cash_only_decided'] ?? 0,
+            r['recorded_auto'] ?? 0,
           ]);
         }
         final ids = await batch.commit(noResult: false, continueOnError: false);

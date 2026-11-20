@@ -128,6 +128,27 @@ void main() {
     expect(got, NotifChip.categorize);
   });
 
+  testWidgets('hideCount: no number shown or spoken, not dashed or dimmed; default unchanged', (t) async {
+    final h = t.ensureSemantics();
+    List<NotifChipSpec> withHide(bool hide) => [
+      NotifChipSpec(chip: NotifChip.parse, label: 'Parse', spokenName: 'To parse', count: 0, hideCount: hide),
+      _chips()[3],
+    ];
+    for (final scale in [1.0, 1.3]) {
+      await t.pumpWidget(_wrap(withHide(true), selected: NotifChip.news, scale: scale));
+      expect(find.byKey(const Key('notif-chip-count-parse')), findsNothing);
+      expect(find.text('Parse'), findsOneWidget);
+      expect(t.getSemantics(find.byKey(const Key('notif-chip-parse'))).label, 'To parse');
+      final op = t.widget<Opacity>(find.descendant(
+          of: find.byKey(const Key('notif-chip-parse')), matching: find.byType(Opacity)));
+      expect(op.opacity, 1);
+    }
+    await t.pumpWidget(_wrap(withHide(false), selected: NotifChip.news));
+    expect(t.widget<Text>(find.byKey(const Key('notif-chip-count-parse'))).data, '0');
+    expect(t.getSemantics(find.byKey(const Key('notif-chip-parse'))).label, 'To parse, 0');
+    h.dispose();
+  });
+
   testWidgets('tap calls onSelected', (t) async {
     NotifChip? got;
     await t.pumpWidget(_wrap(_chips(), onSelected: (c) => got = c));

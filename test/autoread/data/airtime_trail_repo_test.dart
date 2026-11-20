@@ -26,6 +26,7 @@ import 'package:mmogo/autoread/ui/waiting_section.dart' show WaitingActions;
 import 'package:mmogo/data/db/schema.dart';
 import 'package:mmogo/data/prefs/recipient_memory.dart';
 import 'package:mmogo/domain/airtime/airtime_kind.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -401,6 +402,7 @@ void main() {
         item = (await e.repo.watch().first).single;
       });
       await t.pumpWidget(MaterialApp(
+        navigatorKey: appNavigatorKey,
         home: Scaffold(
           body: Builder(builder: (c) {
             actions = buildRealWaitingActions(c, e.repo);

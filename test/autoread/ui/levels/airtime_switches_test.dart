@@ -5,11 +5,13 @@ import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
+import 'package:mmogo/ui/widgets/pill_toast.dart';
 import 'package:mmogo/autoread/logic/airtime_auto.dart';
 import 'package:mmogo/autoread/ui/auto_group.dart';
 import 'package:mmogo/autoread/ui/airtime_kind_copy.dart';
 import 'package:mmogo/autoread/ui/auto_record_copy.dart';
-import 'package:mmogo/autoread/ui/auto_record_tab.dart';
+import 'package:mmogo/autoread/ui/levels/airtime_switches.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -37,6 +39,7 @@ AirtimeAutoController _controller() {
 Widget _host(Widget child, {double scale = 1, String mode = 'light'}) => AppPaletteScope(
       controller: AppPaletteController('ocean', mode),
       child: MaterialApp(
+        navigatorKey: appNavigatorKey,
         home: Builder(
           builder: (context) => MediaQuery(
             data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
@@ -47,7 +50,7 @@ Widget _host(Widget child, {double scale = 1, String mode = 'light'}) => AppPale
     );
 
 Widget _tab({double scale = 1, String mode = 'light'}) =>
-    _host(AutoRecordTab(controller: _c), scale: scale, mode: mode);
+    _host(SingleChildScrollView(child: AirtimeSwitches(controller: _c)), scale: scale, mode: mode);
 
 void main() {
   setUp(() {
@@ -62,40 +65,14 @@ void main() {
     addTearDown(t.view.reset);
   }
 
-  testWidgets('starts off: chips, two rows, no panel, no explainer', (t) async {
+  testWidgets('starts off: two rows, no explainer text', (t) async {
     phone(t);
     await t.pumpWidget(_tab());
-    expect(find.text('Airtime'), findsOneWidget);
-    for (final code in ['SM', 'PB', 'BG', 'W', 'P']) {
-      expect(find.text(code), findsOneWidget);
-    }
     expect(find.text(kAirtimeNameMyselfForTest), findsOneWidget);
     expect(find.text('For another number'), findsOneWidget);
-    expect(find.byKey(const Key('autoRecordMyselfPanel')), findsNothing);
     expect(find.text(kAutoRecordExplainLater), findsNothing);
-    expect(find.text(kAutoRecordLaterTypes), findsOneWidget);
     expect(_c.on, isFalse);
     expect(_c.onOther, isFalse);
-  });
-
-  testWidgets('chips sit in one narrow row, muted ones are inert and spoken as coming later', (t) async {
-    phone(t);
-    final sem = t.ensureSemantics();
-    await t.pumpWidget(_tab());
-    final keys = ['Airtime', 'SM', 'PB', 'BG', 'W', 'P'].map((c) => Key('autoRecordChip$c')).toList();
-    final rects = keys.map((k) => t.getRect(find.byKey(k))).toList();
-    for (final r in rects) {
-      expect(r.width, lessThan(150), reason: 'chip must not be full width');
-      expect(r.height, 44);
-      expect((r.top - rects.first.top).abs(), lessThan(1), reason: 'one row');
-    }
-    for (final code in ['SM', 'PB', 'BG', 'W', 'P']) {
-      expect(find.ancestor(of: find.byKey(Key('autoRecordChip$code')), matching: find.byType(InkWell)), findsNothing);
-      expect(find.ancestor(of: find.byKey(Key('autoRecordChip$code')), matching: find.byType(GestureDetector)), findsNothing);
-    }
-    expect(find.bySemanticsLabel('Send money, coming later'), findsOneWidget);
-    expect(find.bySemanticsLabel('Paybill, coming later'), findsOneWidget);
-    sem.dispose();
   });
 
   testWidgets('own number is first, the label comes from the category name', (t) async {
@@ -107,7 +84,7 @@ void main() {
     expect(kAirKindMyselfLabel, 'For myself');
   });
 
-  testWidgets('own switch writes its own key; panel opens and closes', (t) async {
+  testWidgets('own switch writes its own key; no panel opens', (t) async {
     phone(t);
     await t.pumpWidget(_tab());
     await t.tap(find.byKey(const Key('autoRecordMyself')));
@@ -115,17 +92,15 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getBool(kAirtimeAutoPrefKey), isTrue);
     expect(prefs.getBool(kAirtimeAutoOtherPrefKey), isNull);
-    expect(find.byKey(const Key('autoRecordMyselfPanel')), findsOneWidget);
-    expect(find.byKey(const Key('autoRecordOtherPanel')), findsNothing);
-    expect(find.text(autoRecordExplainTap(kAirKindMyselfLabel)), findsOneWidget);
-    expect(find.text(kAutoRecordExplainLater), findsOneWidget);
-    expect(find.textContaining('recorded at once'), findsOneWidget);
+    expect(find.byKey(const Key('autoRecordMyselfPanel')), findsNothing);
+    expect(find.text(kAutoRecordExplainLater), findsNothing);
+    expect(find.textContaining('recorded at once'), findsOneWidget); // the ON toast
+    PillToast.dismissNow(); // the pill floats over the top row: clear it before the next tap
+    await t.pump();
     await t.tap(find.byKey(const Key('autoRecordMyself')));
     await t.pumpAndSettle();
     expect(prefs.getBool(kAirtimeAutoPrefKey), isFalse);
-    expect(find.byKey(const Key('autoRecordMyselfPanel')), findsNothing);
     expect(find.textContaining('Nothing is recorded for you'), findsOneWidget);
-    expect(find.text(kAutoRecordExplainLater), findsNothing);
   });
 
   testWidgets('other switch writes the other key only', (t) async {
@@ -138,7 +113,6 @@ void main() {
     expect(prefs.getBool(kAirtimeAutoPrefKey), isNull);
     expect(_c.onOther, isTrue);
     expect(_c.on, isFalse);
-    expect(find.text(autoRecordExplainTap(kAirKindOtherLabel)), findsOneWidget);
   });
 
   testWidgets('no Soft or Hard control anywhere on the tab, open or closed', (t) async {
@@ -154,29 +128,13 @@ void main() {
     expect(find.byKey(const Key('autoRecordMyselfSoft')), findsNothing);
   });
 
-  testWidgets('the extra tab label carries N and follows the controller', (t) async {
+  testWidgets('switches and trail agree on one controller; no switch card anywhere', (t) async {
     phone(t);
-    final tab = autoRecordExtraTab(_c);
-    expect(tab.pageTitle, 'Remembered');
-    expect(tab.tabLabel(), 'Recorded automatically · 0');
-    var fired = 0;
-    tab.listenable.addListener(() => fired++);
-    _c.setOn(true);
-    _c.setOnOther(true);
-    expect(tab.tabLabel(), 'Recorded automatically · 2');
-    expect(fired, 2);
-    expect(autoRecordTabSpoken(1), 'Recorded automatically, 1 of 2 on');
-  });
-
-  testWidgets('tab, tab label and trail agree on one controller; no switch card anywhere', (t) async {
-    phone(t);
-    final tab = autoRecordExtraTab(_c);
     await t.pumpWidget(_host(ListenableBuilder(
       listenable: _c,
       builder: (context, _) => Column(children: [
-        Text(tab.tabLabel(), key: const Key('tabLabel')),
         AutoGroup(_c, DateTime(2026, 11, 13, 9), onChangeInSettings: () {}),
-        Expanded(child: AutoRecordTab(controller: _c)),
+        Expanded(child: SingleChildScrollView(child: AirtimeSwitches(controller: _c))),
       ]),
     )));
     expect(find.byKey(const Key('autoAirtimeCard')), findsNothing);
@@ -184,11 +142,8 @@ void main() {
     await t.pumpAndSettle();
     expect(_c.onOther, isTrue);
     expect(_c.on, isFalse);
-    expect(t.widget<Text>(find.byKey(const Key('tabLabel'))).data, 'Recorded automatically · 1');
     await t.tap(find.byKey(const Key('autoRecordMyself')));
     await t.pumpAndSettle();
-    expect(t.widget<Text>(find.byKey(const Key('tabLabel'))).data, 'Recorded automatically · 2');
-    expect(find.byKey(const Key('autoRecordMyselfPanel')), findsOneWidget);
     // A new record shows on the trail, with its link; still no card.
     _c.add(AutoRecorded(rowId: 5, amountCents: 500, at: DateTime(2026, 11, 13, 9)));
     await t.pumpAndSettle();
@@ -196,15 +151,16 @@ void main() {
     expect(find.byKey(const Key('autoAirtimeCard')), findsNothing);
   });
 
-  testWidgets('the open panel says each record can be undone and no Categorize tap is needed', (t) async {
+  testWidgets('switched on: none of the rule paragraphs is on the page (they live in the "?" sheet)', (t) async {
     phone(t);
     await t.pumpWidget(_tab());
-    expect(find.text(kAutoRecordExplainUndo), findsNothing);
     await t.tap(find.byKey(const Key('autoRecordMyself')));
+    await t.tap(find.byKey(const Key('autoRecordOther')));
     await t.pumpAndSettle();
-    expect(find.text(kAutoRecordExplainUndo), findsOneWidget);
-    expect(find.textContaining('can be undone'), findsOneWidget);
-    expect(find.textContaining('Categorize'), findsOneWidget);
+    expect(find.textContaining('You tap Parse on each message'), findsNothing);
+    expect(find.text(kAutoRecordExplainUndo), findsNothing);
+    expect(find.text(kAutoRecordExplainLater), findsNothing);
+    expect(find.byKey(const Key('autoRecordMyselfExplain')), findsNothing);
   });
 
   testWidgets('no digits or phone text anywhere in the open tab', (t) async {
@@ -218,7 +174,7 @@ void main() {
     }
   });
 
-  testWidgets('spoken labels: rows toggle with name and hint, chips say coming later', (t) async {
+  testWidgets('spoken labels: rows toggle with name and hint', (t) async {
     phone(t);
     await t.pumpWidget(_tab());
     final row = t.getSemantics(find.byKey(const Key('autoRecordMyself')));
@@ -226,11 +182,10 @@ void main() {
     expect(row.hint, kAutoRecordMyselfSub);
     expect(row.getSemanticsData().flagsCollection.isToggled != Tristate.none, isTrue);
     expect(row.getSemanticsData().flagsCollection.isToggled == Tristate.isTrue, isFalse);
-    expect(t.getSemantics(find.byKey(const Key('autoRecordChipPB'))).label, 'Paybill, coming later');
   });
 
   for (final mode in ['light', 'dark']) {
-    testWidgets('large text 1.3 and $mode: both rows open, no overflow, block aligned with row text', (t) async {
+    testWidgets('large text 1.3 and $mode: both switches on, no overflow, rows fit the width', (t) async {
       phone(t);
       await t.pumpWidget(_tab(scale: 1.3, mode: mode));
       await t.tap(find.byKey(const Key('autoRecordMyself')));
@@ -238,12 +193,7 @@ void main() {
       await t.pumpAndSettle();
       expect(t.takeException(), isNull);
       for (final k in ['autoRecordMyself', 'autoRecordOther']) {
-        final line1 = find.byKey(Key('${k}Explain'));
-        final line2 = find.byKey(Key('${k}ExplainLater'));
-        expect(t.getTopLeft(line1).dx, t.getTopLeft(line2).dx);
-        expect(t.getTopLeft(line1).dx, 60);
-        expect(t.getRect(line1).right, 390 - 14);
-        expect(t.getTopLeft(line2).dy, greaterThanOrEqualTo(t.getBottomLeft(line1).dy));
+        expect(t.getRect(find.byKey(Key(k))).right, lessThanOrEqualTo(390));
       }
     });
   }

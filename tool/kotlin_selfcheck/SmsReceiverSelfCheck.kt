@@ -9,6 +9,8 @@ internal object SmsReceiverSelfCheck {
             if (!ok) fails.add(name)
         }
 
+        check("no parse due: the ready alert goes first", SmsReceiverLogic.readyAlertFirst(false))
+        check("parse due on arrival: no ready alert first", !SmsReceiverLogic.readyAlertFirst(true))
         check("MPESA allowed", SmsReceiverLogic.senderAllowed("MPESA"))
         check("padded lowercase allowed", SmsReceiverLogic.senderAllowed(" mpesa "))
         check("MPesa allowed", SmsReceiverLogic.senderAllowed("MPesa"))

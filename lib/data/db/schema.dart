@@ -4,6 +4,7 @@ import '../../domain/airtime/airtime_kind.dart';
 import 'migration_v3_ddl.dart';
 import 'migration_v5_ddl.dart';
 import 'migration_v6_ddl.dart';
+import 'migration_v8_ddl.dart';
 import 'migration_v7_ddl.dart';
 
 /// Pure schema/seed logic, factored out of [AppDatabase] so it can be
@@ -63,7 +64,7 @@ class AppSchema {
     (group: 'AIRTIME', name: kAirtimeNameOther, seedKey: kAirtimeSeedOther),
   ];
 
-  /// Creates the CURRENT (version 7) schema: the v3 tables plus `fuliza_events`, the Airtime kind-lock trigger and the v6 link columns/triggers from the frozen constants in
+  /// Creates the CURRENT (version 8) schema: the v3 tables plus `fuliza_events`, the Airtime kind-lock trigger and the v6 link columns/triggers from the frozen constants in
   /// `migration_v3_ddl.dart`, so a fresh install and a migrated 0.1.1 database
   /// come from the same text. (The long design history of the `transactions`
   /// CHECKs lives with the frozen 0.1.1 copy, `test/fixtures/schema_v2.dart`.)
@@ -76,6 +77,9 @@ class AppSchema {
     }
     await db.execute(kAirtimeKindTriggerDdl);
     for (final sql in kV6Statements) {
+      await db.execute(sql);
+    }
+    for (final sql in kV8Statements) {
       await db.execute(sql);
     }
   }

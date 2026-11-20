@@ -15,6 +15,11 @@ import 'data/autoread_wipe.dart';
 import 'data/pending_items_store.dart';
 import 'logic/airtime_auto.dart' show AirtimeAutoController;
 import 'logic/reading_controller.dart';
+import 'rules/prefs_rule_engine.dart';
+import 'rules/prefs_rule_store.dart';
+import 'rules/prefs_undone_codes.dart';
+import 'rules/rule_backup_guard.dart';
+import 'rules/rule_cleanup.dart';
 
 class AutoReadRuntime {
   AutoReadRuntime._();
@@ -31,6 +36,14 @@ class AutoReadRuntime {
   /// and the Notifications card read and flip the same state; cleared on dispose.
   static AirtimeAutoController? airtime;
 
+  // ---- AUTOREAD RULES wiring (S2a): the ONE rules store, engine, undone codes,
+  // backup guard and clean-up hooks of the process. Lazy; preferences only.
+  static final PrefsRuleStore ruleStore = PrefsRuleStore();
+  static final PrefsRuleEngine ruleEngine = PrefsRuleEngine(ruleStore);
+  static final PrefsUndoneCodes undoneCodes = PrefsUndoneCodes();
+  static final RuleBackupGuard ruleGuard = RuleBackupGuard();
+  static final RuleCleanup ruleCleanup = RuleCleanup(ruleStore, guard: ruleGuard);
+
   /// Set by the running app: rebuilds the waiting rows after Delete data.
   static Future<void> Function()? refresh;
 
@@ -40,6 +53,7 @@ class AutoReadRuntime {
     try {
       await ReadingControllerHolder.instance?.reconcile();
     } catch (_) {}
+    await ruleCleanup.enforceDetailsOff(); // details OFF keeps no rule (never throws)
   }
 
   /// Sets the controller and the Delete data hook. Safe to call twice.
@@ -49,6 +63,6 @@ class AutoReadRuntime {
       store: store,
       prefs: SharedReadingPrefs(),
     );
-    ResetEnv.defaultDeviceWipe = AutoReadWipe(refresh: () async => refresh?.call()).run;
+    ResetEnv.defaultDeviceWipe = AutoReadWipe(refresh: () async => refresh?.call(), rules: ruleGuard).run;
   }
 }

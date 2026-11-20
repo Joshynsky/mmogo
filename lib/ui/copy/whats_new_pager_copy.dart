@@ -1,54 +1,49 @@
 /// 0.1.2 A5a (WN1, PK2, CW2): the What's-new page's words (the page replaced the
-/// six-card sheet). The item texts follow the signed mock
-/// `_pipeline/ui-rework/whats-new-page.html` (its COPY object), the partner's
-/// wording file of 20-10-2026 and the signed sentences of `pages/wording.html`;
-/// the fixed sentences come from their one source constant and are never
-/// retyped here. This file holds the standard build's words only; the other
-/// build's own words are in `lib/autoread/ui/whats_new_autoread_copy.dart`. PM
-/// placeholders are listed in `s11a-deviations.md`.
+/// six-card sheet). 0.2.1: every item text follows the PM-signed mock
+/// `_pipeline/v0.2.1/mock-whats-new-0.2.1/index.html` (its COPY and ITEMS objects, signed
+/// 20-11-2026); the fixed sentences come from their one source constant and are never
+/// retyped here. This file holds the standard build's words and the words shared by both builds;
+/// the other build's own words are in `lib/autoread/ui/whats_new_autoread_copy.dart`.
 library;
 
 import 'data_copy.dart';
 import 'privacy_copy.dart';
 
 /// The version the page is about. A FIXED constant (not `AppInfo`): the page's
-/// title and the Updates entry say 0.2.0 (PM 31-10-2026: they must match the
-/// build). 0.1.3 was never released, so its six items (wording signed by the PM
-/// 01-11-2026, WN-0.1.3) are folded in and tagged [kWhatsNewTagFrom013]; the
-/// items new in 0.2.0 carry [kWhatsNewTagNew] (PM 14-11-2026).
-const kWhatsNewPagerVersion = '0.2.0';
+/// title and the Updates entry say 0.2.1 (PM 31-10-2026: they must match the
+/// build). The 0.2.1 page (PM-signed mock 20-11-2026) lists the items new in 0.2.1, a fold of
+/// "more changes", and one line saying everything from 0.2.0 is still here; the 0.2.0 and 0.1.3
+/// items are not listed again.
+// WORDING-DRAFT (0.2.1, signed mock 20-11-2026)
+const kWhatsNewPagerVersion = '0.2.1';
 
-/// The tag on each item: which update it came from (SIGNED PM 14-11-2026).
-const kWhatsNewTagNew = 'New in 0.2.0';
-const kWhatsNewTagFrom013 = 'From 0.1.3';
+/// The tag on each item (signed mock 20-11-2026).
+// WORDING-DRAFT (0.2.1, signed mock 20-11-2026)
+const kWhatsNewTagNew = 'New in 0.2.1';
 
 const kWhatsNewPagerTitle = "What's new in mmogo $kWhatsNewPagerVersion";
 
 /// The Updates entry (a synthetic card, not a stored notice).
-// SIGNED (PM 14-11-2026: 0.1.3 folded into 0.2.0)
+// WORDING-DRAFT (0.2.1, PM agreed 20-11-2026: only what 0.2.1 built)
 const kWhatsNewEntryBody =
-    'Airtime for another number, backups, and the 0.1.3 changes: the bottom bar, Paid to, receiver details, Recently deleted, exports and privacy.';
+    'Withdrawals that log cash, a choice of account in Paid to, an Update button, and clearer messages.';
 
 /// PLACEHOLDER (not the mock's "See what's new": that label opens the browser
 /// for release notices, see the Updates footnote).
 const kWhatsNewEntryButton = "Read what's new";
 
-/// The line under the title (standard build: six items).
-// SIGNED (PM 14-11-2026)
-const kWhatsNewIntro =
-    '0.1.3 was never released, so its changes are folded into 0.2.0. Each item says which update it came from. '
-    'Tap one to read it. Tap Got it when you are done.';
+/// The line under the title (mock COPY.intro).
+// WORDING-DRAFT (0.2.1, signed mock 20-11-2026)
+// WORDING-DRAFT (0.2.1, PM 20-11-2026: true for both entry points, Back or Got it)
+const kWhatsNewIntro = 'Tap one to read it.';
 
-// New in 0.2.0, shared by both builds (SIGNED PM 14-11-2026)
-const kWhatsNewAirOtherTitle = 'Airtime for another number';
-const kWhatsNewAirOtherSummary = 'Airtime bought for another number is now read and recorded.';
-const kWhatsNewAirOtherBody =
-    'Airtime bought for another number is now read and recorded. Earlier versions missed it. '
-    'Airtime has two categories: For myself and For another number. Your earlier airtime is filed under For myself.';
-
-const kWhatsNewBackupsTitle = 'Backups';
-const kWhatsNewBackupsSummary = kBackupNotRestorableByOlderV4;
-const kWhatsNewBackupsBody = '$kBackupNotRestorableByOlderV4 Backups from 0.1.2 still restore.';
+// The fold and the line above Privacy (mock COPY).
+// WORDING-DRAFT (0.2.1, signed mock 20-11-2026)
+const kWhatsNewStill = 'Everything from 0.2.0 is still here.';
+const kWhatsNewMoreLabel = 'More changes';
+const kWhatsNewMoreShow = 'Show more changes';
+const kWhatsNewMoreHide = 'Hide more changes';
+const kWhatsNewOpenInSettings = 'Open in Settings';
 
 /// The banner at the very top of the standard build's page. It never uses the
 /// words of the other version's name: it only says what the second version
@@ -60,55 +55,77 @@ const kWhatsNewBannerBody =
     'It asks for SMS permission, so it is separate and optional.';
 const kWhatsNewBannerLink = 'Open the mmogo page';
 
-// Item 1 (NAV)
-const kWhatsNewNavTitle = 'Navigation bar';
-const kWhatsNewNavSummary = "The bottom bar no longer hides behind your phone's buttons.";
-const kWhatsNewNavBody =
-    'On phones with the three buttons at the bottom, the Home, Analytics, Paid to and Profile tabs were covered. '
-    'They now sit above the buttons.';
+// Items shown in both builds (mock ITEMS). The words only the other build shows are in
+// `lib/autoread/ui/whats_new_autoread_copy.dart`.
+// WORDING-DRAFT (0.2.1, signed mock 20-11-2026)
 
-// Item 2 (F3)
-const kWhatsNewAirtimeTitle = 'Airtime on Paid to';
-const kWhatsNewAirtimeSummary = 'Paid to now counts airtime.';
-const kWhatsNewAirtimeBody =
-    'Paid out on Paid to now matches This month on Home. '
-    'Airtime shows as one line at the end of the overview: how many purchases and how much. '
-    'It is hidden while you search or filter by category.';
+// Withdrawals
+const kWhatsNewWithdrawalsTitle = 'Withdrawals';
+const kWhatsNewWithdrawalsSummary = 'A withdrawal is not counted as spending. You say what the cash was for.';
+const kWhatsNewWithdrawalsBody = [
+  'A cash withdrawal stays a withdrawal. It is not counted as spending.',
+  'On a withdrawal, "What was this money for?" lets you pick a category. mmogo then adds a linked Cash entry under that category, '
+      'with the same date as the withdrawal, and that entry counts as spent. "Cash only" is the default: nothing is added.',
+  'You can split it: some spent, the rest stays cash. You can add several entries.',
+  'If you delete the withdrawal, its Cash entries go with it. Recently deleted brings them all back within 1 hour.',
+  'Home shows "Cash withdrawn (not counted)", and withdrawal fees are inside the transaction cost line.',
+  'Withdrawals you saved before this update are not changed. Open one to say what the cash was for.',
+];
 
-// Item 3 (F6): has the Change in Settings button.
-const kWhatsNewReceiverTitle = 'Receiver details';
-const kWhatsNewReceiverSummary = 'You choose whether receiver names and numbers are kept.';
-const kWhatsNewReceiverBody =
-    'In Settings, Record receiver details is on or off. '
-    "When it is off, new entries are saved without the receiver's name or number. "
-    'Entries you already saved are not changed.';
-const kWhatsNewChangeInSettings = 'Change in Settings';
+// Suggested categories (has the Open in Settings button)
+const kWhatsNewSuggestTitle = 'Suggested categories';
+const kWhatsNewSuggestSummary = 'mmogo suggests the categories you use most for each person.';
+const kWhatsNewSuggestBody = [
+  'mmogo suggests the categories you used most in your last 5 records for that person.',
+  'See and change them in Settings, under "Remembered recipients". '
+      'Pick one type at a time: Send Money, Paybill, Buy Goods, Pochi, Withdrawals (muted) or Airtime.',
+];
+const kWhatsNewSuggestLast =
+    'These rules stay on this phone and are not in backups. If you restore a backup with Replace, everyone goes back to Suggested.';
 
-// Item 4 (F2)
-const kWhatsNewDeletedTitle = 'Recently deleted';
-const kWhatsNewDeletedSummary = 'Recently deleted says how long you can restore.';
-const kWhatsNewDeletedBody =
-    "You can restore a deleted entry for 1 hour. The 'coming soon' web page row is gone.";
+// Paid to: choose an account
+const kWhatsNewPaidToTitle = 'Paid to: choose an account';
+const kWhatsNewPaidToSummary = 'When one person has several accounts, you choose which one to look at.';
+const kWhatsNewPaidToBody =
+    'When one recipient has several accounts, you now choose which account to look at. '
+    'This works when you pay directly, in loop views, and in Year and All time.';
 
-// Item 5 (SEC-03)
-const kWhatsNewExportsTitle = 'Exports';
-const kWhatsNewExportsSummary = 'Exports no longer leave copies behind.';
-const kWhatsNewExportsBody =
-    'After you share a CSV, the temporary copies mmogo made are removed. '
-    'Delete data also removes any left over from an earlier version.';
+// Backups (the first sentence is the one constant in data_copy.dart)
+const kWhatsNewBackupsTitle = 'Backups';
+const kWhatsNewBackupsSummary = kBackupNotRestorableByOlderV5;
+const kWhatsNewBackupsBody = '$kBackupNotRestorableByOlderV5 Older backups still restore.';
 
-// Item 6 (the closing item; PM-signed sentences, never retyped)
+// Pochi
+const kWhatsNewPochiTitle = 'Pochi';
+const kWhatsNewPochiSummary = 'When a Pochi message is read, you choose Pochi or Send Money.';
+const kWhatsNewPochiBody = 'When mmogo reads a Pochi message, you choose whether it is Pochi or Send Money.';
+
+// Updates
+const kWhatsNewUpdatesTitle = 'Updates';
+const kWhatsNewUpdatesSummary = 'Check for updates from Settings, under About.';
+const kWhatsNewUpdatesBody =
+    'In Settings, under About, Updates now has "Check for updates now". '
+    'When a newer version exists, a filled Update button appears. '
+    'The News row stays until you install it, then moves to Updates.';
+
+// What's new links
+const kWhatsNewLinksTitle = 'What’s new links to Settings';
+const kWhatsNewLinksSummary = 'Items now open the Settings area they describe.';
+const kWhatsNewLinksBody =
+    'Items on this page now link to the Settings area they describe. Back returns you to the item you were reading.';
+
+// Pop-up messages
+const kWhatsNewPillTitle = 'Pop-up messages';
+const kWhatsNewPillSummary = 'Messages like Undo now show at the top and follow your theme.';
+const kWhatsNewPillBody =
+    'Messages like Undo now show as a pill at the top of the screen. It follows your light or dark theme.';
+
+// The closing item: the signed sentence is never retyped; the second paragraph is new in the mock.
 const kWhatsNewCard5Title = 'Privacy';
-/// The closed line: the signed sentence without its parenthetical, derived (not retyped).
-final kWhatsNewCard5Summary = kPrivacySentenceStandard.replaceFirst(' (switchable off)', '');
 
-/// The signed canonical sentence (standard build), shown first and in bold.
+/// The closed line and the first, bold paragraph: the signed sentence (mock: privacyStd).
+const kWhatsNewCard5Summary = kPrivacySentenceStandard;
 const kWhatsNewCard5Body = kPrivacySentenceStandard;
 
-/// R14 (F4): the canonical sentence already says the internet is used only to
-/// check for updates, so only the second half of W7 follows it.
-const kWhatsNewCard5Network = kNetworkSeenSentence;
-
-/// The last paragraph of the Privacy item (WN-0.1.3 item 6).
-const kWhatsNewCard5Receiver =
-    'The Privacy page now says exactly what is kept for your version, including the receiver details above.';
+/// The second paragraph of the Privacy item, in both builds (mock: privacyRules).
+const kWhatsNewPrivacyRules = 'The rules you set for each person stay on this phone. They are not in backups.';

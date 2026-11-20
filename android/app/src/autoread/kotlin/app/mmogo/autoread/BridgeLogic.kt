@@ -18,6 +18,13 @@ internal object BridgeLogic {
         return if (id is String && HeldId.isValid(id)) id else null
     }
 
+    /** The "minutes" argument of setAlertMinutes: an Int that is one of the offered choices, else null. */
+    fun minutesArg(args: Any?): Int? {
+        if (args !is Map<*, *>) return null
+        val v = args["minutes"]
+        return if (v is Int && v in AlertText.DETAILS_MINUTES_CHOICES) v else null
+    }
+
     /** The `enabled` argument, or null when missing or not a boolean. */
     fun enabledArg(args: Any?): Boolean? {
         if (args !is Map<*, *>) return null
@@ -65,11 +72,12 @@ internal object BridgeLogic {
         enabled: Boolean, smsGranted: Boolean, notifGranted: Boolean, heldCount: Int,
         parseOn: Boolean = false, autostartHelp: Boolean = false, consentVersion: Int = 0,
         alertDetails: Boolean = AlertText.DEFAULT_SHOW_DETAILS, alertDetailsAbsent: Boolean = false,
+        alertMinutes: Int = AlertText.DETAILS_MINUTES_DEFAULT,
     ): Map<String, Any?> =
         mapOf(
             "enabled" to enabled, "smsGranted" to smsGranted, "notifGranted" to notifGranted, "heldCount" to heldCount,
             "parseOn" to parseOn, "autostartHelp" to autostartHelp, "consentVersion" to consentVersion,
-            "alertDetails" to alertDetails, "alertDetailsAbsent" to alertDetailsAbsent,
+            "alertDetails" to alertDetails, "alertDetailsAbsent" to alertDetailsAbsent, "alertMinutes" to alertMinutes,
         )
 
     fun permissionsResult(smsGranted: Boolean, notifGranted: Boolean): Map<String, Any?> =

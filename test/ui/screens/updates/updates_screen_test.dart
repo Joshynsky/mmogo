@@ -9,7 +9,9 @@ import 'dart:convert';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/ui/shell/app_messenger.dart';
 import 'package:mmogo/app_constants.dart';
+import 'package:mmogo/autoread/autoread_feature.dart';
 import 'package:mmogo/data/prefs/update_prefs.dart';
 import 'package:mmogo/data/updates/release_info.dart';
 import 'package:mmogo/data/updates/update_check_client.dart';
@@ -63,7 +65,7 @@ Future<_Rig> _pump(
   tester.view.physicalSize = const Size(400, 3000);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(MaterialApp(home: UpdatesScreen(inbox: rig.inbox, service: rig.service)));
+  await tester.pumpWidget(MaterialApp(navigatorKey: appNavigatorKey, home: UpdatesScreen(inbox: rig.inbox, service: rig.service)));
   await tester.pumpAndSettle();
   return rig;
 }
@@ -174,6 +176,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(MaterialApp(
+        navigatorKey: appNavigatorKey,
         home: UpdatesScreen(inbox: rig.inbox, service: rig.service),
         routes: {Routes.backup: (_) => const Scaffold(body: Text('backup page'))},
       ));
@@ -244,6 +247,26 @@ void main() {
       await tester.pumpAndSettle();
       expect(bridge.openedUrls, [AppConstants.siteUrl]);
       expect(bridge.calls.where((c) => c.startsWith('openUrl')), ['openUrl:https://joshynsky.github.io/mmogo/']);
+    });
+
+    testWidgets('Update button shows only when an update is waiting and opens the standard-build page', (tester) async {
+      await _pump(tester);
+      expect(find.byKey(const Key('updateDownloadButton')), findsNothing);
+      expect(find.byKey(const Key('checkNowButton')), findsOneWidget);
+    });
+
+    testWidgets('with a release notice: check button plus Update, Update opens the build URL', (tester) async {
+      await _pump(tester, stored: [_notice('v0.2.0', 'x')]);
+      expect(find.byKey(const Key('checkNowButton')), findsOneWidget);
+      expect(find.text(kUpdatesDownloadLabel), findsOneWidget);
+      await tester.tap(find.byKey(const Key('updateDownloadButton')));
+      await tester.pumpAndSettle();
+      expect(bridge.openedUrls, [kAutoReadCompiled ? AppConstants.siteOtherUrl : AppConstants.siteStdUrl]);
+    });
+
+    testWidgets('a welcome notice alone does not show Update', (tester) async {
+      await _pump(tester, stored: [_notice('Welcome', 'hi', welcome: true)]);
+      expect(find.byKey(const Key('updateDownloadButton')), findsNothing);
     });
 
     testWidgets("a failed open says so in plain words", (tester) async {
@@ -404,7 +427,7 @@ void main() {
         inbox: inbox,
         installedVersion: () => '0.1.1',
       );
-      await tester.pumpWidget(MaterialApp(home: UpdatesScreen(inbox: inbox, service: service)));
+      await tester.pumpWidget(MaterialApp(navigatorKey: appNavigatorKey, home: UpdatesScreen(inbox: inbox, service: service)));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('checkNowButton')));
@@ -431,6 +454,7 @@ void main() {
       expect(rig.inbox.unreadCount.value, 2);
       await tester.pumpWidget(
         MaterialApp(
+          navigatorKey: appNavigatorKey,
           home: Builder(
             builder: (context) => Scaffold(
               body: TextButton(
