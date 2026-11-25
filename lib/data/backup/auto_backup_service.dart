@@ -9,7 +9,7 @@ import '../db/app_database.dart';
 import '../prefs/backup_prefs.dart';
 import '../updates/updates_inbox.dart';
 import 'auto_backup_leftovers.dart';
-import 'backup_service.dart';
+import 'rule_backup_seams.dart';
 
 export 'auto_backup_leftovers.dart';
 
@@ -131,7 +131,8 @@ class AutoBackupService {
   }
 
   static Future<Uint8List> _defaultExport() =>
-      BackupService(db: () => AppDatabase.instance.database).exportToBytes();
+      // 0.2.2 item 2 (B1): the rules travel when the auto-read build installed them (one holder).
+      RuleBackupSeams.backupService(db: () => AppDatabase.instance.database).exportToBytes();
 
   static void _snackbar(String message) {
     PillToast.show(message);

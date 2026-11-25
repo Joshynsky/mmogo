@@ -70,6 +70,8 @@ Future<void> main() async {
     // 0.2.1 rules (Suggested + Ask first): the rules store, history, offers and the Settings and
     // Remembered rows are joined to the app here (preferences only; the database opens later).
     RulesWiring.install();
+    // 0.2.2 item 2 (B1): rules go into backups and come back on restore (both seams, one call).
+    RulesWiring.installBackupRules();
   }
   // 0.2.0 S8: Paid to groups a named Paybill by name (accounts paged in its sheet) in the debug flavor only.
   PaidToGrouping.paybillByName = kAutoReadCompiled;

@@ -37,6 +37,9 @@ import '../ui/levels/levels_deps.dart';
 import '../ui/notifications/suggestions_controller.dart';
 import '../../data/backup/restore_rules.dart' show RuleRestoreSink, RulesRestoreOutcome, RulesRestorePlan;
 import '../rules/rule_restore.dart';
+import '../../data/backup/backup_rules.dart' show BackupRuleInput;
+import '../../data/backup/rule_backup_seams.dart';
+import '../rules/rule_backup_source.dart';
 
 class RulesWiring {
   RulesWiring._();
@@ -113,6 +116,7 @@ class RulesWiring {
     LedgerHooks.onRestored = null;
     LedgerHooks.onBulk = null;
     AppPrefs.onCaptureIdentityWritten = null;
+    RuleBackupSeams.uninstall(); // both rule seams go together
     LevelsDeps.instance = null;
     suggestions?.dispose();
     suggestions = null;
@@ -134,7 +138,8 @@ class RulesWiring {
 
   /// A Replace restore committed: every person goes back to Suggested (rules, undone codes and the old
   /// summary removed), then the summary is rebuilt from the restored ledger. A Merge restore never
-  /// calls this (it only rebuilds the summary, through the bulk hook).
+  /// calls this (it only rebuilds the summary, through the bulk hook). Since B1 the restore's rules step
+  /// ([restoreSink], queued after this) then puts the FILE's rules back (none from a 0.2.1 file).
   static Future<void> afterReplaceRestore() => _serial(() async {
         await AutoReadRuntime.ruleGuard.afterReplaceRestore();
         await summary.rebuild(recordReceiverDetails: await AppPrefs.readCaptureIdentityPreference());
@@ -143,9 +148,19 @@ class RulesWiring {
 
   /// The restore's rules step (0.2.2 item 2, S-4b): the file's rules go into the rule store through
   /// the SAME serial queue as [afterReplaceRestore], so on a Replace the hook's wipe (queued first, from
-  /// the trail hook) always runs BEFORE this import. The rule list shown follows. NOT passed to the
-  /// app's `RestoreService` yet (dormant until the Replace dialog and wording are signed).
+  /// the trail hook) always runs BEFORE this import. The rule list shown follows. Reaches the app's
+  /// `RestoreService` through [installBackupRules] (B1).
   static RuleRestoreSink restoreSink() => _WiringRestoreSink();
+
+  /// The export's rules source (B1): the rule store's rules, read on the SAME serial queue, so an export
+  /// (automatic, manual or a Replace's safety copy) never reads half of a restore's import or a wipe.
+  /// Empty while "Record receiver details" is OFF (the store answers empty then).
+  static Future<List<BackupRuleInput>> backupSource() => _serial(() => backupRulesFrom(AutoReadRuntime.ruleStore));
+
+  /// 0.2.2 item 2 (B1): puts the rules into backups and reads them back on restore, BOTH seams in one
+  /// call (`RuleBackupSeams.install` takes the pair). `main.dart` calls it once, after [install], inside
+  /// `if (kAutoReadCompiled)`. Safe to call twice. [uninstall] clears both.
+  static void installBackupRules() => RuleBackupSeams.install(source: backupSource, sink: restoreSink());
 
   /// The after-Replace-restore hook main installs: it CHAINS what was there ([prior]), empties the
   /// shown airtime trail ([clearTrail]) and sends every person back to Suggested. Never overwrites.

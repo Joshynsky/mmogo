@@ -111,16 +111,34 @@ class _RememberedScreenState extends State<RememberedScreen> {
     return t is RememberedForgetHooks ? t as RememberedForgetHooks : null;
   }
 
+  /// The second tab's own Forget all words, when it has them (0.2.2; null = the page's words).
+  Future<RememberedForgetAllText?> _forgetAllText() async {
+    final t = widget.extraTab;
+    if (t is! RememberedForgetAllCopy) return null;
+    return (t as RememberedForgetAllCopy).forgetAllText([for (final e in _entries) e.key]);
+  }
+
   Future<void> _forgetAll() async {
     final n = _entries.length;
+    RememberedForgetAllText? got; // counts only, never a name
+    try {
+      got = await _forgetAllText();
+    } catch (_) {
+      if (mounted) setState(() => _error = true); // no true count = no dialog
+      return;
+    }
+    if (!mounted) return;
+    final own = got;
     final go = await showDialog<bool>(
       context: context,
       builder: (ctx) {
         final palette = AppPalette.of(ctx);
         return PaletteAlertDialog(
           key: const Key('forgetAllDialog'),
-          title: const Text(kForgetAllTitle, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-          content: widget.extraTab == null
+          title: Text(own?.title ?? kForgetAllTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          content: own != null
+              ? Text(own.body)
+              : widget.extraTab == null
               ? const Text(kForgetAllBody)
               : Column(
                   mainAxisSize: MainAxisSize.min,
@@ -136,7 +154,7 @@ class _RememberedScreenState extends State<RememberedScreen> {
             TextButton(
               key: const Key('forgetAllConfirm'),
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(kForgetAll, style: TextStyle(fontWeight: FontWeight.w700, color: palette.error)),
+              child: Text(own?.ok ?? kForgetAll, style: TextStyle(fontWeight: FontWeight.w700, color: palette.error)),
             ),
           ],
         );
@@ -147,7 +165,7 @@ class _RememberedScreenState extends State<RememberedScreen> {
       final ok = await _memory.forgetAll();
       if (ok) await _hooks?.onAllNamesForgotten();
       return ok;
-    }, done: forgotRecipientsText(n));
+    }, done: own?.toast ?? forgotRecipientsText(n));
   }
 
   @override

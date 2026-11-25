@@ -3,8 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../data/backup/backup_limits.dart';
-import '../../../data/backup/backup_service.dart';
 import '../../../data/backup/restore_service.dart';
+import '../../../data/backup/rule_backup_seams.dart';
 import '../../../data/db/app_database.dart';
 import '../../../platform/storage_bridge.dart';
 import '../../copy/backup_copy.dart';
@@ -68,10 +68,9 @@ class RestoreFlow {
 
   static RestoreService _defaultService() {
     BackupUiSeams.ensureReal('RestoreService');
-    return RestoreService(
-      db: () => AppDatabase.instance.database,
-      backup: BackupService(db: () => AppDatabase.instance.database),
-    );
+    // 0.2.2 item 2 (B1): the rules step and the Replace safety copy read the SAME installed pair, so the
+    // Undo of a Replace brings the phone's rules back. Nothing installed = no rule travels (as before).
+    return RuleBackupSeams.restoreService(db: () => AppDatabase.instance.database);
   }
 
   /// Runs the whole flow. Never throws: every failure is a dialog or a sheet.

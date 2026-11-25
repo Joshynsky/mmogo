@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../data/backup/restore_types.dart';
 import '../../copy/backup_copy.dart';
 import '../../copy/data_copy.dart';
+import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/highlight_pulse.dart';
 import '../../widgets/tap_target.dart';
+import '../settings/settings_targets.dart';
 import 'backup_sheet_shell.dart';
 import 'backup_widgets.dart';
+import 'restore_rules_note.dart';
 import 'skipped_rows_list.dart';
 
 /// What the user did on the result sheet.
@@ -84,6 +88,8 @@ class _ResultSheetState extends State<_ResultSheet> {
     };
     final canUndo = kind == RestoreSheetKind.replaced && result.safetyCopyKept;
     final labels = restoredSettingLabels(result.settings.applied);
+    // 0.2.2 (U6): what happened to the rules, worded by the auto-read side; none without its holder.
+    final ruleNotes = RestoreRulesNotes.notesFor(result.rules);
     TextStyle body({bool bold = false}) => TextStyle(
       fontSize: 13.5,
       height: 1.45,
@@ -138,6 +144,7 @@ class _ResultSheetState extends State<_ResultSheet> {
         Text(note, key: const Key('restoreResultNote'), style: body()),
         if (labels.isNotEmpty)
           Text(settingsRestoredLine(labels), key: const Key('restoreResultSettings'), style: body()),
+        for (var i = 0; i < ruleNotes.length; i++) RulesNoteBlock(key: Key('restoreRulesNote$i'), note: ruleNotes[i], palette: p),
         if (!result.settingsApplied) BackupWarning(palette: p, text: kSettingsNotApplied, bottomGap: 0),
         if (kind == RestoreSheetKind.undone && result.safetyCopyStillThere)
           Semantics(
@@ -200,4 +207,54 @@ class _ResultSheetState extends State<_ResultSheet> {
         ),
     ],
   );
+}
+
+/// One rules note (U6): optional bold title, the counts-only text, and an "Open Settings" button that
+/// opens Settings with the "Record receiver details" switch outlined. Announced when the sheet opens.
+class RulesNoteBlock extends StatelessWidget {
+  const RulesNoteBlock({super.key, required this.note, required this.palette});
+
+  final RestoreRulesNote note;
+  final AppPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = palette;
+    final button = note.settingsButton;
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (note.title != null)
+            Semantics(
+              header: true,
+              child: Text(
+                note.title!,
+                style: TextStyle(fontSize: 14, height: 1.4, fontWeight: FontWeight.w800, color: p.ink),
+              ),
+            ),
+          Text(note.body, style: TextStyle(fontSize: 13.5, height: 1.45, fontWeight: FontWeight.w700, color: p.ink)),
+          if (button != null)
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton(
+                key: const Key('restoreRulesOpenSettings'),
+                onPressed: () {
+                  HighlightRequest.set(kSettingsTargetCaptureReceiver);
+                  Navigator.of(context).pushNamed(Routes.settings);
+                },
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(kMinTapTarget, kMinTapTarget),
+                  foregroundColor: p.primary,
+                ),
+                child: Text(button),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }

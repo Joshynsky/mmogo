@@ -34,6 +34,20 @@ class _FakeTab extends ChangeNotifier implements RememberedExtraTab {
   }
 }
 
+/// 0.2.2 U5: a tab with its own Forget all words ([words] null = the page's own).
+class _CopyTab extends _FakeTab implements RememberedForgetAllCopy {
+  bool words = true;
+  bool fail = false;
+  final List<int> asked = [];
+  @override
+  Future<RememberedForgetAllText?> forgetAllText(List<String> nameKeys) async {
+    if (fail) throw StateError('count failed');
+    final n = nameKeys.length + 3; // the tab's own people on top of the names
+    asked.add(nameKeys.length);
+    return words ? RememberedForgetAllText(title: 'T $n', body: 'B', ok: 'OK', toast: 'Toast $n') : null;
+  }
+}
+
 Future<RecipientMemory> _seeded() async {
   SharedPreferences.setMockInitialValues({});
   var clock = 1000;
@@ -181,4 +195,40 @@ void main() {
       expect(tester.getSize(find.byKey(const Key('rememberedTab1'))).height, greaterThanOrEqualTo(44));
     });
   }
+  testWidgets('0.2.2: a tab with its own Forget all words: count in, its title/body/button, no extra sentence', (tester) async {
+    final tab = _CopyTab();
+    final m = await _seeded();
+    await _pump(tester, m, tab);
+    await tester.tap(find.byKey(const Key('rememberedForgetAll')));
+    await tester.pumpAndSettle();
+    expect(tab.asked, [2]); // the page passed both name keys
+    expect(find.text('T 5'), findsOneWidget); // the tab's count, not the page's
+    expect(find.text('T 2'), findsNothing);
+    expect(find.text('B'), findsOneWidget);
+    expect(find.text('OK'), findsOneWidget);
+    expect(find.text(kForgetAllTitle), findsNothing);
+    expect(find.text('The extra sentence.'), findsNothing);
+    await tester.tap(find.byKey(const Key('forgetAllConfirm')));
+    await tester.pumpAndSettle();
+    expect(await m.list(), isEmpty);
+  });
+
+  testWidgets('0.2.2: the tab cannot take its count: no dialog, the failure line, nothing forgotten', (tester) async {
+    final m = await _seeded();
+    await _pump(tester, m, _CopyTab()..fail = true);
+    await tester.tap(find.byKey(const Key('rememberedForgetAll')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('forgetAllDialog')), findsNothing);
+    expect(find.text(kRememberedCouldNot), findsOneWidget);
+    expect(await m.list(), hasLength(2));
+  });
+
+  testWidgets('0.2.2: a tab whose Forget all words are null keeps the page dialog', (tester) async {
+    await _pump(tester, await _seeded(), _CopyTab()..words = false);
+    await tester.tap(find.byKey(const Key('rememberedForgetAll')));
+    await tester.pumpAndSettle();
+    expect(find.text(kForgetAllTitle), findsOneWidget);
+    expect(find.text(kForgetAllBody), findsOneWidget);
+    expect(find.text('The extra sentence.'), findsOneWidget);
+  });
 }

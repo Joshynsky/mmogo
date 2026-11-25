@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../../data/backup/backup_service.dart';
+import '../../../data/backup/rule_backup_seams.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/prefs/backup_prefs.dart';
 import 'backup_ui_seams.dart';
@@ -108,7 +109,7 @@ class BackupExportFlow {
   static Future<BackupExport> _defaultExport() async {
     BackupUiSeams.ensureReal('backup export');
     final db = await AppDatabase.instance.database;
-    return BackupService(db: () async => db).export();
+    return RuleBackupSeams.backupService(db: () async => db).export(); // B1: rules when installed
   }
 
   static Future<bool> _defaultShare(String path, String fileName) async {

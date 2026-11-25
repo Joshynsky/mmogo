@@ -80,88 +80,75 @@ Future<void> _pump(WidgetTester t, _Rig r, {double scale = 1, double width = 390
 
 double _y(WidgetTester t, String key) => t.getTopLeft(find.byKey(Key(key))).dy;
 
+/// Opens the folded Suggested section (layout A folds it at start).
+Future<void> _openSuggested(WidgetTester t) async {
+  await t.ensureVisible(find.byKey(const Key('levelGroupToggle.suggested')));
+  await t.pumpAndSettle();
+  await t.tap(find.byKey(const Key('levelGroupToggle.suggested')));
+  await t.pumpAndSettle();
+}
+
+// 0.2.2 U5 (PM D3): layout A replaced the 0.2.1 level filter and type chips. The filter and chip tests
+// were rewritten on purpose for the sections, the fold and the search; the flag-off (0.2.1) promises stay.
 void main() {
   testWidgets('empty: no people yet shows the empty line, airtime switches still there', (t) async {
     final r = _Rig()..known = const [];
     await _pump(t, r);
     expect(find.text(kLevelsEmpty), findsOneWidget);
-    expect(find.byKey(const Key('autoRecordMyself')), findsNothing); // Send Money is open, not Airtime
+    expect(find.byKey(const Key('levelsSearch')), findsNothing);
+    expect(find.byKey(const Key('autoRecordMyself')), findsOneWidget); // no type chips: the switches sit under the list
   });
 
-  testWidgets('list order: Ask first before Suggested, then by name; history names under Suggested', (t) async {
+  testWidgets('sections: Ask first before Suggested; Suggested folded; by name; history names under Suggested', (t) async {
     final r = _Rig();
     await r.store.setLevel(ReceiverType.sendMoney, '0722', name: 'Grace', level: RuleLevel.askFirst, categoryId: 2, at: _at);
     await _pump(t, r);
+    expect(find.byKey(const Key('levelRow.SM.0722')), findsOneWidget);
+    expect(find.byKey(const Key('levelRow.SM.0711')), findsNothing); // folded
+    expect(find.text('Send Money · Food'), findsOneWidget); // Grace's rule category
+    await _openSuggested(t);
     expect(_y(t, 'levelRow.SM.0722'), lessThan(_y(t, 'levelRow.SM.0711')));
-    expect(find.text('Food'), findsOneWidget); // Grace's rule category
-    expect(find.text('Food, Fuel'), findsOneWidget); // Tim: history, most used first
-    await t.tap(find.byKey(const Key('typeChipP')));
-    await t.pumpAndSettle();
-    expect(find.text(kLevelsNoHistory), findsOneWidget); // Amina
+    expect(_y(t, 'levelRow.PO.Amina'), lessThan(_y(t, 'levelRow.SM.0711'))); // by name: Amina, Tim
+    expect(find.text('Send Money · Food, Fuel'), findsOneWidget); // Tim: history, most used first
+    expect(find.text('Pochi · $kLevelsNoHistory'), findsOneWidget); // Amina
   });
 
-  testWidgets('filter: Ask first only, Suggested only, All; empty filter line', (t) async {
+  testWidgets('search: matches name and kind, opens the folded section, "Nobody matches." when none', (t) async {
     final r = _Rig();
     await r.store.setLevel(ReceiverType.sendMoney, '0722', name: 'Grace', level: RuleLevel.askFirst, categoryId: 2, at: _at);
     await _pump(t, r);
-    await t.tap(find.byKey(const Key('levelFilteraskFirst')));
+    await t.enterText(find.byKey(const Key('levelsSearch')), 'tim');
     await t.pumpAndSettle();
-    expect(find.byKey(const Key('levelRow.SM.0722')), findsOneWidget);
-    expect(find.byKey(const Key('levelRow.SM.0711')), findsNothing);
-    await t.tap(find.byKey(const Key('levelFiltersuggested')));
-    await t.pumpAndSettle();
+    expect(find.byKey(const Key('levelRow.SM.0711')), findsOneWidget); // Suggested opened by the search
     expect(find.byKey(const Key('levelRow.SM.0722')), findsNothing);
-    expect(find.byKey(const Key('levelRow.SM.0711')), findsOneWidget);
-    await t.tap(find.byKey(const Key('levelFilterall')));
+    await t.enterText(find.byKey(const Key('levelsSearch')), 'pochi');
     await t.pumpAndSettle();
+    expect(find.byKey(const Key('levelRow.PO.Amina')), findsOneWidget); // the kind matches too
+    await t.enterText(find.byKey(const Key('levelsSearch')), 'nobody here');
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('levelsSearchEmpty')), findsOneWidget);
+    await t.enterText(find.byKey(const Key('levelsSearch')), '');
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('levelRow.SM.0711')), findsNothing); // folded again
     expect(find.byKey(const Key('levelRow.SM.0722')), findsOneWidget);
-    // Nobody at Ask first: the filter line.
-    await r.store.forget(ReceiverType.sendMoney, '0722');
-    await t.tap(find.byKey(const Key('levelFilteraskFirst')));
-    await t.pumpAndSettle();
-    expect(find.text(kLevelsFilterEmpty), findsOneWidget);
   });
 
-  testWidgets('type chips: money out first, no All chip, readable names, Send Money open by default', (t) async {
+  testWidgets('D3: no level filter and no type chips; every kind in one list', (t) async {
     await _pump(t, _Rig());
-    final order = ['typeChipSM', 'typeChipPB', 'typeChipBG', 'typeChipP', 'typeChipW', 'typeChipAirtime'];
-    final pos = [for (final k in order) t.getTopLeft(find.byKey(Key(k)))];
-    for (var i = 1; i < pos.length; i++) {
-      final before = pos[i - 1];
-      expect(pos[i].dy > before.dy || (pos[i].dy == before.dy && pos[i].dx > before.dx), isTrue, reason: order[i]);
+    for (final k in ['levelFilterall', 'levelFilteraskFirst', 'typeChipSM', 'typeChipP', 'typeChipW', 'typeChipAirtime']) {
+      expect(find.byKey(Key(k)), findsNothing, reason: k);
     }
-    for (final n in ['Send Money', 'Paybill', 'Buy Goods', 'Pochi', 'Withdrawals', 'Airtime']) {
-      expect(find.descendant(of: find.byKey(const Key('levelsTab')), matching: find.text(n)), findsOneWidget, reason: n);
-    }
-    expect(find.byKey(const Key('typeChipAll')), findsNothing);
-    expect(find.text('All'), findsOneWidget); // only the level filter's own All
+    await _openSuggested(t);
     expect(find.byKey(const Key('levelRow.SM.0711')), findsOneWidget);
-    expect(find.byKey(const Key('levelRow.PO.Amina')), findsNothing);
-    expect(find.byKey(const Key('autoRecordMyself')), findsNothing);
+    expect(find.byKey(const Key('levelRow.PO.Amina')), findsOneWidget);
   });
 
-  testWidgets('type chips: one type at a time; tapping the open one keeps it open', (t) async {
+  testWidgets('Airtime: its heading and the two switches under the people; no rule paragraphs', (t) async {
     await _pump(t, _Rig());
-    await t.tap(find.byKey(const Key('typeChipP')));
+    await t.ensureVisible(find.byKey(const Key('autoRecordOther')));
     await t.pumpAndSettle();
-    expect(find.byKey(const Key('levelRow.PO.Amina')), findsOneWidget);
-    expect(find.byKey(const Key('levelRow.SM.0711')), findsNothing);
-    await t.tap(find.byKey(const Key('typeChipP')));
-    await t.pumpAndSettle();
-    expect(find.byKey(const Key('levelRow.PO.Amina')), findsOneWidget);
-    await t.tap(find.byKey(const Key('typeChipPB')));
-    await t.pumpAndSettle();
-    expect(find.byKey(const Key('levelRow.PO.Amina')), findsNothing);
-    expect(find.text(kLevelsEmpty), findsOneWidget);
-  });
-
-  testWidgets('Airtime view: only the two switches, no rule paragraphs, no rows', (t) async {
-    await _pump(t, _Rig());
-    await t.tap(find.byKey(const Key('typeChipAirtime')));
-    await t.pumpAndSettle();
+    expect(find.byKey(const Key('levelsAirtimeHeader')), findsOneWidget);
     expect(find.byKey(const Key('autoRecordMyself')), findsOneWidget);
-    expect(find.byKey(const Key('autoRecordOther')), findsOneWidget);
-    expect(find.byKey(const Key('levelRow.SM.0711')), findsNothing);
     await t.tap(find.byKey(const Key('autoRecordMyself')));
     await t.tap(find.byKey(const Key('autoRecordOther')));
     await t.pumpAndSettle();
@@ -170,23 +157,11 @@ void main() {
     expect(find.text(kAutoRecordExplainLater), findsNothing);
   });
 
-  testWidgets('withdrawal chip is muted and does nothing', (t) async {
-    final sem = t.ensureSemantics();
-    final r = _Rig();
-    await _pump(t, r);
-    await t.tap(find.byKey(const Key('typeChipW')), warnIfMissed: false);
-    await t.pumpAndSettle();
-    expect(find.byKey(const Key('levelRow.SM.0711')), findsOneWidget);
-    expect(t.getSemantics(find.byKey(const Key('typeChipW'))).label, 'Withdrawals, coming later');
-    sem.dispose();
-  });
-
   testWidgets('Pochi shows only remembered names, even when a rule exists', (t) async {
     final r = _Rig();
     await r.store.setLevel(ReceiverType.pochi, 'Zed', name: 'Zed', level: RuleLevel.askFirst, categoryId: 1, at: _at);
     await _pump(t, r);
-    await t.tap(find.byKey(const Key('typeChipP')));
-    await t.pumpAndSettle();
+    await _openSuggested(t);
     expect(find.byKey(const Key('levelRow.PO.Amina')), findsOneWidget);
     expect(find.byKey(const Key('levelRow.PO.Zed')), findsNothing);
   });
@@ -194,6 +169,7 @@ void main() {
   testWidgets('level sheet: Suggested to Ask first needs a category, saves a rule', (t) async {
     final r = _Rig();
     await _pump(t, r);
+    await _openSuggested(t);
     await t.tap(find.byKey(const Key('levelButton.SM.0711')));
     await t.pumpAndSettle();
     expect(find.text(levelSheetTitle('Tim ***')), findsOneWidget);
@@ -213,15 +189,15 @@ void main() {
     expect(rule.categoryId, 1);
     expect(rule.name, 'Tim');
     expect(find.text(levelSheetTitle('Tim ***')), findsNothing);
-    // The row now says Ask first and the list re-ordered.
+    // The row moved to the Ask first section.
     expect(find.text(kLevelAskFirst), findsWidgets);
+    expect(find.byKey(const Key('levelRow.SM.0711')), findsOneWidget);
   });
 
-  testWidgets('level sheet: no category chosen blocks Save; Suggested forgets the rule', (t) async {
+  testWidgets('level sheet: no category chosen blocks Save; Suggested now KEEPS the rule (PM 25-11)', (t) async {
     final r = _Rig();
     await _pump(t, r);
-    await t.tap(find.byKey(const Key('typeChipP')));
-    await t.pumpAndSettle();
+    await _openSuggested(t);
     await t.tap(find.byKey(const Key('levelButton.PO.Amina'))); // no history
     await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('levelChoiceaskFirst')));
@@ -231,10 +207,8 @@ void main() {
     await t.tap(find.byKey(const Key('levelSheetCancel')));
     await t.pumpAndSettle();
     expect(await r.store.all(), isEmpty);
-    // Existing rule: choosing Suggested and Save removes it.
+    // Existing rule: choosing Suggested and Save keeps the rule at Suggested (0.2.1 removed it).
     await r.store.setLevel(ReceiverType.sendMoney, '0711', name: 'Tim', level: RuleLevel.askFirst, categoryId: 2, at: _at);
-    await t.pumpAndSettle();
-    await t.tap(find.byKey(const Key('typeChipSM')));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('levelButton.SM.0711')));
     await t.pumpAndSettle();
@@ -242,7 +216,10 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('levelSheetSave')));
     await t.pumpAndSettle();
-    expect(await r.store.get(ReceiverType.sendMoney, '0711'), isNull);
+    final kept = await r.store.get(ReceiverType.sendMoney, '0711');
+    expect(kept, isNotNull);
+    expect(kept!.level, RuleLevel.suggested);
+    expect(kept.categoryId, 2);
   });
 
   testWidgets('level sheet: the 300 cap shows a message and keeps the sheet', (t) async {
@@ -251,7 +228,7 @@ void main() {
       await r.store.setLevel(ReceiverType.buyGoods, 'S$i', name: 'S$i', level: RuleLevel.askFirst, categoryId: 1, at: _at);
     }
     await _pump(t, r);
-    await t.tap(find.byKey(const Key('typeChipSM')));
+    await t.enterText(find.byKey(const Key('levelsSearch')), 'tim'); // the long Ask first list is in the way
     await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('levelButton.SM.0711')));
     await t.pumpAndSettle();
@@ -279,10 +256,13 @@ void main() {
     expect(all, contains(kAutoRecordExplainLater));
   });
 
-  testWidgets('no Auto-record level, tag or confirm anywhere in 0.2.1', (t) async {
+  testWidgets('no Auto-record level, tag or confirm anywhere while the flag is off', (t) async {
     final r = _Rig();
+    await r.store.setLevel(ReceiverType.payBill, '888', name: 'Power', level: RuleLevel.askFirst, categoryId: 1, at: _at);
     await _pump(t, r);
+    await _openSuggested(t);
     expect(find.textContaining('Auto-record'), findsNothing);
+    expect(find.text(kLevelsHelper), findsOneWidget); // the 0.2.1 helper, not the Auto-record one
     await t.tap(find.byKey(const Key('levelButton.SM.0711')));
     await t.pumpAndSettle();
     expect(find.textContaining('Auto-record'), findsNothing);
@@ -291,7 +271,7 @@ void main() {
   testWidgets('no deps (standard wiring gap): only the airtime switches', (t) async {
     await _pump(t, _Rig(), noDeps: true);
     expect(find.byKey(const Key('autoRecordMyself')), findsOneWidget);
-    expect(find.byKey(const Key('levelFilterall')), findsNothing);
+    expect(find.byKey(const Key('levelsSearch')), findsNothing);
   });
 
   for (final c in [(1.3, 390.0), (2.0, 390.0), (1.3, 500.0)]) {
@@ -300,7 +280,9 @@ void main() {
       await r.store.setLevel(ReceiverType.sendMoney, '0722', name: 'Grace Wanjiru Long Name Here', level: RuleLevel.askFirst, categoryId: 2, at: _at);
       await _pump(t, r, scale: c.$1, width: c.$2);
       expect(t.takeException(), isNull);
-      await t.scrollUntilVisible(find.byKey(const Key('levelButton.SM.0711')), 200, scrollable: find.byType(Scrollable).first);
+      await _openSuggested(t);
+      await t.ensureVisible(find.byKey(const Key('levelButton.SM.0711')));
+      await t.pumpAndSettle();
       await t.tap(find.byKey(const Key('levelButton.SM.0711')));
       await t.pumpAndSettle();
       await t.tap(find.byKey(const Key('levelChoiceaskFirst')));

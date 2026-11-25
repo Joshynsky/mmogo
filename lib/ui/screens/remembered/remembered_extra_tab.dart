@@ -37,6 +37,28 @@ class RememberedExtraHelp {
   final List<String> paragraphs;
 }
 
+/// The words of the Forget all dialog and its toast for one count (plain strings; counts only, never a
+/// name).
+class RememberedForgetAllText {
+  const RememberedForgetAllText({required this.title, required this.body, required this.ok, required this.toast});
+  final String title;
+  final String body;
+
+  /// The confirm button.
+  final String ok;
+
+  /// The toast after a successful Forget all.
+  final String toast;
+}
+
+/// Optional: an extra tab that supplies its own Forget all words (0.2.2). [forgetAllText] gets the keys of
+/// the remembered names the page will forget (never shown or logged) so the tab can count everyone the
+/// Forget all removes, each person once; null = the page's own words (as without this interface). A
+/// throw means the count could not be taken: the page shows its failure line and no dialog.
+abstract class RememberedForgetAllCopy {
+  Future<RememberedForgetAllText?> forgetAllText(List<String> nameKeys);
+}
+
 /// Optional: an extra tab that also wants to hear what happens on the recipients list, so what it keeps
 /// about a name goes with the name. The page calls these AFTER the change was stored. Plain Dart; a
 /// tab without it simply hears nothing. [key] is the remembered-name key (never shown or logged).

@@ -117,6 +117,9 @@ void main() {
     await pump(t, deps: deps);
     await t.tap(find.byKey(const Key('rememberedTab1')));
     await t.pumpAndSettle();
+    // 0.2.2 U5 layout A: a Suggested person sits in the Suggested section, folded at start.
+    await t.tap(find.byKey(const Key('levelGroupToggle.suggested')));
+    await t.pumpAndSettle();
     expect(find.textContaining('Joseph Kamau'), findsWidgets);
   });
 }

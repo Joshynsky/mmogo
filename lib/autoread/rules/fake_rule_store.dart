@@ -33,14 +33,22 @@ class FakeRuleStore implements RuleStore {
     _rules[id] = old == null
         ? ReceiverRule(
             type: type, key: key, name: name, level: level, categoryId: categoryId, ceilingCents: ceilingCents, created: at, changed: at)
-        : old.copyWith(
+        // Like PrefsRuleStore.setLevel: the category and ceiling are exactly what is passed (null
+        // clears them; a caller that must keep the category passes the stored one), and the
+        // restore mark is cleared. (0.2.2 U6: copyWith used to keep the old category on null.)
+        : ReceiverRule(
+            type: type,
+            key: key,
             name: name,
             level: level,
             categoryId: categoryId,
+            run: old.run,
+            runCategoryId: old.runCategoryId,
+            created: old.created,
+            changed: at,
+            lastRecorded: old.lastRecorded,
             ceilingCents: ceilingCents,
-            clearCeiling: ceilingCents == null,
-            autoPending: false,
-            changed: at);
+            autoPending: false);
     _changes.add(null);
     return true;
   }

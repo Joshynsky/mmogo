@@ -156,7 +156,8 @@ void main() {
       child: MaterialApp(home: Scaffold(body: LevelsTab(controller: c, deps: deps))),
     ));
     await t.pumpAndSettle();
-    await t.tap(find.byKey(const Key('typeChipP')));
+    // 0.2.2 U5 (D3): no type chips; Amina (Suggested) sits in the folded Suggested section.
+    await t.tap(find.byKey(const Key('levelGroupToggle.suggested')));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('levelButton.PO.Amina')));
     await t.pumpAndSettle();
