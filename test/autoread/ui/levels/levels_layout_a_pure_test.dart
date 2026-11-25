@@ -1,4 +1,5 @@
-// 0.2.2 U5: the pure parts of layout A (search match, row lines, section order). Invented names only.
+// 0.2.2 U5: the pure parts of the page (search match, row lines, group order); the row and group parts
+// rewritten on purpose for the item 2 redesign (U-PAGE). Invented names only.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/autoread/rules/rule_model.dart';
 import 'package:mmogo/autoread/ui/levels/hard_rule_copy.dart';
@@ -33,33 +34,68 @@ void main() {
     expect(levelPersonMatches(bill, 'kplc'), isTrue);
   });
 
-  test('row line: ceiling, no ceiling, paused, Paybill at Ask first only with the screens on', () {
-    expect(levelRowLine(_p('A', RuleLevel.autoRecord, ceiling: 200000), paused: false, hard: true), 'Auto-record up to Ksh 2,000');
-    expect(levelRowLine(_p('A', RuleLevel.autoRecord), paused: false, hard: true), kHardRowAutoNoCeiling);
-    expect(levelRowLine(_p('A', RuleLevel.autoRecord, ceiling: 5), paused: true, hard: true), kHardRowPaused);
-    final bill = _p('KPLC', RuleLevel.askFirst, type: ReceiverType.payBill, key: '888880');
-    expect(levelRowLine(bill, paused: false, hard: true), kHardRowAskFirstHighest);
-    expect(levelRowLine(bill, paused: false, hard: false), isNull);
-    expect(levelRowLine(_p('G', RuleLevel.askFirst), paused: true, hard: true), isNull);
-    expect(levelRowLine(_p('S', RuleLevel.suggested), paused: false, hard: true), isNull);
+  // 0.2.2 item 2 redesign (U-PAGE): rewritten on purpose. Rows say what mmogo does (mock rows), the
+  // identity line is the masked number then the type, the groups are Suggested, Ask first, Auto-record with
+  // ONE open (Auto-record at start).
+  test('row line: Suggests (chosen) / last 10, Asks, Records up to / never asks first, paused', () {
+    expect(levelRowLine(_p('S', RuleLevel.suggested), paused: false), kHardSuggestsFromLast10);
+    final chosen = _p('S', RuleLevel.suggested).withChosenFrom(
+        hardTestRuleChosen([7, 4]), const {4: 'Bills', 7: 'Family'});
+    expect(chosen.chosenCategoryIds, [7, 4]);
+    expect(levelRowLine(chosen, paused: false), hardRowSuggests('Family, Bills'));
+    expect(levelRowLine(_p('G', RuleLevel.askFirst, cats: ['Food']), paused: false), hardRowAsks('Food'));
+    expect(levelRowLine(_p('G', RuleLevel.askFirst, cats: ['Food']), paused: true), hardRowAsks('Food')); // only Auto-record pauses
+    expect(levelRowLine(_p('A', RuleLevel.autoRecord, ceiling: 200000, cats: ['Rent']), paused: false),
+        hardRowRecordsUpTo('Rent', 200000));
+    expect(levelRowLine(_p('A', RuleLevel.autoRecord, cats: ['Rent']), paused: false), hardRowRecordsNoLimit('Rent'));
+    expect(levelRowLine(_p('A', RuleLevel.autoRecord, ceiling: 5, cats: ['Rent']), paused: true), kHardRowPaused);
+    expect(levelRowLine(_p('A', RuleLevel.autoRecord), paused: false), kHardNoCategoryYet); // a deleted category
   });
 
-  test('pill level: Auto-record reads Ask first while paused, others unchanged', () {
-    expect(shownLevel(_p('A', RuleLevel.autoRecord), paused: true), RuleLevel.askFirst);
-    expect(shownLevel(_p('A', RuleLevel.autoRecord), paused: false), RuleLevel.autoRecord);
-    expect(shownLevel(_p('S', RuleLevel.suggested), paused: true), RuleLevel.suggested);
+  test('chosen list: kept only at Suggested; a deleted category is left out of the names', () {
+    final ask = _p('G', RuleLevel.askFirst).withChosenFrom(hardTestRuleChosen([7]), const {7: 'Family'});
+    expect(ask.chosenCategoryIds, isEmpty);
+    final gone = _p('S', RuleLevel.suggested).withChosenFrom(hardTestRuleChosen([7, 9]), const {7: 'Family'});
+    expect(gone.chosenCategoryIds, [7, 9]);
+    expect(gone.chosenCategoryNames, ['Family']);
+    expect(_p('S', RuleLevel.suggested).withChosenFrom(null, const {}).chosenCategoryIds, isEmpty);
   });
 
-  test('detail line: kind, masked number (Send Money only), categories or no history', () {
-    expect(levelRowDetail(_p('T', RuleLevel.suggested, cats: ['Food', 'Fuel'])), 'Send Money · 0722***555 · Food, Fuel');
-    expect(levelRowDetail(_p('A', RuleLevel.suggested, type: ReceiverType.pochi, key: 'AMINA')), 'Pochi · No history yet');
+  test('spoken: a paused Auto-record row says Auto-record and paused, never "Ask first"', () {
+    final tim = _p('Tim', RuleLevel.autoRecord, ceiling: 200000, cats: ['Rent']);
+    final paused = levelRowSpoken(tim, paused: true);
+    expect(paused, contains(kHardLevelAutoRecord));
+    expect(paused, contains(kHardRowPaused));
+    expect(paused, isNot(contains(kHardLevelAskFirst)));
+    expect(paused, contains('number ending 555'));
+    expect(paused, isNot(contains('123'))); // hidden digits never spoken
+    expect(levelRowSpoken(tim, paused: false), contains(hardRowRecordsUpTo('Rent', 200000)));
   });
 
-  test('sections: riskiest first, Suggested folded at start, people by name', () {
-    expect(kLevelGroupOrder, [RuleLevel.autoRecord, RuleLevel.askFirst, RuleLevel.suggested]);
-    expect(kLevelGroupsFoldedAtStart, {RuleLevel.suggested});
+  test('identity line: masked number (Send Money only), then the type', () {
+    expect(levelRowDetail(_p('T', RuleLevel.suggested, cats: ['Food', 'Fuel'])), '0722***555 · Send Money');
+    expect(levelRowDetail(_p('A', RuleLevel.suggested, type: ReceiverType.pochi, key: 'AMINA')), 'Pochi');
+  });
+
+  test('groups: Suggested, Ask first, Auto-record; Auto-record open at start, else Ask first; one open at a time', () {
+    expect(kLevelGroupOrder, [RuleLevel.suggested, RuleLevel.askFirst, RuleLevel.autoRecord]);
     final all = [_p('zed', RuleLevel.askFirst), _p('Amy', RuleLevel.askFirst), _p('Bo', RuleLevel.suggested)];
     expect(peopleAt(all, RuleLevel.askFirst).map((x) => x.name), ['Amy', 'zed']);
     expect(peopleAt(all, RuleLevel.autoRecord), isEmpty);
+    expect(initialOpenGroup([...all, _p('Al', RuleLevel.autoRecord)]), RuleLevel.autoRecord);
+    expect(initialOpenGroup(all), RuleLevel.askFirst);
+    expect(initialOpenGroup([_p('Bo', RuleLevel.suggested)]), isNull); // Suggested never opens by itself
+    expect(toggledGroup(RuleLevel.autoRecord, RuleLevel.askFirst), RuleLevel.askFirst); // opening one closes the other
+    expect(toggledGroup(RuleLevel.askFirst, RuleLevel.askFirst), isNull);
+    expect(toggledGroup(null, RuleLevel.suggested), RuleLevel.suggested);
   });
 }
+
+ReceiverRule hardTestRuleChosen(List<int> ids) => ReceiverRule(
+    type: ReceiverType.sendMoney,
+    key: '0722123555',
+    name: 'S',
+    level: RuleLevel.suggested,
+    chosenCategoryIds: ids,
+    created: DateTime(2026, 11, 25),
+    changed: DateTime(2026, 11, 25));

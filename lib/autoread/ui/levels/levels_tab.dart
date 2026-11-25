@@ -1,26 +1,27 @@
-/// §AUTOREAD.LEVELS.TAB: the second tab of the Remembered page ("Suggest and
-/// auto-record"), layout A (0.2.2 U5; PM D3 replaced the 0.2.1 level filter and type chips): helper line,
-/// search, people in sections by level (levels_groups.dart; Auto-record first, Suggested folded), then the
-/// airtime switches. Named slots (null = nothing drawn) take the pause card, the paused banner, the reset
-/// footer and the restore review line, which the integration slice fills. With Record receiver details OFF
-/// the tab explains itself (Open Settings) and draws no slots. Composition only: every part is its own
-/// widget in this folder. Without [LevelsDeps] (no rules store wired) only the airtime switches show.
-/// The level sheet's save: `_save` delegates to saveLevelChoice (level_sheet_open.dart): Suggested KEEPS the
-/// rule (PM 25-11), the ceiling is forwarded, and the one notice (deps.notice) follows a successful save while
-/// the Auto-record screens are on.
+/// §AUTOREAD.LEVELS.TAB: the second tab of the Remembered page ("Suggest and auto-record"), 0.2.2 item 2
+/// redesign (mock-remembered-v2 page-all / page-open / page-auto / page-paused / page-empty / page-end):
+/// the pause switch pinned at the top, then (scrolling) the restore review line, the people in folded
+/// groups by level (levels_groups.dart: Auto-record open at start, opening one closes the other), then the
+/// airtime switches; the bottom bar pinned at the bottom (it gets the Set up action). No chips, no search
+/// and no paused banner on this page. Named slots (null = nothing drawn) take the pause switch, the bottom
+/// bar, the review line and the Set up action; the integration slice fills them. With Record receiver
+/// details OFF the tab is ONE card (levels_details_off_card.dart) and draws no slots. The tab reloads when
+/// it comes back from Settings or from Set up, and when the app is resumed (B-8). Composition only: every
+/// part is its own widget in this folder. Without [LevelsDeps] (no rules store wired) only the airtime
+/// switches show.
+/// The person's sheet save: `_save` delegates to saveLevelChoice (level_sheet_open.dart). The page object
+/// with the Forget all hooks is levels_extra_tab.dart (exported here, so importers keep this path).
 library;
+
+export 'levels_extra_tab.dart' show levelsExtraTab;
 
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../../../domain/format/source_types.dart' show sourceTypeName;
-import '../../../ui/screens/remembered/remembered_extra_tab.dart';
-import '../../../ui/shell/routes.dart' show Routes;
 import '../../../ui/theme/app_colors.dart';
-import '../../../ui/widgets/pill_toast.dart';
 import '../../logic/airtime_auto.dart';
-import '../../rules/rule_cleanup.dart';
 import '../../rules/rule_model.dart';
 import 'airtime_switches.dart';
 import 'hard_rule_copy.dart';
@@ -29,100 +30,34 @@ import 'level_sheet.dart';
 import 'level_sheet_open.dart';
 import 'levels_copy.dart';
 import 'levels_deps.dart';
+import 'levels_details_off_card.dart';
 import 'levels_groups.dart';
-import 'levels_help.dart';
 import 'levels_person_row.dart';
-import 'levels_search.dart';
 
-/// The tab's named slots (0.2.2). Each is drawn only when given; the integration slice passes the pause
-/// card, the paused banner, the reset footer and the restore review line. Built inside the tab, so they
-/// follow its theme.
+/// The tab's named slots (0.2.2 item 2 redesign). Each is drawn only when given and only while Record
+/// receiver details is on. Built inside the tab, so they follow its theme. There is deliberately NO paused
+/// banner slot: the amber switch and the "Paused: asking first" rows say it on this page.
 class LevelsSlots {
-  const LevelsSlots({this.pauseCard, this.pausedBanner, this.resetFooter, this.reviewLine});
+  const LevelsSlots({this.pauseSwitch, this.bottomBar, this.reviewLine, this.onSetUp});
 
-  /// Under the helper line, above the search.
-  final WidgetBuilder? pauseCard;
+  /// The "Pause all Auto-record" switch row, pinned at the top (scrolls with the list when the tab is
+  /// too short to pin it).
+  final WidgetBuilder? pauseSwitch;
 
-  /// First in the tab, above the list (I1: it scrolls with the list, so a large text size can never let
-  /// the banner and the review line fill the screen).
-  final WidgetBuilder? pausedBanner;
+  /// The bottom bar (Reset link and Set up button), pinned at the bottom. It receives the tab's Set up
+  /// action: null when [onSetUp] is null (the bar hides its Set up button then).
+  final Widget Function(BuildContext context, VoidCallback? onSetUp)? bottomBar;
 
-  /// Pinned at the bottom of the tab.
-  final WidgetBuilder? resetFooter;
-
-  /// At the top of the tab, under the paused banner (scrolls with the list, as the banner).
+  /// The restore review line, first in the scrolling list.
   final WidgetBuilder? reviewLine;
+
+  /// Opens the Set up sheet (null = no Set up). The tab reloads when it completes.
+  final Future<void> Function(BuildContext context)? onSetUp;
 }
 
-/// The page object the Remembered screen takes as its second tab.
-///
-/// [cleanup] (optional) makes a Forget, a Change to Send Money and a Forget all on the recipients list
-/// also remove the person's rule. [detailsOn] reads "Record receiver details" (null = treated as on).
-RememberedExtraTab levelsExtraTab(AirtimeAutoController controller,
-        {LevelsDeps? deps, RuleCleanup? cleanup, Future<bool> Function()? detailsOn, LevelsSlots slots = const LevelsSlots()}) =>
-    _LevelsExtraTab(controller, deps, cleanup, detailsOn, slots);
-
-class _LevelsExtraTab implements RememberedExtraTab, RememberedForgetHooks, RememberedForgetAllCopy {
-  _LevelsExtraTab(this.c, this.deps, this.cleanup, this.detailsOn, this.slots);
-  final AirtimeAutoController c;
-  final LevelsDeps? deps;
-  final RuleCleanup? cleanup;
-  final Future<bool> Function()? detailsOn;
-  final LevelsSlots slots;
-
-  @override
-  Future<void> onNameForgotten(String key) async => cleanup?.onNameForgotten(key);
-  @override
-  Future<void> onNameChangedToSendMoney(String key) async => cleanup?.onNameChangedToSendMoney(key);
-  @override
-  Future<void> onAllNamesForgotten() async {
-    await cleanup?.onAllNamesForgotten();
-    // 0.2.2: the Forget all words say levels and ceilings are forgotten too, so every rule goes (not only
-    // the Pochi ones). The pause switch is not a rule and stays.
-    final d = deps;
-    if (!autoRecordUi || d == null) return;
-    try {
-      for (final r in await d.store.all()) {
-        await d.store.forget(r.type, r.key);
-      }
-    } catch (_) {
-      // Partly done: say so (the existing save-failed toast) and throw, so the page shows no "Forgot n"
-      // success toast; it marks the run failed and reloads, and the rules still stored stay listed here.
-      PillToast.show(kLevelSheetSaveFailed);
-      rethrow;
-    }
-  }
-
-  /// Flag on (PM 25-11): the TRUE count of everyone Forget all removes: every remembered name plus every
-  /// person with a rule, each once (a Pochi rule lives under its remembered name's key, so that person
-  /// counts once; other rules are keyed by number and are separate people). Flag off: null = today's dialog.
-  @override
-  Future<RememberedForgetAllText?> forgetAllText(List<String> nameKeys) async {
-    if (!autoRecordUi) return null;
-    final names = nameKeys.toSet();
-    final d = deps;
-    final rules = d == null ? const <ReceiverRule>[] : await d.store.all(); // a failure throws: no dialog
-    final n = names.length + rules.where((r) => !(r.type == ReceiverType.pochi && names.contains(r.key))).length;
-    return RememberedForgetAllText(title: hardForgetTitle(n), body: kHardForgetBody, ok: kHardForgetOk, toast: hardForgetToast(n));
-  }
-
-  @override
-  Listenable get listenable => c;
-  @override
-  String get pageTitle => 'Remembered';
-  @override
-  String get recipientsTabLabel => kLevelsRecipientsTab;
-  @override
-  String tabLabel() => kLevelsTabLabel;
-  @override
-  String get forgetAllLabel => kLevelsForgetAllLabel;
-  @override
-  String get forgetAllNote => kLevelsForgetAllNote;
-  @override
-  RememberedExtraHelp get help => levelsHelp();
-  @override
-  Widget buildBody(BuildContext context) => LevelsTab(controller: c, deps: deps, detailsOn: detailsOn, slots: slots);
-}
+/// Below this height the pause switch scrolls with the list instead of being pinned (large text on a
+/// short screen keeps room for the people).
+const double kLevelsPinTopMinHeight = 480;
 
 class LevelsTab extends StatefulWidget {
   const LevelsTab({super.key, required this.controller, this.deps, this.detailsOn, this.slots = const LevelsSlots()});
@@ -137,14 +72,16 @@ class LevelsTab extends StatefulWidget {
   State<LevelsTab> createState() => _LevelsTabState();
 }
 
-class _LevelsTabState extends State<LevelsTab> {
+class _LevelsTabState extends State<LevelsTab> with WidgetsBindingObserver {
   List<LevelPerson> _people = const [];
   bool _loaded = false;
   bool _failed = false;
   bool _detailsOff = false;
   bool _paused = false;
-  final Set<RuleLevel> _folded = {...kLevelGroupsFoldedAtStart};
-  final TextEditingController _search = TextEditingController();
+
+  /// The one open group; set to the start group the first time people are shown, then the user's.
+  RuleLevel? _open;
+  bool _openSet = false;
   StreamSubscription<void>? _sub;
   int _gen = 0;
 
@@ -154,6 +91,7 @@ class _LevelsTabState extends State<LevelsTab> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _sub = widget.deps?.store.changes.listen((_) => _load());
     if (_hard) widget.deps?.pause?.changes.addListener(_readPause);
     _load();
@@ -162,10 +100,22 @@ class _LevelsTabState extends State<LevelsTab> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _sub?.cancel();
     if (_hard) widget.deps?.pause?.changes.removeListener(_readPause);
-    _search.dispose();
     super.dispose();
+  }
+
+  /// B-8: back in the app (Settings may have changed Record receiver details): read everything again.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refresh();
+  }
+
+  void _refresh() {
+    if (!mounted) return;
+    _load();
+    _readPause();
   }
 
   Future<void> _readPause() async {
@@ -189,8 +139,8 @@ class _LevelsTabState extends State<LevelsTab> {
       final known = d.known == null ? const <KnownPerson>[] : await d.known!();
       final knownPochi = {for (final k in known) if (k.type == ReceiverType.pochi) k.key};
       final byId = <String, LevelPerson>{};
-      Future<LevelPerson> make(ReceiverType t, String key, String name, ReceiverRule? r) =>
-          buildLevelPerson(d, t, key, name, r, cats);
+      Future<LevelPerson> make(ReceiverType t, String key, String name, ReceiverRule? r) async =>
+          (await buildLevelPerson(d, t, key, name, r, cats)).withChosenFrom(r, cats);
 
       final ruleBy = {for (final r in rules) '${r.type.code}.${r.key}': r};
       for (final r in rules) {
@@ -208,6 +158,10 @@ class _LevelsTabState extends State<LevelsTab> {
         _detailsOff = off;
         _loaded = true;
         _failed = false;
+        if (!_openSet && !off && _people.isNotEmpty) {
+          _open = initialOpenGroup(_people);
+          _openSet = true;
+        }
       });
     } catch (_) {
       if (!mounted || gen != _gen) return;
@@ -218,13 +172,13 @@ class _LevelsTabState extends State<LevelsTab> {
     }
   }
 
-  /// The level sheet's save (level_sheet_open.dart, shared with the offer pill): Suggested keeps the rule,
+  /// The person sheet's save (level_sheet_open.dart, shared with the offer pill): Suggested keeps the rule,
   /// the ceiling is forwarded, the notice follows while the Auto-record screens are on, and its Change
-  /// ceiling opens this person's sheet again here, with the field focused.
+  /// opens this person's sheet again here, with the field focused.
   Future<LevelSaveResult> _save(LevelPerson x, RuleLevel level, int? cat, int? ceilingCents) =>
       saveLevelChoice(widget.deps!, x, level, cat, ceilingCents, notify: _hard, onChangeCeiling: () => _changeCeiling(x));
 
-  /// The pill's "Change ceiling": the person's sheet again, with the field focused.
+  /// The pill's "Change": the person's sheet again, with the field focused.
   void _changeCeiling(LevelPerson before) {
     if (!mounted) return;
     final now = _people.where((p) => p.id == before.id).firstOrNull ?? before;
@@ -241,7 +195,26 @@ class _LevelsTabState extends State<LevelsTab> {
         onSave: (l, c, {ceilingCents}) => _save(x, l, c, ceilingCents));
   }
 
-  void _toggle(RuleLevel l) => setState(() => _folded.contains(l) ? _folded.remove(l) : _folded.add(l));
+  void _toggle(RuleLevel l) => setState(() {
+        _open = toggledGroup(_open, l);
+        _openSet = true;
+      });
+
+  /// B-7 + B-8: Settings at the "Record receiver details" switch; read again when it is closed.
+  Future<void> _openSettings() async {
+    await openSettingsAtCaptureReceiver(context);
+    _refresh();
+  }
+
+  /// The Set up action given to the bottom bar (null = no Set up); read again when the sheet is closed.
+  VoidCallback? get _setUp {
+    final open = widget.slots.onSetUp;
+    if (open == null) return null;
+    return () async {
+      await open(context);
+      _refresh();
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -256,75 +229,54 @@ class _LevelsTabState extends State<LevelsTab> {
     }
     final slots = widget.slots;
     final on = !_detailsOff;
-    final list = ListView(
-      key: const Key('levelsTab'),
-      padding: const EdgeInsets.only(bottom: 16),
-      children: [
-        if (!on)
-          ..._detailsOffBody(p)
-        else ...[
-          if (slots.pausedBanner != null) slots.pausedBanner!(context),
-          if (slots.reviewLine != null) slots.reviewLine!(context),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-            child: Text(_hard ? kHardPageHelper : kLevelsHelper,
-                key: const Key('levelsHelper'), style: TextStyle(fontSize: 12.5, height: 1.4, color: p.mutedInk)),
-          ),
-          if (slots.pauseCard != null) slots.pauseCard!(context),
-          if (_failed)
-            _note(p, kLevelsLoadFailed, const Key('levelsFailed'))
-          else if (_loaded && _people.isEmpty)
-            _note(p, kLevelsEmpty, const Key('levelsEmpty'))
-          else if (_loaded) ...[
-            LevelsSearchField(controller: _search, onChanged: (_) => setState(() {})),
-            LevelsGroups(
-              people: _people,
-              query: _search.text,
-              folded: _folded,
-              onToggle: _toggle,
-              rowBuilder: (x) => LevelsPersonRow(
-                key: Key('levelRow.${x.type.code}.${x.key}'),
-                person: x,
-                paused: _paused,
-                hard: _hard,
-                onLevelTap: () => _openSheet(x),
+    return LayoutBuilder(builder: (context, box) {
+      final pinTop = box.maxHeight >= kLevelsPinTopMinHeight;
+      final top = on && slots.pauseSwitch != null ? slots.pauseSwitch!(context) : null;
+      final list = ListView(
+        key: const Key('levelsTab'),
+        padding: const EdgeInsets.only(bottom: 16),
+        children: [
+          if (!on)
+            LevelsDetailsOffCard(onOpenSettings: _openSettings)
+          else ...[
+            if (top != null && !pinTop) top,
+            if (slots.reviewLine != null) slots.reviewLine!(context),
+            // Flag off: the 0.2.1 helper line stays; the redesigned page has none (mock page-all).
+            if (!_hard)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                child: Text(kLevelsHelper,
+                    key: const Key('levelsHelper'), style: TextStyle(fontSize: 12.5, height: 1.4, color: p.mutedInk)),
               ),
-            ),
+            if (_failed)
+              _note(p, kLevelsLoadFailed, const Key('levelsFailed'))
+            else if (_loaded && _people.isEmpty)
+              _note(p, _hard ? kHardPageFirstTime : kLevelsEmpty, const Key('levelsEmpty'), center: _hard)
+            else if (_loaded)
+              LevelsGroups(
+                people: _people,
+                open: _open,
+                onToggle: _toggle,
+                rowBuilder: (x) => LevelsPersonRow(
+                  key: Key('levelRow.${x.type.code}.${x.key}'),
+                  person: x,
+                  paused: _paused,
+                  hard: _hard,
+                  onLevelTap: () => _openSheet(x),
+                ),
+              ),
           ],
+          _airtimeHeader(p),
+          AirtimeSwitches(controller: widget.controller),
         ],
-        _airtimeHeader(p),
-        AirtimeSwitches(controller: widget.controller),
-      ],
-    );
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Expanded(child: list),
-      if (on && slots.resetFooter != null) slots.resetFooter!(context),
-    ]);
+      );
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (top != null && pinTop) top,
+        Expanded(child: list),
+        if (on && slots.bottomBar != null) slots.bottomBar!(context, _setUp),
+      ]);
+    });
   }
-
-  /// Record receiver details OFF (mock rst-off-page): the line, Open Settings, the empty line.
-  List<Widget> _detailsOffBody(AppPalette p) => [
-        Container(
-          key: const Key('levelsDetailsOff'),
-          margin: const EdgeInsets.fromLTRB(14, 10, 14, 4),
-          padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
-          decoration: BoxDecoration(color: p.tint, borderRadius: BorderRadius.circular(16)),
-          child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
-            Text(kHardDetailsOffLine, style: TextStyle(fontSize: 13.5, height: 1.4, color: p.tintInk)),
-            TextButton(
-              key: const Key('levelsOpenSettings'),
-              style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-              onPressed: () => Navigator.of(context).pushNamed(Routes.settings),
-              child: Text(kHardOpenSettings, style: TextStyle(fontWeight: FontWeight.w800, color: p.primary)),
-            ),
-          ]),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 16, 14, 8),
-          child: Text(kHardDetailsOffEmpty,
-              key: const Key('levelsDetailsOffEmpty'), textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: p.mutedInk)),
-        ),
-      ];
 
   /// The airtime switches' own heading (the type name, as the old Airtime chip said).
   Widget _airtimeHeader(AppPalette p) => Semantics(
@@ -339,8 +291,15 @@ class _LevelsTabState extends State<LevelsTab> {
         ),
       );
 
-  Widget _note(AppPalette p, String text, Key key) => Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
-        child: Text(text, key: key, style: TextStyle(fontSize: 13, height: 1.4, color: p.mutedInk)),
+  /// A one-line state of the list (failed, nobody yet); a live region so a screen reader hears it.
+  Widget _note(AppPalette p, String text, Key key, {bool center = false}) => Padding(
+        padding: EdgeInsets.fromLTRB(14, center ? 20 : 12, 14, 4),
+        child: Semantics(
+          liveRegion: true,
+          child: Text(text,
+              key: key,
+              textAlign: center ? TextAlign.center : TextAlign.start,
+              style: TextStyle(fontSize: center ? 14 : 13, height: 1.4, color: p.mutedInk)),
+        ),
       );
 }

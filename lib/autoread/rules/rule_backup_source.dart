@@ -1,6 +1,7 @@
 /// §AUTOREAD.RULE_BACKUP_SOURCE - AUTOREAD RULES to backup adapter (0.2.2 item 2, S-4a): the
 /// export's `BackupRulesSource` over a [RuleStore]. Plain data out (kind code, key, name, level,
-/// category DATABASE id, ceiling, marker): `lib/data/backup` turns the id into a seed key or name.
+/// category DATABASE id, ceiling, marker, chosen Suggest category ids): `lib/data/backup` turns
+/// each id into a seed key or name.
 /// Empty while "Record receiver details" is OFF (the real store answers empty then). Wired since
 /// 0.2.2 B1: `RulesWiring.backupSource` reads it for every `BackupService(rules:)` (RuleBackupSeams).
 library;
@@ -19,5 +20,6 @@ Future<List<BackupRuleInput>> backupRulesFrom(RuleStore store) async => [
           categoryId: r.categoryId,
           ceilingCents: r.ceilingCents,
           autoPending: r.autoPending,
+          chosenCategoryIds: r.chosenCategoryIds,
         ),
     ];

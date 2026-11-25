@@ -20,6 +20,9 @@ const int kBackupFormatVersion = 1;
 /// database stays at version 8 (rules live in phone preferences), so this no longer mirrors
 /// `kDbVersion`. A 0.2.1 or older app refuses a schema 9 file as made by a newer version (nothing is
 /// written); a file of schema 8 or lower never carries the section and restores with no rules.
+/// The rule row's `sc` key (chosen Suggest categories, 0.2.2 item 2 B-BK) was added WITHOUT a
+/// schema bump: no released build ever wrote schema 9 (v0.2.1 writes 8; schema 9 first appears
+/// after the v0.2.1 tag), so no schema 9 file without `sc` exists outside development builds.
 /// 8 (0.2.1) adds one optional row key, `recorded_auto` (1 = recorded with no tap), written only
 /// when 1. A 0.2.0 or older app refuses a schema 8 file as made by a newer version (nothing is
 /// written); a file of schema 7 or lower restores with every flag 0. `format_version` stays 1.
@@ -412,6 +415,13 @@ const List<String> kBackupFulizaKeys = [
 /// `cat_name` the person's own category name (never both; both null = no category), `ceil` cents or
 /// null, `ap` 0/1 (restored from Auto-record, awaiting a review). Category DATABASE ids never travel:
 /// a restore gives categories new ids, so the rule names its category and restore maps it back.
+/// `sc` (0.2.2 item 2, B-BK): the person's chosen Suggest categories ("Categories I choose"), a
+/// list of 0..[kBackupMaxChosenCategories] entries in the order chosen, each a map with exactly
+/// one of `cat_seed` / `cat_name` (the same naming as the rule's own category). Always present
+/// (the exporter writes `[]` when none and for every level above Suggested). Restore maps each
+/// entry back to the phone's id, drops entries that are not ACTIVE categories after the restore,
+/// clamps to [kBackupMaxChosenCategories] and keeps the list only at Suggested; a missing,
+/// null or unreadable `sc` restores as empty (`restore_rules.dart`).
 const List<String> kBackupRuleKeys = [
   't',
   'k',
@@ -421,7 +431,12 @@ const List<String> kBackupRuleKeys = [
   'cat_name',
   'ceil',
   'ap',
+  'sc',
 ];
+
+/// Most chosen Suggest categories a rule row's `sc` may carry: the same 2 as
+/// `kMaxChosenCategories` in the rule model (a test pins the two; `lib/data` may not import it).
+const int kBackupMaxChosenCategories = 2;
 
 // --- patterns -------------------------------------------------------------------
 

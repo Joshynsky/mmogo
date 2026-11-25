@@ -60,7 +60,8 @@ void main() {
       expect(kBackupMinCeilingCents, kCeilingMinCents);
       expect(kBackupMaxCeilingCents, kCeilingMaxCents);
       expect(kBackupMaxRuleLevel, RuleLevel.autoRecord.code);
-      expect(kBackupRuleKeys, ['t', 'k', 'name', 'lv', 'cat_seed', 'cat_name', 'ceil', 'ap']);
+      // CHANGED ON PURPOSE (0.2.2 item 2 B-BK): `sc` (chosen Suggest categories) added, no schema bump.
+      expect(kBackupRuleKeys, ['t', 'k', 'name', 'lv', 'cat_seed', 'cat_name', 'ceil', 'ap', 'sc']);
     });
 
     test('receiver_rules sits between fuliza_events and prefs; the schema 8 lists are frozen', () {
@@ -78,7 +79,7 @@ void main() {
   });
 
   group('codec', () {
-    test('writes the section in order, `end` still last, counts entry; only the 8 keys', () {
+    test('writes the section in order, `end` still last, counts entry; only the 9 keys', () {
       final bytes = BackupCodec.encode(
         createdAtMs: f0,
         classifications: const [],

@@ -1,5 +1,5 @@
 /// §AUTOREAD.TODO_SECTION - the body of the To do chip: To parse (n) with the
-/// Parse all bar, To choose, Suggestions, To categorize (n, unreadable inside), the trail slot LAST, and
+/// Parse all bar, To choose, Suggestions, To categorize (n), Could not read (n), the trail slot LAST, and
 /// one empty card when nothing is left. Rows come from [rowBuilder] and the bar
 /// and trail slot are passed in, so this file holds order, headings and counts
 /// only and stays testable without a repository. Autoread build only.
@@ -80,8 +80,8 @@ class TodoSection extends StatelessWidget {
         decision == null &&
         !hasToChoose &&
         !hasSuggestions;
-    // F10 (PM 24-11): To confirm, To parse, To choose, Suggestions (one card), To categorize (unreadable
-    // messages last inside it, F11), then Recorded automatically at the very bottom.
+    // F10 (PM 24-11): To confirm, To parse, To choose, Suggestions (one card), To categorize, then
+    // Could not read (F-1 25-11 replaces F11), then Recorded automatically at the very bottom.
     final children = <Widget>[
       if (confirm.isNotEmpty) ...[
         SectionHeading('$kHeadingToConfirm (${capCount(confirm.length)})'),
@@ -93,11 +93,17 @@ class TodoSection extends StatelessWidget {
       ],
       if (hasToChoose) ?toChoose,
       if (hasSuggestions) ?suggestions,
-      if (toCategorize.isNotEmpty || decision != null || unreadable.isNotEmpty) ...[
-        _TodoHeading('$kHeadingToCategorize (${capCount(toCategorize.length + unreadable.length + (decision == null ? 0 : 1))})'),
+      // 0.2.2 item 2 (B-3, F-1, PM 25-11): unreadable and gone messages left To categorize and its
+      // count; they get their own heading right after it. kHeadingCouldNotRead keeps the signed
+      // 11-11 words "Could not read" (the sign-off says "Could not be read"; W2 decides).
+      if (toCategorize.isNotEmpty || decision != null) ...[
+        _TodoHeading('$kHeadingToCategorize (${capCount(toCategorize.length + (decision == null ? 0 : 1))})'),
         const _Quiet(kWaitingNotCounted),
         if (decision != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: decision),
         ...toCategorize.map(rowBuilder),
+      ],
+      if (unreadable.isNotEmpty) ...[
+        _TodoHeading('$kHeadingCouldNotRead (${capCount(unreadable.length)})'),
         ...unreadable.map(rowBuilder),
       ],
       if (nothing) NothingWaitingLine(top: hasTrail),

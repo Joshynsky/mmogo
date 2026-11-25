@@ -7,6 +7,7 @@ import 'package:mmogo/autoread/logic/airtime_auto.dart';
 import 'package:mmogo/autoread/rules/fake_rule_store.dart';
 import 'package:mmogo/autoread/rules/rule_model.dart';
 import 'package:mmogo/autoread/ui/category_choices.dart';
+import 'package:mmogo/autoread/ui/levels/hard_rule_copy.dart';
 import 'package:mmogo/autoread/ui/levels/levels_copy.dart';
 import 'package:mmogo/autoread/ui/auto_record_copy.dart' show kAutoRecordExplainLater, kAutoRecordExplainUndo;
 import 'package:mmogo/autoread/ui/levels/levels_deps.dart';
@@ -80,7 +81,7 @@ Future<void> _pump(WidgetTester t, _Rig r, {double scale = 1, double width = 390
 
 double _y(WidgetTester t, String key) => t.getTopLeft(find.byKey(Key(key))).dy;
 
-/// Opens the folded Suggested section (layout A folds it at start).
+/// Opens the closed Suggested group (closed at start).
 Future<void> _openSuggested(WidgetTester t) async {
   await t.ensureVisible(find.byKey(const Key('levelGroupToggle.suggested')));
   await t.pumpAndSettle();
@@ -90,6 +91,8 @@ Future<void> _openSuggested(WidgetTester t) async {
 
 // 0.2.2 U5 (PM D3): layout A replaced the 0.2.1 level filter and type chips. The filter and chip tests
 // were rewritten on purpose for the sections, the fold and the search; the flag-off (0.2.1) promises stay.
+// 0.2.2 item 2 redesign (U-PAGE): the group and search tests were rewritten on purpose again (folded groups,
+// one open, no search on the page).
 void main() {
   testWidgets('empty: no people yet shows the empty line, airtime switches still there', (t) async {
     final r = _Rig()..known = const [];
@@ -99,38 +102,29 @@ void main() {
     expect(find.byKey(const Key('autoRecordMyself')), findsOneWidget); // no type chips: the switches sit under the list
   });
 
-  testWidgets('sections: Ask first before Suggested; Suggested folded; by name; history names under Suggested', (t) async {
+  // 0.2.2 item 2 redesign (U-PAGE): rewritten on purpose. Groups Suggested, Ask first, Auto-record with
+  // one open (Ask first here: nobody is on Auto-record); rows say what mmogo does.
+  testWidgets('groups: Suggested above Ask first; Ask first open (no Auto-record people), Suggested closed; by name', (t) async {
     final r = _Rig();
     await r.store.setLevel(ReceiverType.sendMoney, '0722', name: 'Grace', level: RuleLevel.askFirst, categoryId: 2, at: _at);
     await _pump(t, r);
+    expect(_y(t, 'levelGroup.suggested'), lessThan(_y(t, 'levelGroup.askFirst')));
     expect(find.byKey(const Key('levelRow.SM.0722')), findsOneWidget);
-    expect(find.byKey(const Key('levelRow.SM.0711')), findsNothing); // folded
-    expect(find.text('Send Money · Food'), findsOneWidget); // Grace's rule category
+    expect(find.byKey(const Key('levelRow.SM.0711')), findsNothing); // closed
+    expect(find.text(hardRowAsks('Food')), findsOneWidget); // Grace's rule category
     await _openSuggested(t);
-    expect(_y(t, 'levelRow.SM.0722'), lessThan(_y(t, 'levelRow.SM.0711')));
+    expect(find.byKey(const Key('levelRow.SM.0722')), findsNothing); // opening one closes the other
     expect(_y(t, 'levelRow.PO.Amina'), lessThan(_y(t, 'levelRow.SM.0711'))); // by name: Amina, Tim
-    expect(find.text('Send Money · Food, Fuel'), findsOneWidget); // Tim: history, most used first
-    expect(find.text('Pochi · $kLevelsNoHistory'), findsOneWidget); // Amina
+    expect(find.text(kHardSuggestsFromLast10), findsNWidgets(2)); // Tim and Amina, no chosen list
+    expect(find.text('Pochi'), findsOneWidget); // Amina's identity line: the type only
   });
 
-  testWidgets('search: matches name and kind, opens the folded section, "Nobody matches." when none', (t) async {
+  testWidgets('no search on the page (search lives in the Set up sheet)', (t) async {
     final r = _Rig();
     await r.store.setLevel(ReceiverType.sendMoney, '0722', name: 'Grace', level: RuleLevel.askFirst, categoryId: 2, at: _at);
     await _pump(t, r);
-    await t.enterText(find.byKey(const Key('levelsSearch')), 'tim');
-    await t.pumpAndSettle();
-    expect(find.byKey(const Key('levelRow.SM.0711')), findsOneWidget); // Suggested opened by the search
-    expect(find.byKey(const Key('levelRow.SM.0722')), findsNothing);
-    await t.enterText(find.byKey(const Key('levelsSearch')), 'pochi');
-    await t.pumpAndSettle();
-    expect(find.byKey(const Key('levelRow.PO.Amina')), findsOneWidget); // the kind matches too
-    await t.enterText(find.byKey(const Key('levelsSearch')), 'nobody here');
-    await t.pumpAndSettle();
-    expect(find.byKey(const Key('levelsSearchEmpty')), findsOneWidget);
-    await t.enterText(find.byKey(const Key('levelsSearch')), '');
-    await t.pumpAndSettle();
-    expect(find.byKey(const Key('levelRow.SM.0711')), findsNothing); // folded again
-    expect(find.byKey(const Key('levelRow.SM.0722')), findsOneWidget);
+    expect(find.byKey(const Key('levelsSearch')), findsNothing);
+    expect(find.byType(TextField), findsNothing);
   });
 
   testWidgets('D3: no level filter and no type chips; every kind in one list', (t) async {
@@ -189,7 +183,10 @@ void main() {
     expect(rule.categoryId, 1);
     expect(rule.name, 'Tim');
     expect(find.text(levelSheetTitle('Tim ***')), findsNothing);
-    // The row moved to the Ask first section.
+    // The row moved to the Ask first group (closed while Suggested is open; opening it shows Tim).
+    expect(find.byKey(const Key('levelRow.SM.0711')), findsNothing);
+    await t.tap(find.byKey(const Key('levelGroupToggle.askFirst')));
+    await t.pumpAndSettle();
     expect(find.text(kLevelAskFirst), findsWidgets);
     expect(find.byKey(const Key('levelRow.SM.0711')), findsOneWidget);
   });
@@ -210,6 +207,8 @@ void main() {
     // Existing rule: choosing Suggested and Save keeps the rule at Suggested (0.2.1 removed it).
     await r.store.setLevel(ReceiverType.sendMoney, '0711', name: 'Tim', level: RuleLevel.askFirst, categoryId: 2, at: _at);
     await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('levelGroupToggle.askFirst'))); // Tim is in the Ask first group now
+    await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('levelButton.SM.0711')));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('levelChoicesuggested')));
@@ -228,8 +227,7 @@ void main() {
       await r.store.setLevel(ReceiverType.buyGoods, 'S$i', name: 'S$i', level: RuleLevel.askFirst, categoryId: 1, at: _at);
     }
     await _pump(t, r);
-    await t.enterText(find.byKey(const Key('levelsSearch')), 'tim'); // the long Ask first list is in the way
-    await t.pumpAndSettle();
+    await _openSuggested(t); // the long Ask first list closes
     await t.tap(find.byKey(const Key('levelButton.SM.0711')));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('levelChoiceaskFirst')));

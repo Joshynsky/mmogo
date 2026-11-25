@@ -63,7 +63,7 @@ void main() {
 
   double y(WidgetTester t, Finder f) => t.getTopLeft(f).dy;
 
-  testWidgets('order: To confirm, To parse, To choose, Suggestions, To categorize, Recorded automatically last', (t) async {
+  testWidgets('order: To confirm, To parse, To choose, Suggestions, To categorize, Could not read, Recorded automatically last', (t) async {
     final trail = [
       AutoRecorded(rowId: 5, amountCents: 50000, at: kFakeNow.subtract(const Duration(minutes: 3)), partyLabel: 'JOHN D', categoryName: 'Fuel'),
     ];
@@ -73,26 +73,30 @@ void main() {
       y(t, find.text('$kHeadingToParse (1)')),
       y(t, find.text('TO-CHOOSE')),
       y(t, find.text('$kHeadingSuggestions (3)')),
-      y(t, find.text('$kHeadingToCategorize (2)')),
+      y(t, find.text('$kHeadingToCategorize (1)')),
+      y(t, find.text('$kHeadingCouldNotRead (1)')),
       y(t, find.text('$kAutoRecordedHeading (1)')),
     ];
     expect(order, [...order]..sort());
-    expect(order.toSet(), hasLength(6));
+    expect(order.toSet(), hasLength(7));
   });
 
-  testWidgets('Suggestions is ONE card with "2 more"; Could not read is gone; unreadable sits last inside To categorize', (t) async {
+  // 0.2.2 item 2 (B-3, F-1): unreadable rows left To categorize; they sit under their own heading after it.
+  testWidgets('Suggestions is ONE card with "2 more"; unreadable row is under Could not read, after To categorize', (t) async {
     await pump(t, [cat(4), unreadable(3)], toChoose: false);
     expect(find.byKey(const Key('suggestion-confirm')), findsOneWidget);
     expect(find.text('2 more'), findsOneWidget);
-    expect(find.textContaining(kHeadingCouldNotRead), findsNothing);
-    expect(find.text('$kHeadingToCategorize (2)'), findsOneWidget);
-    expect(y(t, find.byKey(Key('row-${heldIdFor(4)}'))), lessThan(y(t, find.byKey(Key('row-${heldIdFor(3)}')))));
-    expect(y(t, find.text('$kHeadingToCategorize (2)')), lessThan(y(t, find.byKey(Key('row-${heldIdFor(3)}')))));
+    expect(find.text('$kHeadingToCategorize (1)'), findsOneWidget); // count excludes the unreadable row
+    expect(find.text('$kHeadingCouldNotRead (1)'), findsOneWidget);
+    expect(y(t, find.byKey(Key('row-${heldIdFor(4)}'))), lessThan(y(t, find.text('$kHeadingCouldNotRead (1)'))));
+    expect(y(t, find.text('$kHeadingCouldNotRead (1)')), lessThan(y(t, find.byKey(Key('row-${heldIdFor(3)}')))));
   });
 
-  testWidgets('only an unreadable message: it is under To categorize (1)', (t) async {
+  testWidgets('only an unreadable message: Could not read (1), no empty To categorize heading', (t) async {
     await pump(t, [unreadable(3)], toChoose: false, offerCount: 0);
-    expect(find.text('$kHeadingToCategorize (1)'), findsOneWidget);
+    expect(find.textContaining(kHeadingToCategorize), findsNothing);
+    expect(find.text(kWaitingNotCounted), findsNothing);
+    expect(find.text('$kHeadingCouldNotRead (1)'), findsOneWidget);
     expect(find.byKey(Key('row-${heldIdFor(3)}')), findsOneWidget);
   });
 

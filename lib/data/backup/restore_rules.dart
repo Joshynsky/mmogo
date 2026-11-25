@@ -9,10 +9,17 @@
 /// Auto-record to Ask first with the `autoPending` marker (Paybill cannot hold Auto-record at all:
 /// Ask first, no marker), and plans Replace (all rules replace the phone's) or Merge (the sink adds
 /// only for receivers with no rule). Data only: no wording. Never touches the pause switch.
+///
+/// Chosen Suggest categories (`sc`, 0.2.2 item 2 B-BK): for a rule that is Suggested in the file,
+/// each entry is mapped to the phone's id the same way, entries that are not an ACTIVE category
+/// after the restore are dropped, an id twice is kept once, and at most
+/// [kBackupMaxChosenCategories] are kept in order. Above Suggested the list is always empty. A
+/// missing, null or unreadable `sc` (or entry) restores as empty: never a refused rule.
 library;
 
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'backup_limits.dart' show kBackupMaxChosenCategories;
 import 'backup_validator.dart' show ValidatedBackup;
 import 'restore_types.dart' show RestoreMode;
 
@@ -28,6 +35,7 @@ class RestoredRule {
     this.autoPending = false,
     this.wasAutoRecord = false,
     this.wasPaybillAuto = false,
+    this.chosenCategoryIds = const <int>[],
   });
 
   /// `ReceiverType.code` (`SM`, `PB`, `BG`, `PO`).
@@ -48,6 +56,10 @@ class RestoredRule {
 
   /// The file had Auto-record on a Paybill (counted separately: it can never be Auto-record).
   final bool wasPaybillAuto;
+
+  /// Chosen Suggest categories as phone ids (active only, at most 2, no id twice). Always empty
+  /// unless [level] is 0.
+  final List<int> chosenCategoryIds;
 }
 
 /// What the sink is asked to do.
@@ -124,7 +136,7 @@ abstract class RuleRestoreSink {
 
 /// The phone's categories as the restore needs them to map a rule.
 class RuleCategoryLookup {
-  const RuleCategoryLookup({this.idBySeed = const {}, this.idByName = const {}});
+  const RuleCategoryLookup({this.idBySeed = const {}, this.idByName = const {}, this.activeIds = const {}});
 
   /// `seed_key` -> id.
   final Map<String, int> idBySeed;
@@ -132,13 +144,19 @@ class RuleCategoryLookup {
   /// Name of a user-made category -> id (an active row wins, else the lowest id).
   final Map<String, int> idByName;
 
+  /// Ids of the ACTIVE categories (`active = 1`). A chosen Suggest category must be one of these;
+  /// the rule's own category is not checked here (unchanged since S-4b).
+  final Set<int> activeIds;
+
   static Future<RuleCategoryLookup> load(DatabaseExecutor ex) async {
     final seed = <String, int>{};
     final byName = <String, int>{};
     final active = <String>{};
+    final activeIds = <int>{};
     final rows = await ex.rawQuery('SELECT id, seed_key, name, active FROM classifications ORDER BY id');
     for (final r in rows) {
       final id = r['id']! as int;
+      if (r['active'] == 1) activeIds.add(id);
       final sk = r['seed_key'] as String?;
       if (sk != null) {
         seed[sk] = id;
@@ -151,8 +169,32 @@ class RuleCategoryLookup {
         if (isActive) active.add(name);
       }
     }
-    return RuleCategoryLookup(idBySeed: seed, idByName: byName);
+    return RuleCategoryLookup(idBySeed: seed, idByName: byName, activeIds: activeIds);
   }
+
+  /// The phone id for one `sc` entry (a map with exactly one of `cat_seed` / `cat_name`), or null
+  /// when the entry is unreadable, not found, or not an active category.
+  int? chosenId(Object? entry) {
+    if (entry is! Map || entry.length != 1) return null;
+    final seed = entry['cat_seed'];
+    final name = entry['cat_name'];
+    final id = seed is String ? idBySeed[seed] : (name is String ? idByName[name] : null);
+    return id != null && activeIds.contains(id) ? id : null;
+  }
+}
+
+/// The phone ids for a file row's `sc` value. PURE and never throws: not a list = empty; each
+/// unreadable, unknown or inactive entry dropped; an id twice kept once; at most
+/// [kBackupMaxChosenCategories], file order kept.
+List<int> restoredChosenIds(Object? sc, RuleCategoryLookup cats) {
+  if (sc is! List) return const <int>[];
+  final out = <int>[];
+  for (final e in sc) {
+    if (out.length == kBackupMaxChosenCategories) break;
+    final id = cats.chosenId(e);
+    if (id != null && !out.contains(id)) out.add(id);
+  }
+  return List<int>.unmodifiable(out);
 }
 
 /// Builds the plan from a validated file. PURE.
@@ -178,6 +220,7 @@ RulesRestorePlan planRulesRestore(ValidatedBackup file, RestoreMode mode, RuleCa
       autoPending: level == 1 && (wasAuto || (!auto && canAuto && r['ap'] == 1)),
       wasAutoRecord: wasAuto,
       wasPaybillAuto: auto && !canAuto,
+      chosenCategoryIds: level == 0 ? restoredChosenIds(r['sc'], cats) : const <int>[],
     ));
   }
   return RulesRestorePlan(replace: mode == RestoreMode.replace, hasSection: file.hasRulesSection, rows: rows);

@@ -1,7 +1,13 @@
-// 0.2.2 U5: the Remembered page's second tab, layout A, with the Auto-record screens on (autoRecordUi
-// forced true): sections, fold, search, row lines, pause look, details OFF, slots, the sheet's save
-// (Suggested keeps the rule, ceiling forwarded, the one notice) and the counts-only Forget all.
-// Invented names only.
+// The Remembered page's second tab with the Auto-record screens on (autoRecordUi forced true).
+// 0.2.2 item 2 redesign (U-PAGE, mock-remembered-v2 page-*): REWRITTEN ON PURPOSE from the U5 layout A
+// tests (plan section 3 reversal 3): folded groups Suggested / Ask first / Auto-record with ONE open
+// (Auto-record at start), no chips, no search, no helper line, rows that say what mmogo does, paused rows
+// and their spoken label, the ONE details-off card with B-7 (Settings at the switch) and B-8 (refresh after
+// Settings and on resume), the slots (pause switch pinned, bottom bar with Set up, no paused banner), the
+// sheet's save (Suggested keeps the rule, ceiling forwarded, the one notice) and the counts-only Forget all
+// through C2's forgetEveryone / countEveryone. Invented names only.
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/autoread/history/fake_history_reader.dart';
@@ -20,8 +26,11 @@ import 'package:mmogo/data/prefs/recipient_memory.dart';
 import 'package:mmogo/domain/parsing/parsed_sms_fields.dart';
 import 'package:mmogo/ui/copy/settings_copy.dart';
 import 'package:mmogo/ui/screens/remembered/remembered_screen.dart';
+import 'package:mmogo/ui/screens/settings/settings_targets.dart';
 import 'package:mmogo/ui/shell/app_messenger.dart' show appNavigatorKey;
+import 'package:mmogo/ui/shell/routes.dart' show Routes;
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
+import 'package:mmogo/ui/widgets/highlight_pulse.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../support/hard_rule_fakes.dart';
@@ -41,6 +50,7 @@ class _Cats implements CategoryChoices {
 /// "passed explicitly" needs the call itself).
 class _RecStore extends FakeRuleStore {
   final List<({RuleLevel level, int? categoryId, int? ceilingCents})> calls = [];
+  int forgetEveryoneCalls = 0;
   @override
   Future<bool> setLevel(ReceiverType type, String key,
       {required String name,
@@ -58,31 +68,41 @@ class _RecStore extends FakeRuleStore {
         chosenCategoryIds: chosenCategoryIds,
         at: at);
   }
+
+  @override
+  Future<int> forgetEveryone() {
+    forgetEveryoneCalls++;
+    return super.forgetEveryone();
+  }
 }
 
 const _tim = '0722123555';
 const _grace = '0711000222';
 
-/// Forgets [okForgets] rules, then every forget throws (a store failing part way).
-class _ThrowAfterStore extends _RecStore {
-  _ThrowAfterStore(this.okForgets);
-  int okForgets;
+/// forgetEveryone fails (C2's erase-everyone call); nothing is erased.
+class _ThrowOnForgetAllStore extends _RecStore {
   @override
-  Future<void> forget(ReceiverType type, String key) async {
-    if (okForgets-- <= 0) throw StateError('store failed');
-    return super.forget(type, key);
-  }
+  Future<int> forgetEveryone() async => throw StateError('store failed');
 }
 
-/// A store whose list cannot be read.
-class _FailingAllStore extends _RecStore {
+/// A store whose count cannot be taken.
+class _FailingCountStore extends _RecStore {
   @override
-  Future<List<ReceiverRule>> all() async => throw StateError('store failed');
+  Future<int> countEveryone() async => throw StateError('store failed');
+}
+
+/// Hides every rule from all() (what B-HIDE does while Record receiver details is off); the C2 calls
+/// still see them.
+class _HiddenStore extends _RecStore {
+  @override
+  Future<List<ReceiverRule>> all() async => const [];
 }
 
 class _Rig {
-  _Rig({_RecStore? store}) : store = store ?? _RecStore();
+  _Rig({_RecStore? store, this.knownPeople = const [KnownPerson(type: ReceiverType.buyGoods, key: '5512', name: 'Mama Mboga')]})
+      : store = store ?? _RecStore();
   final _RecStore store;
+  final List<KnownPerson> knownPeople;
   final notice = FakeRuleChangeNotice();
   final pause = FakeHardRulePausePort();
   final airtime = AirtimeAutoController(onSwitch: (_) async {}, onSwitchOther: (_) async {}, onUndo: (_) async {});
@@ -93,14 +113,14 @@ class _Rig {
         history: FakeHistoryReader(history: {'BG.5512': [2]}),
         categories: _Cats(),
         suggest: FakeSuggestSettings(),
-        known: () async => const [KnownPerson(type: ReceiverType.buyGoods, key: '5512', name: 'Mama Mboga')],
+        known: () async => knownPeople,
         now: () => kHardTestNow,
         pause: pause,
         notice: notice,
       );
 
-  /// Tim Auto-record with Ksh 2,000, Amina (Pochi rule) Auto-record no ceiling, Grace Ask first,
-  /// KPLC (Paybill) Ask first, Mama Mboga Suggested (known name, no rule).
+  /// Tim Auto-record Family with Ksh 2,000, Amina (Buy Goods) Auto-record Bills with no limit, Grace Ask
+  /// first Food, KPLC (Paybill) Ask first Bills, Mama Mboga Suggested (known name, no rule).
   Future<void> seed() async {
     await store.saveRule(hardTestRule(_tim, name: 'Tim', level: RuleLevel.autoRecord, categoryId: 1, ceilingCents: 200000));
     await store.saveRule(hardTestRule('Amina', type: ReceiverType.buyGoods, name: 'Amina', level: RuleLevel.autoRecord, categoryId: 3));
@@ -110,14 +130,27 @@ class _Rig {
   }
 }
 
+/// What the fake Settings page saw: the highlight id taken when it opened.
+final List<String?> _settingsOpened = [];
+
 Future<void> _pump(WidgetTester t, _Rig r,
-    {double scale = 1, bool dark = false, TextDirection dir = TextDirection.ltr, LevelsSlots slots = const LevelsSlots()}) async {
-  t.view.physicalSize = const Size(390, 1400);
+    {double scale = 1,
+    bool dark = false,
+    TextDirection dir = TextDirection.ltr,
+    LevelsSlots slots = const LevelsSlots(),
+    Size size = const Size(390, 1400)}) async {
+  t.view.physicalSize = size;
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.reset);
   await t.pumpWidget(AppPaletteScope(
     controller: AppPaletteController('ocean', dark ? 'dark' : 'light'),
     child: MaterialApp(
+      onGenerateRoute: (s) => s.name == Routes.settings
+          ? MaterialPageRoute<void>(builder: (_) {
+              _settingsOpened.add(HighlightRequest.take());
+              return const Scaffold(key: Key('fakeSettings'), body: Center(child: BackButton(key: Key('fakeSettingsBack'))));
+            })
+          : null,
       home: Builder(
         builder: (c) => MediaQuery(
           data: MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)),
@@ -138,70 +171,151 @@ double _y(WidgetTester t, Key k) => t.getTopLeft(find.byKey(k)).dy;
 
 Finder _inRow(String id, Finder f) => find.descendant(of: find.byKey(Key('levelRow.$id')), matching: f);
 
-void main() {
-  setUp(() => debugAutoRecordUiOverride = true);
-  tearDown(() => debugAutoRecordUiOverride = null);
+String _toggleText(WidgetTester t, RuleLevel l) => t.widget<Text>(find.byKey(Key('levelGroupToggle.${l.name}'))).data!;
 
-  testWidgets('sections: Auto-record, Ask first, Suggested in that order; counts; Suggested folded with "Show n"', (t) async {
+Future<void> _tapGroup(WidgetTester t, RuleLevel l) async {
+  await t.ensureVisible(find.byKey(Key('levelGroupToggle.${l.name}')));
+  await t.pumpAndSettle();
+  await t.tap(find.byKey(Key('levelGroupToggle.${l.name}')));
+  await t.pumpAndSettle();
+}
+
+/// Test slots: a 60 px pause switch, a 10 px review line, a bottom bar with a Set up button when the tab
+/// gives it one ([seen] records what the bar received).
+LevelsSlots _testSlots({List<VoidCallback?>? seen, Future<void> Function(BuildContext)? onSetUp}) => LevelsSlots(
+      pauseSwitch: (_) => const SizedBox(key: Key('slotPause'), height: 60),
+      reviewLine: (_) => const SizedBox(key: Key('slotReview'), height: 10),
+      bottomBar: (_, setUp) {
+        seen?.add(setUp);
+        return SizedBox(
+          key: const Key('slotBar'),
+          height: 56,
+          child: setUp == null
+              ? null
+              : TextButton(key: const Key('slotBarSetUp'), onPressed: setUp, child: const Text(kHardSetUpButton)),
+        );
+      },
+      onSetUp: onSetUp,
+    );
+
+void main() {
+  setUp(() {
+    debugAutoRecordUiOverride = true;
+    _settingsOpened.clear();
+  });
+  tearDown(() {
+    debugAutoRecordUiOverride = null;
+    HighlightRequest.take();
+  });
+
+  testWidgets('groups: Suggested, Ask first, Auto-record with counts; Auto-record open, the others closed; no search, chips or helper',
+      (t) async {
     final r = _Rig();
     await r.seed();
     await _pump(t, r);
-    expect(find.text(kHardPageHelper), findsOneWidget);
-    final auto = _y(t, const Key('levelGroup.autoRecord'));
-    final ask = _y(t, const Key('levelGroup.askFirst'));
     final sug = _y(t, const Key('levelGroup.suggested'));
-    expect(auto, lessThan(ask));
-    expect(ask, lessThan(sug));
-    expect(find.bySemanticsLabel('${hardGroupName(RuleLevel.autoRecord)}, 2'), findsOneWidget);
-    expect(find.bySemanticsLabel('${hardGroupName(RuleLevel.askFirst)}, 2'), findsOneWidget);
-    expect(find.text(hardGroupShow(1)), findsOneWidget);
+    final ask = _y(t, const Key('levelGroup.askFirst'));
+    final auto = _y(t, const Key('levelGroup.autoRecord'));
+    expect(sug < ask && ask < auto, isTrue);
+    expect(_toggleText(t, RuleLevel.suggested), hardGroupShow(1));
+    expect(_toggleText(t, RuleLevel.askFirst), hardGroupShow(2));
+    expect(_toggleText(t, RuleLevel.autoRecord), kHardGroupHide);
+    expect(find.byKey(const Key('levelRow.SM.$_tim')), findsOneWidget);
+    expect(find.byKey(const Key('levelRow.SM.$_grace')), findsNothing);
     expect(find.byKey(const Key('levelRow.BG.5512')), findsNothing);
-    // Auto-record rows sit between the Auto-record and Ask first headers, by name (Amina, Tim).
+    // Auto-record rows by name (Amina, Tim), under their header.
     final amina = _y(t, const Key('levelRow.BG.Amina'));
     final tim = _y(t, const Key('levelRow.SM.$_tim'));
-    expect(auto < amina && amina < tim && tim < ask, isTrue);
+    expect(auto < amina && amina < tim, isTrue);
+    for (final k in ['levelsSearch', 'levelsHelper', 'levelFilterall', 'typeChipSM', 'typeChipAll']) {
+      expect(find.byKey(Key(k)), findsNothing, reason: k);
+    }
+    expect(find.text(kHardPageHelper), findsNothing);
+    expect(find.text(kHardSearchPlaceholder), findsNothing);
   });
 
-  testWidgets('fold: Show n opens Suggested, Hide folds it; the other sections fold too', (t) async {
+  testWidgets('one open at a time: opening Ask first closes Auto-record (page-open); Hide closes it; Suggested opens alone',
+      (t) async {
     final r = _Rig();
     await r.seed();
     await _pump(t, r);
-    await t.tap(find.text(hardGroupShow(1)));
-    await t.pumpAndSettle();
-    expect(find.byKey(const Key('levelRow.BG.5512')), findsOneWidget);
-    expect(find.text(kHardGroupHide), findsNWidgets(3));
-    await t.tap(find.byKey(const Key('levelGroupToggle.autoRecord')));
-    await t.pumpAndSettle();
+    await _tapGroup(t, RuleLevel.askFirst);
+    expect(find.byKey(const Key('levelRow.SM.$_grace')), findsOneWidget);
     expect(find.byKey(const Key('levelRow.SM.$_tim')), findsNothing);
-    expect(find.text(hardGroupShow(2)), findsOneWidget);
+    expect(_toggleText(t, RuleLevel.autoRecord), hardGroupShow(2));
+    expect(_toggleText(t, RuleLevel.askFirst), kHardGroupHide);
+    await _tapGroup(t, RuleLevel.askFirst);
+    expect(find.byKey(const Key('levelRow.SM.$_grace')), findsNothing);
+    expect(find.text(kHardGroupHide), findsNothing);
+    await _tapGroup(t, RuleLevel.suggested);
+    expect(find.byKey(const Key('levelRow.BG.5512')), findsOneWidget);
+    expect(find.text(kHardGroupHide), findsOneWidget);
   });
 
-  testWidgets('row lines: ceiling on the row, no ceiling, Paybill at Ask first says it is the highest', (t) async {
+  testWidgets('fold headers announce the level, the count and "Show n" / "Hide", with the expanded state', (t) async {
+    final sem = t.ensureSemantics();
     final r = _Rig();
     await r.seed();
     await _pump(t, r);
-    expect(_inRow('SM.$_tim', find.text('Auto-record up to Ksh 2,000')), findsOneWidget);
-    expect(_inRow('BG.Amina', find.text(kHardRowAutoNoCeiling)), findsOneWidget);
-    expect(_inRow('PB.888880', find.text(kHardRowAskFirstHighest)), findsOneWidget);
-    expect(_inRow('SM.$_grace', find.byKey(const Key('levelRowLine'))), findsNothing);
-    expect(_inRow('SM.$_tim', find.text('Send Money · ${maskPhone(_tim)} · Family')), findsOneWidget);
-    expect(_inRow('SM.$_tim', find.text(kHardLevelAutoRecord)), findsOneWidget);
+    final sug = t.getSemantics(find.byKey(const Key('levelGroup.suggested')));
+    expect(sug.label, '${hardGroupName(RuleLevel.suggested)}, 1, ${hardGroupShow(1)}');
+    final sd = sug.getSemanticsData().flagsCollection;
+    expect(sd.isHeader, isTrue);
+    expect(sd.isButton, isTrue);
+    expect(sd.isExpanded, Tristate.isFalse);
+    final auto = t.getSemantics(find.byKey(const Key('levelGroup.autoRecord')));
+    expect(auto.label, '${hardGroupName(RuleLevel.autoRecord)}, 2, $kHardGroupHide');
+    expect(auto.getSemanticsData().flagsCollection.isExpanded, Tristate.isTrue);
+    sem.dispose();
   });
 
-  testWidgets('paused: Auto-record rows say "Paused: asking first", the pill reads Ask first and is dashed; resume puts it back', (t) async {
+  testWidgets('rows say what mmogo does: Records up to / never asks first, Asks; identity line masked then type', (t) async {
+    final r = _Rig();
+    await r.seed();
+    await _pump(t, r);
+    expect(_inRow('SM.$_tim', find.text(hardRowRecordsUpTo('Family', 200000))), findsOneWidget);
+    expect(_inRow('SM.$_tim', find.text('${maskPhone(_tim)} · Send Money')), findsOneWidget);
+    expect(_inRow('BG.Amina', find.text(hardRowRecordsNoLimit('Bills'))), findsOneWidget);
+    expect(_inRow('SM.$_tim', find.textContaining('123')), findsNothing); // hidden digits never drawn
+    await _tapGroup(t, RuleLevel.askFirst);
+    expect(_inRow('SM.$_grace', find.text(hardRowAsks('Food'))), findsOneWidget);
+    expect(_inRow('PB.888880', find.text(hardRowAsks('Bills'))), findsOneWidget);
+    expect(t.getSize(find.byKey(const Key('levelButton.SM.$_grace'))).height, greaterThanOrEqualTo(44));
+  });
+
+  testWidgets('Suggested lists every Suggested person; no chosen list = "Suggests from last 10 payments", chosen = their names',
+      (t) async {
+    final r = _Rig();
+    await r.seed();
+    await r.store.saveRule(hardTestRule(_grace, name: 'Grace', categoryId: 2).copyWith(chosenCategoryIds: [3, 1]));
+    await _pump(t, r);
+    await _tapGroup(t, RuleLevel.suggested);
+    expect(_inRow('BG.5512', find.text(kHardSuggestsFromLast10)), findsOneWidget);
+    expect(_inRow('SM.$_grace', find.text(hardRowSuggests('Bills, Family'))), findsOneWidget);
+    expect(_toggleText(t, RuleLevel.suggested), kHardGroupHide);
+  });
+
+  testWidgets('paused: Auto-record rows say "Paused: asking first"; spoken = Auto-record + paused, never "Ask first"; resume',
+      (t) async {
+    final sem = t.ensureSemantics();
     final r = _Rig();
     await r.seed();
     r.pause.paused = true;
     await _pump(t, r);
     expect(_inRow('SM.$_tim', find.text(kHardRowPaused)), findsOneWidget);
-    expect(_inRow('SM.$_tim', find.text(kHardLevelAskFirst)), findsOneWidget);
-    expect(find.byKey(const Key('levelPillPaused')), findsNWidgets(2));
-    expect(_inRow('SM.$_grace', find.byKey(const Key('levelPillPaused'))), findsNothing);
+    expect(_inRow('BG.Amina', find.text(kHardRowPaused)), findsOneWidget);
+    final label = t.getSemantics(find.byKey(const Key('levelButton.SM.$_tim'))).label;
+    expect(label, contains(kHardLevelAutoRecord));
+    expect(label, contains(kHardRowPaused));
+    expect(label, isNot(contains(kHardLevelAskFirst)));
+    await _tapGroup(t, RuleLevel.askFirst);
+    expect(_inRow('SM.$_grace', find.text(kHardRowPaused)), findsNothing); // Ask first people are not paused
+    await _tapGroup(t, RuleLevel.autoRecord);
     await r.pause.setPaused(false);
     await t.pumpAndSettle();
     expect(find.text(kHardRowPaused), findsNothing);
-    expect(find.byKey(const Key('levelPillPaused')), findsNothing);
-    expect(_inRow('SM.$_tim', find.text('Auto-record up to Ksh 2,000')), findsOneWidget);
+    expect(_inRow('SM.$_tim', find.text(hardRowRecordsUpTo('Family', 200000))), findsOneWidget);
+    sem.dispose();
   });
 
   testWidgets('pause read fails: rows fail closed (paused)', (t) async {
@@ -212,77 +326,127 @@ void main() {
     expect(_inRow('SM.$_tim', find.text(kHardRowPaused)), findsOneWidget);
   });
 
-  testWidgets('search: by category and by number; a search opens the folded section; empty line is a live region', (t) async {
-    final sem = t.ensureSemantics();
+  testWidgets('nobody on Auto-record: no Auto-record group, Ask first opens at start', (t) async {
     final r = _Rig();
-    await r.seed();
+    await r.store.saveRule(hardTestRule(_grace, name: 'Grace', level: RuleLevel.askFirst, categoryId: 2));
     await _pump(t, r);
-    await t.enterText(find.byKey(const Key('levelsSearch')), 'food');
-    await t.pumpAndSettle();
+    expect(find.byKey(const Key('levelGroup.autoRecord')), findsNothing);
     expect(find.byKey(const Key('levelRow.SM.$_grace')), findsOneWidget);
-    expect(find.byKey(const Key('levelRow.BG.5512')), findsOneWidget); // Suggested opened (Food from history)
-    expect(find.byKey(const Key('levelRow.SM.$_tim')), findsNothing);
-    expect(find.byKey(const Key('levelGroup.autoRecord')), findsNothing); // no match there: no header
-    await t.enterText(find.byKey(const Key('levelsSearch')), '555');
-    await t.pumpAndSettle();
-    expect(find.byKey(const Key('levelRow.SM.$_tim')), findsOneWidget); // visible digits of 0722***555
-    // F2: the hidden digits (0722[123]555) and the full number never match.
-    for (final q in ['123', '0722123555', '2123']) {
-      await t.enterText(find.byKey(const Key('levelsSearch')), q);
-      await t.pumpAndSettle();
-      expect(find.byKey(const Key('levelRow.SM.$_tim')), findsNothing, reason: q);
-    }
-    await t.enterText(find.byKey(const Key('levelsSearch')), 'zzz');
-    await t.pumpAndSettle();
-    expect(find.text(kHardSearchEmpty), findsOneWidget);
-    expect(t.getSemantics(find.byKey(const Key('levelsSearchEmpty'))).getSemanticsData().flagsCollection.isLiveRegion, isTrue);
+    expect(find.byKey(const Key('levelRow.BG.5512')), findsNothing);
+  });
+
+  testWidgets('first time, nobody at all: the first-time line (a live region), no groups; the bottom bar keeps Set up', (t) async {
+    final sem = t.ensureSemantics();
+    final r = _Rig(knownPeople: const []);
+    await _pump(t, r, slots: _testSlots(onSetUp: (_) async {}));
+    expect(find.text(kHardPageFirstTime), findsOneWidget);
+    expect(t.getSemantics(find.byKey(const Key('levelsEmpty'))).getSemanticsData().flagsCollection.isLiveRegion, isTrue);
+    expect(find.byKey(const Key('levelGroup.suggested')), findsNothing);
+    expect(find.byKey(const Key('slotBarSetUp')), findsOneWidget);
     sem.dispose();
   });
 
-  testWidgets('details OFF: the line, Open Settings, the empty line; no search, no rows, no slots', (t) async {
+  testWidgets('details OFF: ONE card (signed text) + Turn it on in Settings (44 px); no groups, no slots', (t) async {
     final r = _Rig()..details = false;
     await r.seed();
-    await _pump(t, r,
-        slots: LevelsSlots(
-          pauseCard: (_) => const SizedBox(key: Key('slotPause')),
-          pausedBanner: (_) => const SizedBox(key: Key('slotBanner')),
-          resetFooter: (_) => const SizedBox(key: Key('slotReset')),
-          reviewLine: (_) => const SizedBox(key: Key('slotReview')),
-        ));
-    expect(find.text(kHardDetailsOffLine), findsOneWidget);
-    expect(find.text(kHardOpenSettings), findsOneWidget);
+    await _pump(t, r, slots: _testSlots(onSetUp: (_) async {}));
+    expect(find.byKey(const Key('levelsDetailsOff')), findsOneWidget);
+    expect(find.text(kHardDetailsOffCard), findsOneWidget);
+    expect(find.text(kHardTurnOnInSettings), findsOneWidget);
+    expect(find.text(kHardOpenSettings), findsNothing);
+    expect(find.text(kHardDetailsOffLine), findsNothing);
+    expect(find.text(kHardDetailsOffEmpty), findsNothing);
     expect(t.getSize(find.byKey(const Key('levelsOpenSettings'))).height, greaterThanOrEqualTo(44));
-    expect(find.text(kHardDetailsOffEmpty), findsOneWidget);
-    expect(find.byKey(const Key('levelsSearch')), findsNothing);
+    expect(find.byKey(const Key('levelGroup.autoRecord')), findsNothing);
     expect(find.byKey(const Key('levelRow.SM.$_tim')), findsNothing);
-    for (final k in ['slotPause', 'slotBanner', 'slotReset', 'slotReview']) {
+    for (final k in ['slotPause', 'slotReview', 'slotBar', 'slotBarSetUp']) {
       expect(find.byKey(Key(k)), findsNothing, reason: k);
     }
   });
 
-  testWidgets('slots: each drawn only when given; banner and review on top, reset footer at the bottom', (t) async {
+  testWidgets('B-7 + B-8: Turn it on opens Settings at the Record receiver details switch; back from Settings the page reloads',
+      (t) async {
+    final r = _Rig()..details = false;
+    await r.seed();
+    await _pump(t, r);
+    await t.tap(find.byKey(const Key('levelsOpenSettings')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('fakeSettings')), findsOneWidget);
+    expect(_settingsOpened, [kSettingsTargetCaptureReceiver]);
+    r.details = true; // the user turns it on in Settings
+    await t.tap(find.byKey(const Key('fakeSettingsBack')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('levelsDetailsOff')), findsNothing);
+    expect(find.byKey(const Key('levelRow.SM.$_tim')), findsOneWidget); // Auto-record opens at the first showing
+  });
+
+  testWidgets('B-8: the app resumed reloads (details and pause read again)', (t) async {
     final r = _Rig();
     await r.seed();
     await _pump(t, r);
-    expect(find.byKey(const Key('slotPause')), findsNothing);
-    await _pump(t, r,
-        slots: LevelsSlots(
-          pauseCard: (_) => const SizedBox(key: Key('slotPause'), height: 10),
-          pausedBanner: (_) => const SizedBox(key: Key('slotBanner'), height: 10),
-          resetFooter: (_) => const SizedBox(key: Key('slotReset'), height: 10),
-          reviewLine: (_) => const SizedBox(key: Key('slotReview'), height: 10),
-        ));
-    expect(_y(t, const Key('slotBanner')), lessThan(_y(t, const Key('slotReview'))));
-    expect(_y(t, const Key('slotReview')), lessThan(_y(t, const Key('levelsHelper'))));
-    expect(_y(t, const Key('levelsHelper')), lessThan(_y(t, const Key('slotPause'))));
-    expect(_y(t, const Key('slotPause')), lessThan(_y(t, const Key('levelsSearch'))));
-    expect(_y(t, const Key('slotReset')), greaterThan(_y(t, const Key('levelsAirtimeHeader'))));
+    expect(find.byKey(const Key('levelsDetailsOff')), findsNothing);
+    r.details = false;
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('levelsDetailsOff')), findsOneWidget);
+    r.details = true;
+    r.pause.paused = true; // changed elsewhere, no change event heard here
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await t.pumpAndSettle();
+    expect(_inRow('SM.$_tim', find.text(kHardRowPaused)), findsOneWidget);
+  });
+
+  testWidgets('slots: pause switch pinned at the top, review line first in the list, bottom bar pinned at the bottom', (t) async {
+    final r = _Rig();
+    await r.seed();
+    await _pump(t, r, slots: _testSlots(), size: const Size(390, 600));
+    expect(_y(t, const Key('slotPause')), lessThan(_y(t, const Key('slotReview'))));
+    expect(_y(t, const Key('slotReview')), lessThan(_y(t, const Key('levelGroup.suggested'))));
+    expect(_y(t, const Key('slotBar')), greaterThan(_y(t, const Key('levelGroup.autoRecord'))));
+    expect(find.descendant(of: find.byKey(const Key('levelsTab')), matching: find.byKey(const Key('slotPause'))), findsNothing);
+    final pauseY = _y(t, const Key('slotPause'));
+    final barY = _y(t, const Key('slotBar'));
+    await t.drag(find.byKey(const Key('levelsTab')), const Offset(0, -300));
+    await t.pumpAndSettle();
+    expect(_y(t, const Key('slotPause')), pauseY); // pinned
+    expect(_y(t, const Key('slotBar')), barY); // pinned
+    expect(find.byKey(const Key('slotReview')), findsNothing); // scrolled away with the list
+  });
+
+  testWidgets('slots on a short screen: the pause switch scrolls with the list', (t) async {
+    final r = _Rig();
+    await r.seed();
+    await _pump(t, r, slots: _testSlots(), size: const Size(390, 420));
+    expect(find.descendant(of: find.byKey(const Key('levelsTab')), matching: find.byKey(const Key('slotPause'))), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets("Set up slot: null = the bar gets no Set up; given = the bar's Set up runs it and the page reloads", (t) async {
+    final r = _Rig();
+    await r.seed();
+    final seen = <VoidCallback?>[];
+    await _pump(t, r, slots: _testSlots(seen: seen));
+    expect(seen.last, isNull);
+    expect(find.byKey(const Key('slotBarSetUp')), findsNothing);
+    var opened = 0;
+    await _pump(t, r, slots: _testSlots(seen: seen, onSetUp: (c) async {
+      opened++;
+      await r.store.saveRule(hardTestRule('0733000111', name: 'Wanjiru', level: RuleLevel.autoRecord, categoryId: 2));
+    }));
+    expect(seen.last, isNotNull);
+    await t.tap(find.byKey(const Key('slotBarSetUp')));
+    await t.pumpAndSettle();
+    expect(opened, 1);
+    expect(find.byKey(const Key('levelRow.SM.0733000111')), findsOneWidget);
   });
 
   testWidgets('sheet save, Suggested: KEEPS the rule at Suggested with the stored category passed; the notice follows', (t) async {
     final r = _Rig();
     await r.seed();
     await _pump(t, r);
+    await _tapGroup(t, RuleLevel.askFirst);
     await t.tap(find.byKey(const Key('levelButton.SM.$_grace')));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('levelChoicesuggested')));
@@ -297,17 +461,16 @@ void main() {
     expect(r.notice.calls.single.name, nameWithMask('Grace', _grace));
     expect(r.notice.calls.single.level, RuleLevel.suggested);
     expect(r.notice.calls.single.onChangeCeiling, isNull);
-    // Grace is listed in the folded Suggested section now.
+    // Grace is listed in the closed Suggested group now.
     expect(find.byKey(const Key('levelRow.SM.$_grace')), findsNothing);
-    expect(find.text(hardGroupShow(2)), findsOneWidget);
+    expect(_toggleText(t, RuleLevel.suggested), hardGroupShow(2));
   });
 
   testWidgets('sheet save, Suggested for someone with no rule writes nothing and shows no notice', (t) async {
     final r = _Rig();
     await r.seed();
     await _pump(t, r);
-    await t.tap(find.text(hardGroupShow(1)));
-    await t.pumpAndSettle();
+    await _tapGroup(t, RuleLevel.suggested);
     await t.tap(find.byKey(const Key('levelButton.BG.5512')));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('levelSheetSave')));
@@ -318,7 +481,7 @@ void main() {
     expect(find.byKey(const Key('levelSheetTitle')), findsNothing); // the sheet still closed
   });
 
-  testWidgets('sheet save, Auto-record ceiling change: ceiling forwarded, category kept, notice with Change ceiling reopening the sheet', (t) async {
+  testWidgets('sheet save, Auto-record limit change: forwarded, category kept, notice with Change reopening the sheet', (t) async {
     final r = _Rig();
     await r.seed();
     await _pump(t, r);
@@ -336,7 +499,7 @@ void main() {
     expect(call.level, RuleLevel.autoRecord);
     expect(call.ceilingCents, 50000);
     expect(call.name, nameWithMask('Tim', _tim));
-    expect(_inRow('SM.$_tim', find.text('Auto-record up to Ksh 500')), findsOneWidget);
+    expect(_inRow('SM.$_tim', find.text(hardRowRecordsUpTo('Family', 50000))), findsOneWidget); // the group stayed open
     call.onChangeCeiling!();
     await t.pumpAndSettle();
     expect(find.text('500'), findsOneWidget);
@@ -364,7 +527,7 @@ void main() {
     await r.store.saveRule(hardTestRule(_grace, name: 'Grace', level: RuleLevel.askFirst, categoryId: 2, ceilingCents: 70000, autoPending: true));
     await _pump(t, r);
     expect(find.byKey(const Key('levelGroup.autoRecord')), findsNothing);
-    expect(_inRow('SM.$_grace', find.text(kHardLevelAskFirst)), findsOneWidget);
+    expect(_inRow('SM.$_grace', find.text(hardRowAsks('Food'))), findsOneWidget);
     await t.tap(find.byKey(const Key('levelButton.SM.$_grace')));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('levelChoiceautoRecord')));
@@ -372,11 +535,12 @@ void main() {
     expect(find.text('700'), findsOneWidget);
   });
 
-  testWidgets('flag off: the save sends no notice', (t) async {
+  testWidgets('flag off: the 0.2.1 helper line stays; the save sends no notice', (t) async {
     debugAutoRecordUiOverride = false;
     final r = _Rig();
     await r.store.saveRule(hardTestRule(_grace, name: 'Grace', level: RuleLevel.askFirst, categoryId: 2));
     await _pump(t, r);
+    expect(find.byKey(const Key('levelsHelper')), findsOneWidget);
     await t.tap(find.byKey(const Key('levelButton.SM.$_grace')));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('levelChoicesuggested')));
@@ -387,26 +551,48 @@ void main() {
     expect((await r.store.get(ReceiverType.sendMoney, _grace))!.level, RuleLevel.suggested);
   });
 
-  for (final c in [(2.0, false, TextDirection.ltr), (2.0, true, TextDirection.rtl), (1.0, true, TextDirection.ltr)]) {
-    testWidgets('text ${c.$1}, ${c.$2 ? 'dark' : 'light'}, ${c.$3.name}: no overflow, open and paused', (t) async {
+  for (final c in [
+    (2.0, false, TextDirection.ltr),
+    (2.0, true, TextDirection.ltr),
+    (2.0, true, TextDirection.rtl),
+    (2.0, false, TextDirection.rtl),
+    (1.0, true, TextDirection.ltr),
+  ]) {
+    testWidgets('text ${c.$1}, ${c.$2 ? 'dark' : 'light'}, ${c.$3.name}: no overflow, each group open, paused, every slot drawn',
+        (t) async {
       final r = _Rig();
       await r.seed();
       r.pause.paused = true;
-      await _pump(t, r, scale: c.$1, dark: c.$2, dir: c.$3);
+      await _pump(t, r, scale: c.$1, dark: c.$2, dir: c.$3, slots: _testSlots(onSetUp: (_) async {}), size: const Size(390, 800));
       expect(t.takeException(), isNull);
       expect(t.getSize(find.byKey(const Key('levelButton.SM.$_tim'))).height, greaterThanOrEqualTo(44));
-      expect(t.getSize(find.byKey(const Key('levelsSearch'))).height, greaterThanOrEqualTo(44));
-      await t.ensureVisible(find.byKey(const Key('levelGroupToggle.suggested')));
+      for (final l in [RuleLevel.suggested, RuleLevel.askFirst, RuleLevel.autoRecord]) {
+        await _tapGroup(t, l);
+        expect(t.takeException(), isNull, reason: l.name);
+        expect(t.getSize(find.byKey(Key('levelGroup.${l.name}'))).height, greaterThanOrEqualTo(44));
+      }
+      await t.ensureVisible(find.byKey(const Key('levelButton.SM.$_tim'))); // the last tap opened Auto-record
       await t.pumpAndSettle();
-      await t.tap(find.byKey(const Key('levelGroupToggle.suggested')));
-      await t.pumpAndSettle();
-      expect(t.takeException(), isNull);
-      expect(t.getSize(find.byKey(const Key('levelGroup.suggested'))).height, greaterThanOrEqualTo(44));
-      expect(find.byKey(const Key('levelRow.BG.5512')), findsOneWidget);
+      if (c.$3 == TextDirection.rtl) {
+        // RTL: the name starts on the right of the row, the chevron sits on the left.
+        final row = t.getRect(find.byKey(const Key('levelButton.SM.$_tim')));
+        final name = t.getRect(find.descendant(of: find.byKey(const Key('levelButton.SM.$_tim')), matching: find.text('Tim')));
+        final chev = t.getRect(
+            find.descendant(of: find.byKey(const Key('levelButton.SM.$_tim')), matching: find.byIcon(Icons.chevron_right)));
+        expect(name.right, greaterThan(row.center.dx));
+        expect(chev.left, lessThan(row.center.dx));
+      }
     });
   }
 
-  group('Forget all (moved here from U4): counts only', () {
+  testWidgets('details-off card at 200%, dark and RTL: no overflow', (t) async {
+    final r = _Rig()..details = false;
+    await _pump(t, r, scale: 2, dark: true, dir: TextDirection.rtl, size: const Size(390, 800));
+    expect(t.takeException(), isNull);
+    expect(find.text(kHardTurnOnInSettings), findsOneWidget);
+  });
+
+  group('Forget all: counts only, through forgetEveryone / countEveryone (C2)', () {
     Future<RecipientMemory> seeded() async {
       SharedPreferences.setMockInitialValues({});
       var clock = 1000;
@@ -436,8 +622,8 @@ void main() {
       await t.pumpAndSettle();
     }
 
-    testWidgets('flag on, a rule removal fails part way: no success toast, the save-failed toast, the rest stays listed', (t) async {
-      final store = _ThrowAfterStore(1);
+    testWidgets('flag on, the erase fails: no success toast, the save-failed toast, every rule stays listed', (t) async {
+      final store = _ThrowOnForgetAllStore();
       final r = _Rig(store: store);
       await r.seed();
       final m = await seeded();
@@ -448,9 +634,9 @@ void main() {
       await t.pump();
       await t.pump(const Duration(milliseconds: 400));
       expect(find.text(kLevelSheetSaveFailed), findsOneWidget);
-      expect(find.text(hardForgetToast(2)), findsNothing);
+      expect(find.text(hardForgetToast(6)), findsNothing);
       expect(find.text(forgotRecipientsText(2)), findsNothing);
-      expect(await r.store.all(), hasLength(3)); // one removed, then the store failed
+      expect(await r.store.all(), hasLength(4));
       await t.tap(find.byKey(const Key('rememberedTab1')));
       await t.pumpAndSettle();
       expect(find.byKey(const Key('levelGroup.askFirst')), findsOneWidget); // what remains is still listed
@@ -481,13 +667,29 @@ void main() {
       await t.pump(const Duration(milliseconds: 400));
       expect(find.text(hardForgetToast(5)), findsOneWidget); // the toast says the same true count
       expect(await m.list(), isEmpty);
-      expect(await r.store.all(), isEmpty);
+      expect(await r.store.countEveryone(), 0);
+      expect(r.store.forgetEveryoneCalls, 1);
       expect(r.pause.setCalls, 0); // the pause switch is not touched
       await drainToasts(t);
     });
 
+    testWidgets('flag on, rules hidden (details OFF, all() empty): the count and the erase still take them (B-HIDE ready)', (t) async {
+      final r = _Rig(store: _HiddenStore());
+      await r.seed();
+      final m = await seeded();
+      await pumpPage(t, r, m);
+      await t.tap(find.byKey(const Key('rememberedForgetAll')));
+      await t.pumpAndSettle();
+      expect(find.descendant(of: find.byKey(const Key('forgetAllDialog')), matching: find.text(hardForgetTitle(6))), findsOneWidget);
+      await t.tap(find.byKey(const Key('forgetAllConfirm')));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 400));
+      expect(await r.store.countEveryone(), 0);
+      await drainToasts(t);
+    });
+
     testWidgets('flag on: the count cannot be taken (store fails) -> no dialog, nothing forgotten', (t) async {
-      final r = _Rig(store: _FailingAllStore());
+      final r = _Rig(store: _FailingCountStore());
       final m = await seeded();
       await pumpPage(t, r, m);
       await t.tap(find.byKey(const Key('rememberedForgetAll')));
@@ -507,6 +709,7 @@ void main() {
       await t.pumpAndSettle();
       expect(await m.list(), hasLength(2));
       expect(await r.store.all(), hasLength(4));
+      expect(r.store.forgetEveryoneCalls, 0);
     });
 
     testWidgets("flag off: today's dialog and today's clean-up through the real RuleCleanup (Pochi rules only)", (t) async {
@@ -526,6 +729,7 @@ void main() {
       final left = await r.store.all();
       expect(left.where((x) => x.type == ReceiverType.pochi), isEmpty); // the clean-up ran
       expect(left, hasLength(4)); // Send Money, Buy Goods and Paybill rules stay (today's behaviour)
+      expect(r.store.forgetEveryoneCalls, 0);
       await drainToasts(t);
     });
   });

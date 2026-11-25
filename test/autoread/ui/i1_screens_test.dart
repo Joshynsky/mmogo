@@ -94,7 +94,9 @@ Future<void> _remembered(WidgetTester t, LevelsDeps d, {bool details = true, dou
       mode: mode);
 }
 
-const _slotKeys = [Key('slotPauseCard'), Key('slotPausedBanner'), Key('slotReviewLine'), Key('slotResetFooter')];
+// 0.2.2 item 2 redesign (U-PAGE): the slots group was REWRITTEN ON PURPOSE: the tab now takes the pause
+// switch (pinned top), the review line and the bottom bar; there is NO paused banner on this page.
+const _slotKeys = [Key('slotPauseSwitch'), Key('slotReviewLine'), Key('slotBottomBar')];
 
 void main() {
   setUp(useFakeDeleteData);
@@ -105,34 +107,31 @@ void main() {
   });
 
   group('Remembered page slots (rememberedPageFor)', () {
-    testWidgets('flag on, details on, paused: card, banner, review line, reset footer, in place', (t) async {
+    testWidgets('flag on, details on, paused: switch, review line, bottom bar in place; no paused banner on this page', (t) async {
       debugAutoRecordUiOverride = true;
       await _remembered(t, _deps(await _store(pending: true), pause: FakeHardRulePausePort(paused: true)));
       for (final k in _slotKeys) {
         expect(find.byKey(k), findsOneWidget, reason: '$k');
       }
       expect(find.byKey(const Key('hardPauseCard')), findsOneWidget);
-      expect(find.text(hardPausedBanner(1)), findsOneWidget);
+      expect(find.byType(HardRulePausedBanner), findsNothing);
+      expect(find.text(hardPausedBanner(1)), findsNothing);
       expect(find.text(hardReviewLine(1)), findsOneWidget);
       expect(find.byKey(const Key('hardResetButton')), findsOneWidget);
       double y(Key k) => t.getTopLeft(find.byKey(k)).dy;
-      expect(y(const Key('slotPausedBanner')), lessThan(y(const Key('slotReviewLine'))));
-      expect(y(const Key('slotReviewLine')), lessThan(y(const Key('levelsHelper'))));
-      expect(y(const Key('levelsHelper')), lessThan(y(const Key('slotPauseCard'))));
-      expect(y(const Key('slotPauseCard')), lessThan(y(const Key('slotResetFooter'))));
+      expect(y(const Key('slotPauseSwitch')), lessThan(y(const Key('slotReviewLine'))));
+      expect(y(const Key('slotReviewLine')), lessThan(y(const Key('slotBottomBar'))));
     });
 
-    testWidgets('not paused, nobody pending: banner and review line take no room', (t) async {
+    testWidgets('not paused, nobody pending: the review line takes no room', (t) async {
       debugAutoRecordUiOverride = true;
       await _remembered(t, _deps(await _store(), pause: FakeHardRulePausePort()));
-      expect(find.byKey(const Key('hardPausedBanner')), findsNothing);
       expect(find.byKey(const Key('reviewLine')), findsNothing);
-      expect(t.getSize(find.byKey(const Key('slotPausedBanner'), skipOffstage: false)).height, 0);
       expect(t.getSize(find.byKey(const Key('slotReviewLine'), skipOffstage: false)).height, 0);
       expect(find.byKey(const Key('hardPauseCard')), findsOneWidget);
     });
 
-    testWidgets('flag off: no slot drawn, details-off page not used (the 0.2.1 tab)', (t) async {
+    testWidgets('flag off: no slot drawn, details-off page not used (no Auto-record controls)', (t) async {
       debugAutoRecordUiOverride = false;
       await _remembered(t, _deps(await _store(pending: true), pause: FakeHardRulePausePort(paused: true)), details: false);
       for (final k in _slotKeys) {
@@ -142,7 +141,7 @@ void main() {
       expect(find.byType(HardRulePausedBanner), findsNothing);
     });
 
-    testWidgets('flag on, details OFF: the details-off page, no slots', (t) async {
+    testWidgets('flag on, details OFF: the details-off card, no slots', (t) async {
       debugAutoRecordUiOverride = true;
       await _remembered(t, _deps(await _store(pending: true), pause: FakeHardRulePausePort(paused: true)), details: false);
       expect(find.byKey(const Key('levelsDetailsOff')), findsOneWidget);
@@ -161,19 +160,19 @@ void main() {
       });
     }
 
-    test('hardRuleSlotsFor: empty while the flag is off or without deps; no pause port = no card or banner', () async {
+    test('hardRuleSlotsFor: empty while the flag is off or without deps; no pause port = no switch; Set up left to I2', () async {
       final d = _deps(FakeRuleStore());
       debugAutoRecordUiOverride = false;
       final off = hardRuleSlotsFor(d);
-      expect([off.pauseCard, off.pausedBanner, off.reviewLine, off.resetFooter], everyElement(isNull));
+      expect([off.pauseSwitch, off.reviewLine, off.bottomBar, off.onSetUp], everyElement(isNull));
       debugAutoRecordUiOverride = true;
       final none = hardRuleSlotsFor(null);
-      expect([none.pauseCard, none.pausedBanner, none.reviewLine, none.resetFooter], everyElement(isNull));
+      expect([none.pauseSwitch, none.reviewLine, none.bottomBar, none.onSetUp], everyElement(isNull));
       final noPause = hardRuleSlotsFor(d);
-      expect(noPause.pauseCard, isNull);
-      expect(noPause.pausedBanner, isNull);
+      expect(noPause.pauseSwitch, isNull);
       expect(noPause.reviewLine, isNotNull);
-      expect(noPause.resetFooter, isNotNull);
+      expect(noPause.bottomBar, isNotNull);
+      expect(noPause.onSetUp, isNull);
     });
   });
 

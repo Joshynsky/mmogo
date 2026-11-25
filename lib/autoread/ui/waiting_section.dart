@@ -252,15 +252,17 @@ class WaitingSection extends StatelessWidget {
         offers: c.offers,
         categoryName: actions.categoryNameOf ?? (_) => null,
         onNotNow: (o) => c.notNow(o),
+        // U-OFFER (B-1): the controller hides the card at once; a failed save brings it back with this toast.
         onConfirm: (o) async {
-          if (!await c.confirm(o)) PillToast.show(kSuggestionNotSaved);
+          final cat = actions.categoryNameOf?.call(o.categoryId);
+          if (!await c.confirm(o, categoryName: cat)) PillToast.show(kSuggestionNotSaved);
         },
         // U2: Auto-record asks first (C0 dialog, no ceiling), then the controller saves and shows the notice.
         onAutoRecord: (o) async {
           final cat = actions.categoryNameOf?.call(o.categoryId);
           if (cat == null || !offersAutoRecord(o, cat)) return;
           if (!await showHardRuleConfirm(context, name: offerWho(o), category: cat)) return;
-          if (!await c.confirmAuto(o)) PillToast.show(kSuggestionNotSaved);
+          if (!await c.confirmAuto(o, categoryName: cat)) PillToast.show(kSuggestionNotSaved);
         },
         times: c.suggestAfter,
       );

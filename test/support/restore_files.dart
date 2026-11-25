@@ -165,9 +165,16 @@ Map<String, Object?> bigFileJson(int n, {String prefix = 'X'}) => fileJson(
       ],
     );
 
-/// One `receiver_rules` row of a schema 9 file (invented data).
+/// One `receiver_rules` row of a schema 9 file (invented data). [sc] = the chosen Suggest
+/// categories (0.2.2 item 2 B-BK: `{cat_seed}` / `{cat_name}` entries; `[]` = none).
 Map<String, Object?> ruleRow(String t, String k,
-        {String name = 'Person', int lv = 1, String? catSeed, String? catName, int? ceil, int ap = 0}) =>
+        {String name = 'Person',
+        int lv = 1,
+        String? catSeed,
+        String? catName,
+        int? ceil,
+        int ap = 0,
+        List<Object?> sc = const []}) =>
     {
       't': t,
       'k': k,
@@ -177,6 +184,7 @@ Map<String, Object?> ruleRow(String t, String k,
       'cat_name': catName,
       'ceil': ceil,
       'ap': ap,
+      'sc': sc,
     };
 
 /// A [ValidatedBackup] built by hand, bypassing the validator (for the

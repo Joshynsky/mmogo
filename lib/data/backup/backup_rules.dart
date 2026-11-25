@@ -21,6 +21,7 @@ class BackupRuleInput {
     this.categoryId,
     this.ceilingCents,
     this.autoPending = false,
+    this.chosenCategoryIds = const <int>[],
   });
 
   /// `ReceiverType.code` (`SM`, `PB`, `BG`, `PO`).
@@ -33,6 +34,10 @@ class BackupRuleInput {
   final int? categoryId;
   final int? ceilingCents;
   final bool autoPending;
+
+  /// The person's chosen Suggest categories (DATABASE ids, in the order chosen; 0.2.2 item 2
+  /// B-BK). Written as `sc` by seed key or name; empty = "Last 10 payments".
+  final List<int> chosenCategoryIds;
 }
 
 /// Reads the rules to export. Must return an empty list while "Record receiver details" is OFF
@@ -46,7 +51,9 @@ class BackupRuleRows {
   /// File-shaped rows (keys per `kBackupRuleKeys`), sorted by kind then key.
   final List<Map<String, Object?>> rows;
 
-  /// Rows kept but changed in the copy (name tidied, Paybill Auto-record written as Ask first).
+  /// Rows kept but changed in the copy (name tidied, Paybill Auto-record written as Ask first, a
+  /// chosen list trimmed: a category not in the file, an id twice, more than 2, or a list held
+  /// above Suggested).
   final int repaired;
 
   /// Rules left out: table `receiver_rules`, no row id, the field and rule only (never a value).
@@ -58,6 +65,11 @@ class BackupRuleRows {
 /// `cat_seed` for a built-in or `cat_name` for the person's own, and as no category when the id is
 /// not found (deleted or left out). A rule that cannot be made valid is skipped, never guessed:
 /// an unreadable kind, key, level or ceiling (dropping a ceiling would widen Auto-record).
+///
+/// Chosen Suggest categories (`sc`, B-BK): written only for a rule that is Suggested in the file,
+/// each id named the same way as the rule's category; an id not found is dropped (never guessed),
+/// an id twice is written once, at most [kBackupMaxChosenCategories] in order. Any trim counts the
+/// row as repaired; a chosen list never makes a rule skipped (the rule is still valid without it).
 BackupRuleRows buildBackupRuleRows(
   List<BackupRuleInput> inputs,
   List<Map<String, Object?>> classifications,
@@ -124,6 +136,8 @@ BackupRuleRows buildBackupRuleRows(
         catName = cat['name']! as String;
       }
     }
+    final chosen = level == 0 ? _chosenRefs(r.chosenCategoryIds, byId) : const <Map<String, Object?>>[];
+    if (chosen.length != r.chosenCategoryIds.length) changed = true;
     if (changed) repaired++;
     rows.add(<String, Object?>{
       't': r.type,
@@ -134,7 +148,28 @@ BackupRuleRows buildBackupRuleRows(
       'cat_name': catName,
       'ceil': ceil,
       'ap': r.autoPending ? 1 : 0,
+      'sc': chosen,
     });
   }
   return BackupRuleRows(rows: rows, repaired: repaired, skipped: skipped);
+}
+
+/// The `sc` entries for [ids]: each id found in the file's categories as `{cat_seed}` (built-in)
+/// or `{cat_name}` (the person's own); not found = dropped; an id twice = once; at most
+/// [kBackupMaxChosenCategories], order kept.
+List<Map<String, Object?>> _chosenRefs(List<int> ids, Map<int, Map<String, Object?>> byId) {
+  final out = <Map<String, Object?>>[];
+  final seen = <int>{};
+  for (final id in ids) {
+    if (out.length == kBackupMaxChosenCategories) break;
+    if (!seen.add(id)) continue;
+    final cat = byId[id];
+    if (cat == null) continue;
+    if (cat['seed_key'] is String) {
+      out.add(<String, Object?>{'cat_seed': cat['seed_key']});
+    } else if (cat['name'] is String) {
+      out.add(<String, Object?>{'cat_name': cat['name']});
+    }
+  }
+  return out;
 }

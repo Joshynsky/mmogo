@@ -7,6 +7,10 @@
 /// details" OFF nothing is stored and the count of dropped rules is reported. Every restored rule
 /// is Suggested or Ask first: Auto-record comes back as Ask first with `autoPending` (cleared when
 /// the person sets any level). A storage failure on Replace leaves the rules EMPTY, never partial.
+/// Chosen Suggest categories (0.2.2 item 2 B-BK) are written only at Suggested and always through
+/// `clampChosenCategoryIds` (at most 2, no id twice): `saveRule` does not re-check the list, and a
+/// stored invalid list would make a later `setLevel` at Suggested (Reset everyone, which keeps the
+/// list, PM 25-11 Q2) refuse that person.
 /// Dormant: not passed to the app's `RestoreService` yet.
 library;
 
@@ -77,6 +81,7 @@ class RuleRestoreApplier implements RuleRestoreSink {
           changed: at,
           ceilingCents: row.ceilingCents,
           autoPending: row.autoPending,
+          chosenCategoryIds: row.level == 0 ? clampChosenCategoryIds(row.chosenCategoryIds) : const <int>[],
         ));
         if (!ok) {
           refused++;
