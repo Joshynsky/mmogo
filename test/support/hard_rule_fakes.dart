@@ -47,7 +47,7 @@ class FakeRuleChangeNotice implements RuleChangeNotice {
   final List<NoticeCall> calls = [];
 
   @override
-  void show(String name, RuleLevel level, int? ceilingCents, VoidCallback? onChangeCeiling) =>
+  void show(String name, RuleLevel level, int? ceilingCents, VoidCallback? onChangeCeiling, {String? categoryName}) =>
       calls.add(NoticeCall(name, level, ceilingCents, onChangeCeiling));
 }
 

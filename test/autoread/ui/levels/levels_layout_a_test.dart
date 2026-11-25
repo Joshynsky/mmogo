@@ -43,9 +43,20 @@ class _RecStore extends FakeRuleStore {
   final List<({RuleLevel level, int? categoryId, int? ceilingCents})> calls = [];
   @override
   Future<bool> setLevel(ReceiverType type, String key,
-      {required String name, required RuleLevel level, int? categoryId, int? ceilingCents, required DateTime at}) {
+      {required String name,
+      required RuleLevel level,
+      int? categoryId,
+      int? ceilingCents,
+      List<int> chosenCategoryIds = const <int>[],
+      required DateTime at}) {
     calls.add((level: level, categoryId: categoryId, ceilingCents: ceilingCents));
-    return super.setLevel(type, key, name: name, level: level, categoryId: categoryId, ceilingCents: ceilingCents, at: at);
+    return super.setLevel(type, key,
+        name: name,
+        level: level,
+        categoryId: categoryId,
+        ceilingCents: ceilingCents,
+        chosenCategoryIds: chosenCategoryIds,
+        at: at);
   }
 }
 

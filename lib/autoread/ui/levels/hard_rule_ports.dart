@@ -76,8 +76,10 @@ class PrefsHardRulePausePort implements HardRulePausePort {
 // ---------------------------------------------------------------- the notice after a level change
 
 /// Shown after every successful level change. [onChangeCeiling] is offered only for Auto-record.
+/// [categoryName] (0.2.2 item 2 redesign) = the plain name of the category the person was set to; null when
+/// there is none (Suggested) or the caller does not know it.
 abstract class RuleChangeNotice {
-  void show(String name, RuleLevel level, int? ceilingCents, VoidCallback? onChangeCeiling);
+  void show(String name, RuleLevel level, int? ceilingCents, VoidCallback? onChangeCeiling, {String? categoryName});
 }
 
 /// Plain stand-in until the real two-stage pill (slice U3): one PillToast with the stage 1 line.
@@ -85,7 +87,7 @@ class PillToastRuleChangeNotice implements RuleChangeNotice {
   const PillToastRuleChangeNotice();
 
   @override
-  void show(String name, RuleLevel level, int? ceilingCents, VoidCallback? onChangeCeiling) =>
+  void show(String name, RuleLevel level, int? ceilingCents, VoidCallback? onChangeCeiling, {String? categoryName}) =>
       PillToast.show(hardPillStage1(name, level));
 }
 
@@ -107,13 +109,17 @@ class RuleBulkOps {
 
   /// Sets every rule that [needsReset] to Suggested through `setLevel` (clears the ceiling and the
   /// pending mark). Rules stay (the person stays remembered); nobody is raised; the pause switch is not
-  /// touched. Returns how many were changed; a refused or failed one is not counted.
+  /// touched. Each person's chosen Suggest categories are kept (PM 25-11, Q2). Returns how many were
+  /// changed; a refused or failed one is not counted.
   Future<int> resetAllToSuggested() async {
     var n = 0;
     for (final r in await store.all()) {
       if (!needsReset(r)) continue;
       try {
-        if (await store.setLevel(r.type, r.key, name: r.name, level: RuleLevel.suggested, at: _now())) n++;
+        if (await store.setLevel(r.type, r.key,
+            name: r.name, level: RuleLevel.suggested, chosenCategoryIds: r.chosenCategoryIds, at: _now())) {
+          n++;
+        }
       } catch (_) {}
     }
     return n;

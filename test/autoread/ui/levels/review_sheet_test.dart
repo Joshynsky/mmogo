@@ -93,7 +93,7 @@ Finder _pick(ReceiverRule r, String which) =>
     find.descendant(of: find.byKey(Key('reviewRow${reviewId(r)}')), matching: find.byKey(Key(which)));
 
 String? _toast() {
-  final f = find.descendant(of: find.byType(Overlay).first, matching: find.textContaining(RegExp('Auto-record again|All on Ask first|Could not save')));
+  final f = find.descendant(of: find.byType(Overlay).first, matching: find.textContaining(RegExp('back on Auto-record|Everyone stays on Ask first|Could not save')));
   return f.evaluate().isEmpty ? null : (f.evaluate().first.widget as Text).data;
 }
 

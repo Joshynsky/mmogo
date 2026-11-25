@@ -23,16 +23,33 @@ class FakeRuleStore implements RuleStore {
 
   @override
   Future<bool> setLevel(ReceiverType type, String key,
-      {required String name, required RuleLevel level, int? categoryId, int? ceilingCents, required DateTime at}) async {
+      {required String name,
+      required RuleLevel level,
+      int? categoryId,
+      int? ceilingCents,
+      List<int> chosenCategoryIds = const <int>[],
+      required DateTime at}) async {
     if (!detailsOn) return false;
     if (level == RuleLevel.autoRecord && !canHoldAutoRecord(type)) return false;
     if (!isValidCeilingCents(ceilingCents)) return false;
+    // Like PrefsRuleStore.setLevel: the chosen list is kept only at Suggested.
+    final suggested = level == RuleLevel.suggested;
+    if (suggested && !isValidChosenCategoryIds(chosenCategoryIds)) return false;
+    final chosen = suggested ? List<int>.unmodifiable(chosenCategoryIds) : const <int>[];
     final id = _id(type, key);
     final old = _rules[id];
     if (old == null && _rules.length >= kRuleCap) return false;
     _rules[id] = old == null
         ? ReceiverRule(
-            type: type, key: key, name: name, level: level, categoryId: categoryId, ceilingCents: ceilingCents, created: at, changed: at)
+            type: type,
+            key: key,
+            name: name,
+            level: level,
+            categoryId: categoryId,
+            ceilingCents: ceilingCents,
+            chosenCategoryIds: chosen,
+            created: at,
+            changed: at)
         // Like PrefsRuleStore.setLevel: the category and ceiling are exactly what is passed (null
         // clears them; a caller that must keep the category passes the stored one), and the
         // restore mark is cleared. (0.2.2 U6: copyWith used to keep the old category on null.)
@@ -48,7 +65,8 @@ class FakeRuleStore implements RuleStore {
             changed: at,
             lastRecorded: old.lastRecorded,
             ceilingCents: ceilingCents,
-            autoPending: false);
+            autoPending: false,
+            chosenCategoryIds: chosen);
     _changes.add(null);
     return true;
   }
@@ -73,6 +91,19 @@ class FakeRuleStore implements RuleStore {
     _rules.clear();
     _changes.add(null);
   }
+
+  /// Like PrefsRuleStore.forgetEveryone: every rule, whatever [detailsOn] says.
+  @override
+  Future<int> forgetEveryone() async {
+    final n = _rules.length;
+    _rules.clear();
+    if (n > 0) _changes.add(null);
+    return n;
+  }
+
+  /// Like PrefsRuleStore.countEveryone: every rule, whatever [detailsOn] says.
+  @override
+  Future<int> countEveryone() async => _rules.length;
 
   @override
   Stream<void> get changes => _changes.stream;

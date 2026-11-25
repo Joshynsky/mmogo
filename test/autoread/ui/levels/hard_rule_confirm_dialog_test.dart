@@ -86,8 +86,8 @@ void main() {
       expect(hardPillStage1('Amina Wanjiku', RuleLevel.autoRecord), 'Amina Wanjiku set to Auto-record');
       expect(hardPillStage1('Gary', RuleLevel.askFirst), 'Gary set to Ask first');
       expect(hardPillStage1('Gary', RuleLevel.suggested), 'Gary set to Suggested');
-      expect(hardPillStage2('Amina', null), 'Amina is on Auto-record with no ceiling.');
-      expect(hardPillStage2('Tim', 200000), 'Tim is on Auto-record with a ceiling of Ksh 2,000.');
+      expect(hardPillStage2('Amina', null), 'Amina is on Auto-record with no limit.');
+      expect(hardPillStage2('Tim', 200000), 'Tim is on Auto-record with a limit of Ksh 2,000.');
       expect(hardRowAutoCeiling(50000), 'Auto-record up to Ksh 500');
       expect(hardOfferBody('Tim', 'Food', 4), contains('as Food 4 times in a row'));
       expect([for (final l in RuleLevel.values) hardRuleLevelName(l)], ['Suggested', 'Ask first', 'Auto-record']);

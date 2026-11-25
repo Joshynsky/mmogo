@@ -51,7 +51,12 @@ class _ThrowingStore extends FakeRuleStore {
   int calls = 0;
   @override
   Future<bool> setLevel(ReceiverType type, String key,
-      {required String name, required RuleLevel level, int? categoryId, int? ceilingCents, required DateTime at}) async {
+      {required String name,
+      required RuleLevel level,
+      int? categoryId,
+      int? ceilingCents,
+      List<int> chosenCategoryIds = const <int>[],
+      required DateTime at}) async {
     calls++;
     throw StateError('disk');
   }

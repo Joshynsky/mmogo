@@ -1,5 +1,7 @@
 /// §AUTOREAD.RULE_CODEC - AUTOREAD RULES codec: one rule as JSON `{v,t,k,name,lv,cat,run,runCat,
-/// created,changed,lastRecorded,ceil?,ap?}`. A corrupt value decodes to null (ignored).
+/// created,changed,lastRecorded,ceil?,ap?,sc?}`. A corrupt value decodes to null (ignored).
+/// `sc` (0.2.2 item 2 redesign) = the chosen Suggest category ids. Written only when not empty; absent
+/// = empty ("Last 10 payments"). A bad `sc` drops the field, never the rule (unlike `ceil` / `ap`).
 library;
 
 import 'dart:convert';
@@ -27,7 +29,20 @@ String encodeRule(ReceiverRule r) => jsonEncode(<String, Object?>{
       'lastRecorded': r.lastRecorded?.millisecondsSinceEpoch,
       'ceil': r.ceilingCents,
       'ap': r.autoPending,
+      if (r.chosenCategoryIds.isNotEmpty) 'sc': r.chosenCategoryIds,
     });
+
+/// The chosen list from a raw `sc` value. Absent, not a list, longer than [kMaxChosenCategories],
+/// any non-int item or an id twice = empty (the field is dropped, the rule is kept).
+List<int> decodeChosenCategoryIds(Object? raw) {
+  if (raw is! List || raw.length > kMaxChosenCategories) return const <int>[];
+  final out = <int>[];
+  for (final x in raw) {
+    if (x is! int || out.contains(x)) return const <int>[];
+    out.add(x);
+  }
+  return List<int>.unmodifiable(out);
+}
 
 /// Null for anything that is not a well-formed version 1 rule.
 ReceiverRule? decodeRule(Object? raw) {
@@ -68,6 +83,7 @@ ReceiverRule? decodeRule(Object? raw) {
       lastRecorded: last == null ? null : DateTime.fromMillisecondsSinceEpoch(last as int, isUtc: true),
       ceilingCents: ceil as int?,
       autoPending: ap == true,
+      chosenCategoryIds: decodeChosenCategoryIds(m['sc']),
     );
   } catch (_) {
     return null;

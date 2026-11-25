@@ -88,11 +88,15 @@ class PrefsRuleStore implements RuleStore {
     required RuleLevel level,
     int? categoryId,
     int? ceilingCents,
+    List<int> chosenCategoryIds = const <int>[],
     required DateTime at,
   }) =>
       _serial(() async {
         if (level == RuleLevel.autoRecord && !canHoldAutoRecord(type)) return false;
         if (!isValidCeilingCents(ceilingCents)) return false;
+        // Chosen Suggest categories live only at Suggested; Ask first and Auto-record clear them.
+        final suggested = level == RuleLevel.suggested;
+        if (suggested && !isValidChosenCategoryIds(chosenCategoryIds)) return false;
         final p = await _fresh();
         if (!_detailsOn(p)) return false;
         final old = decodeRule(p.get(ruleStorageKey(type, key)));
@@ -110,6 +114,7 @@ class PrefsRuleStore implements RuleStore {
           changed: t,
           lastRecorded: old?.lastRecorded,
           ceilingCents: ceilingCents,
+          chosenCategoryIds: suggested ? List<int>.unmodifiable(chosenCategoryIds) : const <int>[],
         );
         // A person chosen for Ask first outranks a counter-only Suggested record.
         return _write(p, next, old == null, mayDropSuggested: level != RuleLevel.suggested);
@@ -153,6 +158,22 @@ class PrefsRuleStore implements RuleStore {
         await _wipe(p);
         _changes.add(null);
       });
+
+  /// Reads the keys directly, never through all(): every rule key, whatever the details switch says.
+  @override
+  Future<int> forgetEveryone() => _serial(() async {
+        final p = await _fresh();
+        final keys = _ruleKeys(p).toList();
+        for (final k in keys) {
+          await p.remove(k);
+        }
+        if (keys.isNotEmpty) _changes.add(null);
+        return keys.length;
+      });
+
+  /// Every rule key (the set [forgetEveryone] erases; the same count the cap uses).
+  @override
+  Future<int> countEveryone() => _serial(() async => _ruleKeys(await _fresh()).length);
 
   @override
   Stream<void> get changes => _changes.stream;

@@ -40,7 +40,7 @@ class RuleChangePill implements RuleChangeNotice {
   static _Live? _current;
 
   @override
-  void show(String name, RuleLevel level, int? ceilingCents, VoidCallback? onChangeCeiling) {
+  void show(String name, RuleLevel level, int? ceilingCents, VoidCallback? onChangeCeiling, {String? categoryName}) {
     final overlay = appNavigatorKey.currentState?.overlay;
     if (overlay == null) return;
     dismissNow();

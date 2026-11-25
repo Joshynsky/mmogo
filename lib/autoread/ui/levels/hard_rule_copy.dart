@@ -1,15 +1,33 @@
 /// §AUTOREAD.LEVELS.HARD_RULE_COPY: every new string of the 0.2.2 Auto-record hard rule screens (level
-/// sheet, confirm dialog, offer card, the one pill, pause and reset controls, Remembered layout A, restore
-/// review). The ONLY home of these strings: the screen slices import this file and add none of their own.
+/// sheet, confirm dialog, offer card, the one pill, pause and reset controls, Remembered page, Set up,
+/// person sheet, category picker, restore review). The ONLY home of these strings: the screen slices
+/// import this file and add none of their own.
 ///
-/// Text is the draft from the signed mock `_pipeline/v0.2.2/mock-hard-rule/index.html` (key in brackets),
-/// with the PM's 25-11 changes applied: the ceiling label has no "(optional)", the Paybill line has no "yet".
-/// Every string is WORDING-DRAFT and marked `// SIGN`: the PM signs them before release (plan section 5).
-/// `kTodo...` constants are PLACEHOLDERS for lines the mock does not have; the PM writes them (slice W).
+/// Three kinds of line, each marked on its own line:
+/// - `// SIGNED 25-11 (...)`: the PM's signed words (ITEM2-REVIEW-SIGNOFF-2026-11-25, sections "Signed
+///   wording" and "Signed at sign-off"), verbatim. Pinned by test/autoread/ui/levels/hard_rule_copy_signed_test.dart.
+/// - `// SIGN WORDING-DRAFT (...)`: a draft line copied from a mock (mock-hard-rule, or mock-remembered-v2
+///   with its scene id). The PM signs these in slice W2.
+/// - `kTodo...`: PLACEHOLDERS for lines no mock has; the PM writes them (W2).
+///
+/// Item 2 redesign (C1, 25-11): "limit" replaces "ceiling" in every user-facing value (key names may keep
+/// "Ceiling"). Every counted line goes through [peopleCount] ("1 person" / "{n} people"). Keys whose
+/// arguments changed got NEW functions next to the old ones; the old ones stay until slice I2 deletes
+/// the keys nothing uses any more (each is marked `OLD: I2 deletes when unused`).
+/// NOT here on purpose (still open PM items): the confirm buttons "Turn on" / "Cancel" ([kHardConfirmTurnOn]
+/// is unchanged) and the Settings row "0 names" subtitle.
 library;
 
 import '../../../domain/format/money.dart' show kshTrim;
+import '../../../domain/format/source_types.dart' show sourceTypeName;
 import '../../rules/rule_model.dart';
+
+// ---------------------------------------------------------------- counts
+/// "person" for 1, "people" otherwise (the noun alone, for lines with a word between count and noun).
+String _peopleNoun(int n) => n == 1 ? 'person' : 'people';
+
+/// "1 person" / "{n} people". SIGNED 25-11 ("Singular: "1 person" everywhere"). Every counted line uses it.
+String peopleCount(int n) => '$n ${_peopleNoun(n)}';
 
 // ---------------------------------------------------------------- levels
 // SIGN WORDING-DRAFT (mock lvl_sug)
@@ -36,24 +54,25 @@ String hardSheetNoteAskFirst(String category) => 'mmogo asks "Record as $categor
 // SIGN WORDING-DRAFT (mock n_auto)
 const String kHardSheetNoteAutoRecord = 'Recorded with no tap. You get a notice every time, and you can Undo it.';
 
-// ---------------------------------------------------------------- ceiling field
+// ---------------------------------------------------------------- limit field (key names keep "Ceiling")
 // SIGN WORDING-DRAFT (mock ceil_l; PM-signed label, "(optional)" dropped 25-11)
 const String kHardCeilingLabel = 'Ask first above Ksh';
 // SIGN WORDING-DRAFT (the "Ksh" prefix drawn in the mock field)
 const String kHardCeilingPrefix = 'Ksh';
-// SIGN WORDING-DRAFT (mock ceil_ph)
-const String kHardCeilingPlaceholder = 'No ceiling';
-// SIGN WORDING-DRAFT (mock ceil_h)
-const String kHardCeilingHint = 'Leave empty for no ceiling. A payment above this amount is asked first.';
+// SIGN WORDING-DRAFT (mock-remembered-v2 ceil_ph, "limit" per PM 25-11)
+const String kHardCeilingPlaceholder = 'No limit';
+// SIGN WORDING-DRAFT (mock-remembered-v2 ceil_h, "limit" per PM 25-11)
+const String kHardCeilingHint = 'Leave empty for no limit. A payment above this amount is asked first.';
 // SIGN WORDING-DRAFT (mock ceil_e)
 const String kHardCeilingError = 'Enter an amount above 0, or leave it empty.';
-// SIGN PLACEHOLDER: the mock has no line for a ceiling above Ksh 1,000,000 (plan section 5). PM to write.
-const String kTodoHardCeilingTooHigh = '[PM to write: ceiling above Ksh 1,000,000]';
+// SIGN PLACEHOLDER: the mock has no line for a limit above Ksh 1,000,000 (plan section 5). PM to write.
+const String kTodoHardCeilingTooHigh = '[PM to write: limit above Ksh 1,000,000]';
 
 // ---------------------------------------------------------------- greyed Auto-record reasons
-// SIGN WORDING-DRAFT (mock why_bill with "yet" removed per PM 25-11; the PM's own example was
-// "Paybill payments always ask first": confirm the exact words)
+// OLD: I2 deletes when unused (replaced by kHardPaybillAlwaysAsks). SIGN WORDING-DRAFT (mock why_bill)
 const String kHardWhyNotPaybill = 'Not for Paybill. Ask first is the highest level.';
+// SIGNED 25-11 ("Paybill line")
+const String kHardPaybillAlwaysAsks = 'Paybill payments always ask first.';
 // SIGN WORDING-DRAFT (mock why_agent)
 const String kHardWhyNotWithdrawal = 'Not for withdrawals. Ask first is the highest level.';
 
@@ -67,7 +86,7 @@ String hardConfirmBodyNoCeiling(String name, String category) =>
 String hardConfirmBodyCeiling(String name, String category, int ceilingCents) =>
     "From now on mmogo records $name's payments up to ${kshTrim(ceilingCents)} as $category without asking. "
     'Above that it asks first. You can Undo any of them.';
-// SIGN WORDING-DRAFT (mock conf_ok)
+// SIGN WORDING-DRAFT (mock conf_ok). Still an open PM item after sign-off ("Turn on" / "Cancel"): unchanged.
 const String kHardConfirmTurnOn = 'Turn on';
 
 // ---------------------------------------------------------------- offer card
@@ -83,65 +102,94 @@ const String kHardOfferAskFirst = 'Ask me first';
 // SIGN WORDING-DRAFT (mock offer_auto)
 const String kHardOfferAutoRecord = 'Auto-record';
 
-// ---------------------------------------------------------------- the one pill
+// ---------------------------------------------------------------- the one pill (never a number)
+// OLD: I2 deletes when unused (replaced by hardPillSuggested / hardPillAskFirst / hardPillAuto).
 // SIGN WORDING-DRAFT (mock pill_sug / pill_ask / pill_auto)
 String hardPillStage1(String name, RuleLevel level) => switch (level) {
       RuleLevel.suggested => '$name set to Suggested',
       RuleLevel.askFirst => '$name set to Ask first',
       RuleLevel.autoRecord => '$name set to Auto-record',
     };
+// OLD: I2 deletes when unused (replaced by kHardPillAnyAmount / hardPillUpTo). "limit" per PM 25-11.
 // SIGN WORDING-DRAFT (mock pill2_t with pill_noceil / pill_ceil)
 String hardPillStage2(String name, int? ceilingCents) =>
-    '$name is on Auto-record with ${ceilingCents == null ? 'no ceiling' : 'a ceiling of ${kshTrim(ceilingCents)}'}.';
-// SIGN WORDING-DRAFT (mock pill2_s)
+    '$name is on Auto-record with ${ceilingCents == null ? 'no limit' : 'a limit of ${kshTrim(ceilingCents)}'}.';
+// OLD: I2 deletes when unused. SIGN WORDING-DRAFT (mock pill2_s)
 const String kHardPillStage2Sub = 'You can change this.';
+// OLD: I2 deletes when unused (replaced by kHardPillSetLimit / kHardPillChange). "limit" per PM 25-11.
 // SIGN WORDING-DRAFT (mock pill_chg)
-const String kHardPillChangeCeiling = 'Change ceiling';
+const String kHardPillChangeCeiling = 'Change limit';
+
+// SIGNED 25-11 ("Pill", Suggested)
+String hardPillSuggested(String name) => '$name set to Suggested';
+// SIGNED 25-11 ("Pill", Ask first)
+String hardPillAskFirst(String name, String category) => '$name set to Ask first · $category';
+// SIGNED 25-11 ("Pill", Auto-record stage 1)
+String hardPillAuto(String name, String category) => '$name set to Auto-record as $category';
+// SIGNED 25-11 ("Pill", Auto-record stage 2, no limit)
+const String kHardPillAnyAmount = 'Records any amount.';
+// SIGNED 25-11 ("Pill", the button next to kHardPillAnyAmount)
+const String kHardPillSetLimit = 'Set a limit';
+// SIGNED 25-11 ("Pill", Auto-record stage 2 with a limit): "Records up to Ksh {limit}."
+String hardPillUpTo(int limitCents) => 'Records up to ${kshTrim(limitCents)}.';
+// SIGNED 25-11 ("Pill", the button next to hardPillUpTo)
+const String kHardPillChange = 'Change';
+
+// ---------------------------------------------------------------- undo of a no-tap entry
+// SIGNED 25-11 ("No-tap message"): "{Name}, Ksh {amount} recorded as {Category}" (+ Undo, existing key).
+String hardAutoArrived(String name, int amountCents, String category) =>
+    '$name, ${kshTrim(amountCents)} recorded as $category';
+// SIGNED 25-11 ("Undo pill")
+String hardUndoStays(String name) => 'Undone. $name stays on Auto-record.';
 
 // ---------------------------------------------------------------- pause (amber, reversible)
 // SIGN WORDING-DRAFT (mock pause_t; also the switch's spoken name)
 const String kHardPauseTitle = 'Pause all Auto-record';
-// SIGN WORDING-DRAFT (mock pause_s)
-const String kHardPauseSub = 'Everyone on Auto-record is asked first. Rules stay saved.';
-// SIGN WORDING-DRAFT (mock pause_ban)
-String hardPausedBanner(int n) => 'Auto-record is paused. $n people are asked first until you resume.';
-// SIGN WORDING-DRAFT (mock resume)
+// SIGNED 25-11 ("Pause row"; the page switch row uses the same line, mock-remembered-v2 pause_sub)
+const String kHardPauseSub = 'Every Auto-record person is asked first until you resume.';
+// SIGN WORDING-DRAFT (mock pause_ban; the count via peopleCount, verb agrees with it)
+String hardPausedBanner(int n) =>
+    'Auto-record is paused. ${peopleCount(n)} ${n == 1 ? 'is' : 'are'} asked first until you resume.';
+// SIGN WORDING-DRAFT (mock resume; also the pinned notice's action, signed 25-11 "Pause")
 const String kHardResume = 'Resume';
-// SIGN WORDING-DRAFT (mock pause_toast)
-const String kHardPausedToast = 'Auto-record paused. Rules are saved.';
-// SIGN WORDING-DRAFT (mock resume_toast)
-String hardResumedToast(int n) => 'Auto-record is back on for $n people.';
+// SIGNED 25-11 ("Pause pill")
+const String kHardPausedToast = 'Auto-record paused. Your settings are kept.';
+// SIGN WORDING-DRAFT (mock resume_toast; the count via peopleCount)
+String hardResumedToast(int n) => 'Auto-record is back on for ${peopleCount(n)}.';
 // SIGN WORDING-DRAFT (mock tag_paused: the amber tag on a To confirm item)
 const String kHardPausedTag = 'Auto-record paused: asking first';
 // SIGN WORDING-DRAFT (mock set_pause_row)
 const String kHardPauseSettingsTitle = 'Pause all Auto-record';
-// SIGN WORDING-DRAFT (mock set_pause_sub)
-const String kHardPauseSettingsSub = 'Turns every Auto-record person into Ask first until you switch it back.';
+// SIGNED 25-11 ("Pause row")
+const String kHardPauseSettingsSub = 'Every Auto-record person is asked first until you resume.';
+// SIGNED 25-11 ("Pause": the pinned phone notice title; mock-remembered-v2 al-paused)
+const String kHardPausedNoticeTitle = 'Auto-record is paused';
 
 // ---------------------------------------------------------------- red buttons (counts only, never names)
 // SIGN WORDING-DRAFT (mock reset_btn)
 const String kHardResetButton = 'Reset everyone to Suggested';
-// SIGN WORDING-DRAFT (mock reset_t)
-String hardResetTitle(int n) => 'Reset $n people to Suggested?';
-// SIGN WORDING-DRAFT (mock reset_b)
+// SIGNED 25-11 ("Reset"): "Reset {n} people to Suggested?"
+String hardResetTitle(int n) => 'Reset ${peopleCount(n)} to Suggested?';
+// SIGNED 25-11 ("Reset")
 const String kHardResetBody =
-    'Their Ask first and Auto-record levels and ceilings are removed. Recipients stay remembered. Nothing already recorded changes.';
-// SIGN WORDING-DRAFT (mock reset_ok)
+    'They go back to Suggested and their limits are removed. mmogo still remembers them. Nothing already recorded changes.';
+// SIGNED 25-11 ("Reset": Cancel · Reset)
 const String kHardResetOk = 'Reset';
-// SIGN WORDING-DRAFT (mock reset_toast)
-String hardResetToast(int n) => '$n people reset to Suggested.';
-// SIGN WORDING-DRAFT (mock forget_btn)
-const String kHardForgetButton = 'Forget all recipients';
-// SIGN WORDING-DRAFT (mock forget_t)
-String hardForgetTitle(int n) => 'Forget all $n recipients?';
-// SIGN WORDING-DRAFT (mock forget_b)
-const String kHardForgetBody = 'Their levels, ceilings and history are forgotten too. We will ask again next time.';
-// SIGN WORDING-DRAFT (mock forget_ok)
+// SIGN WORDING-DRAFT (mock reset_toast; the count via peopleCount)
+String hardResetToast(int n) => '${peopleCount(n)} reset to Suggested.';
+// SIGNED 25-11 ("Signed at sign-off": page button)
+const String kHardForgetButton = 'Forget all people';
+// SIGNED 25-11 ("Forget all"): "Forget all {n} people?"
+String hardForgetTitle(int n) => 'Forget all ${peopleCount(n)}?';
+// SIGNED 25-11 ("Forget all")
+const String kHardForgetBody =
+    "mmogo forgets their names, numbers and Auto-record settings. Nothing already recorded changes. This can't be undone.";
+// SIGNED 25-11 ("Forget all": Cancel · Forget all)
 const String kHardForgetOk = 'Forget all';
-// SIGN WORDING-DRAFT (mock forget_toast)
-String hardForgetToast(int n) => 'Forgot $n recipients.';
+// SIGNED 25-11 ("Forget all"): "Forgot {n} people."
+String hardForgetToast(int n) => 'Forgot ${peopleCount(n)}.';
 
-// ---------------------------------------------------------------- Remembered page, layout A
+// ---------------------------------------------------------------- Remembered page
 // SIGN WORDING-DRAFT (mock page helper under the tabs; not in the mock's key table)
 const String kHardPageHelper = 'Suggested offers categories. Ask first asks for one tap. Auto-record files it for you.';
 // SIGN WORDING-DRAFT (mock grp_auto / grp_ask / grp_sug: the section names are the level names)
@@ -154,46 +202,201 @@ const String kHardGroupHide = 'Hide';
 const String kHardSearchPlaceholder = 'Search people';
 // SIGN WORDING-DRAFT (mock empty_f)
 const String kHardSearchEmpty = 'Nobody matches.';
-// SIGN WORDING-DRAFT (mock row_auto0)
-const String kHardRowAutoNoCeiling = 'Auto-record, no ceiling';
+// SIGN WORDING-DRAFT (mock row_auto0, "limit" per PM 25-11)
+const String kHardRowAutoNoCeiling = 'Auto-record, no limit';
 // SIGN WORDING-DRAFT (mock row_autoc)
 String hardRowAutoCeiling(int ceilingCents) => 'Auto-record up to ${kshTrim(ceilingCents)}';
 // SIGN WORDING-DRAFT (mock row_paused)
 const String kHardRowPaused = 'Paused: asking first';
 // SIGN WORDING-DRAFT (mock row_only_ask)
 const String kHardRowAskFirstHighest = 'Ask first is the highest level here';
-// SIGN WORDING-DRAFT (mock off_line)
+// SIGNED 25-11 ("Signed at sign-off": the line on Suggested rows with no chosen list)
+const String kHardSuggestsFromLast10 = 'Suggests from last 10 payments';
+// OLD: I2 deletes when unused (replaced by kHardDetailsOffCard). SIGN WORDING-DRAFT (mock off_line)
 const String kHardDetailsOffLine = 'Record receiver details is off. No names are kept, so there are no rules.';
-// SIGN WORDING-DRAFT (mock off_btn / off_ok)
+// SIGNED 25-11 ("Details-off card")
+const String kHardDetailsOffCard =
+    "Record receiver details is off, so mmogo doesn't use your saved people or record them for you. "
+    'Your settings come back when you turn it on.';
+// SIGNED 25-11 ("Details-off card": its button)
+const String kHardTurnOnInSettings = 'Turn it on in Settings';
+// SIGN WORDING-DRAFT (mock off_btn / off_ok; signed 25-11 as the restore details-off button)
 const String kHardOpenSettings = 'Open Settings';
-// SIGN WORDING-DRAFT (mock rst-off-page empty line, not in the key table)
+// OLD: I2 deletes when unused. SIGN WORDING-DRAFT (mock rst-off-page empty line, not in the key table)
 const String kHardDetailsOffEmpty = 'Nobody is remembered while Record receiver details is off.';
+// SIGNED 25-11 ("Redesign": the bottom bar button)
+const String kHardSetUpButton = 'Set up';
+// SIGNED 25-11 ("Redesign": the Set up sheet title; also the Set up button's spoken name, mock setup_aria)
+const String kHardSetUpTitle = 'Set up a recipient';
+// SIGNED 25-11 (F-5: the one list's heading)
+const String kHardRecentlyRecorded = 'Recently recorded';
+// SIGNED 25-11 (F-5: the tag on no-tap entries; the same words as the level name)
+const String kHardAutoRecordTag = kHardLevelAutoRecord;
 
-// ---------------------------------------------------------------- restore review
-// SIGN WORDING-DRAFT (mock rev_line)
-String hardReviewLine(int n) => '$n people were on Auto-record. They are on Ask first until you confirm.';
-// SIGN WORDING-DRAFT (mock rev_btn)
+// ---------------------------------------------------------------- Suggest from (person sheet)
+// SIGNED 25-11 ("Signed at sign-off": Suggest words)
+const String kHardSuggestFrom = 'Suggest from:';
+// SIGNED 25-11 ("Signed at sign-off": Suggest words)
+const String kHardSuggestLast10 = 'Last 10 payments';
+// SIGNED 25-11 ("Signed at sign-off": Suggest words)
+const String kHardSuggestChoose = 'Categories I choose';
+// SIGNED 25-11 ("Signed at sign-off": the heading named in "the two How Suggest works texts")
+const String kHardSuggestHowTitle = 'How Suggest works';
+// SIGNED 25-11 ("Signed at sign-off": How Suggest works, Last 10 payments; mock-remembered-v2 sug_hist_p)
+String hardSuggestHowLast10(String name) =>
+    "When you pay $name, the alert says Tap Parse. Then mmogo suggests the categories you used most in $name's "
+    'last 10 payments. Nothing records without a tap.';
+// SIGNED 25-11 ("Signed at sign-off": How Suggest works, Categories I choose; mock-remembered-v2 sug_pick_p).
+// [max] = the most categories a person can choose (C2's kMaxChosenCategories, 2).
+String hardSuggestHowChosen(String name, int max) =>
+    'When you pay $name, the alert shows your categories as buttons straight away, with no Parse tap. '
+    'Choose up to $max. Nothing records without a tap.';
+// SIGNED 25-11 ("Signed at sign-off": Suggest words)
+const String kHardSuggestAlertPreview = 'Your alert will show:';
+// SIGNED 25-11 ("Signed at sign-off": Suggest words)
+const String kHardSuggestNoneChosen = 'None chosen yet';
+// SIGNED 25-11 ("Signed at sign-off": the must-choose error)
+const String kHardSuggestNeedOne = 'Choose at least one category, or pick Last 10 payments.';
+
+// ---------------------------------------------------------------- person sheet: mock-only drafts (W2 signs)
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-ask ask_h)
+const String kHardAskHowTitle = 'How Ask first works';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-ask imp_ask)
+String hardAskHow(String name, String category) =>
+    'When you pay $name, the alert asks "Record as $category?". One tap records it. Nothing records until you tap.';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-auto auto_h)
+const String kHardAutoHowTitle = 'How Auto-record works';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-auto imp_auto)
+String hardAutoHow(String name, String category) =>
+    'Payments to $name are recorded as $category with no tap. You get a notice every time, and you can Undo it.';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-auto imp_ceil_h2)
+const String kHardLimitHelpTitle = 'What "Ask first above" means';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-auto imp_ceil_p, mock line 338)
+const String kHardLimitHelp =
+    'A payment above this amount is asked first. A payment of exactly this amount is recorded. Only the amount counts, not the fee.';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-auto imp_ceil_ph: the empty limit field)
+const String kHardLimitNotSet = 'Not set';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-auto imp_ceil_h: the help under the limit field)
+const String kHardLimitEmptyHint = 'Leave it empty and mmogo never asks first.';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-sug p_count; singular per the mock's SING table): "{k} payments"
+String hardPaymentsCount(int k) => k == 1 ? '1 payment' : '$k payments';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-sug set_to: the level choice's label)
+const String kHardSetTo = 'Set to';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-sug lv_sug_btn: the Suggested level's button)
+const String kHardLevelSuggestButton = 'Suggest';
+// SIGN WORDING-DRAFT (mock-remembered-v2 back: every sheet's back arrow, spoken)
+const String kHardBack = 'Back';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-sug-chosen sug_cur_l)
+const String kHardSuggestCurrentLabel = 'Categories to suggest';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-sug-pick0 sug_choose)
+const String kHardSuggestChooseButton = 'Choose categories';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-sug-chosen sug_change): "Categories ({k} of {m})"
+String hardSuggestChangeButton(int k, int m) => 'Categories ($k of $m)';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-keep sug_keep): {level} = the level the person had
+String hardSuggestKeeps(String name, String level) => "$name's $level setting stays saved. You can switch back any time.";
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-ask cat_l)
+const String kHardCategoryLabel = 'Category';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-ask cat_choose)
+const String kHardCategoryChoose = 'Choose category';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-ask ask_most: under a pre-filled category)
+const String kHardCategoryMostUsed = 'Most used, you can change it.';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-wait ask_wait)
+String hardCategoryWaiting(String name) => "$name's only payment is still waiting without a category, so choose one.";
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-ask ask_need)
+const String kHardCategoryNeed = 'Choose a category so mmogo knows what to ask.';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-ask-err ask_err)
+const String kHardCategoryError = 'Choose a category first.';
+// SIGN WORDING-DRAFT (mock-remembered-v2 setup-half no_cat)
+const String kHardNoCategoryYet = 'No category yet';
+// SIGN WORDING-DRAFT (mock-remembered-v2 p-sug save)
+const String kHardSave = 'Save';
+
+// ---------------------------------------------------------------- category picker: mock-only drafts (W2 signs)
+// SIGN WORDING-DRAFT (mock-remembered-v2 pick-multi pk_t_multi)
+String hardPickerTitleMulti(String name) => 'Categories for $name';
+// SIGN WORDING-DRAFT (mock-remembered-v2 pick-one pk_t_one)
+String hardPickerTitleOne(String name) => 'Category for $name';
+// SIGN WORDING-DRAFT (mock-remembered-v2 pick-multi pk_s_multi)
+String hardPickerUpTo(int m) => 'Choose up to $m.';
+// SIGN WORDING-DRAFT (mock-remembered-v2 pick-multi pk_count): "{k} of {m} chosen"
+String hardPickerCount(int k, int m) => '$k of $m chosen';
+// SIGN WORDING-DRAFT (mock-remembered-v2 pick-multi pk_used: the dot's text label)
+const String kHardPickerUsedBefore = 'Used before';
+// SIGN WORDING-DRAFT (mock-remembered-v2 pick-multi pk_limit)
+String hardPickerLimit(int m) => 'You can choose up to $m. Turn one off first.';
+// SIGN WORDING-DRAFT (mock-remembered-v2 pick-multi done)
+const String kHardPickerDone = 'Done';
+
+// ---------------------------------------------------------------- Set up sheet and page: mock-only drafts (W2 signs)
+// SIGN WORDING-DRAFT (mock-remembered-v2 setup-half types_aria: the type chips' group name)
+const String kHardTypeChipsGroup = 'Payment type';
+// SIGN WORDING-DRAFT (mock-remembered-v2 setup-half all_n: the first type chip)
+const String kHardTypeChipAll = 'All';
+// SIGN WORDING-DRAFT (mock-remembered-v2 setup-half TYPES: the type chips, (short code, name)). The names
+// come from their one place, sourceTypeName (they are the mock's names word for word); only the short
+// codes are new here.
+final List<(String, String)> kHardTypeChips = [
+  ('SM', sourceTypeName('SEND_MONEY')),
+  ('PB', sourceTypeName('PAYBILL')),
+  ('BG', sourceTypeName('BUY_GOODS')),
+  ('P', sourceTypeName('POCHI_LA_BIASHARA')),
+  ('A', sourceTypeName('AIRTIME')),
+];
+// SIGN WORDING-DRAFT (mock-remembered-v2 setup-search imp_q; also the field's spoken name)
+const String kHardSetUpSearch = 'Search name or category';
+// SIGN WORDING-DRAFT (mock-remembered-v2 setup-half imp_hint)
+const String kHardSetUpHint = 'Everyone you have paid, most payments first.';
+// SIGN WORDING-DRAFT (mock-remembered-v2 setup-half grab_up)
+const String kHardSheetTaller = 'Make the list taller';
+// SIGN WORDING-DRAFT (mock-remembered-v2 setup-full grab_down)
+const String kHardSheetShorter = 'Make the list shorter';
+// SIGN WORDING-DRAFT (mock-remembered-v2 setup-pb acct): "account {a}", {a} already masked by the caller
+String hardSetUpAccount(String maskedAccount) => 'account $maskedAccount';
+// SIGN WORDING-DRAFT (mock-remembered-v2 setup-at air_me)
+const String kHardAirtimeMyself = 'Myself';
+// SIGN WORDING-DRAFT (mock-remembered-v2 setup-at air_other)
+const String kHardAirtimeOther = 'Other number';
+// SIGN WORDING-DRAFT (mock-remembered-v2 page-sug row_sug): {categories} = the chosen names joined by ", "
+String hardRowSuggests(String categories) => 'Suggests $categories';
+// SIGN WORDING-DRAFT (mock-remembered-v2 page-open row_ask)
+String hardRowAsks(String category) => 'Asks: Record as $category?';
+// SIGN WORDING-DRAFT (mock-remembered-v2 page-auto row_auto_c)
+String hardRowRecordsUpTo(String category, int limitCents) => 'Records as $category, up to ${kshTrim(limitCents)}';
+// SIGN WORDING-DRAFT (mock-remembered-v2 page-auto row_auto_n)
+String hardRowRecordsNoLimit(String category) => 'Records as $category, never asks first';
+// SIGN WORDING-DRAFT (mock-remembered-v2 page-all grp_none: an open group with nobody in it)
+const String kHardGroupNone = 'Nobody here yet.';
+// SIGN WORDING-DRAFT (mock-remembered-v2 page-empty imp_first)
+const String kHardPageFirstTime = 'Nobody set up yet. mmogo still suggests categories from history.';
+
+// ---------------------------------------------------------------- restore review (signed 25-11 "Restore")
+// SIGNED 25-11 ("Restore"): "{n} people were on Auto-record in your backup. They ask first until you check them."
+// The verb agrees with the count ("1 person was").
+String hardReviewLine(int n) =>
+    '${peopleCount(n)} ${n == 1 ? 'was' : 'were'} on Auto-record in your backup. They ask first until you check them.';
+// SIGNED 25-11 ("Restore": + Review)
 const String kHardReviewButton = 'Review';
-// SIGN WORDING-DRAFT (mock rev_t)
+// SIGNED 25-11 ("Restore")
 const String kHardReviewTitle = 'Auto-record from your backup';
-// SIGN WORDING-DRAFT (mock rev_s)
-const String kHardReviewSub = 'Choose who goes back to Auto-record.';
-// SIGN WORDING-DRAFT (mock rev_ok)
-const String kHardReviewConfirm = 'Confirm';
-// SIGN WORDING-DRAFT (mock rev_keep)
+// SIGNED 25-11 ("Restore")
+const String kHardReviewSub = 'Tick who goes back on Auto-record. The rest ask first.';
+// SIGNED 25-11 ("Restore": Save · Keep all on Ask first)
+const String kHardReviewConfirm = 'Save';
+// SIGNED 25-11 ("Restore": Save · Keep all on Ask first)
 const String kHardReviewKeepAll = 'Keep all on Ask first';
-// SIGN WORDING-DRAFT (mock rev_toast)
-String hardReviewToast(int n) => '$n people are on Auto-record again.';
-// SIGN WORDING-DRAFT (mock revkeep toast)
-const String kHardReviewKeptToast = 'All on Ask first.';
-// SIGN WORDING-DRAFT (mock rst_toast)
-String hardRestoreToast(int n) => 'Backup restored. $n people need a review.';
-// SIGN WORDING-DRAFT (mock off_t)
+// SIGNED 25-11 ("Restore"): "{n} people back on Auto-record."
+String hardReviewToast(int n) => '${peopleCount(n)} back on Auto-record.';
+// SIGNED 25-11 ("Restore")
+const String kHardReviewKeptToast = 'Everyone stays on Ask first.';
+// SIGNED 25-11 ("Restore"): "Backup restored. Check {n} Auto-record people."
+String hardRestoreToast(int n) => 'Backup restored. Check $n Auto-record ${_peopleNoun(n)}.';
+// SIGNED 25-11 ("Restore", details-off)
 const String kHardRestoreOffTitle = 'Backup restored';
-// SIGN WORDING-DRAFT (mock off_b)
-String hardRestoreOffBody(int n) => '$n saved rules were left out. Rules need Record receiver details, and it is off.';
+// SIGNED 25-11 ("Restore", details-off)
+String hardRestoreOffBody(int n) =>
+    'Settings for ${peopleCount(n)} were left out because Record receiver details is off. '
+    'Turn it on, then restore again to bring them back.';
 
 // ---------------------------------------------------------------- arrival (slice B2)
-// SIGN PLACEHOLDER: toast for a row Auto-record recorded, shown when mmogo opens (today's Yes toast says
-// "from your Yes on the alert"; plan section 5). PM to write.
+// OLD: I2 deletes when unused (replaced by hardAutoArrived). SIGN PLACEHOLDER (plan section 5).
 const String kTodoAutoRecordArrivedToast = '[PM to write: recorded by Auto-record toast]';

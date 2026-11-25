@@ -9,6 +9,7 @@ import '../../rules/rule_model.dart';
 import '../../rules/rule_store.dart';
 import '../category_choices.dart';
 import 'hard_rule_ports.dart';
+import 'setup_ports.dart';
 
 /// A remembered person or account the page may list even before a rule exists.
 class KnownPerson {
@@ -49,6 +50,8 @@ class LevelsDeps {
     this.pause,
     this.notice = const PillToastRuleChangeNotice(),
     RuleBulkOps? bulk,
+    this.setup,
+    this.pickCategories,
   }) : _bulk = bulk;
 
   final RuleStore store;
@@ -75,6 +78,13 @@ class LevelsDeps {
   final RuleChangeNotice notice;
 
   final RuleBulkOps? _bulk;
+
+  /// The Set up sheet's list (0.2.2 item 2 redesign; real one from slice B-SRC). Null = no Set up.
+  final SetupRecipientsSource? setup;
+
+  /// The category chips picker (0.2.2 item 2 redesign; real one from slice U-PICK). Null = no picker
+  /// (the person sheet keeps its older picker or offers no "Categories I choose").
+  final PickCategories? pickCategories;
 
   /// Page-wide rule operations (0.2.2); built over [store] and [now] unless given.
   RuleBulkOps get bulk => _bulk ?? RuleBulkOps(store, now: now);
