@@ -34,7 +34,7 @@ class _Port implements SuggestSettingsPort {
   Future<bool> setAfter(int n) async => true;
 }
 
-Future<void> _show(WidgetTester t, LevelPerson p, CategoryChoices cats, {double height = 700, Future<LevelSaveResult> Function(RuleLevel, int?)? onSave}) async {
+Future<void> _show(WidgetTester t, LevelPerson p, CategoryChoices cats, {double height = 700, LevelSaveFn? onSave}) async {
   t.view.physicalSize = Size(390, height);
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.reset);
@@ -45,7 +45,7 @@ Future<void> _show(WidgetTester t, LevelPerson p, CategoryChoices cats, {double 
         body: Builder(
           builder: (c) => TextButton(
             key: const Key('open'),
-            onPressed: () => showLevelSheet(c, person: p, categories: cats, onSave: onSave ?? (_, _) async => LevelSaveResult.ok),
+            onPressed: () => showLevelSheet(c, person: p, categories: cats, onSave: onSave ?? (_, _, {ceilingCents}) async => LevelSaveResult.ok),
             child: const Text('open'),
           ),
         ),

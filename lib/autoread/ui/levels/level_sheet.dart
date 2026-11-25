@@ -21,11 +21,15 @@ const List<RuleLevel> kSheetLevels = [RuleLevel.suggested, RuleLevel.askFirst];
 
 enum LevelSaveResult { ok, capReached, failed }
 
+/// What the sheet calls on Save. [ceilingCents] is the Auto-record ceiling (0.2.2); callers ignore it
+/// until the sheet offers Auto-record.
+typedef LevelSaveFn = Future<LevelSaveResult> Function(RuleLevel level, int? categoryId, {int? ceilingCents});
+
 Future<void> showLevelSheet(
   BuildContext context, {
   required LevelPerson person,
   required CategoryChoices categories,
-  required Future<LevelSaveResult> Function(RuleLevel level, int? categoryId) onSave,
+  required LevelSaveFn onSave,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -40,7 +44,7 @@ class LevelSheet extends StatefulWidget {
   const LevelSheet({super.key, required this.person, required this.categories, required this.onSave});
   final LevelPerson person;
   final CategoryChoices categories;
-  final Future<LevelSaveResult> Function(RuleLevel level, int? categoryId) onSave;
+  final LevelSaveFn onSave;
 
   @override
   State<LevelSheet> createState() => _LevelSheetState();

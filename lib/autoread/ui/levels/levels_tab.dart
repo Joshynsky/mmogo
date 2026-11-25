@@ -205,7 +205,7 @@ class _LevelsTabState extends State<LevelsTab> {
               LevelsPersonRow(
                 key: Key('levelRow.${x.type.code}.${x.key}'),
                 person: x,
-                onLevelTap: () => showLevelSheet(context, person: x, categories: d.choicesFor(x.type), onSave: (l, c) => _save(x, l, c)),
+                onLevelTap: () => showLevelSheet(context, person: x, categories: d.choicesFor(x.type), onSave: (l, c, {ceilingCents}) => _save(x, l, c)),
               ),
         ],
       ],

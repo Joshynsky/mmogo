@@ -34,6 +34,12 @@ class LevelPerson {
 
   /// Category names for the detail line (rule category, or most-used ones).
   final List<String> categoryNames;
+
+  /// The stored Auto-record ceiling in cents (0.2.2); null = none.
+  final int? ceilingCents;
+
+  /// Restored from a backup at Auto-record and on Ask first until reviewed (0.2.2, the rule's mark).
+  final bool autoPending;
   const LevelPerson({
     required this.type,
     required this.key,
@@ -42,6 +48,8 @@ class LevelPerson {
     this.categoryId,
     this.topIds = const [],
     this.categoryNames = const [],
+    this.ceilingCents,
+    this.autoPending = false,
   });
 }
 

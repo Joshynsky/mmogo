@@ -77,7 +77,9 @@ String encodePendingItem(WaitingItem item) {
 }
 
 /// The optional hint fields (contract section 4): `rl` ask or auto (absent = Suggested), `rc` the receiver
-/// type code, `rk` the person key, `sg` up to 2 category ids. Never message text.
+/// type code, `rk` the person key, `sg` up to 2 category ids, `fa` true only for an Ask first hint made
+/// from an Auto-record rule (0.2.2; absent otherwise, so older items and Kotlin readers are unchanged).
+/// Never message text.
 Map<String, Object?> _encodeHint(RuleHint? h) {
   if (h == null) return const {};
   return <String, Object?>{
@@ -86,6 +88,7 @@ Map<String, Object?> _encodeHint(RuleHint? h) {
     'rc': h.type.code,
     'rk': h.key,
     'sg': h.suggested.length > 2 ? h.suggested.sublist(0, 2) : h.suggested,
+    if (h.fromAutoRecord) 'fa': true,
   };
 }
 
@@ -110,7 +113,7 @@ RuleHint? _decodeHint(Map<String, dynamic> m) {
       if (x is int && ids.length < 2) ids.add(x);
     }
   }
-  return RuleHint(level: level, type: type, key: rk, suggested: ids);
+  return RuleHint(level: level, type: type, key: rk, suggested: ids, fromAutoRecord: m['fa'] == true);
 }
 
 /// Null when the JSON is corrupt or incomplete (treated as absent).

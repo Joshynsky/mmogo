@@ -8,6 +8,7 @@ import '../../history/history_reader.dart';
 import '../../rules/rule_model.dart';
 import '../../rules/rule_store.dart';
 import '../category_choices.dart';
+import 'hard_rule_ports.dart';
 
 /// A remembered person or account the page may list even before a rule exists.
 class KnownPerson {
@@ -45,7 +46,10 @@ class LevelsDeps {
     this.categoriesFor,
     this.known,
     this.now = DateTime.now,
-  });
+    this.pause,
+    this.notice = const PillToastRuleChangeNotice(),
+    RuleBulkOps? bulk,
+  }) : _bulk = bulk;
 
   final RuleStore store;
   final HistoryReader history;
@@ -63,6 +67,17 @@ class LevelsDeps {
   /// are listed only when they appear here.
   final Future<List<KnownPerson>> Function()? known;
   final DateTime Function() now;
+
+  /// The "Pause all Auto-record" switch (0.2.2). Null = no pause control is drawn (standard build, tests).
+  final HardRulePausePort? pause;
+
+  /// The notice after every level change (0.2.2; the real two-stage pill replaces the plain default).
+  final RuleChangeNotice notice;
+
+  final RuleBulkOps? _bulk;
+
+  /// Page-wide rule operations (0.2.2); built over [store] and [now] unless given.
+  RuleBulkOps get bulk => _bulk ?? RuleBulkOps(store, now: now);
 
   /// Set once by the app's wiring; null in the standard build and in tests that
   /// pass their own deps.
