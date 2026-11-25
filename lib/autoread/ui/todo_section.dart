@@ -1,5 +1,5 @@
 /// §AUTOREAD.TODO_SECTION - the body of the To do chip: To parse (n) with the
-/// Parse all bar, Could not read (n), To categorize (n), the trail slot, and
+/// Parse all bar, To choose, Suggestions, To categorize (n, unreadable inside), the trail slot LAST, and
 /// one empty card when nothing is left. Rows come from [rowBuilder] and the bar
 /// and trail slot are passed in, so this file holds order, headings and counts
 /// only and stays testable without a repository. Autoread build only.
@@ -42,7 +42,7 @@ class TodoSection extends StatelessWidget {
   final Widget? toChoose;
   final bool hasToChoose;
 
-  /// The Suggestions section, last. [hasSuggestions]: at least one offer.
+  /// The Suggestions section (one card), after To parse / To choose. [hasSuggestions]: at least one offer.
   final Widget? suggestions;
   final bool hasSuggestions;
 
@@ -61,7 +61,7 @@ class TodoSection extends StatelessWidget {
   /// The Parse all bar, shown beside the To parse heading. Null: none.
   final Widget? parseAllBar;
 
-  /// The Recorded automatically slot, after the three groups. Null: none.
+  /// The Recorded automatically slot, last on the page. Null: none.
   final Widget? trail;
 
   @override
@@ -80,6 +80,8 @@ class TodoSection extends StatelessWidget {
         decision == null &&
         !hasToChoose &&
         !hasSuggestions;
+    // F10 (PM 24-11): To confirm, To parse, To choose, Suggestions (one card), To categorize (unreadable
+    // messages last inside it, F11), then Recorded automatically at the very bottom.
     final children = <Widget>[
       if (confirm.isNotEmpty) ...[
         SectionHeading('$kHeadingToConfirm (${capCount(confirm.length)})'),
@@ -89,39 +91,33 @@ class TodoSection extends StatelessWidget {
         _TodoHeading('$kHeadingToParse (${capCount(readable.length)})', trailing: parseAllBar),
         ...readable.map(rowBuilder),
       ],
-      if (unreadable.isNotEmpty) ...[
-        _TodoHeading('$kHeadingCouldNotRead (${capCount(unreadable.length)})', small: readable.isNotEmpty),
-        ...unreadable.map(rowBuilder),
-      ],
       if (hasToChoose) ?toChoose,
-      if (toCategorize.isNotEmpty || decision != null) ...[
-        _TodoHeading('$kHeadingToCategorize (${capCount(toCategorize.length + (decision == null ? 0 : 1))})'),
+      if (hasSuggestions) ?suggestions,
+      if (toCategorize.isNotEmpty || decision != null || unreadable.isNotEmpty) ...[
+        _TodoHeading('$kHeadingToCategorize (${capCount(toCategorize.length + unreadable.length + (decision == null ? 0 : 1))})'),
         const _Quiet(kWaitingNotCounted),
         if (decision != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: decision),
         ...toCategorize.map(rowBuilder),
+        ...unreadable.map(rowBuilder),
       ],
       if (nothing) NothingWaitingLine(top: hasTrail),
       ?trail,
-      if (hasSuggestions) ?suggestions,
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
   }
 }
 
 class _TodoHeading extends StatelessWidget {
-  const _TodoHeading(this.text, {this.trailing, this.small = false});
+  const _TodoHeading(this.text, {this.trailing});
   final String text;
   final Widget? trailing;
-
-  /// Could not read sits under To parse as a smaller heading.
-  final bool small;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final title = Semantics(
       header: true,
-      child: Text(text, style: (small ? t.titleSmall : t.titleMedium)?.copyWith(fontWeight: FontWeight.w700)),
+      child: Text(text, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
     );
     return Padding(
       padding: const EdgeInsets.fromLTRB(2, 10, 2, 6),

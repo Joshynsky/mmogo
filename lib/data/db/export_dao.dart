@@ -108,7 +108,7 @@ class ExportDao {
       JOIN classifications c ON c.id = t.classification_id
       JOIN classification_groups g ON g.id = c.group_id
       WHERE t.deleted_at IS NULL
-      ORDER BY t.transaction_occurred_at DESC
+      ORDER BY t.transaction_occurred_at DESC, t.id DESC
     ''');
     return rows
         .map(

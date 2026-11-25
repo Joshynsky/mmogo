@@ -20,6 +20,9 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../data/db/analytics_dao.dart' show AnalyticsTransactionRow;
+import '../ui/category_choices.dart';
+import '../ui/choose_category_copy.dart';
+import 'suggested_chips_source.dart';
 import '../../domain/format/money.dart';
 import '../../ui/widgets/withdrawal_use_block.dart' show WdChoice, WdCreateResult;
 import '../../ui/shell/routes.dart';
@@ -49,8 +52,11 @@ WaitingActions buildRealWaitingActions(
   ChoosingIds? choosing,
   ValueNotifier<String?>? note,
   RulesPageState? rules,
+  SuggestedChipsSource? chips,
 }) {
   final ids = choosing ?? ChoosingIds();
+  // 0.2.2 chips: the page passes the app's source (RulesWiring.chipsSource()); none passed = no chips.
+  final chipSource = chips;
   final quiet = note ?? ValueNotifier<String?>(null);
 
   void toast(String text) => PillToast.show(text);
@@ -90,6 +96,36 @@ WaitingActions buildRealWaitingActions(
     if (f != null) quiet.value = noteRecorded(describeReadable(f));
   }
 
+  Future<List<CategoryChoice>> chipsFor(WaitingItem item) async {
+    if (chipSource == null) return const <CategoryChoice>[];
+    try {
+      return await chipSource.chipsFor(item, await repo.categoryChoicesFor(item));
+    } catch (_) {
+      return const <CategoryChoice>[]; // never an error
+    }
+  }
+
+  /// A chip tap records at once through the repository's own save (one queue step, checks the category is
+  /// still active), then shows the in-app Undo pill. False: nothing recorded (category inactive).
+  Future<bool> pickChip(WaitingItem item, CategoryChoice chip) async {
+    final r = await repo.recordChip(item.id, chip.id);
+    if (!r.active) return false;
+    ids.remove(item.id);
+    final f = item.parsed;
+    final rowId = r.rowId;
+    if (f != null && rowId != null) {
+      PillToast.show(
+        chipRecordedToast(kshTrim(f.amountCents), chip.name),
+        actionLabel: kAutoRecordedUndo,
+        onAction: () async {
+          await repo.undoChipRecord(rowId);
+          toast(kChipUndoneToast);
+        },
+      );
+    }
+    return true;
+  }
+
   void later(WaitingItem item) {
     ids.remove(item.id);
     quiet.value = kNoteMovedToCategorize;
@@ -111,6 +147,7 @@ WaitingActions buildRealWaitingActions(
         item: target,
         choices: choices,
         onSave: (categoryId) => repo.saveCategory(target.id, categoryId),
+        suggestedChips: () => chipsFor(target),
       );
     } catch (_) {
       // Nothing is saved; the row stays.
@@ -125,7 +162,7 @@ WaitingActions buildRealWaitingActions(
     final cat = hint.suggested.isEmpty ? null : hint.suggested.first;
     if (cat == null) return categorize(item);
     try {
-      await repo.saveCategory(item.id, '$cat');
+      await repo.saveCategoryListed(item.id, '$cat');
       final f = item.parsed;
       if (f != null) quiet.value = noteRecorded(describeReadable(f));
     } catch (_) {
@@ -265,6 +302,8 @@ WaitingActions buildRealWaitingActions(
     choicesFor: repo.categoryChoicesFor,
     onPickCategory: pickCategory,
     onLater: later,
+    chipsFor: chipsFor,
+    onPickChip: chipSource == null ? null : pickChip,
     choosing: ids,
     undecided: repo.undecided,
     onWithdrawalCashOnly: withdrawalCashOnly,

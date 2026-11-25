@@ -46,7 +46,7 @@ class AskFirstRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = AppPalette.of(context);
     final title = askFirstTitle(categoryName);
-    final what = waitingTitle(item.parsed!);
+    final what = waitingTitle(item.parsed!, withMask: true);
     final age = 'Received ${rowAgeText(item.heldAt, now)}';
     return Semantics(
       container: true,

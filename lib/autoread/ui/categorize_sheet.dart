@@ -13,46 +13,17 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show MaxLengthEnforcement;
 
-import '../../domain/format/money.dart';
 import '../../domain/parsing/parsed_sms_fields.dart';
 import '../../ui/theme/app_colors.dart';
 import '../../ui/widgets/error_notes.dart';
 import '../model/waiting_item.dart';
 import 'category_choices.dart';
 import 'notifications_autoread_copy.dart';
+import 'categorize_copy.dart';
+import 'categorize_details.dart';
 
-// Strings. From the Add screen: hint, "Add", "+ New", duplicate text. From the
-// signed mock: heading (kActionCategorize), "Category", "Choose a category to
-// save", "Save in X", "Close", the 100-character text, the detail labels.
-// NOT IN MOCK or Add (plainest words): the empty-name text, the two failure texts.
-const String kCategorizeCategoryLabel = 'Category';
-const String kCategorizeNewPill = '+ New';
-const String kCategorizeNewHint = 'New category name';
-const String kCategorizeNewAdd = 'Add';
-const String kCategorizeClose = 'Close';
-const String kCategorizeChoosePrompt = 'Choose a category to save';
-String categorizeSaveIn(String name) => 'Save in $name';
-const String kCategorizeTooLong =
-    'A category name can be up to 100 characters.';
-String categorizeDuplicate(String name) =>
-    'A category named "$name" already exists.';
-const String kCategorizeEmptyName =
-    'Type a name for the category.'; // NOT IN MOCK
-const String kCategorizeLoadFailed =
-    'Could not load the categories.'; // NOT IN MOCK
-const String kCategorizeNewFailed =
-    'Could not create the category. Try again.'; // NOT IN MOCK
-const String kCategorizeSaveFailed =
-    'Could not save. Try again.'; // NOT IN MOCK
-const String kCategorizeCheckThis = 'Check this one.'; // mock flag box
-/// SIGNED (PM 13-11-2026): under the one fixed category of an airtime item.
-const String kCategorizeAirtimeFixed = 'Set when the airtime was read. It cannot be changed.';
-// SIGNED (PM 13-11-2026): the labels of the details block.
-const String kCategorizeLabelType = 'Type';
-const String kCategorizeLabelAmount = 'Amount';
-const String kCategorizeLabelPaidTo = 'Paid to';
-const String kCategorizeLabelDate = 'Date';
-const String kCategorizeLabelCost = 'Transaction cost';
+export 'categorize_copy.dart';
+
 
 /// Opens the sheet. [onSave] gets the chosen category id once; the sheet
 /// closes after it completes. Close, scrim and Back close without saving.
@@ -61,6 +32,7 @@ Future<void> showCategorizeSheet(
   required WaitingItem item,
   required CategoryChoices choices,
   required Future<void> Function(String categoryId) onSave,
+  Future<List<CategoryChoice>> Function()? suggestedChips,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -68,7 +40,7 @@ Future<void> showCategorizeSheet(
     useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (_) =>
-        CategorizeSheet(item: item, choices: choices, onSave: onSave),
+        CategorizeSheet(item: item, choices: choices, onSave: onSave, suggestedChips: suggestedChips),
   );
 }
 
@@ -78,11 +50,16 @@ class CategorizeSheet extends StatefulWidget {
     required this.item,
     required this.choices,
     required this.onSave,
+    this.suggestedChips,
   });
 
   final WaitingItem item;
   final CategoryChoices choices;
   final Future<void> Function(String categoryId) onSave;
+
+  /// 0.2.2: the suggested chips for this item, left to right (most used last); null or empty or a failure =
+  /// no chips and no label (the list as before). Read when the sheet opens.
+  final Future<List<CategoryChoice>> Function()? suggestedChips;
 
   @override
   State<CategorizeSheet> createState() => _CategorizeSheetState();
@@ -90,6 +67,7 @@ class CategorizeSheet extends StatefulWidget {
 
 class _CategorizeSheetState extends State<CategorizeSheet> {
   List<CategoryChoice> _cats = const [];
+  List<CategoryChoice> _suggested = const [];
   bool _loading = true;
   String? _loadError;
   String? _pickedId;
@@ -122,12 +100,27 @@ class _CategorizeSheetState extends State<CategorizeSheet> {
         if (_isAirtime && cats.length == 1) _pickedId = cats.first.id;
         _loading = false;
       });
+      _loadChips(cats);
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _loadError = kCategorizeLoadFailed;
         _loading = false;
       });
+    }
+  }
+
+  /// The Suggested row arrives after the list is shown (the list never waits for the history); any failure
+  /// leaves the list as it is, with no chips and no label.
+  Future<void> _loadChips(List<CategoryChoice> cats) async {
+    if (widget.suggestedChips == null || _isAirtime) return;
+    try {
+      final chips = await widget.suggestedChips!();
+      if (!mounted) return;
+      final s = splitSuggested(cats, chips).suggested;
+      if (s.isNotEmpty) setState(() => _suggested = s);
+    } catch (_) {
+      // never an error: the full list as today
     }
   }
 
@@ -230,23 +223,31 @@ class _CategorizeSheetState extends State<CategorizeSheet> {
                         ),
                       ),
                     ),
-                    _header(palette),
+                    CategorizeHeader(palette: palette),
                     Flexible(
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            ..._details(palette),
+                            CategorizeDetails(item: widget.item, palette: palette),
                             const SizedBox(height: 14),
-                            Text(
-                              kCategorizeCategoryLabel,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: palette.ink,
+                            if (_suggested.isNotEmpty) ...[
+                              categorizeLabel(palette, kCategorizeSuggestedLabel),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                key: const Key('categorizeSuggestedRow'),
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  for (var i = 0; i < _suggested.length; i++)
+                                    _chip(palette, _suggested[i], mostUsed: i == _suggested.length - 1),
+                                ],
                               ),
-                            ),
+                              const SizedBox(height: 14),
+                              categorizeLabel(palette, kCategorizeAllLabel),
+                            ] else
+                              categorizeLabel(palette, kCategorizeCategoryLabel),
                             const SizedBox(height: 8),
                             _chips(palette),
                             if (_creatingNew) _newRow(palette),
@@ -271,153 +272,12 @@ class _CategorizeSheetState extends State<CategorizeSheet> {
     );
   }
 
-  Widget _header(AppPalette palette) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Semantics(
-              header: true,
-              child: Text(
-                kActionCategorize,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: palette.ink,
-                ),
-              ),
-            ),
-          ),
-          IconButton(
-            key: const Key('categorizeClose'),
-            tooltip: kCategorizeClose,
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            icon: Icon(Icons.close, color: palette.ink),
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
-        ],
-      ),
-    );
-  }
 
-  List<Widget> _details(AppPalette palette) {
-    final p = widget.item.parsed;
-    final flagged = widget.item.sameCodeDifferentDetails;
-    return [
-      if (flagged)
-        Container(
-          key: const Key('categorizeFlag'),
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: palette.tint,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                size: 18,
-                color: palette.tintInk,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      const TextSpan(
-                        text: kCategorizeCheckThis,
-                        style: TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      const TextSpan(text: ' $kFlaggedLine'),
-                    ],
-                  ),
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.4,
-                    color: palette.tintInk,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      if (p != null)
-        Container(
-          key: const Key('categorizeDetails'),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            border: Border.all(color: palette.line),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              _detailRow(
-                palette,
-                kCategorizeLabelType,
-                _typeLabel(p.sourceType),
-              ),
-              _detailRow(
-                palette,
-                kCategorizeLabelAmount,
-                formatKsh(p.amountCents),
-              ),
-              _detailRow(
-                palette,
-                kCategorizeLabelPaidTo,
-                p.counterpartyLabel ?? '—',
-              ),
-              _detailRow(
-                palette,
-                kCategorizeLabelDate,
-                _dateTime(
-                  DateTime.fromMillisecondsSinceEpoch(p.transactionOccurredAt),
-                ),
-              ),
-              _detailRow(
-                palette,
-                kCategorizeLabelCost,
-                formatKsh(p.transactionCostCents),
-              ),
-            ],
-          ),
-        ),
-    ];
-  }
-
-  Widget _detailRow(AppPalette palette, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: MergeSemantics(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 2,
-              child: Text(
-                label,
-                style: TextStyle(fontSize: 13, color: palette.mutedInk),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 3,
-              child: Text(
-                value,
-                textAlign: TextAlign.end,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: palette.ink,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  /// Every category not already shown in the Suggested row (no repeats).
+  List<CategoryChoice> get _restCats {
+    if (_suggested.isEmpty) return _cats;
+    final ids = {for (final c in _suggested) c.id};
+    return [for (final c in _cats) if (!ids.contains(c.id)) c];
   }
 
   Widget _chips(AppPalette palette) {
@@ -436,7 +296,7 @@ class _CategorizeSheetState extends State<CategorizeSheet> {
           spacing: 8,
           runSpacing: 8,
           children: [
-            for (final c in _cats) _chip(palette, c, fixed: _isAirtime),
+            for (final c in _restCats) _chip(palette, c, fixed: _isAirtime),
             if (!_creatingNew && !_isAirtime) _newPill(palette),
           ],
         ),
@@ -453,7 +313,7 @@ class _CategorizeSheetState extends State<CategorizeSheet> {
     );
   }
 
-  Widget _chip(AppPalette palette, CategoryChoice c, {bool fixed = false}) {
+  Widget _chip(AppPalette palette, CategoryChoice c, {bool fixed = false, bool mostUsed = false}) {
     final selected = c.id == _pickedId;
     // A fixed chip (airtime) is shown selected and cannot be switched.
     void tap() {
@@ -470,7 +330,7 @@ class _CategorizeSheetState extends State<CategorizeSheet> {
         color: selected ? palette.primary : palette.surface,
         shape: StadiumBorder(
           side: BorderSide(
-            color: selected ? palette.primary : palette.line,
+            color: selected || mostUsed ? palette.primary : palette.line,
             width: 1.5,
           ),
         ),
@@ -659,19 +519,4 @@ class _CategorizeSheetState extends State<CategorizeSheet> {
       ),
     );
   }
-}
-
-String _typeLabel(SmsSourceType t) => switch (t) {
-  SmsSourceType.sendMoney => 'Send Money',
-  SmsSourceType.payBill => 'Paybill',
-  SmsSourceType.buyGoods => 'Buy Goods',
-  SmsSourceType.pochi => 'Pochi La Biashara',
-  SmsSourceType.agentWithdrawal => 'Withdrawal',
-  SmsSourceType.airtime => 'Airtime',
-};
-
-/// The mock's date text: `18-10-2026, 08:30`.
-String _dateTime(DateTime d) {
-  String p(int n) => n.toString().padLeft(2, '0');
-  return '${p(d.day)}-${p(d.month)}-${d.year}, ${p(d.hour)}:${p(d.minute)}';
 }

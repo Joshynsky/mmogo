@@ -19,10 +19,12 @@ class RecordedAutoSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) return const SizedBox.shrink();
+    // N6: the count is the entries still recorded; undone rows stay listed (dimmed) but are not counted.
+    final active = entries.where((e) => !e.inRecentlyDeleted).length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeading('$kAutoRecordedHeading (${entries.length})'),
+        SectionHeading(active == 0 ? kAutoRecordedHeading : '$kAutoRecordedHeading ($active)'),
         for (final e in entries)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),

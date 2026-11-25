@@ -7,6 +7,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../ui/theme/app_colors.dart';
+import '../../logic/phone_mask.dart';
 import '../../rules/rule_model.dart';
 import '../../../ui/widgets/bottom_sheet_shell.dart';
 import '../category_choices.dart';
@@ -99,7 +100,8 @@ class _LevelSheetState extends State<LevelSheet> {
   @override
   Widget build(BuildContext context) {
     final p = AppPalette.of(context);
-    final name = widget.person.name;
+    final person = widget.person;
+    final name = person.type == ReceiverType.sendMoney ? nameWithMask(person.name, person.key) : person.name;
     return BottomSheetShell(palette: p, children: [..._top(p, name), _actions(p)]);
   }
 

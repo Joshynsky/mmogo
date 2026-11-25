@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import '../../domain/parsing/parsed_sms_fields.dart';
 import '../../ui/copy/withdrawal_copy.dart';
 import '../../ui/theme/app_colors.dart';
+import '../history/history_summary_writer.dart' show HistorySummaryWriter;
 import '../model/waiting_item.dart';
 import 'categorize_sheet.dart';
 import 'category_choices.dart';
@@ -30,7 +31,17 @@ class ChooseCategoryRow extends StatefulWidget {
     this.fresh = true,
     this.onCashOnly,
     this.onCategorizeWithdrawal,
+    this.chipsFor,
+    this.onPickChip,
   });
+
+  /// 0.2.2 (item 0 Part 1): the suggested chips of this item, left to right (most used last). Null or empty or
+  /// a failure: no chips, the row is as before. Needs [onPickChip] too.
+  final Future<List<CategoryChoice>> Function(WaitingItem item)? chipsFor;
+
+  /// A chip tap: records at once through the existing record path (the caller shows the Undo pill). Returns
+  /// false when nothing was recorded (the category is no longer active): the row then refreshes its chips.
+  final Future<bool> Function(WaitingItem item, CategoryChoice chip)? onPickChip;
 
   /// 0.2.1: both set + the item is a withdrawal: the row shows two side-by-side buttons,
   /// Cash only | Categorize (no Later chip); Categorize opens the withdrawal sheet.
@@ -57,7 +68,59 @@ class ChooseCategoryRow extends StatefulWidget {
 
 class _ChooseCategoryRowState extends State<ChooseCategoryRow> {
   bool _failed = false;
+  bool _saveFailed = false;
   bool _busy = false;
+  List<CategoryChoice> _chips = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadChips();
+    // N1: a record or Undo elsewhere changed the history summary: re-read this card's chips.
+    HistorySummaryWriter.changes.addListener(_onSummaryChanged);
+  }
+
+  @override
+  void dispose() {
+    HistorySummaryWriter.changes.removeListener(_onSummaryChanged);
+    super.dispose();
+  }
+
+  void _onSummaryChanged() {
+    if (mounted && !_busy) _loadChips();
+  }
+
+  bool get _chipsOn =>
+      widget.chipsFor != null && widget.onPickChip != null && !_isAirtime && !_withdrawalMode;
+
+  Future<void> _loadChips() async {
+    if (!_chipsOn) return;
+    List<CategoryChoice> found;
+    try {
+      found = await widget.chipsFor!(widget.item);
+    } catch (_) {
+      found = const []; // never an error: the row is as before
+    }
+    if (!mounted) return;
+    setState(() => _chips = found.length > 2 ? found.sublist(found.length - 2) : found);
+  }
+
+  /// A chip tap. One call only: a second tap or a second chip does nothing once the first is accepted.
+  Future<void> _chipTap(CategoryChoice c) async {
+    if (_busy) return;
+    _busy = true;
+    try {
+      final recorded = await widget.onPickChip!(widget.item, c);
+      if (!recorded) {
+        _busy = false; // nothing was written: the user can choose again
+        await _loadChips();
+      }
+      // After a success the row is about to leave, so it stays locked.
+    } catch (_) {
+      _busy = false;
+      if (mounted) setState(() => _saveFailed = true);
+    }
+  }
 
   bool get _isAirtime =>
       widget.item.parsed?.sourceType == SmsSourceType.airtime;
@@ -111,6 +174,7 @@ class _ChooseCategoryRowState extends State<ChooseCategoryRow> {
         item: widget.item,
         choices: c,
         onSave: (id) => _pick(id),
+        suggestedChips: _chipsOn ? () => widget.chipsFor!(widget.item) : null,
       );
     } catch (_) {
       if (mounted) setState(() => _failed = true);
@@ -170,6 +234,14 @@ class _ChooseCategoryRowState extends State<ChooseCategoryRow> {
                   style: TextStyle(color: p.mutedInk, fontSize: 12.5),
                 ),
               ),
+            if (_saveFailed)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  kCategorizeSaveFailed,
+                  style: TextStyle(color: p.mutedInk, fontSize: 12.5),
+                ),
+              ),
             if (_withdrawalMode)
               Row(
                 key: const Key('choose-actions'),
@@ -180,36 +252,118 @@ class _ChooseCategoryRowState extends State<ChooseCategoryRow> {
                 ],
               )
             else
-            SizedBox(
-              width: double.infinity,
-              child: Wrap(
-                key: const Key('choose-actions'),
-                alignment: WrapAlignment
-                    .end, // right side, like the To parse row (PM 14-11-2026: thumb reach)
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (later)
-                    _Pill(
-                      key: const Key('choose-later'),
-                      label: kChooseLaterChip,
-                      quiet: true,
-                      onTap: () => widget.onLater!(widget.item),
+            // N5: ONE row, right side (thumb reach). Not now and Categorize keep their natural width; the
+            // suggested chips share what is left and cut a long name with "..." rather than wrap or overflow.
+            // Only when even that cannot fit (huge text, a narrow screen) the pills wrap, as before.
+            LayoutBuilder(
+              builder: (context, box) {
+                final labelOf = <String>[
+                  if (later) kChooseLaterChip,
+                  kActionCategorize,
+                ];
+                final fixed = labelOf.fold<double>(0, (w, l) => w + _pillWidth(context, l)) + 8.0 * (labelOf.length - 1);
+                final oneRow = fixed + _chips.length * (8 + _kMinChipWidth) <= box.maxWidth;
+                final later0 = later
+                    ? _Pill(
+                        key: const Key('choose-later'),
+                        label: kChooseLaterChip,
+                        quiet: true,
+                        onTap: () => widget.onLater!(widget.item),
+                      )
+                    : null;
+                final cat = _Pill(
+                  key: const Key('choose-categorize'),
+                  label: kActionCategorize,
+                  fill: _chips.isEmpty, // same filled look as the Parse button (PM 17-11-2026); with chips the chip is the main button
+                  onTap: _open,
+                );
+                // Left to right; the most used is LAST (on the right, filled).
+                Widget chip(int i) => _Pill(
+                      key: Key('choose-chip-${_chips[i].id}'),
+                      label: _chips[i].name,
+                      fill: i == _chips.length - 1,
+                      spoken: chipSpoken(_chips[i].name),
+                      ellipsize: true, // one line always; a long name is cut with "..."
+                      onTap: () => _chipTap(_chips[i]),
+                    );
+                if (!oneRow && _chips.isNotEmpty) {
+                  // Deliberate two-row fallback (N5, mock-chips: right-aligned, most used bottom right):
+                  // row 1 = Not now + Categorize, row 2 = the chips together, never one chip alone.
+                  return Column(
+                    key: const Key('choose-actions'),
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Wrap(
+                        key: const Key('choose-actions-top'),
+                        alignment: WrapAlignment.end,
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [?later0, cat],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        key: const Key('choose-actions-chips'),
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          for (var i = 0; i < _chips.length; i++) ...[
+                            if (i > 0) const SizedBox(width: 8),
+                            Flexible(child: chip(i)),
+                          ],
+                        ],
+                      ),
+                    ],
+                  );
+                }
+                if (!oneRow) {
+                  return SizedBox(
+                    width: double.infinity,
+                    child: Wrap(
+                      key: const Key('choose-actions'),
+                      alignment: WrapAlignment.end,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [?later0, cat, for (var i = 0; i < _chips.length; i++) chip(i)],
                     ),
-                  _Pill(
-                    key: const Key('choose-categorize'),
-                    label: kActionCategorize,
-                    fill: true, // same filled look as the Parse button (PM 17-11-2026)
-                    onTap: _open,
-                  ),
-                ],
-              ),
+                  );
+                }
+                return Row(
+                  key: const Key('choose-actions'),
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (later0 != null) ...[later0, const SizedBox(width: 8)],
+                    cat,
+                    for (var i = 0; i < _chips.length; i++) ...[
+                      const SizedBox(width: 8),
+                      Flexible(child: chip(i)),
+                    ],
+                  ],
+                );
+              },
             ),
           ],
         ),
       ),
     );
   }
+}
+
+/// A chip is never squeezed below this on the one-row layout; below it the pills wrap (N5 last resort).
+const double _kMinChipWidth = 96;
+
+/// The width a pill needs for [label] at the current text size (text + 14 padding each side + 1.5 border each side).
+double _pillWidth(BuildContext context, String label) {
+  final tp = TextPainter(
+    text: TextSpan(
+      text: label,
+      style: DefaultTextStyle.of(context).style.copyWith(fontSize: 13, fontWeight: FontWeight.w800),
+    ),
+    textDirection: TextDirection.ltr,
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  final w = tp.width + 28 + 3;
+  tp.dispose();
+  return w < 44 ? 44 : w;
 }
 
 class _Pill extends StatelessWidget {
@@ -219,8 +373,16 @@ class _Pill extends StatelessWidget {
     required this.onTap,
     this.quiet = false,
     this.fill = false,
+    this.spoken,
+    this.ellipsize = false,
   });
   final String label;
+
+  /// One line, cut with an ellipsis when the width runs out (never wraps, never overflows).
+  final bool ellipsize;
+
+  /// What a screen reader says, when it differs from [label].
+  final String? spoken;
   final VoidCallback onTap;
   final bool quiet;
 
@@ -232,7 +394,7 @@ class _Pill extends StatelessWidget {
     final p = AppPalette.of(context);
     return Semantics(
       button: true,
-      label: label,
+      label: spoken ?? label,
       onTap: onTap,
       excludeSemantics: true,
       child: Material(
@@ -254,6 +416,8 @@ class _Pill extends StatelessWidget {
                   Flexible(
                     child: Text(
                       label,
+                      maxLines: ellipsize ? 1 : null,
+                      overflow: ellipsize ? TextOverflow.ellipsis : null,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: fill ? FontWeight.w800 : FontWeight.w700,

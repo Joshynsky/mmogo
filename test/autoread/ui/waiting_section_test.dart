@@ -59,11 +59,11 @@ Iterable<String> _texts(WidgetTester t) => t
 
 void main() {
   group('WaitingSection', () {
-    testWidgets('To do: to parse (soonest first), then unreadable and gone, then to categorize; no news', (t) async {
+    testWidgets('To do: to parse (soonest first), then to categorize with the gone row last inside it; no news', (t) async {
       _size(t, 360);
       await t.pumpWidget(_section(WaitingDataSet.typical));
       // Ready: 1 (2 h held), 2 (12 h), 3 (20 h, expires soonest); 4 is gone; 5, 6, 7 categorize (newest first).
-      final order = [_w(3), _w(2), _w(1), _w(4), _w(5), _w(6), _w(7)];
+      final order = [_w(3), _w(2), _w(1), _w(5), _w(6), _w(7), _w(4)];
       for (final f in order) {
         expect(f, findsOneWidget);
       }
@@ -72,7 +72,7 @@ void main() {
         expect(ys[i], greaterThan(ys[i - 1]), reason: 'row $i out of order');
       }
       final texts = _texts(t).toList();
-      expect(texts, containsAll(['$kHeadingToParse (3)', '$kHeadingToCategorize (3)']));
+      expect(texts, containsAll(['$kHeadingToParse (3)', '$kHeadingToCategorize (4)']));
       expect(find.text(kWaitingNotCounted), findsOneWidget);
     });
 
@@ -105,8 +105,8 @@ void main() {
       expect(find.text(kUnreadableTitle), findsOneWidget);
       expect(find.text(kActionPaste), findsNothing);
       expect(find.byKey(const Key('waitingRowDimIcon')), findsOneWidget);
-      // 0.2.0: an unreadable row sits under its own heading; no "To parse (0)".
-      expect(_texts(t), contains('$kHeadingCouldNotRead (1)'));
+      // 0.2.2 (F11): an unreadable row sits inside To categorize; no "To parse (0)".
+      expect(_texts(t), contains('$kHeadingToCategorize (1)'));
       expect(_texts(t), isNot(contains('$kHeadingToParse (0)')));
       // F6: Paste goes through the paste sheet, Remove through its question.
       await t.tap(find.text(kActionRemove));

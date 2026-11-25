@@ -337,6 +337,57 @@ void main() {
     });
   });
 
+  group('recordChip (0.2.2 suggested chip)', () {
+    Future<void> parsedItem(String text, {int n = 1}) async {
+      env.bridge.hold(_id(n), text, _t0.subtract(const Duration(minutes: 5)));
+      await env.repo.ingest();
+      expect(await env.repo.parse(_id(n)), ParseOutcome.parsed);
+    }
+
+    test('records through the same save, returns the row id, and a second tap writes no second entry', () async {
+      env = await _env();
+      await parsedItem(kSampleSendMoney);
+      final cls = await env.classId('Transport', 'SEND_MONEY');
+      final first = await env.repo.recordChip(_id(1), '$cls');
+      final second = await env.repo.recordChip(_id(1), '$cls');
+      expect(first.active, isTrue);
+      expect(first.rowId, isNotNull);
+      expect(second.rowId, isNull, reason: 'the item is gone: nothing new is written');
+      final rows = await env.transactions();
+      expect(rows, hasLength(1));
+      expect(rows.single['id'], first.rowId);
+      expect(rows.single['classification_id'], cls);
+      expect(rows.single['amount_cents'], 50000);
+      expect(rows.single['raw_parse_source'], 'SMS_PARSE');
+      expect(env.repo.itemById(_id(1)), isNull);
+      expect(env.saved, hasLength(1));
+    });
+
+    test('a category that became inactive: nothing is recorded and the item keeps waiting', () async {
+      env = await _env();
+      await parsedItem(kSampleSendMoney);
+      final cls = await env.classId('Transport', 'SEND_MONEY');
+      await env.db.rawUpdate('UPDATE classifications SET active = 0 WHERE id = ?', [cls]);
+      final r = await env.repo.recordChip(_id(1), '$cls');
+      expect(r.active, isFalse);
+      expect(await env.transactions(), isEmpty);
+      expect(env.repo.itemById(_id(1))?.kind, WaitingKind.waitingCategory);
+      expect(env.saved, isEmpty);
+    });
+
+    test('undoChipRecord moves the entry to Recently deleted, once', () async {
+      env = await _env();
+      await parsedItem(kSampleSendMoney);
+      final cls = await env.classId('Transport', 'SEND_MONEY');
+      final r = await env.repo.recordChip(_id(1), '$cls');
+      await env.repo.undoChipRecord(r.rowId!);
+      final at = (await env.transactions()).single['deleted_at'];
+      expect(at, isNotNull);
+      await env.repo.undoChipRecord(r.rowId!);
+      expect((await env.transactions()).single['deleted_at'], at, reason: 'a second Undo does not move the window');
+    });
+  });
+
   group('saveCategory', () {
     Future<void> parsedItem(String text, {int n = 1}) async {
       env.bridge.hold(_id(n), text, _t0.subtract(const Duration(minutes: 5)));
@@ -542,6 +593,18 @@ void main() {
       expect(cash.single['c'], made.id);
       expect(cash.single['p'], isNotNull);
       expect(await env.db.rawQuery('PRAGMA foreign_key_check'), isEmpty);
+    });
+
+    test('N2: saveWithdrawal signals "saved" AFTER the linked Cash entry exists (Home re-reads a finished state)', () async {
+      env = await _env();
+      await parsedWithdrawal();
+      final made = await env.repo.createWithdrawalUseCategory('Boda fare');
+      final wd = (await env.db.rawQuery("SELECT id FROM classifications WHERE seed_key = 'AGENT_WITHDRAWAL:cash_withdrawal'"))
+          .first['id'] as int;
+      env.saved.clear();
+      await env.repo.saveWithdrawal(_id(1), '$wd', useCategoryId: made.id);
+      // one signal from the withdrawal insert, a last one after the link and decision
+      expect(env.saved, hasLength(2));
     });
 
     test('decideWithdrawal (the "need a decision" item) takes a Cash-list category too', () async {

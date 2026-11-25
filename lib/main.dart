@@ -19,6 +19,7 @@ import 'autoread/ui/remembered_wiring.dart';
 import 'autoread/ui/waiting_bell_numbers.dart';
 import 'data/db/app_database.dart';
 import 'domain/paid_to/paid_to.dart' show PaidToGrouping;
+import 'ui/shell/back_closes_keyboard.dart';
 import 'ui/screens/analytics/edit_lock_parts.dart' show EditLockSwitch;
 import 'domain/fuliza/fuliza_rebuild.dart' show FulizaRebuild;
 import 'ui/screens/fuliza/fuliza_source.dart' show FulizaSource;
@@ -60,6 +61,7 @@ void parseFromNotificationEntry(List<String> args) {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  BackClosesKeyboard.install(); // F6: Back with the keyboard open closes the keyboard first
   // Auto-read: the one bridge and controller, and the Delete data wipe hook,
   // are set BEFORE the reset resume so a cut-short Delete data is finished with
   // the auto-read wipe too.

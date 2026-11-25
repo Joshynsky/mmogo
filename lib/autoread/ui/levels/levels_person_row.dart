@@ -6,6 +6,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../ui/theme/app_colors.dart';
+import '../../logic/phone_mask.dart';
 import '../../rules/rule_model.dart';
 import 'level_filter_row.dart' show levelTagText;
 import 'levels_copy.dart';
@@ -67,7 +68,7 @@ class LevelsPersonRow extends StatelessWidget {
                 TextSpan(text: person.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.ink)),
                 TextSpan(text: '  ${chip.code}', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: chip.color(p))),
                 if (ending != null)
-                  TextSpan(text: '  …$ending', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.mutedInk)),
+                  TextSpan(text: '  ${maskPhone(person.key)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.mutedInk)),
               ]),
             ),
             const SizedBox(height: 2),

@@ -18,7 +18,7 @@ class _Throws implements HistoryReader {
 }
 
 void main() {
-  group('topTwoCategories (most used of the last 5)', () {
+  group('topTwoCategories (most used of the last 10)', () {
     test('most used first, at most 2', () {
       expect(topTwoCategories([3, 4, 4, 5, 4]), [4, 3]);
       expect(topTwoCategories([7]), [7]);
@@ -28,9 +28,11 @@ void main() {
       expect(topTwoCategories([9, 8, 9, 8, 1]), [9, 8]);
       expect(topTwoCategories([1, 2, 3, 4, 5]), [1, 2]);
     });
-    test('only the newest 5 count (most used, NOT most recent)', () {
-      // newest first: 1 once, then 2 four times; a sixth and seventh record of 3 are ignored.
-      expect(topTwoCategories([1, 2, 2, 2, 2, 3, 3]), [2, 1]);
+    test('only the newest 10 count (most used, NOT most recent)', () {
+      // newest first: 1 once, 2 four times, 3 twice, then 4 six times; only the first 10 count,
+      // so 4 has 3 and wins nothing over 2 (4 would win if all 13 counted).
+      expect(topTwoCategories([1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4]), [2, 4]);
+      expect(kHistLastRecords, 10);
     });
   });
 
@@ -93,7 +95,7 @@ void main() {
 
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
-    test('rebuild writes top 2 of the last 5 per person; the reader returns them', () async {
+    test('rebuild writes top 2 of the last 10 per person; the reader returns them', () async {
       final w = HistorySummaryWriter(rows: () async => rows);
       expect(await w.rebuild(recordReceiverDetails: true), isTrue);
       final r = SummaryHistoryReader();
@@ -130,6 +132,21 @@ void main() {
       current = rows.where((r) => r.personId != 'BG.SHOP').toList(); // the BG.SHOP record was undone
       await w.rebuild(recordReceiverDetails: true);
       expect(await SummaryHistoryReader().topTwo(ReceiverType.buyGoods, 'SHOP'), isEmpty);
+    });
+
+    test('N1: changes counts only rebuilds that changed the summary (and a clear that removed it)', () async {
+      var current = rows;
+      final w = HistorySummaryWriter(rows: () async => current);
+      final start = HistorySummaryWriter.changes.value;
+      await w.rebuild(recordReceiverDetails: true);
+      expect(HistorySummaryWriter.changes.value, start + 1);
+      await w.rebuild(recordReceiverDetails: true); // same ledger: same summary
+      expect(HistorySummaryWriter.changes.value, start + 1);
+      current = rows.where((r) => r.personId != 'BG.SHOP').toList(); // Undo
+      await w.rebuild(recordReceiverDetails: true);
+      expect(HistorySummaryWriter.changes.value, start + 2);
+      await w.clear();
+      expect(HistorySummaryWriter.changes.value, start + 3);
     });
 
     test('the key is not in the backup allowlist file (device only)', () {

@@ -499,14 +499,15 @@ void main() {
   });
 
   group('Settings: Parse from the notification switch', () {
-    testWidgets('Read off: the row is greyed, shows the stored value and says why', (t) async {
+    testWidgets('Read off: the row is greyed, shows OFF (F6) and says why; the stored choice is kept', (t) async {
       final r = _Rig(consent: true, bridge: FakeReadingBridge(parseOn: true));
       await _pump(t, r);
       expect(find.text(kParseLabel), findsOneWidget);
       expect(find.text(kParseGreyLine), findsOneWidget);
       expect(t.widget<Switch>(_parseSwitch).onChanged, isNull);
-      // Row 16 display fix: the stored value shows even while Read is off (greyed look kept).
-      expect(t.widget<Switch>(_parseSwitch).value, isTrue);
+      // F6 (0.2.2): shown off while Read is off, as the mock does; the stored choice is not touched.
+      expect(t.widget<Switch>(_parseSwitch).value, isFalse);
+      expect(r.b.parseOn, isTrue);
     });
 
     testWidgets('Read on, Parse ON after consent: switch shows on; turning it off and on writes through', (t) async {

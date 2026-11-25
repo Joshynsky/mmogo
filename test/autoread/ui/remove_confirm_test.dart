@@ -49,6 +49,7 @@ void main() {
     final removed = <WaitingItem>[];
     final items = waitingSet(WaitingDataSet.typical, kFakeNow).items;
     await t.pumpWidget(_section(items, removed));
+    await t.ensureVisible(_removeLink());
     await t.tap(_removeLink());
     await t.pumpAndSettle();
     expect(find.text(kRemoveTitle), findsOneWidget);
@@ -66,18 +67,21 @@ void main() {
     final items = waitingSet(WaitingDataSet.typical, kFakeNow).items;
     await t.pumpWidget(_section(items, removed));
 
+    await t.ensureVisible(_removeLink());
     await t.tap(_removeLink());
     await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('removeCancel')));
     await t.pumpAndSettle();
     expect(find.text(kRemoveTitle), findsNothing);
 
+    await t.ensureVisible(_removeLink());
     await t.tap(_removeLink());
     await t.pumpAndSettle();
     await t.tapAt(const Offset(5, 5)); // scrim
     await t.pumpAndSettle();
     expect(find.text(kRemoveTitle), findsNothing);
 
+    await t.ensureVisible(_removeLink());
     await t.tap(_removeLink());
     await t.pumpAndSettle();
     await t.binding.handlePopRoute(); // system Back
@@ -117,7 +121,8 @@ void main() {
       await t.pumpWidget(_section(waitingSet(WaitingDataSet.typical, kFakeNow).items, [], scale: 1.3));
       await t.ensureVisible(_removeLink()); // the list is longer with its own Could not read heading
       await t.pumpAndSettle();
-      await t.tap(_removeLink());
+      await t.ensureVisible(_removeLink());
+    await t.tap(_removeLink());
       await t.pumpAndSettle();
       expect(t.takeException(), isNull);
       for (final k in ['removeCancel', 'removeConfirm']) {

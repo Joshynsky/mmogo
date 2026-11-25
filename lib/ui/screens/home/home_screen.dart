@@ -97,6 +97,9 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
   /// The rows of the Fuliza block for the period shown; null = no block.
   FulizaHomeRows? _fulizaRows;
 
+  /// F1 (0.2.2): cash withdrawn in the period not yet linked to Cash entries; 0 hides the Home line.
+  int _leftoverCents = 0;
+
   late final AppLifecycleListener _lifecycle;
 
   // Coach-tour anchors.
@@ -235,6 +238,7 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
       HomeDashboardDao.sourceTypeTotals(db, startMs: start, endMs: end),
       HomeDashboardDao.recentTransactions(db, limit: homeRecentFetchLimit),
       FulizaSource.load(db),
+      HomeDashboardDao.withdrawalLeftoverCents(db, startMs: start, endMs: end),
     ]);
 
     // A newer load (a quicker second period tap) wins.
@@ -246,6 +250,7 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
       _bySource = results[2] as Map<String, SourceTypeTotal>;
       _recent = results[3] as List<RecentTransaction>;
       _fuliza = results[4] as FulizaSnapshot?;
+      _leftoverCents = results[5] as int;
       _fulizaRows = _fuliza == null
           ? null
           : fulizaHomeRows(_fuliza!.data, start, end, fulizaPeriodWord(_period), formatKsh);
@@ -376,9 +381,10 @@ class _HomeScreenState extends State<HomeScreen> with PrimaryTabRefresh<HomeScre
                 diff: diff,
                 typeTotals: {for (final (code, _) in homeTypeOrder) code: _bySource[code]?.totalCents ?? 0},
                 costCents: totalCost,
-                // S5: cash withdrawn in the period (only when there is one) and the
-                // withdrawal part of the cost; neither is in the total or the bars.
-                cashWithdrawnCents: withdrawal != null && withdrawal.count > 0 ? withdrawal.withdrawnCents : null,
+                // F1: only the cash withdrawn and not yet counted (withdrawn minus the linked Cash
+                // entries, per withdrawal, never below 0); 0 = no row. S5: the withdrawal part of the
+                // cost; neither is in the total or the bars.
+                cashWithdrawnCents: _leftoverCents > 0 ? _leftoverCents : null,
                 withdrawalFeeCents: withdrawal?.costCents ?? 0,
                 onPeriodTap: _cyclePeriod,
                 hiddenProgress: _progress != null && _progress!.hide ? _progress : null,

@@ -32,8 +32,8 @@ class HomeSummaryCard extends StatelessWidget {
   /// place of the change. `null` = show the change.
   final PeriodProgress? hiddenProgress;
 
-  /// Cash withdrawn in the period, shown as a muted "not counted" line.
-  /// `null` = no withdrawal in the period (no line). Never part of the total.
+  /// F1: the cash withdrawn and not yet counted (the leftover), a muted line.
+  /// `null` = nothing left (no line). Never part of the total.
   final int? cashWithdrawnCents;
 
   /// The withdrawal part of [costCents] (already inside it); 0 hides the
@@ -184,9 +184,10 @@ class HomeSummaryCard extends StatelessWidget {
   }
 }
 
-/// "Cash withdrawn: Ksh X (not counted)": one muted line under the bars, only
-/// when the period has a withdrawal (signed mock `.wdline`). Not a bar, not in
-/// the total or any percentage.
+/// §HOME.LEFTOVER_LINE (0.2.2, F1, agreed mock home-Y-agreed): one line,
+/// "Cash withdrawn, not counted" and the amount taken out and not yet spent as
+/// cash. What was spent is already in the Cash bar, so it is not shown again.
+/// Only drawn when something is left. Not a bar, not in the total.
 class _CashWithdrawnLine extends StatelessWidget {
   const _CashWithdrawnLine({required this.palette, required this.cents});
 
@@ -199,19 +200,13 @@ class _CashWithdrawnLine extends StatelessWidget {
       key: const Key('homeCashWithdrawn'),
       padding: const EdgeInsets.only(top: 2),
       child: Semantics(
-        label: 'Cash withdrawn, ${formatKsh(cents)}, not counted as spending',
+        label: 'Cash withdrawn, not counted, ${formatKsh(cents)}',
         excludeSemantics: true,
-        child: Text.rich(
-          TextSpan(
-            style: TextStyle(fontSize: 12, color: palette.mutedInk),
-            children: [
-              const TextSpan(text: 'Cash withdrawn: '),
-              TextSpan(
-                text: formatKsh(cents),
-                style: TextStyle(fontWeight: FontWeight.w700, color: palette.softInk, fontFeatures: tabularFigures),
-              ),
-              const TextSpan(text: ' (not counted)'),
-            ],
+        child: HomeSplitLine(
+          start: Text(kHomeCashLeftoverLabel, style: TextStyle(fontSize: 12, color: palette.mutedInk)),
+          end: Text(
+            formatKsh(cents),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: palette.softInk, fontFeatures: tabularFigures),
           ),
         ),
       ),

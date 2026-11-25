@@ -264,7 +264,7 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
                 icon: Icons.touch_app_outlined,
                 label: kParseLabel,
                 subtitle: s.on ? kConsentParseDesc : kParseGreyLine,
-                value: s.parseOn, // the stored value, even while Read is off (the row stays greyed)
+                value: s.on && s.parseOn, // F6 (0.2.2): greyed AND shown off while Read is off; the stored choice is kept in the prefs
                 onChanged: (!s.available || !s.on || _busy) ? null : _onParse,
               ),
               SettingsLink(

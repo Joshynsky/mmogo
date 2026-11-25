@@ -37,9 +37,9 @@ List<String> scanRawSpending(String path, String text) {
 const _withdrawnAllowedFile = 'lib/ui/screens/analytics/type_breakdown.dart';
 /// Second and last use: the Withdrawal-only list chip's "Ksh X out" subtotal.
 const _withdrawnChipFile = 'lib/ui/screens/analytics/transaction_list.dart';
-/// Third and last use (S5): Home reads the period's cash withdrawn once, to
-/// print the muted "Cash withdrawn: Ksh X (not counted)" line. The Home
-/// summary card and bars get it only as a plain number, never through the rule.
+/// Third and last use (S5): Home reads the period's cash withdrawn once. 0.2.2 F1: Home now prints only
+/// the leftover (withdrawn minus linked Cash, from HomeDashboardDao.withdrawalLeftoverCents), so
+/// home_screen.dart no longer reads the withdrawn figure for that line; the file stays allowed.
 const _withdrawnHomeFile = 'lib/ui/screens/home/home_screen.dart';
 final _withdrawnUse =RegExp(r'\.withdrawn\b|\bwithdrawnCents\b');
 
@@ -128,7 +128,7 @@ void main() {
       bad.addAll(scanWithdrawnUse(_norm(f.path), f.readAsStringSync()));
     }
     expect(bad, isEmpty, reason: bad.join('\n'));
-    expect(File(_withdrawnHomeFile).readAsStringSync(), contains('.withdrawnCents'));
+    expect(File(_withdrawnHomeFile).readAsStringSync(), contains('withdrawalLeftoverCents'));
     // Not the bars, not the summary total, not the recent rows, not the DAO's spent sums.
     expect(scanWithdrawnUse('lib/ui/screens/home/summary_card.dart', 'bar = t.withdrawnCents;'), hasLength(1));
     expect(scanWithdrawnUse('lib/ui/screens/home/recent_list.dart', 'x = withdrawnCents(a, b);'), hasLength(1));

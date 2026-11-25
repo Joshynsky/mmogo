@@ -6,7 +6,9 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../ui/theme/app_colors.dart';
+import '../../logic/phone_mask.dart';
 import '../../rules/rule_engine.dart';
+import '../../rules/rule_model.dart';
 import '../row_parts.dart';
 import 'notifications_rule_copy.dart';
 import 'rule_pill.dart';
@@ -24,7 +26,9 @@ class SuggestionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = AppPalette.of(context);
     final cat = categoryName;
-    final body = cat == null ? suggestionBodyNoCat(offer.name, offer.run) : suggestionBody(offer.name, cat, offer.run);
+    // F2: two people with one name are told apart by the masked number (Send Money only).
+    final who = offer.type == ReceiverType.sendMoney ? nameWithMask(offer.name, offer.key) : offer.name;
+    final body = cat == null ? suggestionBodyNoCat(who, offer.run) : suggestionBody(who, cat, offer.run);
     return Semantics(
       container: true,
       label: '$kSuggestionTitle $body',
@@ -60,7 +64,7 @@ class SuggestionCard extends StatelessWidget {
               child: RulePill(
                 key: const Key('suggestion-confirm'),
                 label: kSuggestionConfirm,
-                spoken: '$kSuggestionConfirm: ${offer.name}',
+                spoken: '$kSuggestionConfirm: $who',
                 fill: true,
                 onTap: onConfirm,
               ),
@@ -72,7 +76,8 @@ class SuggestionCard extends StatelessWidget {
   }
 }
 
-/// The Suggestions section: heading with the count, one card per offer. Nothing when [offers] is empty.
+/// The Suggestions section (0.2.2, F10): heading with the total, ONE card (the first offer) and, when more
+/// wait, a quiet "n more" line. The next offer shows when this one is answered. Nothing when [offers] is empty.
 class SuggestionsSection extends StatelessWidget {
   const SuggestionsSection({super.key, required this.offers, required this.categoryName, required this.onNotNow, required this.onConfirm});
   final List<Offer> offers;
@@ -83,18 +88,28 @@ class SuggestionsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (offers.isEmpty) return const SizedBox.shrink();
+    final o = offers.first;
+    final more = offers.length - 1;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeading('$kHeadingSuggestions (${offers.length})'),
-        for (final o in offers)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: SuggestionCard(
+            offer: o,
+            categoryName: categoryName(o.categoryId),
+            onNotNow: () => onNotNow(o),
+            onConfirm: () => onConfirm(o),
+          ),
+        ),
+        if (more > 0)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: SuggestionCard(
-              offer: o,
-              categoryName: categoryName(o.categoryId),
-              onNotNow: () => onNotNow(o),
-              onConfirm: () => onConfirm(o),
+            padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
+            child: Text(
+              suggestionsMoreLine(more),
+              key: const Key('suggestions-more'),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppPalette.of(context).mutedInk),
             ),
           ),
       ],

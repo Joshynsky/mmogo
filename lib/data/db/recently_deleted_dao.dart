@@ -86,7 +86,7 @@ class RecentlyDeletedDao {
       FROM transactions t
       JOIN classifications c ON c.id = t.classification_id
       WHERE t.deleted_at IS NOT NULL
-      ORDER BY t.deleted_at DESC
+      ORDER BY t.deleted_at DESC, t.id DESC
     ''');
     return rows
         .map(

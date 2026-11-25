@@ -84,8 +84,8 @@ void main() {
   FfiHistoryReader reader({DatabaseFactory? factory, Duration? cap}) =>
       FfiHistoryReader(dbPath: () async => path, factory: factory ?? databaseFactoryFfi, cap: cap ?? kFfiHistoryCap);
 
-  test('Send Money: one person across phone formats; last 5 live records; most used first', () async {
-    // newest first among JANE live rows: 2, 3, 3, 2, 2, (1 is the 6th) -> counts 2:3, 3:2
+  test('Send Money: one person across phone formats; last 10 live records; most used first', () async {
+    // newest first among JANE live rows: 2, 3, 3, 2, 2, 1 (the 6th still counts now) -> counts 2:3, 3:2, 1:1
     expect(await reader().topTwo(ReceiverType.sendMoney, '0712345678'), [2, 3]);
   });
 

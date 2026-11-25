@@ -99,10 +99,12 @@ void main() {
         ),
       ),
     ));
-    await t.tap(find.descendant(
+    final paste = find.descendant(
       of: find.byKey(Key('waiting-row-${heldIdFor(4)}')),
       matching: find.text(kActionPaste),
-    ));
+    );
+    await t.ensureVisible(paste); // F11: the unreadable row now sits last in To categorize
+    await t.tap(paste);
     await t.pumpAndSettle();
     expect(pasted, isEmpty);
     await t.tap(find.byKey(const Key('pasteContinue')));

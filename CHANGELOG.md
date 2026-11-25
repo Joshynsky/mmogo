@@ -7,7 +7,7 @@ What changed in each version of mmogo, newest first. Written for the people who 
 ### Added
 - **Withdrawals stay withdrawals.** Pick what the cash was for and mmogo adds a linked Cash entry under that category. Earlier withdrawals are not changed; open one to say what the cash was for. In the auto-read version, withdrawals that still need a decision appear in Notifications.
 - **Ask first and Suggested (auto-read version).** For people you choose, mmogo reads the message and asks "Record as...?" Nothing is recorded without your tap. The alert has three buttons: Not now, Change category and Yes. Change category opens the Categorize sheet for that entry. A Yes tapped while the app is busy is kept and carried out. For these people the "Tap to parse" alert is skipped.
-- **Suggested categories and a Remembered page.** mmogo can suggest a category for a person, and Remembered in Settings lists each person's level. The rules you set stay on this phone and are not in backups.
+- **A Remembered page.** Remembered in Settings lists each person and what mmogo does for them. Suggested is the default and does not suggest categories yet. The rules you set stay on this phone and are not in backups.
 - **Notifications lists (auto-read version).** The Notifications page has lists for the messages waiting, and one for entries recorded automatically.
 - **Paid to: choose an account.** Paid to lets you pick which account to look at.
 - **Update button.** The Updates page has an Update button that opens the mmogo page for your version, and a link to it.

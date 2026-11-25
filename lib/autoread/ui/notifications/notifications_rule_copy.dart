@@ -30,6 +30,9 @@ const String kSuggestionConfirm = 'Ask first';
 
 // WORDING-DRAFT
 /// Quiet note when the rule could not be saved (the list of remembered people is full).
+// WORDING-DRAFT (0.2.2, F10): under the one Suggestions card; the PM signs.
+String suggestionsMoreLine(int n) => '$n more';
+
 const String kSuggestionNotSaved = 'Could not save this. Try again.';
 
 // WORDING-DRAFT
@@ -43,8 +46,8 @@ String askFirstTitle(String cat) => 'Record as $cat?';
 // WORDING-DRAFT
 const String kAskFirstChange = 'Change category';
 
-// WORDING-DRAFT
-const String kAskFirstLater = 'Categorize later';
+// WORDING-DRAFT (F8, PM 24-11: one word everywhere for putting something off; replaces 'Categorize later')
+const String kAskFirstLater = 'Not now';
 
 // WORDING-DRAFT
 const String kAskFirstYes = 'Yes';

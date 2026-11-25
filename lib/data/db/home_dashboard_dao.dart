@@ -2,6 +2,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../domain/home/recent_transaction.dart';
 import '../../domain/money/spent_amount.dart';
+import '../../domain/money/withdrawn_leftover.dart';
 
 /// One `source_type`'s totals within a period: the spent amount and the
 /// M-Pesa transaction cost paid on top of it (`transaction_cost_cents`,
@@ -98,6 +99,39 @@ class HomeDashboardDao {
     return result;
   }
 
+  /// §HOME.LEFTOVER (0.2.2, F1): cash withdrawn in the period that is not yet
+  /// linked to Cash entries. Per withdrawal (amount minus its linked, not
+  /// deleted, Cash entries), never negative, then added; the rule lives in
+  /// `withdrawn_leftover.dart`. A linked entry counts whatever its own date.
+  static Future<int> withdrawalLeftoverCents(
+    Database db, {
+    required int startMs,
+    required int endMs,
+  }) async {
+    final rows = await db.rawQuery(
+      '''
+      SELECT t.amount_cents AS amount,
+             (SELECT group_concat(ch.amount_cents, char(31)) FROM transactions ch
+              WHERE ch.parent_transaction_id = t.id AND ch.deleted_at IS NULL) AS linked_amounts
+      FROM transactions t
+      WHERE t.deleted_at IS NULL
+        AND t.source_type = '$kAgentWithdrawalType'
+        AND t.transaction_occurred_at BETWEEN ? AND ?
+      ''',
+      [startMs, endMs],
+    );
+    return totalWithdrawalLeftoverCents([
+      for (final r in rows)
+        (
+          (r['amount'] as num).toInt(),
+          // Not _names: that drops repeats, and two equal amounts are two entries.
+          (r['linked_amounts']?.toString() ?? '')
+              .split('\u001f')
+              .fold<int>(0, (s, a) => s + (int.tryParse(a) ?? 0)),
+        ),
+    ]);
+  }
+
   /// Most-recent-first, unfiltered by any period — Home's
   /// recent-transactions list is unfiltered by the period selector.
   static Future<List<RecentTransaction>> recentTransactions(
@@ -119,7 +153,7 @@ class HomeDashboardDao {
       FROM transactions t
       JOIN classifications c ON c.id = t.classification_id
       WHERE t.deleted_at IS NULL
-      ORDER BY t.transaction_occurred_at DESC
+      ORDER BY t.transaction_occurred_at DESC, t.id DESC
       LIMIT ?
       ''',
       [limit],

@@ -8,6 +8,7 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -47,7 +48,7 @@ Future<List<HistoryRow>> readHistoryRows(Database db, {int limit = kHistoryScanL
   return out;
 }
 
-/// Groups newest-first rows into the summary (person -> top 2 of their last 5). People come out in order
+/// Groups newest-first rows into the summary (person -> top 2 of their last 10). People come out in order
 /// of their newest record; the cap is applied by the encoder.
 Map<String, List<int>> summariseHistory(List<HistoryRow> newestFirst) {
   final perPerson = <String, List<int>>{};
@@ -66,6 +67,11 @@ class HistorySummaryWriter {
   final Future<List<HistoryRow>> Function() rows;
   final Future<SharedPreferences> Function() _prefs;
 
+  /// §AUTOREAD.CHIPS_REFRESH (N1): counts every rebuild that CHANGED the stored summary. A waiting card that
+  /// is already on screen listens and re-reads its suggested chips (best two follow the newest record or Undo).
+  /// Static: the one shared writer in the app and any test writer all tell the same cards.
+  static final ValueNotifier<int> changes = ValueNotifier<int>(0);
+
   Future<void> _tail = Future<void>.value();
 
   Future<T> _serial<T>(Future<T> Function() op) {
@@ -82,7 +88,11 @@ class HistorySummaryWriter {
       try {
         final summary = summariseHistory(await rows());
         final p = await _prefs();
-        return await p.setString(kHistSummaryPrefKey, encodeHistSummary(summary));
+        final encoded = encodeHistSummary(summary);
+        final changed = p.getString(kHistSummaryPrefKey) != encoded;
+        final ok = await p.setString(kHistSummaryPrefKey, encoded);
+        if (ok && changed) changes.value++; // N1: chips already on screen re-read
+        return ok;
       } catch (_) {
         return false;
       }
@@ -94,7 +104,9 @@ class HistorySummaryWriter {
         try {
           final p = await _prefs();
           if (!p.containsKey(kHistSummaryPrefKey)) return true;
-          return await p.remove(kHistSummaryPrefKey);
+          final ok = await p.remove(kHistSummaryPrefKey);
+          if (ok) changes.value++;
+          return ok;
         } catch (_) {
           return false;
         }

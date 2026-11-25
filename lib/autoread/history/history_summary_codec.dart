@@ -1,5 +1,5 @@
 /// AUTOREAD HISTORY summary: the pure part (no I/O). The preferences summary `autoread_hist_v1` holds,
-/// per person, the up-to-2 most used category ids of their last 5 records. Written only by the app.
+/// per person, the up-to-2 most used category ids of their last 10 records (PM 24-11-2026: was 5). Written only by the app.
 /// Labels and numbers only, never message text.
 library;
 
@@ -16,8 +16,8 @@ const String kHistSummaryPrefKey = 'autoread_hist_v1';
 /// At most this many people are kept (newest first when over).
 const int kHistSummaryCap = 300;
 
-/// A person's last N records are looked at.
-const int kHistLastRecords = 5;
+/// A person's last N records are looked at (10 since 0.2.2, PM 24-11-2026; was 5).
+const int kHistLastRecords = 10;
 
 /// Keys longer than this are never stored or looked up (same limit as the rule keys).
 const int kHistMaxKeyLength = 200;

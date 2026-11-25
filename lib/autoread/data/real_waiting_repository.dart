@@ -60,6 +60,9 @@ import 'held_describer.dart';
 import 'pending_items_store.dart';
 import 'real_category_choices.dart';
 
+part 'real_waiting_withdrawal.dart';
+part 'real_waiting_auto.dart';
+
 typedef TimerFactory = Timer Function(Duration after, void Function() callback);
 
 /// Saved-transaction lookup for the service: is this M-Pesa code already a
@@ -439,71 +442,9 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
     return RealCategoryChoices(await _database(), type, airtimeOther: item.parsed!.airtimeOther);
   }
 
-  /// 0.2.1: a parsed withdrawal item is recorded as a withdrawal (under its own built-in category
-  /// [withdrawalCategoryId]) and decided in the same step: [useCategoryId] null = Cash only (the
-  /// withdrawal is marked decided), else a linked Cash entry for the full amount in that category.
-  /// Same save order as [saveCategory]; the decision follows the transaction, so a crash between
-  /// them leaves an undecided withdrawal that the "need a decision" item then shows.
-  Future<void> saveWithdrawal(String id, String withdrawalCategoryId, {int? useCategoryId}) => _locked(() async {
-        final cls = int.tryParse(withdrawalCategoryId);
-        if (cls == null) throw ArgumentError.value(withdrawalCategoryId, 'withdrawalCategoryId', 'not a category id');
-        final rowId = await _saveInner(id, cls);
-        if (rowId != null) {
-          final db = await _database();
-          if (useCategoryId == null) {
-            await LinkedCashDao.markCashOnly(db, withdrawalId: rowId);
-          } else {
-            await LinkedCashDao.setWithdrawalCategory(db, withdrawalId: rowId, classificationId: useCategoryId);
-          }
-        }
-        await _publish();
-      });
-
-  /// 0.2.1: every recorded withdrawal still waiting for "Cash only" or a category (newest first).
-  Future<List<AnalyticsTransactionRow>> undecidedWithdrawals() async =>
-      LinkedCashDao.undecidedWithdrawals(await _database());
-
   /// 0.2.1: the undecided withdrawals, kept live for the Notifications item AND the bell (the bell
   /// counts the decision item as ONE). Reloaded by [refreshUndecided].
   final ValueNotifier<List<AnalyticsTransactionRow>> undecided = ValueNotifier(const []);
-
-  /// Reloads [undecided]; on a failure it keeps what it showed.
-  Future<void> refreshUndecided() async {
-    try {
-      final rows = await undecidedWithdrawals();
-      if (!_closed) undecided.value = rows;
-    } catch (_) {
-      // Keeps the last list.
-    }
-  }
-
-  /// 0.2.1: decides a recorded withdrawal from the "need a decision" item.
-  Future<void> decideWithdrawal(int withdrawalId, {int? useCategoryId}) async {
-    final db = await _database();
-    if (useCategoryId == null) {
-      await LinkedCashDao.markCashOnly(db, withdrawalId: withdrawalId);
-    } else {
-      await LinkedCashDao.setWithdrawalCategory(db, withdrawalId: withdrawalId, classificationId: useCategoryId);
-    }
-    _onSaved();
-    await refreshUndecided();
-  }
-
-  /// 0.2.1: "Cash only for all": every id in one database transaction (all or nothing).
-  Future<void> decideAllCashOnly(List<int> withdrawalIds) async {
-    final db = await _database();
-    await LinkedCashDao.markManyCashOnly(db, withdrawalIds: withdrawalIds);
-    _onSaved();
-    await refreshUndecided();
-  }
-
-  /// 0.2.1: the Cash list (and only it) for "What was this money for?"; empty until the user makes one.
-  Future<List<ClassificationItem>> withdrawalUseChoices() async =>
-      ClassificationDao.fetchCashUseClassifications(await _database());
-
-  /// 0.2.1: "+ New" in "What was this money for?" - creates INTO the Cash list (duplicates checked only there).
-  Future<WdCreateResult> createWithdrawalUseCategory(String name) async =>
-      wd_create.createWithdrawalUseCategory(await _database(), name);
 
   /// Saves the waiting item [id] as a real transaction under [categoryId] (a
   /// classification id in decimal), then removes it.
@@ -523,6 +464,53 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
         if (cls == null) throw ArgumentError.value(categoryId, 'categoryId', 'not a category id');
         await _saveInner(id, cls);
         await _publish();
+      });
+
+  /// 0.2.2 suggested chip: the SAME save as [saveCategory] (same transaction, same order, same ledger hooks),
+  /// but it checks inside the one queue step that the category is still active, and it hands back the new
+  /// ledger row id so the caller can offer Undo. [ChipRecordResult.active] false: nothing was written and the
+  /// item keeps waiting. [ChipRecordResult.rowId] null with active true: nothing new was written (the item was
+  /// gone or its code was already recorded). A second call for the same item finds it gone: no second entry.
+  Future<ChipRecordResult> recordChip(String id, String categoryId) => _locked(() async {
+        final cls = int.tryParse(categoryId);
+        if (cls == null) throw ArgumentError.value(categoryId, 'categoryId', 'not a category id');
+        if (!await _categoryActive(cls)) return const ChipRecordResult(active: false);
+        final rowId = await _saveInner(id, cls);
+        if (rowId != null) await _noteTrail(rowId);
+        await _publish();
+        return ChipRecordResult(active: true, rowId: rowId);
+      });
+
+  /// 0.2.2 (F10): the in-app Ask first "Yes": the SAME save as [saveCategory], and the new entry is listed
+  /// under Recorded automatically (with Undo). Never throws on the listing itself.
+  Future<void> saveCategoryListed(String id, String categoryId) => _locked(() async {
+        final cls = int.tryParse(categoryId);
+        if (cls == null) throw ArgumentError.value(categoryId, 'categoryId', 'not a category id');
+        final rowId = await _saveInner(id, cls);
+        if (rowId != null) await _noteTrail(rowId);
+        await _publish();
+      });
+
+  /// 0.2.2 (F10, contract 6e): lists [rowId] (a chip tap or an Ask first Yes) under Recorded automatically.
+  /// It uses the existing 24 h trail (row number and time only; no schema change, no column flag). The
+  /// ledger column `recorded_automatically` stays for rows written with no tap at all. Inside [_locked].
+  Future<void> _noteTrail(int rowId) async {
+    try {
+      await _reloadTrail(await _trailStore.add(rowId, _now()));
+    } catch (_) {}
+  }
+
+  /// Undo of a chip-recorded entry: Recently deleted (restorable for 1 hour). A row already deleted or gone is
+  /// left alone (a second Undo must not move its 1 hour window).
+  Future<void> undoChipRecord(int rowId) => _locked(() async {
+        final db = await _database();
+        final row =
+            (await db.query('transactions', columns: ['deleted_at'], where: 'id = ?', whereArgs: [rowId])).firstOrNull;
+        if (row != null && row['deleted_at'] == null) {
+          await TransactionDao.softDelete(db, id: rowId);
+          _onSaved();
+        }
+        await _reloadTrail();
       });
 
   /// The save itself, inside [_locked]; returns the new ledger row id, or null
@@ -574,168 +562,6 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
     return rowId;
   }
 
-  // ------------------------------------------------- airtime auto-record (J2)
-
-  static Future<bool> _prefsReadAirtimeAuto() async =>
-      (await SharedPreferences.getInstance()).getBool(kAirtimeAutoPrefKey) ?? false;
-
-  static Future<void> _prefsWriteAirtimeAuto(bool on) async =>
-      (await SharedPreferences.getInstance()).setBool(kAirtimeAutoPrefKey, on);
-
-  static Future<bool> _prefsReadAirtimeAutoOther() async =>
-      (await SharedPreferences.getInstance()).getBool(kAirtimeAutoOtherPrefKey) ?? false;
-
-  static Future<void> _prefsWriteAirtimeAutoOther(bool on) async =>
-      (await SharedPreferences.getInstance()).setBool(kAirtimeAutoOtherPrefKey, on);
-
-  /// The ACTIVE built-in Airtime category of a kind, found by seed key, or null
-  /// (then nothing is recorded for that kind and the item waits as today; never a
-  /// fallback to the other category).
-  Future<int?> _airtimeCategoryFor(bool other) async {
-    final row = await ClassificationDao.fetchActiveBySeedKey(await _database(), seedKey: airtimeSeedKey(other));
-    return row?.id;
-  }
-
-  /// With a switch ON, records every parsed Airtime item of THAT kind that waits
-  /// (the user tapped Parse for each). Never touches another type or the other
-  /// kind. Inside [_locked].
-  Future<void> _autoRecordPending() async {
-    if (!airtime.on && !airtime.onOther) return;
-    try {
-      final stored = (await _store.list())
-          .where((i) => isAutoRecordEligible(i, myselfOn: airtime.on, otherOn: airtime.onOther))
-          .toList();
-      for (final item in stored) {
-        final cls = await _airtimeCategoryFor(item.parsed!.airtimeOther);
-        if (cls == null) {
-          _stuck.add(item.id);
-          continue;
-        }
-        final rowId = await _saveInner(item.id, cls);
-        if (rowId == null) {
-          _stuck.add(item.id);
-        } else {
-          _stuck.remove(item.id);
-          await _markAutomatic(rowId);
-          final at = _now();
-          final shown = await _trailStore.add(rowId, at); // never throws; a failed write keeps the record
-          await _reloadTrail(shown);
-          airtime.noteRecorded(AutoRecorded(
-              rowId: rowId, amountCents: item.parsed!.amountCents, at: at, airtimeOther: item.parsed!.airtimeOther));
-        }
-      }
-    } catch (_) {
-      // A failure leaves the item waiting; the user can still Categorize it.
-      for (final i in await _store.list().catchError((_) => <WaitingItem>[])) {
-        if (isAutoRecordEligible(i, myselfOn: airtime.on, otherOn: airtime.onOther)) _stuck.add(i.id);
-      }
-    }
-  }
-
-  // ------------------------------------------- queued Yes (Ask first, 0.2.1)
-
-  /// Records the Yes taps queued on phone alerts while the app was closed, then refreshes the category names
-  /// the alert shows. Inside [_locked]. Never throws; a failure leaves the items waiting.
-  Future<void> _importQueuedYes() async {
-    if (!_queuedYesOn) return;
-    try {
-      await _importQueuedYesWork().timeout(kQueuedYesBudget);
-    } catch (_) {
-      // Too slow or failed: the ingest goes on; a mark stays and is tried again at the next ingest.
-    }
-  }
-
-  Future<void> _importQueuedYesWork() async {
-    try {
-      final recorded = await _queuedYes.run(await _store.list());
-      if (recorded.isNotEmpty) {
-        final cb = _onQueuedYes;
-        if (cb != null) {
-          cb(recorded);
-        } else {
-          showQueuedYesToasts(recorded, undoQueuedYes);
-        }
-      }
-    } catch (_) {}
-    await _refreshCategoryNames();
-  }
-
-  Future<bool> _categoryActive(int id) async => (await (await _database())
-          .rawQuery('SELECT 1 FROM classifications WHERE id = ? AND active = 1', [id]))
-      .isNotEmpty;
-
-  /// Keeps the Kotlin alert's category names current (written only when they changed).
-  Future<void> _refreshCategoryNames() async {
-    try {
-      if (!await anyAskFirstRuleStored()) return; // no alert will ask a question: no names needed
-      final rows = await (await _database()).rawQuery('SELECT id, name FROM classifications WHERE active = 1');
-      final names = {for (final r in rows) if (r['id'] is int && r['name'] is String) r['id'] as int: r['name'] as String};
-      if (names.length == _namesWritten.length && names.entries.every((e) => _namesWritten[e.key] == e.value)) return;
-      await CategoryNameCache().write(names);
-      _namesWritten = names;
-    } catch (_) {}
-  }
-
-  /// Undo of one entry recorded from a queued Yes: Recently deleted (restorable for 1 hour). A row already
-  /// deleted or gone is left alone.
-  Future<void> undoQueuedYes(QueuedYesRecorded e) => _locked(() async {
-        final db = await _database();
-        final row = (await db.query('transactions', columns: ['deleted_at'], where: 'id = ?', whereArgs: [e.rowId]))
-            .firstOrNull;
-        if (row != null && row['deleted_at'] == null) {
-          await TransactionDao.softDelete(db, id: e.rowId);
-          _onSaved();
-        }
-      });
-
-  /// Marks the row "Recorded automatically" (0.2.1 on; older rows stay unmarked). The database only
-  /// allows it on a non-Cash row from an SMS parse; a refusal leaves the row recorded, unmarked.
-  Future<void> _markAutomatic(int rowId) async {
-    try {
-      await TransactionDao.markRecordedAutomatically(await _database(), id: rowId);
-    } catch (_) {}
-  }
-
-  /// The switch for airtime for another number (default OFF); same behaviour.
-  Future<void> setAirtimeAutoOther(bool on) => _locked(() async {
-        await _writeAirtimeAutoOther(on);
-        airtime.setOnOther(on);
-        await _autoRecordPending();
-        await _publish();
-      });
-
-  /// The switch: remembers the choice; turning it ON records the Airtime items
-  /// that already wait (same type the user just agreed to).
-  Future<void> setAirtimeAuto(bool on) => _locked(() async {
-        await _writeAirtimeAuto(on);
-        airtime.setOn(on);
-        await _autoRecordPending();
-        await _publish();
-      });
-
-  /// Shows the stored trail: [entries] (just written) or a fresh read, joined
-  /// to the ledger. A failure leaves the list as it was.
-  Future<void> _reloadTrail([List<TrailEntry>? entries]) async {
-    try {
-      airtime.setTrail(await joinTrail(await _database(), entries ?? await _trailStore.load()));
-    } catch (_) {}
-  }
-
-  /// Undo of one auto-recorded entry: it moves to Recently deleted (the
-  /// existing soft delete, restorable for 1 hour) and leaves every total.
-  /// The row is read first: one already in Recently deleted, or gone, is left
-  /// alone (a second Undo must not move its 1 hour window).
-  Future<void> undoAutoRecord(AutoRecorded e) => _locked(() async {
-        final db = await _database();
-        final row = (await db.query('transactions', columns: ['deleted_at'], where: 'id = ?', whereArgs: [e.rowId]))
-            .firstOrNull;
-        if (row != null && row['deleted_at'] == null) {
-          await TransactionDao.softDelete(db, id: e.rowId);
-          _onSaved();
-        }
-        await _reloadTrail();
-      });
-
   /// The Add screen's own draft, filled the way Add fills it after a paste
   /// (same field mapping), so the row is built by `AddDraft.toInput`.
   static AddDraft _draftFor(ParsedSmsFields p, bool capture, int classificationId) {
@@ -754,4 +580,11 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
       classificationId: classificationId,
     );
   }
+}
+
+/// What [RealWaitingRepository.recordChip] did (see there).
+class ChipRecordResult {
+  const ChipRecordResult({required this.active, this.rowId});
+  final bool active;
+  final int? rowId;
 }

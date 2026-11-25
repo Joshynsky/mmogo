@@ -74,9 +74,9 @@ const kWhatsNewWithdrawalsBody = [
 
 // Suggested categories (has the Open in Settings button)
 const kWhatsNewSuggestTitle = 'Suggested categories';
-const kWhatsNewSuggestSummary = 'mmogo suggests the categories you use most for each person.';
+const kWhatsNewSuggestSummary = 'Suggested is the default level; suggesting categories comes later.';
 const kWhatsNewSuggestBody = [
-  'mmogo suggests the categories you used most in your last 5 records for that person.',
+  'Suggested is the default level. It does not suggest categories yet; that comes in a later update.',
   'See and change them in Settings, under "Remembered recipients". '
       'Pick one type at a time: Send Money, Paybill, Buy Goods, Pochi, Withdrawals (muted) or Airtime.',
 ];

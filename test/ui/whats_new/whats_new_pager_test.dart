@@ -215,7 +215,7 @@ void main() {
         await tester.ensureVisible(find.byKey(_summary(id)));
         expect(find.byKey(_summary(id)), findsOneWidget, reason: id);
       }
-      expect(_text(tester, _summary('suggest')), 'mmogo suggests the categories you use most for each person.');
+      expect(_text(tester, _summary('suggest')), 'Suggested is the default level; suggesting categories comes later.');
       expect(_text(tester, _summary('paidto')), 'When one person has several accounts, you choose which one to look at.');
       expect(_text(tester, _summary('backups')), 'A backup made with 0.2.1 cannot be restored by 0.2.0 or older.');
       expect(_text(tester, _summary('pochi')), 'When a Pochi message is read, you choose Pochi or Send Money.');

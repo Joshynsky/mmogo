@@ -22,6 +22,7 @@ import '../data/known_people.dart';
 import '../data/lazy_category_choices.dart';
 import '../data/ledger_rule_events.dart';
 import '../data/pending_items_store.dart';
+import '../data/suggested_chips_source.dart';
 import '../background/labelling_pending_store.dart';
 import '../history/fallback_history_reader.dart';
 import '../history/ffi_history_reader.dart';
@@ -49,6 +50,13 @@ class RulesWiring {
   /// The ledger -> preferences summary (rebuilt on open, record, undo, category change, restore).
   static final HistorySummaryWriter summary =
       HistorySummaryWriter(rows: () async => readHistoryRows(await database()));
+
+  /// 0.2.2: the suggested chips of a waiting item, from the app's rules, history summary and details setting.
+  static SuggestedChipsSource chipsSource() => SuggestedChipsSource(
+        rules: AutoReadRuntime.ruleStore,
+        history: appHistory,
+        recordReceiverDetails: AppPrefs.readCaptureIdentityPreference,
+      );
 
   /// The offers "Ask first next time?" (one list for the bell and the Notifications page).
   static SuggestionsController? suggestions;

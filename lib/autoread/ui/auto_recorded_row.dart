@@ -34,7 +34,10 @@ class AutoRecordedRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = AppPalette.of(context);
     final amount = kshTrim(entry.amountCents);
-    final title = autoRecordedTitle(amount, other: entry.airtimeOther);
+    final party = entry.partyLabel;
+    final category = entry.categoryName;
+    final title = party != null ? '$party, $amount' : autoRecordedTitle(amount, other: entry.airtimeOther);
+    final sub = category != null ? recordedAsSub(category) : kAutoRecordedSub;
     final age = rowAgeText(entry.at, now);
     final String foot;
     final NotifRowAction? action;
@@ -53,10 +56,10 @@ class AutoRecordedRow extends StatelessWidget {
       key: Key('auto-recorded-${entry.rowId}'),
       icon: Icon(Icons.check_circle, size: 26, color: notifShapeColor(p, NotifShape.pill)),
       title: title,
-      subtitle: kAutoRecordedSub,
+      subtitle: sub,
       footText: foot,
       action: action,
-      link: onChangeInSettings == null
+      link: onChangeInSettings == null || party != null
           ? null
           : NotifRowAction(
               label: kAutoRecordedChangeInSettings,
@@ -64,7 +67,7 @@ class AutoRecordedRow extends StatelessWidget {
               onTap: onChangeInSettings!,
             ),
       dimmed: entry.inRecentlyDeleted,
-      spokenLabel: '$title. $kAutoRecordedSub $foot.',
+      spokenLabel: '$title. $sub $foot.',
     );
   }
 }

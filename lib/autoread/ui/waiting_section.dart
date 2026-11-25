@@ -33,7 +33,7 @@ import 'waiting_row.dart';
 /// What a tap on a waiting row does. All optional: an unwired action is a
 /// no-op (an UNREADABLE row is shown with Details and Remove either way).
 class WaitingActions {
-  const WaitingActions({this.onParse, this.onCategorize, this.onPaste, this.onRemove, this.onParseAll, this.onDetails, this.airtime, this.describe, this.onChangeInSettings, this.clearDescriptions, this.onPickCategory, this.choicesFor, this.onLater, this.choosing, this.undecided, this.onWithdrawalCashOnly, this.onWithdrawalCategorize, this.onDecisionCashOnly, this.onDecisionCashOnlyAll, this.onDecisionCategorize, this.suggestions, this.ruleHintFor, this.categoryNameOf, this.onAskFirstYes, this.onAskFirstChange, this.onAskFirstLater, this.askFirstChanges, this.toChoose});
+  const WaitingActions({this.onParse, this.onCategorize, this.onPaste, this.onRemove, this.onParseAll, this.onDetails, this.airtime, this.describe, this.onChangeInSettings, this.clearDescriptions, this.onPickCategory, this.choicesFor, this.onLater, this.choosing, this.undecided, this.onWithdrawalCashOnly, this.onWithdrawalCategorize, this.onDecisionCashOnly, this.onDecisionCashOnlyAll, this.onDecisionCategorize, this.suggestions, this.ruleHintFor, this.categoryNameOf, this.onAskFirstYes, this.onAskFirstChange, this.onAskFirstLater, this.askFirstChanges, this.toChoose, this.chipsFor, this.onPickChip});
 
   final void Function(WaitingItem item)? onParse;
   final void Function(WaitingItem item)? onCategorize;
@@ -105,6 +105,11 @@ class WaitingActions {
   /// Fires when what [ruleHintFor] or [categoryNameOf] answer may have changed (names loaded, a row sent
   /// to Categorize later). Null: they never change.
   final Listenable? askFirstChanges;
+
+  /// 0.2.2 suggested chips on a choose row: which chips an item has, and what a chip tap does (records at once;
+  /// false = nothing recorded). Both needed; either null: no chips.
+  final Future<List<CategoryChoice>> Function(WaitingItem item)? chipsFor;
+  final Future<bool> Function(WaitingItem item, CategoryChoice chip)? onPickChip;
 
   /// The To choose section ("Choose Pochi or Send Money"), built by its own code. Null: none. Only placed here.
   final ({Widget section, bool isEmpty})? toChoose;
@@ -178,6 +183,8 @@ class WaitingSection extends StatelessWidget {
                 onLater: actions.onLater,
                 onCashOnly: actions.onWithdrawalCashOnly,
                 onCategorizeWithdrawal: actions.onWithdrawalCategorize,
+                chipsFor: actions.chipsFor,
+                onPickChip: actions.onPickChip,
               )
             : HeldRowDescriber(
                 key: ValueKey('described-${w.id}'),

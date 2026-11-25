@@ -12,7 +12,7 @@ void main() {
     expect(phoneEnding(ReceiverType.payBill, 'ABC#123456'), isNull);
   });
 
-  testWidgets('two numbers of one name show as different rows by their endings', (tester) async {
+  testWidgets('two numbers of one name show as different rows by their masks', (tester) async {
     Widget row(String key) => MaterialApp(
           home: Scaffold(
             body: LevelsPersonRow(
@@ -23,8 +23,8 @@ void main() {
           ),
         );
     await tester.pumpWidget(row('0717571997'));
-    expect(find.textContaining('…997', findRichText: true), findsOneWidget);
+    expect(find.textContaining('0717***997', findRichText: true), findsOneWidget);
     await tester.pumpWidget(row('0729345350'));
-    expect(find.textContaining('…350', findRichText: true), findsOneWidget);
+    expect(find.textContaining('0729***350', findRichText: true), findsOneWidget);
   });
 }

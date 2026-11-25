@@ -416,7 +416,8 @@ void main() {
         expect(find.byIcon(Icons.delete_outline), findsNothing);
         expect(find.byKey(const Key('manageCreateRow')), findsNothing);
         expect(find.byKey(const Key('manageCreateField')), findsNothing);
-        expect(find.text('$name entries always use this category.'), findsOneWidget);
+        expect(find.text(kManageWithdrawalLockedLine), findsOneWidget);
+        expect(find.textContaining('created under Cash'), findsOneWidget);
       });
     }
 

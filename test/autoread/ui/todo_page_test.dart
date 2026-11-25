@@ -160,7 +160,7 @@ void main() {
       await open(t, [unreadable(1)]);
       expect(todoCount([unreadable(1)], kFakeNow), 0); // the number itself is unchanged
       expect(find.byKey(const Key('notif-chip-count-todo')), findsNothing);
-      expect(find.text('$kHeadingCouldNotRead (1)'), findsOneWidget);
+      expect(find.text('$kHeadingToCategorize (1)'), findsOneWidget); // F11: unreadable lives in To categorize
       expect(t.getSemantics(find.byKey(const Key('notif-chip-todo'))).label, kTodoChipSpoken);
       h.dispose();
     }, skip: skip);
@@ -184,8 +184,8 @@ void main() {
     testWidgets('heading counts equal the rows under them', (t) async {
       await open(t, [ready(1), ready(2), unreadable(3), cat(4), cat(5), cat(6)]);
       expect(find.text('$kHeadingToParse (2)'), findsOneWidget);
-      expect(find.text('$kHeadingCouldNotRead (1)'), findsOneWidget);
-      expect(find.text('$kHeadingToCategorize (3)'), findsOneWidget);
+      expect(find.text('$kHeadingCouldNotRead (1)'), findsNothing); // F11
+      expect(find.text('$kHeadingToCategorize (4)'), findsOneWidget); // 3 readable + 1 unreadable
       expect(find.byKey(Key('waiting-row-${heldIdFor(4)}')), findsOneWidget);
       expect(count(t), '5');
     }, skip: skip);
@@ -199,11 +199,11 @@ void main() {
   });
 
   group('To do sections', () {
-    testWidgets('order: To parse, Could not read, To categorize', (t) async {
+    testWidgets('order: To parse, then To categorize with the unreadable row last inside it', (t) async {
       await open(t, [cat(4), unreadable(3), ready(1)]);
       double y(String text) => t.getTopLeft(find.text(text)).dy;
-      expect(y('$kHeadingToParse (1)'), lessThan(y('$kHeadingCouldNotRead (1)')));
-      expect(y('$kHeadingCouldNotRead (1)'), lessThan(y('$kHeadingToCategorize (1)')));
+      expect(y('$kHeadingToParse (1)'), lessThan(y('$kHeadingToCategorize (2)')));
+      expect(find.text('$kHeadingCouldNotRead (1)'), findsNothing);
     }, skip: skip);
 
     testWidgets('empty card with the mock words; no news under To do', (t) async {

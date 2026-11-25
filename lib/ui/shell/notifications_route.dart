@@ -66,7 +66,7 @@ class _NotificationsRouteState extends State<NotificationsRoute> {
     if (kAutoReadCompiled) {
       final w = scope.waiting;
       if (w is RealWaitingRepository) {
-        actions = buildRealWaitingActions(context, w, choosing: _choosing, note: _note, rules: _rules);
+        actions = buildRealWaitingActions(context, w, choosing: _choosing, note: _note, rules: _rules, chips: RulesWiring.chipsSource());
         if (!_undecidedRequested) {
           _undecidedRequested = true;
           w.refreshUndecided();

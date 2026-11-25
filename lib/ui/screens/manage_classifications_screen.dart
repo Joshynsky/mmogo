@@ -12,6 +12,11 @@ import '../widgets/palette_alert_dialog.dart';
 const kManageAirtimeLockedLine =
     'Airtime has two built-in categories: For myself and For another number. mmogo picks the right one from the message, so you cannot rename, delete or switch them.';
 
+/// F6 (0.2.2, PM-approved 24-11): the Withdrawal tab's line. Withdrawal has nothing to add, so it says
+/// where categories for withdrawn money live. WORDING-DRAFT: to be signed before release.
+const kManageWithdrawalLockedLine =
+    'Withdrawal entries always use this category. Categories for money you withdraw are created under Cash.';
+
 /// R31: the one sentence that ends the Delete category dialog (in use or not).
 const kDeleteCategoryTail = 'It moves to Inactive (deleted) and you can restore it any time. Past entries keep it.';
 
@@ -308,6 +313,8 @@ class _ManageClassificationsScreenState extends State<ManageClassificationsScree
       child: Text(
         _selectedGroup!.code == 'AIRTIME'
             ? kManageAirtimeLockedLine
+            : _selectedGroup!.code == 'AGENT_WITHDRAWAL'
+            ? kManageWithdrawalLockedLine
             : '${_selectedGroup!.displayName} entries always use this category.',
         key: const Key('manageLockedLine'),
         style: TextStyle(fontSize: 12.5, height: 1.4, fontWeight: FontWeight.w600, color: palette.mutedInk),

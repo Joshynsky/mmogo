@@ -341,7 +341,7 @@ t.id, t.display_code, t.source_type, t.amount_cents,
       FROM transactions t
       JOIN classifications c ON c.id = t.classification_id
       WHERE $where
-      ORDER BY t.transaction_occurred_at DESC
+      ORDER BY t.transaction_occurred_at DESC, t.id DESC
       ''',
       args,
     );
@@ -375,7 +375,7 @@ t.id, t.display_code, t.source_type, t.amount_cents,
       FROM transactions t
       JOIN classifications c ON c.id = t.classification_id
       WHERE t.deleted_at IS NULL AND t.display_code IN ($marks)
-      ORDER BY t.transaction_occurred_at DESC
+      ORDER BY t.transaction_occurred_at DESC, t.id DESC
       ''',
       codes.toList(),
     );

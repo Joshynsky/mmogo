@@ -146,13 +146,14 @@ void main() {
     });
   });
 
-  group('Parse row shows the stored value while Read is off (display fix)', () {
-    testWidgets('stored ON shows ON, greyed', (t) async {
+  group('Parse row while Read is off (F6, 0.2.2: greyed and shown off)', () {
+    testWidgets('stored ON shows OFF, greyed', (t) async {
       final b = FakeReadingBridge(parseOn: true);
       await _pump(t, b, consent: true);
       final sw = find.descendant(of: find.byKey(const Key('parseSwitch')), matching: find.byType(Switch));
-      expect(t.widget<Switch>(sw).value, isTrue);
+      expect(t.widget<Switch>(sw).value, isFalse);
       expect(t.widget<Switch>(sw).onChanged, isNull);
+      expect(b.parseOn, isTrue, reason: 'display only: the stored choice is kept');
     });
   });
 

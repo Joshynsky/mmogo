@@ -211,7 +211,7 @@ void main() {
       expect(e.repo.airtime.trail, isEmpty);
     });
 
-    test('trail_row_of_non_airtime_or_manual_not_shown', () async {
+    test('trail_row_manual_not_shown_sms_send_money_shown (0.2.2: chip and Ask first records are listed)', () async {
       await start();
       final good = await e.addRow();
       final manual = await e.addRow(source: 'MANUAL');
@@ -220,7 +220,7 @@ void main() {
         await e.store(id, _t0);
       }
       await e.repo.ingest();
-      expect(e.repo.airtime.trail.map((x) => x.rowId), [good]);
+      expect(e.repo.airtime.trail.map((x) => x.rowId).toSet(), {good, send}); // MANUAL stays hidden
     });
 
     test('kind comes from the row: for another number shows as such', () async {

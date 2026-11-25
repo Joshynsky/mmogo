@@ -11,7 +11,9 @@ import 'package:mmogo/autoread/rules/fake_rule_engine.dart';
 import 'package:mmogo/autoread/rules/fake_rule_store.dart';
 import 'package:mmogo/autoread/rules/rule_engine.dart';
 import 'package:mmogo/autoread/rules/rule_model.dart';
+import 'package:mmogo/autoread/ui/auto_recorded_row.dart';
 import 'package:mmogo/autoread/ui/notifications/notifications_rule_copy.dart';
+import 'package:mmogo/autoread/ui/notifications/suggestion_card.dart';
 import 'package:mmogo/autoread/ui/notifications/suggestions_controller.dart';
 import 'package:mmogo/autoread/ui/todo_copy.dart';
 import 'package:mmogo/autoread/ui/waiting_section.dart';
@@ -105,6 +107,21 @@ void main() {
     });
   });
 
+  group('N6 Recorded automatically count', () {
+    testWidgets('counts only entries still recorded; undone rows stay listed but are not counted', (t) async {
+      _size(t, 360);
+      await t.pumpWidget(_section([], actions(air: _air([
+        AutoRecorded(rowId: 1, amountCents: 5000, at: kFakeNow),
+        AutoRecorded(rowId: 2, amountCents: 6000, at: kFakeNow, inRecentlyDeleted: true),
+        AutoRecorded(rowId: 3, amountCents: 7000, at: kFakeNow, inRecentlyDeleted: true),
+      ]))));
+      await t.pump();
+      final all = _texts(t);
+      expect(all, contains('Recorded automatically (1)'));
+      expect(find.byType(AutoRecordedRow), findsNWidgets(3));
+    });
+  });
+
   group('Nothing waiting placement', () {
     testWidgets('empty: bottom card, no top line', (t) async {
       _size(t, 360);
@@ -136,6 +153,21 @@ void main() {
   });
 
   group('suggestion card', () {
+    testWidgets('F2: a full number shows masked, never raw', (t) async {
+      _size(t, 360);
+      await t.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SuggestionCard(
+            offer: const Offer(type: ReceiverType.sendMoney, key: '0722000555', name: 'LUCY AKINYI', categoryId: 5, run: 3),
+            categoryName: 'Food',
+            onNotNow: () {},
+            onConfirm: () {},
+          ),
+        ),
+      ));
+      expect(find.textContaining('LUCY AKINYI 0722***555'), findsOneWidget);
+      expect(find.textContaining('0722000555'), findsNothing);
+    });
     testWidgets('layout: title, body, Not now far left, one confirm far right', (t) async {
       _size(t, 360);
       final c = SuggestionsController(engine: engine, store: store);
@@ -143,7 +175,7 @@ void main() {
       await t.pumpWidget(_section([], actions(s: c)));
       await t.pump();
       expect(find.text(kSuggestionTitle), findsOneWidget);
-      expect(find.text(suggestionBody('Tim', 'Family & friends', 3)), findsOneWidget);
+      expect(find.text(suggestionBody('Tim ***', 'Family & friends', 3)), findsOneWidget);
       final title = t.getTopLeft(find.text(kSuggestionTitle)).dy;
       final notNow = t.getRect(find.byKey(const Key('suggestion-not-now')));
       final confirm = t.getRect(find.byKey(const Key('suggestion-confirm')));
@@ -192,7 +224,7 @@ void main() {
   });
 
   group('Ask first row', () {
-    testWidgets('three buttons, order Change category, Categorize later, Yes; Yes far right; taps wired', (t) async {
+    testWidgets('three buttons, order Change category, Not now, Yes; Yes far right; taps wired', (t) async {
       _size(t, 360);
       final log = <String>[];
       await t.pumpWidget(_section([_item(1)], actions(log: log)));
@@ -201,7 +233,7 @@ void main() {
       final change = t.getRect(find.byKey(const Key('ask-first-change')));
       final later = t.getRect(find.byKey(const Key('ask-first-later')));
       final yes = t.getRect(find.byKey(const Key('ask-first-yes')));
-      // Reading order (line, then left): Change category, Categorize later, Yes. The test font is wide, so the
+      // Reading order (line, then left): Change category, Not now, Yes. The test font is wide, so the
       // buttons may wrap to several lines; Yes is always the last one, at the right edge of its line.
       int order(Rect a, Rect b) => a.top != b.top ? a.top.compareTo(b.top) : a.left.compareTo(b.left);
       expect(order(change, later), lessThan(0));

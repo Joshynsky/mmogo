@@ -114,7 +114,7 @@ void main() {
     // A new file naming the category this way must be reviewed and added here.
     const typeNameFiles = {
       'lib/autoread/logic/message_details.dart',
-      'lib/autoread/ui/categorize_sheet.dart',
+      'lib/autoread/ui/categorize_details.dart',
       'lib/data/db/analytics_dao.dart',
       'lib/data/db/migration_v3_ddl.dart',
       'lib/domain/format/source_types.dart',

@@ -196,7 +196,7 @@ void main() {
     await _pump(t, r);
     await t.tap(find.byKey(const Key('levelButton.SM.0711')));
     await t.pumpAndSettle();
-    expect(find.text(levelSheetTitle('Tim')), findsOneWidget);
+    expect(find.text(levelSheetTitle('Tim ***')), findsOneWidget);
     expect(find.byKey(const Key('levelChoiceautoRecord')), findsNothing); // two levels only
     await t.tap(find.byKey(const Key('levelChoiceaskFirst')));
     await t.pumpAndSettle();
@@ -212,7 +212,7 @@ void main() {
     expect(rule!.level, RuleLevel.askFirst);
     expect(rule.categoryId, 1);
     expect(rule.name, 'Tim');
-    expect(find.text(levelSheetTitle('Tim')), findsNothing);
+    expect(find.text(levelSheetTitle('Tim ***')), findsNothing);
     // The row now says Ask first and the list re-ordered.
     expect(find.text(kLevelAskFirst), findsWidgets);
   });

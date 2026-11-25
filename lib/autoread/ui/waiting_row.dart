@@ -18,6 +18,7 @@ import '../../ui/theme/app_colors.dart';
 import '../../ui/widgets/notif_colors.dart';
 import '../../ui/widgets/notif_shape_icon.dart';
 import '../logic/message_details.dart' show kDetailsLink, unreadableSubline;
+import '../logic/phone_mask.dart';
 import '../logic/waiting_logic.dart';
 import '../model/held_description.dart';
 import '../model/waiting_item.dart';
@@ -37,9 +38,13 @@ const String kTitleAirtime = 'Bought airtime';
 
 /// "Sent Ksh 640 to Jane Wanjiku" from the parsed fields (no raw text). The
 /// name part is left out when the message carried none.
-String waitingTitle(ParsedSmsFields f) {
+/// [withMask] (0.2.2, F2; the in-app To confirm card): a Send Money name is followed by the masked
+/// number (0722***555); a number-only label is masked.
+String waitingTitle(ParsedSmsFields f, {bool withMask = false}) {
   final amount = kshTrim(f.amountCents);
-  final who = (f.counterpartyLabel ?? '').trim();
+  final who = withMask && f.sourceType == SmsSourceType.sendMoney
+      ? nameWithMask(f.counterpartyLabel, f.counterpartyPhone)
+      : (f.counterpartyLabel ?? '').trim();
   final to = who.isEmpty ? '' : ' to $who';
   switch (f.sourceType) {
     case SmsSourceType.sendMoney:

@@ -15,7 +15,7 @@ const String kLevelsForgetAllLabel = 'Forget all recipients';
 const String kLevelsForgetAllNote = 'Your airtime switches and levels are not affected.';
 
 // WORDING-DRAFT (mock rem_helper, cut to the two 0.2.1 levels)
-const String kLevelsHelper = 'Suggested offers categories. Ask first asks for one tap.';
+const String kLevelsHelper = 'Suggested is the default and changes nothing yet. Ask first asks for one tap.';
 // WORDING-DRAFT (mock rem_empty)
 const String kLevelsEmpty = 'Nobody yet. They appear here after you record a message to them.';
 // WORDING-DRAFT (mock rem_fnone)
@@ -65,7 +65,7 @@ const String kCategoryPickTitle = 'Choose a category';
 const String kLevelSheetNoneChosen = 'None chosen';
 // WORDING-DRAFT (mock rule_suggest_note, "Suggest" renamed Suggested, no stored rule)
 String levelSheetSuggestedNote(String name) =>
-    'Suggested: mmogo offers $name\'s most-used categories on the alert. Nothing records without a tap. No rule is stored.';
+    'Suggested: the default. Nothing records without a tap and no rule is stored.';
 // WORDING-DRAFT (mock rule_soft_note)
 const String kLevelSheetAskFirstNote = 'Ask first: mmogo asks with one tap each time.';
 // WORDING-DRAFT
@@ -85,7 +85,7 @@ const String kLevelSheetCancel = 'Cancel';
 const String kLevelsHelpTitle = 'About Suggest and auto-record';
 // WORDING-DRAFT
 const String kLevelsHelpLevels =
-    'For each person or account, choose what mmogo does. Suggested (the default) offers their most-used categories on the alert; nothing records without a tap. Ask first asks "Record as [Category]?" with one tap. The type buttons show one type at a time.';
+    'For each person or account, choose what mmogo does. Suggested (the default) changes nothing; nothing records without a tap. Ask first asks "Record as [Category]?" with one tap. The type buttons show one type at a time.';
 // WORDING-DRAFT (heading line per type)
 const String kLevelsHelpHeadSend = 'Send Money';
 const String kLevelsHelpHeadPaybill = 'Paybill';

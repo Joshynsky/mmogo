@@ -15,3 +15,8 @@ final homeTypeOrder = [
 /// When not even one whole recent row fits (a tiny screen or very large
 /// text), Home becomes an ordinary scrolling page showing this many rows.
 const homeRecentFallbackRows = 5;
+
+/// F1 (0.2.2): the Home line for cash taken out and not yet counted. The label
+/// is the PM's locked wording (21-11); the amount beside it is the leftover only.
+/// WORDING-DRAFT: wording to be signed before release.
+const kHomeCashLeftoverLabel = 'Cash withdrawn, not counted';

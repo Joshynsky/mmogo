@@ -85,7 +85,14 @@ class AutoRecorded {
     required this.at,
     this.airtimeOther = false,
     this.inRecentlyDeleted = false,
+    this.partyLabel,
+    this.categoryName,
   });
+
+  /// 0.2.2: set for a non-airtime entry (a chip record or an Ask first Yes): who it went to, and the
+  /// category it was recorded under. Both null for airtime (its title is built from [airtimeOther]).
+  final String? partyLabel;
+  final String? categoryName;
 
   /// The ledger row (`transactions.id`) that was written.
   final int rowId;
@@ -210,5 +217,7 @@ String autoRecordedTitle(String amount, {bool other = false}) =>
     'Airtime ${(other ? kAirtimeNameOther : kAirtimeNameMyself).toLowerCase()}, $amount';
 // SIGNED (PM 13-11-2026)
 const String kAutoRecordedSub = 'Recorded automatically.';
+// WORDING-DRAFT (0.2.2, F10): sub line of a chip or Ask first Yes entry; the PM signs.
+String recordedAsSub(String category) => 'Recorded as $category.';
 // SIGNED (PM 13-11-2026)
 const String kAutoRecordedChangeInSettings = 'Change in Settings';

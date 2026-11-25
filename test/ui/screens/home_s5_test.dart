@@ -26,7 +26,10 @@ class _Row {
 }
 
 class _Db implements Database {
-  _Db({required this.types, required this.rows});
+  _Db({required this.types, required this.rows, this.wd = const []});
+
+  /// F1: the period's withdrawals as (amount, linked Cash amounts joined by char 31, or null).
+  final List<(int, String?)> wd;
 
   /// source_type -> (total, cost, withdrawn, count)
   final Map<String, (int, int, int, int)> types;
@@ -34,6 +37,11 @@ class _Db implements Database {
 
   @override
   Future<List<Map<String, Object?>>> rawQuery(String sql, [List<Object?>? arguments]) async {
+    if (sql.contains('linked_amounts') && sql.contains("source_type = 'AGENT_WITHDRAWAL'")) {
+      return [
+        for (final w in wd) {'amount': w.$1, 'linked_amounts': w.$2},
+      ];
+    }
     if (sql.contains('GROUP BY source_type')) {
       return [
         for (final e in types.entries)
@@ -116,16 +124,17 @@ void main() {
     testWidgets('a withdrawal adds the muted line and the sub-line; total, bars and cost total are unchanged', (
       tester,
     ) async {
-      await _pump(tester, _Db(types: _withWd, rows: const []));
+      await _pump(tester, _Db(types: _withWd, rows: const [], wd: const [(500000, null)]));
       // Spent total is the same 4,700 as without the withdrawal.
       expect(tester.widget<Text>(find.byKey(const Key('homeTotal'))).data, 'Ksh 4,700.00');
-      final line = tester.widget<Text>(
-        find.descendant(of: find.byKey(const Key('homeCashWithdrawn')), matching: find.byType(Text)),
-      );
-      expect(line.textSpan!.toPlainText(), 'Cash withdrawn: Ksh 5,000.00 (not counted)');
-      final spans = (line.textSpan! as TextSpan).children!.cast<TextSpan>();
-      expect(spans[1].style!.fontWeight, FontWeight.w700);
-      expect(line.textSpan!.style!.color, _pal(tester).mutedInk);
+      final line = tester
+          .widgetList<Text>(find.descendant(of: find.byKey(const Key('homeCashWithdrawn')), matching: find.byType(Text)))
+          .first;
+      expect(line.data, 'Cash withdrawn, not counted');
+      expect(line.style!.color, _pal(tester).mutedInk);
+      final amount = tester.widgetList<Text>(find.descendant(of: find.byKey(const Key('homeCashWithdrawn')), matching: find.byType(Text))).last;
+      expect(amount.data, 'Ksh 5,000.00');
+      expect(amount.style!.fontWeight, FontWeight.w700);
       // Cost total = 42 + 20 + 29 (the withdrawal fee is inside it); the sub-line has no .00.
       expect(tester.widget<Text>(find.byKey(const Key('homeCost'))).data, 'Ksh 91.00');
       expect(tester.widget<Text>(find.byKey(const Key('homeCostWithdrawalFees'))).data, 'incl. Ksh 29 withdrawal fees');
@@ -137,8 +146,8 @@ void main() {
 
     testWidgets('semantics: cash line says not counted; cost row adds the withdrawals part', (tester) async {
       final h = tester.ensureSemantics();
-      await _pump(tester, _Db(types: _withWd, rows: const []));
-      expect(find.bySemanticsLabel('Cash withdrawn, Ksh 5,000.00, not counted as spending'), findsOneWidget);
+      await _pump(tester, _Db(types: _withWd, rows: const [], wd: const [(500000, null)]));
+      expect(find.bySemanticsLabel('Cash withdrawn, not counted, Ksh 5,000.00'), findsOneWidget);
       expect(
         find.bySemanticsLabel('Transaction cost, all M-Pesa, Ksh 91.00, including Ksh 29.00 for withdrawals'),
         findsOneWidget,
@@ -150,13 +159,66 @@ void main() {
       final h = tester.ensureSemantics();
       await _pump(
         tester,
-        _Db(types: const {'SEND_MONEY': (350000, 4200, 0, 1), 'AGENT_WITHDRAWAL': (0, 0, 100000, 1)}, rows: const []),
+        _Db(
+          types: const {'SEND_MONEY': (350000, 4200, 0, 1), 'AGENT_WITHDRAWAL': (0, 0, 100000, 1)},
+          rows: const [],
+          wd: const [(100000, null)],
+        ),
       );
       expect(find.byKey(const Key('homeCashWithdrawn')), findsOneWidget);
       expect(find.byKey(const Key('homeCostWithdrawalFees')), findsNothing);
       expect(find.bySemanticsLabel('Transaction cost, all M-Pesa, Ksh 42.00'), findsOneWidget);
       h.dispose();
     });
+  });
+
+  group('F1 leftover line (cash withdrawn, not counted)', () {
+    const one = {'SEND_MONEY': (350000, 4200, 0, 1), 'AGENT_WITHDRAWAL': (0, 2900, 100000, 1)};
+
+    testWidgets('partly spent: shows only the leftover (1,000 withdrawn, 800 linked gives 200)', (tester) async {
+      await _pump(tester, _Db(types: one, rows: const [], wd: const [(100000, '80000')]));
+      final t = tester.widgetList<Text>(find.descendant(of: find.byKey(const Key('homeCashWithdrawn')), matching: find.byType(Text)));
+      expect(t.last.data, 'Ksh 200.00');
+    });
+
+    testWidgets('fully spent: the row is hidden, the fee sub-line stays', (tester) async {
+      await _pump(tester, _Db(types: one, rows: const [], wd: const [(100000, '8000020000')]));
+      expect(find.byKey(const Key('homeCashWithdrawn')), findsNothing);
+      expect(find.byKey(const Key('homeCostWithdrawalFees')), findsOneWidget);
+    });
+
+    testWidgets('over-linked: hidden, never a negative amount', (tester) async {
+      await _pump(tester, _Db(types: one, rows: const [], wd: const [(100000, '900000')]));
+      expect(find.byKey(const Key('homeCashWithdrawn')), findsNothing);
+      expect(find.textContaining('-'), findsNothing);
+    });
+
+    testWidgets('two withdrawals add their leftovers', (tester) async {
+      await _pump(tester, _Db(types: one, rows: const [], wd: const [(100000, '100000'), (150000, '80000')]));
+      final t = tester.widgetList<Text>(find.descendant(of: find.byKey(const Key('homeCashWithdrawn')), matching: find.byType(Text)));
+      expect(t.last.data, 'Ksh 700.00');
+    });
+
+    for (final b in Brightness.values) {
+      testWidgets('${b.name} theme: label muted, amount soft, both readable (3 / 4.5 : 1 on the card)', (tester) async {
+        tester.platformDispatcher.platformBrightnessTestValue = b;
+        addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+        await _pump(tester, _Db(types: one, rows: const [], wd: const [(100000, '80000')]));
+        final p = _pal(tester);
+        final texts = tester
+            .widgetList<Text>(find.descendant(of: find.byKey(const Key('homeCashWithdrawn')), matching: find.byType(Text)))
+            .toList();
+        expect(texts.first.style!.color, p.mutedInk);
+        expect(texts.last.style!.color, p.softInk);
+        double lum(Color c) => c.computeLuminance();
+        double ratio(Color a, Color c) {
+          final x = lum(a), y = lum(c);
+          return (x > y ? x + 0.05 : y + 0.05) / (x > y ? y + 0.05 : x + 0.05);
+        }
+        expect(ratio(p.mutedInk, p.card), greaterThanOrEqualTo(4.5), reason: '${b.name} label');
+        expect(ratio(p.softInk, p.card), greaterThanOrEqualTo(4.5), reason: '${b.name} amount');
+      });
+    }
   });
 
   group('recent rows', () {
