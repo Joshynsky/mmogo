@@ -1,0 +1,726 @@
+{
+ "about": "0.2.2 item 2 slice B2: ONE case table for the Auto-record decision. Run by the Dart test test/autoread/rules/hard_rule_parity_test.dart against decideHardRule / arrivalMayRecord and by tool/kotlin_selfcheck (HardRuleSelfCheck) against HardRuleLogic.kt. Add cases; never change one to make a side pass. Raw values: paused/details null = key absent. Prefs keys are Dart keys (Kotlin adds 'flutter.'). Invented data only.",
+ "decide": [
+  {
+   "name": "equal amount records",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 50000,
+   "paused": null,
+   "details": null,
+   "expect": "record"
+  },
+  {
+   "name": "1 cent below the ceiling records",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 49999,
+   "paused": null,
+   "details": null,
+   "expect": "record"
+  },
+  {
+   "name": "1 cent above the ceiling asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 50001,
+   "paused": null,
+   "details": null,
+   "expect": "askFirst"
+  },
+  {
+   "name": "no ceiling (null) records any amount",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":null,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 99999999999,
+   "paused": null,
+   "details": null,
+   "expect": "record"
+  },
+  {
+   "name": "no ceiling (0.2.1 rule without ceil and ap keys) records",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null}",
+   "kind": "SM",
+   "amountCents": 120000,
+   "paused": null,
+   "details": null,
+   "expect": "record"
+  },
+  {
+   "name": "ceiling 1 cent, amount 1 cent records",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":1,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 1,
+   "paused": null,
+   "details": null,
+   "expect": "record"
+  },
+  {
+   "name": "ceiling 1 cent, amount 2 cents asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":1,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 2,
+   "paused": null,
+   "details": null,
+   "expect": "askFirst"
+  },
+  {
+   "name": "ceiling at the maximum, equal amount records",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":100000000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100000000,
+   "paused": null,
+   "details": null,
+   "expect": "record"
+  },
+  {
+   "name": "ceiling at the maximum, 1 cent above asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":100000000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100000001,
+   "paused": null,
+   "details": null,
+   "expect": "askFirst"
+  },
+  {
+   "name": "paused (true) asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": true,
+   "details": null,
+   "expect": "askFirst"
+  },
+  {
+   "name": "not paused (false) records",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": false,
+   "details": null,
+   "expect": "record"
+  },
+  {
+   "name": "pause key absent records",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "record"
+  },
+  {
+   "name": "pause key wrong type (text) asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": "yes",
+   "details": null,
+   "expect": "askFirst"
+  },
+  {
+   "name": "pause key wrong type (number) asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": 1,
+   "details": null,
+   "expect": "askFirst"
+  },
+  {
+   "name": "pause unreadable asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "askFirst",
+   "pausedUnreadable": true
+  },
+  {
+   "name": "details off asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": false,
+   "expect": "askFirst"
+  },
+  {
+   "name": "details on records",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": true,
+   "expect": "record"
+  },
+  {
+   "name": "details absent (default on) records",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "record"
+  },
+  {
+   "name": "details wrong type asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": "on",
+   "expect": "askFirst"
+  },
+  {
+   "name": "details unreadable asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "askFirst",
+   "detailsUnreadable": true
+  },
+  {
+   "name": "Paybill level 2 in storage asks first",
+   "rule": "{\"v\":1,\"t\":\"PB\",\"k\":\"KPLC|123456\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "PB",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "askFirst"
+  },
+  {
+   "name": "Paybill level 2, no ceiling, asks first",
+   "rule": "{\"v\":1,\"t\":\"PB\",\"k\":\"KPLC|123456\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":null,\"ap\":false}",
+   "kind": "PB",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "askFirst"
+  },
+  {
+   "name": "Pochi level 2 records",
+   "rule": "{\"v\":1,\"t\":\"PO\",\"k\":\"MAMA MBOGA\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "PO",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "record"
+  },
+  {
+   "name": "Till level 2 records",
+   "rule": "{\"v\":1,\"t\":\"BG\",\"k\":\"SAMPLE GROCER\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "BG",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "record"
+  },
+  {
+   "name": "withdrawal (no kind) is not applicable",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": null,
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "airtime (no kind) is not applicable, also paused",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": null,
+   "amountCents": 100,
+   "paused": true,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "amount 0 asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 0,
+   "paused": null,
+   "details": null,
+   "expect": "askFirst"
+  },
+  {
+   "name": "amount negative asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": -1,
+   "paused": null,
+   "details": null,
+   "expect": "askFirst"
+  },
+  {
+   "name": "amount 0 with no ceiling asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":null,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 0,
+   "paused": null,
+   "details": null,
+   "expect": "askFirst"
+  },
+  {
+   "name": "rule missing is not applicable",
+   "rule": null,
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (not JSON) is not applicable",
+   "rule": "not json",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (empty) is not applicable",
+   "rule": "",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (a JSON list) is not applicable",
+   "rule": "[1]",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (ceiling 0) is not applicable",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":0,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (ceiling above the maximum) is not applicable",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":100000001,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (ceiling with a decimal) is not applicable",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000.0,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (ap is text) is not applicable",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":\"yes\"}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (level 3) is not applicable",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":3,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (version 2) is not applicable",
+   "rule": "{\"v\":2,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (category as text) is not applicable",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":\"7\",\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (run negative) is not applicable",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":-1,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (run with a decimal) is not applicable",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":1.5,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (empty key) is not applicable",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (unknown type) is not applicable",
+   "rule": "{\"v\":1,\"t\":\"XX\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "rule corrupt (no name) is not applicable",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "version written 1.0 reads as 1 (Dart 1.0 == 1) and records",
+   "rule": "{\"v\":1.0,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "record"
+  },
+  {
+   "name": "level written 2.0 reads as 2 and records",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2.0,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "record"
+  },
+  {
+   "name": "stale hint: the rule is now Ask first, asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":1,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "askFirst"
+  },
+  {
+   "name": "stale hint: the rule is now Suggested, not applicable",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":0,\"cat\":null,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":null,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "notApplicable"
+  },
+  {
+   "name": "Ask first rule asks first even paused or details off",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":1,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": true,
+   "details": false,
+   "expect": "askFirst"
+  },
+  {
+   "name": "a rule of another kind asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "PO",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "askFirst"
+  },
+  {
+   "name": "restored-pending (ap true) at level 2 asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":true}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "askFirst"
+  },
+  {
+   "name": "level 2 with no category asks first",
+   "rule": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":null,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+   "kind": "SM",
+   "amountCents": 100,
+   "paused": null,
+   "details": null,
+   "expect": "askFirst"
+  }
+ ],
+ "mayRecord": [
+  {
+   "name": "auto hint, rule still Auto-record, equal to the ceiling: record",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}"
+   },
+   "expect": true
+  },
+  {
+   "name": "auto hint, 1 cent above the ceiling: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50001,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}"
+   },
+   "expect": false
+  },
+  {
+   "name": "Ask first hint: no (only an auto hint may record)",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"ask\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}"
+   },
+   "expect": false
+  },
+  {
+   "name": "Suggested hint (no rl): no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}"
+   },
+   "expect": false
+  },
+  {
+   "name": "stale hint: the rule category changed: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":9,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}"
+   },
+   "expect": false
+  },
+  {
+   "name": "stale hint: the rule is now Ask first: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":1,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}"
+   },
+   "expect": false
+  },
+  {
+   "name": "rule missing: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {},
+   "expect": false
+  },
+  {
+   "name": "rule corrupt: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{"
+   },
+   "expect": false
+  },
+  {
+   "name": "paused: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+    "autoread_hard_paused": true
+   },
+   "expect": false
+  },
+  {
+   "name": "pause key wrong type: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+    "autoread_hard_paused": "yes"
+   },
+   "expect": false
+  },
+  {
+   "name": "pause key false: record",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+    "autoread_hard_paused": false
+   },
+   "expect": true
+  },
+  {
+   "name": "details off: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+    "capture_identity_preference": false
+   },
+   "expect": false
+  },
+  {
+   "name": "details wrong type: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}",
+    "capture_identity_preference": "x"
+   },
+   "expect": false
+  },
+  {
+   "name": "Paybill level 2 in storage: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"payBill\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"PB\",\"rk\":\"KPLC|123456\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.PB.S1BMQ3wxMjM0NTY": "{\"v\":1,\"t\":\"PB\",\"k\":\"KPLC|123456\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}"
+   },
+   "expect": false
+  },
+  {
+   "name": "kind of the message differs from the hint: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"BG\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.BG.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"BG\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}"
+   },
+   "expect": false
+  },
+  {
+   "name": "withdrawal: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"agentWithdrawal\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}"
+   },
+   "expect": false
+  },
+  {
+   "name": "airtime: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"airtime\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}"
+   },
+   "expect": false
+  },
+  {
+   "name": "rule stored under the key belongs to another person: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0799999999\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}"
+   },
+   "expect": false
+  },
+  {
+   "name": "no category offered: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}"
+   },
+   "expect": false
+  },
+  {
+   "name": "amount 0: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":0,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":null,\"ap\":false}"
+   },
+   "expect": false
+  },
+  {
+   "name": "restored-pending rule: no",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":true}"
+   },
+   "expect": false
+  },
+  {
+   "name": "Till with a non-ASCII name: record (same storage key on both sides)",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"buyGoods\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"BG\",\"rk\":\"MAMA MBOGA Ñ\",\"sg\":[7]}",
+   "prefs": {
+    "autoread_rule_v1.BG.TUFNQSBNQk9HQSDDkQ": "{\"v\":1,\"t\":\"BG\",\"k\":\"MAMA MBOGA Ñ\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}"
+   },
+   "expect": true
+  },
+  {
+   "name": "first whole category id is used (a text entry is skipped)",
+   "item": "{\"id\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\"heldAt\":1764000000000,\"flagged\":false,\"code\":\"QWE1R2T3Y4\",\"type\":\"sendMoney\",\"amountCents\":50000,\"costCents\":700,\"label\":\"JANE DOE\",\"phone\":\"0712345678\",\"account\":null,\"agent\":null,\"other\":false,\"occurredAt\":1000,\"rl\":\"auto\",\"rc\":\"SM\",\"rk\":\"0712345678\",\"sg\":[\"x\",7]}",
+   "prefs": {
+    "autoread_rule_v1.SM.MDcxMjM0NTY3OA": "{\"v\":1,\"t\":\"SM\",\"k\":\"0712345678\",\"name\":\"Jane\",\"lv\":2,\"cat\":7,\"run\":0,\"runCat\":null,\"created\":1764000000000,\"changed\":1764000000000,\"lastRecorded\":null,\"ceil\":50000,\"ap\":false}"
+   },
+   "expect": true
+  }
+ ],
+ "ruleKey": [
+  {
+   "type": "SM",
+   "key": "0712345678",
+   "storageKey": "autoread_rule_v1.SM.MDcxMjM0NTY3OA"
+  },
+  {
+   "type": "PB",
+   "key": "KPLC|123456",
+   "storageKey": "autoread_rule_v1.PB.S1BMQ3wxMjM0NTY"
+  },
+  {
+   "type": "BG",
+   "key": "MAMA MBOGA Ñ",
+   "storageKey": "autoread_rule_v1.BG.TUFNQSBNQk9HQSDDkQ"
+  },
+  {
+   "type": "PO",
+   "key": "ab",
+   "storageKey": "autoread_rule_v1.PO.YWI"
+  },
+  {
+   "type": "PO",
+   "key": "a",
+   "storageKey": "autoread_rule_v1.PO.YQ"
+  }
+ ],
+ "kindOfSource": [
+  {
+   "source": "sendMoney",
+   "kind": "SM"
+  },
+  {
+   "source": "payBill",
+   "kind": "PB"
+  },
+  {
+   "source": "buyGoods",
+   "kind": "BG"
+  },
+  {
+   "source": "pochi",
+   "kind": null
+  },
+  {
+   "source": "agentWithdrawal",
+   "kind": null
+  },
+  {
+   "source": "airtime",
+   "kind": null
+  }
+ ]
+}

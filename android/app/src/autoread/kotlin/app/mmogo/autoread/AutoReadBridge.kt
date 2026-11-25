@@ -44,6 +44,8 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
 
     init {
         current = this
+        // 0.2.2 (B2c): Change category on an Auto-record alert keeps the item for the user (cold start).
+        HardRuleArrival.dropOnChange(activity, activity.intent)
     }
 
     private val store get() = AutoReadStores.held(activity)
@@ -230,6 +232,7 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
     private fun handleNewIntent(intent: Intent) {
         try {
             activity.intent = intent
+            HardRuleArrival.dropOnChange(activity, intent) // before the app's import can run
             val id = Notifier.heldIdFrom(intent)
             val action = launchActionOf(intent)
             if (id != null) {

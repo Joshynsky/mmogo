@@ -74,7 +74,10 @@ extension RealWaitingAutoRecord on RealWaitingRepository {
         if (cb != null) {
           cb(recorded);
         } else {
-          showQueuedYesToasts(recorded, undoQueuedYes);
+          showQueuedYesToasts([for (final r in recorded) if (!r.automatic) r], undoQueuedYes);
+          // 0.2.2 B2d: rows Auto-record wrote (no tap); Undo = the same soft delete, and the ledger hook drops
+          // the person to Suggested because the row is marked recorded_automatically (S-3).
+          showAutoArrivalToasts([for (final r in recorded) if (r.automatic) r], undoQueuedYes);
         }
       }
     } catch (_) {}

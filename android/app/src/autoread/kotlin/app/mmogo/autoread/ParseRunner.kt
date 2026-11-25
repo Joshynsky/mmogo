@@ -125,17 +125,27 @@ object ParseRunner {
         }
     }
 
-    private fun finish(job: Job, code: String, waiting: Int, queuedCents: Long? = null, askCategoryId: Long? = null) {
+    private fun finish(job: Job, code: String, waiting: Int, queuedCents: Long? = null, dartAskCategoryId: Long? = null) {
         if (job.finished) return
         job.finished = true
         val ctx = job.ctx
         try {
             job.watchdog?.let { main.removeCallbacks(it) }
             when (ParsePolicy.effectOf(ParsePolicy.outcomeOf(code))) {
-                ParsePolicy.Effect.SHOW_PARSED ->
-                    // A freshly parsed item whose person is Ask first: ask the question; anything else: the plain Parsed line.
-                    if (askCategoryId != null && code == ParsePolicy.Outcome.PARSED.code) AskNotifier.postAsk(ctx, job.id, askCategoryId)
-                    else ParseNotifier.postParsed(ctx, job.id, waiting, queuedCents)
+                ParsePolicy.Effect.SHOW_PARSED -> {
+                    val parsed = code == ParsePolicy.Outcome.PARSED.code
+                    // 0.2.2 (B2c): an Auto-record person is decided again HERE from the stored values (fail closed,
+                    // only behind HardRuleLogic.AUTO_RECORD_LIVE): record = the automatic mark and the queued alert.
+                    if (parsed && HardRuleArrival.queueIfAuto(ctx, job.id, System.currentTimeMillis())) {
+                        HardRuleArrival.postQueued(ctx, job.id)
+                    } else {
+                        // An `auto` item Kotlin did not record asks like an Ask first one (its own hint category).
+                        val askCategoryId = dartAskCategoryId ?: if (parsed) HardRuleArrival.autoHintCategory(ctx, job.id) else null
+                        // A freshly parsed item whose person is Ask first: ask the question; anything else: the plain Parsed line.
+                        if (askCategoryId != null && code == ParsePolicy.Outcome.PARSED.code) AskNotifier.postAsk(ctx, job.id, askCategoryId)
+                        else ParseNotifier.postParsed(ctx, job.id, waiting, queuedCents)
+                    }
+                }
                 ParsePolicy.Effect.SHOW_COULD_NOT_READ -> ParseNotifier.postCouldNotRead(ctx, job.id)
                 ParsePolicy.Effect.CANCEL -> Notifier.cancel(ctx, job.id)
                 ParsePolicy.Effect.LEAVE ->

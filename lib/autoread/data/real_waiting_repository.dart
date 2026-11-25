@@ -48,6 +48,8 @@ import '../model/held_description.dart';
 import '../model/waiting_item.dart';
 import '../rules/prefs_undone_codes.dart' show PrefsUndoneCodes;
 import '../rules/undone_codes.dart' show UndoneCodes;
+import 'hard_rule_arrival.dart';
+import 'hard_rule_arrival_toast.dart';
 import 'queued_yes.dart';
 import 'queued_yes_toast.dart';
 import '../model/waiting_repository.dart';
@@ -102,7 +104,13 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
     UndoneCodes? undoneCodes,
     void Function(List<QueuedYesRecorded> recorded)? onQueuedYes,
     bool queuedYes = true,
+    AutoMarks? autoMarks,
+    Future<bool> Function(WaitingItem item)? autoRecheck,
+    bool? autoRecordLive,
   })  : _queuedYesOn = queuedYes,
+        _autoMarks = autoMarks,
+        _autoRecheck = autoRecheck,
+        _autoLive = autoRecordLive,
         _yesMarks = yesMarks,
         _undoneCodes = undoneCodes,
         _onQueuedYes = onQueuedYes,
@@ -146,12 +154,23 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
   final YesMarks? _yesMarks;
   final UndoneCodes? _undoneCodes;
   final void Function(List<QueuedYesRecorded> recorded)? _onQueuedYes;
+
+  // 0.2.2 item 2 (B2d): an Auto-record arrival is the same import with an AUTOMATIC mark, re-checked from fresh
+  // preferences (hard_rule_arrival.dart) and written through the same save, then marked recorded_automatically.
+  // Null = the real stores; [_autoLive] null = autoRecordLive (false: automatic marks are dropped unrecorded).
+  final AutoMarks? _autoMarks;
+  final Future<bool> Function(WaitingItem item)? _autoRecheck;
+  final bool? _autoLive;
   late final QueuedYesImporter _queuedYes = QueuedYesImporter(
     marks: _yesMarks ?? PrefsYesMarks(),
     undone: _undoneCodes ?? PrefsUndoneCodes(),
     categoryActive: _categoryActive,
     record: _saveInner,
     now: _now,
+    autoMarks: _autoMarks ?? PrefsAutoMarks(),
+    autoRecheck: _autoRecheck ?? HardRuleRecheck().passes,
+    markAutomatic: _markAutomatic,
+    live: _autoLive,
   );
   Map<int, String> _namesWritten = const {};
 

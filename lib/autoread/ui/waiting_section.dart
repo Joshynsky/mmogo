@@ -16,6 +16,7 @@ import '../model/rule_hint.dart';
 import '../model/waiting_item.dart';
 import 'category_choices.dart';
 import 'decision_item.dart';
+import 'levels/hard_rule_confirm_dialog.dart';
 import 'notifications/ask_first_row.dart';
 import 'notifications/notifications_rule_copy.dart';
 import 'notifications/recorded_auto_section.dart';
@@ -241,6 +242,14 @@ class WaitingSection extends StatelessWidget {
         onConfirm: (o) async {
           if (!await c.confirm(o)) PillToast.show(kSuggestionNotSaved);
         },
+        // U2: Auto-record asks first (C0 dialog, no ceiling), then the controller saves and shows the notice.
+        onAutoRecord: (o) async {
+          final cat = actions.categoryNameOf?.call(o.categoryId);
+          if (cat == null || !offersAutoRecord(o, cat)) return;
+          if (!await showHardRuleConfirm(context, name: offerWho(o), category: cat)) return;
+          if (!await c.confirmAuto(o)) PillToast.show(kSuggestionNotSaved);
+        },
+        times: c.suggestAfter,
       );
 
   @override

@@ -42,5 +42,10 @@ fun main() {
     println("AskFirst (0.2.1): " + (if (ask.isEmpty()) "ALL PASS" else "FAILS=" + ask.size))
     failed += ask.size
 
+    val hard = HardRuleSelfCheck.runAll(System.getProperty("mmogo.parity"))
+    hard.forEach { println("  FAIL: $it") }
+    println("HardRule parity (0.2.2 B2, " + HardRuleSelfCheck.count + " checks): " + (if (hard.isEmpty()) "ALL PASS" else "FAILS=" + hard.size))
+    failed += hard.size
+
     if (failed != 0) System.exit(1)
 }

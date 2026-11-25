@@ -102,7 +102,8 @@ internal object AskStore {
     /** The existing "Record receiver details" switch (Dart: AppPrefs.keyCaptureIdentityPreference); absent = ON. */
     const val DETAILS_KEY = "flutter.capture_identity_preference"
 
-    private val ASK = Regex("\"rl\"\\s*:\\s*\"ask\"")
+    // 0.2.2: an `auto` hint that Kotlin did not record shows the same question, so its Yes is valid too.
+    private val ASK = Regex("\"rl\"\\s*:\\s*\"(ask|auto)\"")
     private val FIRST_CATEGORY = Regex("\"sg\"\\s*:\\s*\\[\\s*(\\d+)")
 
     fun yesKey(heldId: String): String = YES_PREFIX + heldId

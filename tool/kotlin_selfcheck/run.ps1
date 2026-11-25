@@ -29,12 +29,14 @@ $k = Join-Path $root 'android\app\src\autoread\kotlin\app\mmogo\autoread'
 $sc = $PSScriptRoot
 $src = @(
   (Join-Path $k 'HeldId.kt'), (Join-Path $k 'HeldStore.kt'), (Join-Path $k 'NotifierPure.kt'), (Join-Path $k 'AlertText.kt'),
-  (Join-Path $k 'SmsReceiverLogic.kt'), (Join-Path $k 'BridgeLogic.kt'), (Join-Path $k 'ConsentGate.kt'), (Join-Path $k 'ParsePolicy.kt'), (Join-Path $k 'AskFirstLogic.kt'),
-  (Join-Path $sc 'HeldStoreSelfCheck.kt'), (Join-Path $sc 'NotifierSelfCheck.kt'), (Join-Path $sc 'SmsReceiverSelfCheck.kt'), (Join-Path $sc 'BridgeSelfCheck.kt'), (Join-Path $sc 'ParseSelfCheck.kt'), (Join-Path $sc 'AlertTextSelfCheck.kt'), (Join-Path $sc 'AskFirstSelfCheck.kt'), (Join-Path $sc 'SelfCheckMain.kt'))
+  (Join-Path $k 'SmsReceiverLogic.kt'), (Join-Path $k 'BridgeLogic.kt'), (Join-Path $k 'ConsentGate.kt'), (Join-Path $k 'ParsePolicy.kt'), (Join-Path $k 'AskFirstLogic.kt'), (Join-Path $k 'HardRuleLogic.kt'),
+  (Join-Path $sc 'HeldStoreSelfCheck.kt'), (Join-Path $sc 'NotifierSelfCheck.kt'), (Join-Path $sc 'SmsReceiverSelfCheck.kt'), (Join-Path $sc 'BridgeSelfCheck.kt'), (Join-Path $sc 'ParseSelfCheck.kt'), (Join-Path $sc 'AlertTextSelfCheck.kt'), (Join-Path $sc 'AskFirstSelfCheck.kt'), (Join-Path $sc 'HardRuleSelfCheck.kt'), (Join-Path $sc 'SelfCheckMain.kt'))
 foreach ($s in $src) { if (-not (Test-Path $s)) { Write-Host "MISSING file: $s"; exit 2 } }
 
 New-Item -ItemType Directory -Force $Out | Out-Null
 & java -cp $compiler org.jetbrains.kotlin.cli.jvm.K2JVMCompiler -no-stdlib -no-reflect -cp "$stdlib;$json" -d $Out @src 2>&1 | Where-Object { $_ -notmatch '^warning:' }
 if ($LASTEXITCODE -ne 0) { Write-Host 'COMPILE FAILED'; exit 1 }
-& java -cp "$Out;$stdlib;$json" app.mmogo.autoread.SelfCheckMainKt
+# 0.2.2 B2: the shared Auto-record case table (the Dart test runs the same file).
+$parity = Join-Path $root 'test\autoread\hard_rule_parity_cases.json'
+& java "-Dmmogo.parity=$parity" -cp "$Out;$stdlib;$json" app.mmogo.autoread.SelfCheckMainKt
 exit $LASTEXITCODE
