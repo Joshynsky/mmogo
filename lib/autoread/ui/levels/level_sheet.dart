@@ -20,9 +20,15 @@ import 'hard_rule_confirm_dialog.dart';
 import 'hard_rule_copy.dart';
 import 'hard_rule_ports.dart' show autoRecordUi;
 import 'level_sheet_ceiling.dart';
-import 'level_filter_row.dart' show levelTagText;
 import 'levels_copy.dart';
 import 'levels_person_row.dart';
+
+/// The words of a level tag on the 0.2.1 sheet (two levels). Moved here from the removed
+/// level_filter_row.dart (PM D3, I1): the sheet is its only user.
+String levelTagText(RuleLevel l) => switch (l) {
+      RuleLevel.askFirst => kLevelAskFirst,
+      _ => kLevelSuggested,
+    };
 
 /// Levels the sheet offers, in order.
 const List<RuleLevel> kSheetLevels = [RuleLevel.suggested, RuleLevel.askFirst];

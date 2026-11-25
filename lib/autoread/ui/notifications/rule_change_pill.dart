@@ -32,8 +32,8 @@ const Duration kRuleChangePillShortHold = Duration(milliseconds: 2500);
 /// Stage 2 stays at least this long (the app's toast minimum).
 const Duration kRuleChangePillLongHold = kPillToastMinDuration;
 
-/// The real notice: draws the one pill. Not installed anywhere yet (slice I1 passes it to LevelsDeps and the
-/// suggestions controller).
+/// The real notice: draws the one pill. Installed by RulesWiring.install (I1) as LevelsDeps.notice and as the
+/// suggestions controller's notice.
 class RuleChangePill implements RuleChangeNotice {
   const RuleChangePill();
 

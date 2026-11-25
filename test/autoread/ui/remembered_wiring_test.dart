@@ -101,15 +101,6 @@ Future<void> _openTab2(WidgetTester t) async {
   await t.pumpAndSettle();
   await t.tap(find.text('Suggest and auto-record'));
   await t.pumpAndSettle();
-  await _showAirtime(t);
-}
-
-/// Send Money is the open type by default; the airtime switches sit under the Airtime chip (when chips show).
-Future<void> _showAirtime(WidgetTester t) async {
-  final chip = find.byKey(const Key('typeChipAirtime'));
-  if (chip.evaluate().isEmpty) return;
-  await t.tap(chip);
-  await t.pumpAndSettle();
 }
 
 void main() {
@@ -184,7 +175,6 @@ void main() {
       arguments: const RememberedRouteArgs(openAutoRecord: true),
     );
     await t.pumpAndSettle();
-    await _showAirtime(t);
     expect(find.byKey(const Key('autoRecordMyself')).hitTestable(), findsOneWidget);
   });
 

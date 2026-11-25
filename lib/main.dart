@@ -70,7 +70,8 @@ Future<void> main() async {
     // 0.2.1 rules (Suggested + Ask first): the rules store, history, offers and the Settings and
     // Remembered rows are joined to the app here (preferences only; the database opens later).
     RulesWiring.install();
-    // 0.2.2 item 2 (B1): rules go into backups and come back on restore (both seams, one call).
+    // 0.2.2 item 2 (B1): rules go into backups and come back on restore (both seams, one call), and the
+    // restore result's rule notes (I1, U6) with them, whatever the Auto-record flag says.
     RulesWiring.installBackupRules();
   }
   // 0.2.0 S8: Paid to groups a named Paybill by name (accounts paged in its sheet) in the debug flavor only.
@@ -169,8 +170,9 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
       );
       _waiting = _realWaiting;
       AutoReadRuntime.airtime = _realWaiting!.airtime; // the ONE switch controller: Notifications card, Remembered tab, Settings row
-      // A Replace restore empties the shown trail AND sends every person back to Suggested (rules wiped,
-      // history summary rebuilt). The hook is CHAINED, never overwritten. Merge never reaches it.
+      // A Replace restore empties the shown trail AND first sends every person back to Suggested (rules
+      // wiped, history summary rebuilt); the restore's rules step (B1) then puts the backup file's rules
+      // back (none from a 0.2.1 file). The hook is CHAINED, never overwritten. Merge never reaches it.
       final priorClear = AirtimeTrailRestoreHook.clearMemory;
       AirtimeTrailRestoreHook.clearMemory =
           RulesWiring.restoreHook(prior: priorClear, clearTrail: () => _realWaiting?.airtime.clearTrail());

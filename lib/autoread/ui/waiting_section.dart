@@ -2,12 +2,15 @@
 /// Autoread build only: shared code reaches it inside `if (kAutoReadCompiled)`.
 /// Sorting and counts come from `waiting_logic.dart`; nothing is re-implemented.
 /// Rows take callbacks only (no repository); the page wires them.
+/// 0.2.2 (I1): while the Auto-record screens are on and a pause port exists, the amber paused banner sits
+/// at the top of To do (mock ctl-a-todo), and an Ask first row gets its hint so the paused tag can show.
 library;
 
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
 import '../../data/db/analytics_dao.dart' show AnalyticsTransactionRow;
+import '../../ui/widgets/collapsing_padding.dart';
 import '../../ui/widgets/pill_toast.dart';
 
 import '../logic/airtime_auto.dart';
@@ -17,6 +20,9 @@ import '../model/waiting_item.dart';
 import 'category_choices.dart';
 import 'decision_item.dart';
 import 'levels/hard_rule_confirm_dialog.dart';
+import 'levels/hard_rule_paused_banner.dart';
+import 'levels/hard_rule_ports.dart' show HardRulePausePort, autoRecordUi;
+import 'levels/levels_deps.dart' show LevelsDeps;
 import 'notifications/ask_first_row.dart';
 import 'notifications/notifications_rule_copy.dart';
 import 'notifications/recorded_auto_section.dart';
@@ -126,6 +132,7 @@ class WaitingSection extends StatelessWidget {
     required this.now,
     this.actions = const WaitingActions(),
     this.focusId,
+    this.pause,
   });
 
   final List<WaitingItem> waiting;
@@ -134,6 +141,10 @@ class WaitingSection extends StatelessWidget {
 
   /// A row to scroll into view when it is listed (a phone-notification tap).
   final String? focusId;
+
+  /// The "Pause all Auto-record" switch (0.2.2) for the To do banner and the rows' paused tag; null = the
+  /// app's one ([LevelsDeps.instance]); none = no banner and no tag.
+  final HardRulePausePort? pause;
 
   /// The Ask first hint and category name for [w], or null when it is a normal row.
   (RuleHint, String)? _ask(WaitingItem w) {
@@ -163,6 +174,8 @@ class WaitingSection extends StatelessWidget {
             onChange: () => actions.onAskFirstChange!(w, hint),
             onLater: () => actions.onAskFirstLater!(w, hint),
             onYes: () => actions.onAskFirstYes!(w, hint),
+            hint: hint,
+            pause: pause,
           ),
         ),
       );
@@ -254,6 +267,19 @@ class WaitingSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final todo = _todo();
+    final port = pause ?? LevelsDeps.instance?.pause;
+    if (!autoRecordUi || port == null) return todo;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      CollapsingPadding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: HardRulePausedBanner(key: const Key('todoPausedBanner'), port: port, bulk: LevelsDeps.instance?.bulk),
+      ),
+      todo,
+    ]);
+  }
+
+  Widget _todo() {
     // It listens to the choosing ids so a row parsed on this page turns into a
     // choose row.
     return ListenableBuilder(

@@ -5,8 +5,9 @@
 /// footer and the restore review line, which the integration slice fills. With Record receiver details OFF
 /// the tab explains itself (Open Settings) and draws no slots. Composition only: every part is its own
 /// widget in this folder. Without [LevelsDeps] (no rules store wired) only the airtime switches show.
-/// The level sheet's save lives here (`_save`): Suggested KEEPS the rule (PM 25-11), the ceiling is
-/// forwarded, and the one notice (deps.notice) follows a successful save while the Auto-record screens are on.
+/// The level sheet's save: `_save` delegates to saveLevelChoice (level_sheet_open.dart): Suggested KEEPS the
+/// rule (PM 25-11), the ceiling is forwarded, and the one notice (deps.notice) follows a successful save while
+/// the Auto-record screens are on.
 library;
 
 import 'dart:async';
@@ -19,13 +20,13 @@ import '../../../ui/shell/routes.dart' show Routes;
 import '../../../ui/theme/app_colors.dart';
 import '../../../ui/widgets/pill_toast.dart';
 import '../../logic/airtime_auto.dart';
-import '../../logic/phone_mask.dart' show nameWithMask;
 import '../../rules/rule_cleanup.dart';
 import '../../rules/rule_model.dart';
 import 'airtime_switches.dart';
 import 'hard_rule_copy.dart';
 import 'hard_rule_ports.dart' show autoRecordUi;
 import 'level_sheet.dart';
+import 'level_sheet_open.dart';
 import 'levels_copy.dart';
 import 'levels_deps.dart';
 import 'levels_groups.dart';
@@ -42,13 +43,14 @@ class LevelsSlots {
   /// Under the helper line, above the search.
   final WidgetBuilder? pauseCard;
 
-  /// Pinned at the top of the tab, above the list.
+  /// First in the tab, above the list (I1: it scrolls with the list, so a large text size can never let
+  /// the banner and the review line fill the screen).
   final WidgetBuilder? pausedBanner;
 
   /// Pinned at the bottom of the tab.
   final WidgetBuilder? resetFooter;
 
-  /// Pinned at the top of the tab, under the paused banner.
+  /// At the top of the tab, under the paused banner (scrolls with the list, as the banner).
   final WidgetBuilder? reviewLine;
 }
 
@@ -182,38 +184,13 @@ class _LevelsTabState extends State<LevelsTab> {
     final gen = ++_gen;
     try {
       final off = widget.detailsOn != null && !await widget.detailsOn!();
-      final cats = {for (final c in await d.categories.categories()) if (int.tryParse(c.id) != null) int.parse(c.id): c.name};
+      final cats = await levelCategoryNames(d);
       final rules = await d.store.all();
       final known = d.known == null ? const <KnownPerson>[] : await d.known!();
       final knownPochi = {for (final k in known) if (k.type == ReceiverType.pochi) k.key};
       final byId = <String, LevelPerson>{};
-      Future<LevelPerson> make(ReceiverType t, String key, String name, ReceiverRule? r) async {
-        if (r != null && r.level != RuleLevel.suggested) {
-          final id = r.categoryId;
-          return LevelPerson(
-              type: t,
-              key: key,
-              name: name,
-              level: r.level,
-              categoryId: id,
-              categoryNames: [if (id != null && cats[id] != null) cats[id]!],
-              ceilingCents: r.ceilingCents,
-              autoPending: r.autoPending);
-        }
-        List<int>? top;
-        try {
-          top = await d.history.topTwo(t, key);
-        } catch (_) {}
-        final ids = top ?? const <int>[];
-        return LevelPerson(
-            type: t,
-            key: key,
-            name: name,
-            level: RuleLevel.suggested,
-            topIds: ids,
-            categoryNames: [for (final i in ids) if (cats[i] != null) cats[i]!],
-            autoPending: r?.autoPending ?? false);
-      }
+      Future<LevelPerson> make(ReceiverType t, String key, String name, ReceiverRule? r) =>
+          buildLevelPerson(d, t, key, name, r, cats);
 
       final ruleBy = {for (final r in rules) '${r.type.code}.${r.key}': r};
       for (final r in rules) {
@@ -241,38 +218,11 @@ class _LevelsTabState extends State<LevelsTab> {
     }
   }
 
-  /// The name the sheet and the notice use (masked number for Send Money).
-  static String _who(LevelPerson x) => x.type == ReceiverType.sendMoney ? nameWithMask(x.name, x.key) : x.name;
-
-  /// The level sheet's save. Suggested keeps the rule (level Suggested, stored category passed explicitly,
-  /// ceiling and pending mark cleared by setLevel); nobody without a rule gets one for Suggested. Ask first
-  /// and Auto-record pass the chosen category (stored one when none) and the ceiling (Auto-record only).
-  Future<LevelSaveResult> _save(LevelPerson x, RuleLevel level, int? cat, int? ceilingCents) async {
-    final d = widget.deps!;
-    final ceiling = level == RuleLevel.autoRecord ? ceilingCents : null;
-    try {
-      final stored = await d.store.get(x.type, x.key);
-      final bool ok;
-      if (level == RuleLevel.suggested) {
-        // No rule = already Suggested: nothing is saved, so no notice either.
-        if (stored == null) return LevelSaveResult.ok;
-        ok = await d.store.setLevel(x.type, x.key,
-            name: x.name, level: RuleLevel.suggested, categoryId: stored.categoryId, at: d.now());
-      } else {
-        ok = await d.store.setLevel(x.type, x.key,
-            name: x.name, level: level, categoryId: cat ?? stored?.categoryId, ceilingCents: ceiling, at: d.now());
-      }
-      if (!ok) return LevelSaveResult.capReached;
-    } catch (_) {
-      return LevelSaveResult.failed;
-    }
-    if (_hard) {
-      try {
-        d.notice.show(_who(x), level, ceiling, level == RuleLevel.autoRecord ? () => _changeCeiling(x) : null);
-      } catch (_) {} // the notice never undoes a stored change
-    }
-    return LevelSaveResult.ok;
-  }
+  /// The level sheet's save (level_sheet_open.dart, shared with the offer pill): Suggested keeps the rule,
+  /// the ceiling is forwarded, the notice follows while the Auto-record screens are on, and its Change
+  /// ceiling opens this person's sheet again here, with the field focused.
+  Future<LevelSaveResult> _save(LevelPerson x, RuleLevel level, int? cat, int? ceilingCents) =>
+      saveLevelChoice(widget.deps!, x, level, cat, ceilingCents, notify: _hard, onChangeCeiling: () => _changeCeiling(x));
 
   /// The pill's "Change ceiling": the person's sheet again, with the field focused.
   void _changeCeiling(LevelPerson before) {
@@ -313,6 +263,8 @@ class _LevelsTabState extends State<LevelsTab> {
         if (!on)
           ..._detailsOffBody(p)
         else ...[
+          if (slots.pausedBanner != null) slots.pausedBanner!(context),
+          if (slots.reviewLine != null) slots.reviewLine!(context),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
             child: Text(_hard ? kHardPageHelper : kLevelsHelper,
@@ -345,8 +297,6 @@ class _LevelsTabState extends State<LevelsTab> {
       ],
     );
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (on && slots.pausedBanner != null) slots.pausedBanner!(context),
-      if (on && slots.reviewLine != null) slots.reviewLine!(context),
       Expanded(child: list),
       if (on && slots.resetFooter != null) slots.resetFooter!(context),
     ]);

@@ -1,8 +1,8 @@
 /// §AUTOREAD.RULE_BACKUP_SOURCE - AUTOREAD RULES to backup adapter (0.2.2 item 2, S-4a): the
 /// export's `BackupRulesSource` over a [RuleStore]. Plain data out (kind code, key, name, level,
 /// category DATABASE id, ceiling, marker): `lib/data/backup` turns the id into a seed key or name.
-/// Empty while "Record receiver details" is OFF (the real store answers empty then). NOT wired
-/// into the app yet: until a later slice passes it to `BackupService(rules:)`, no rule travels.
+/// Empty while "Record receiver details" is OFF (the real store answers empty then). Wired since
+/// 0.2.2 B1: `RulesWiring.backupSource` reads it for every `BackupService(rules:)` (RuleBackupSeams).
 library;
 
 import '../../data/backup/backup_rules.dart';
