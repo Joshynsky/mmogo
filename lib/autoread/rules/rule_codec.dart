@@ -1,5 +1,5 @@
-/// AUTOREAD RULES codec: one rule as JSON `{v,t,k,name,lv,cat,run,runCat,
-/// created,changed,lastRecorded}`. A corrupt value decodes to null (ignored).
+/// §AUTOREAD.RULE_CODEC - AUTOREAD RULES codec: one rule as JSON `{v,t,k,name,lv,cat,run,runCat,
+/// created,changed,lastRecorded,ceil?,ap?}`. A corrupt value decodes to null (ignored).
 library;
 
 import 'dart:convert';
@@ -25,6 +25,8 @@ String encodeRule(ReceiverRule r) => jsonEncode(<String, Object?>{
       'created': r.created.millisecondsSinceEpoch,
       'changed': r.changed.millisecondsSinceEpoch,
       'lastRecorded': r.lastRecorded?.millisecondsSinceEpoch,
+      'ceil': r.ceilingCents,
+      'ap': r.autoPending,
     });
 
 /// Null for anything that is not a well-formed version 1 rule.
@@ -49,6 +51,10 @@ ReceiverRule? decodeRule(Object? raw) {
     if ((cat != null && cat is! int) || (runCat != null && runCat is! int) || (last != null && last is! int)) {
       return null;
     }
+    // Optional keys (absent in 0.2.1 rules). A present but bad value = corrupt.
+    final ceil = m['ceil'], ap = m['ap'];
+    if (ceil != null && (ceil is! int || !isValidCeilingCents(ceil))) return null;
+    if (ap != null && ap is! bool) return null;
     return ReceiverRule(
       type: type,
       key: k,
@@ -60,6 +66,8 @@ ReceiverRule? decodeRule(Object? raw) {
       created: DateTime.fromMillisecondsSinceEpoch(created, isUtc: true),
       changed: DateTime.fromMillisecondsSinceEpoch(changed, isUtc: true),
       lastRecorded: last == null ? null : DateTime.fromMillisecondsSinceEpoch(last as int, isUtc: true),
+      ceilingCents: ceil as int?,
+      autoPending: ap == true,
     );
   } catch (_) {
     return null;

@@ -6,9 +6,10 @@ import 'backup_limits.dart';
 /// Writes the backup file: ONE compact UTF-8 JSON object, no encryption.
 ///
 /// ```
-/// {"app":"mmogo","format_version":1,"schema_version":4,"created_at":...,
+/// {"app":"mmogo","format_version":1,"schema_version":9,"created_at":...,
 ///  "counts":{...},"classifications":[...],"transactions":[...],
-///  "counterparty_map":[...],"fuliza_events":[...],"prefs":{...},
+///  "counterparty_map":[...],"fuliza_events":[...],"receiver_rules":[...],
+///  "prefs":{...},
 ///  "end":"mmogo-v1"}
 /// ```
 /// `app` is deliberately the FIRST key and the output is compact, so the
@@ -28,6 +29,7 @@ class BackupCodec {
     required List<Map<String, Object?>> transactions,
     required List<Map<String, Object?>> counterpartyMap,
     List<Map<String, Object?>> fulizaEvents = const [],
+    List<Map<String, Object?>> receiverRules = const [],
     Map<String, Object?> prefs = const {},
   }) {
     final envelope = <String, Object?>{
@@ -40,6 +42,7 @@ class BackupCodec {
         'transactions': transactions.length,
         'counterparty_map': counterpartyMap.length,
         'fuliza_events': fulizaEvents.length,
+        'receiver_rules': receiverRules.length,
       },
       'classifications': [
         for (final r in classifications) _pick(r, kBackupClassificationKeys),
@@ -52,6 +55,9 @@ class BackupCodec {
       ],
       'fuliza_events': [
         for (final r in fulizaEvents) _pick(r, kBackupFulizaKeys),
+      ],
+      'receiver_rules': [
+        for (final r in receiverRules) _pick(r, kBackupRuleKeys),
       ],
       'prefs': Map<String, Object?>.of(prefs),
       'end': kBackupEndMarker,

@@ -8,6 +8,7 @@ import 'backup_service.dart';
 import 'backup_settings.dart';
 import 'backup_validator.dart';
 import 'restore_plan.dart';
+import 'restore_rules.dart';
 import 'restore_steps.dart';
 import 'restore_trail_hook.dart';
 import 'restore_types.dart';
@@ -16,6 +17,7 @@ import 'safety_copy_store.dart';
 import 'skipped_row_describer.dart';
 
 export 'backup_validator.dart' show RestoreRejected, RestoreRejectReason;
+export 'restore_rules.dart' show RuleRestoreSink, RulesRestoreOutcome, RulesRestorePlan, RestoredRule;
 export 'restore_steps.dart' show RestoreTimerFactory;
 export 'restore_types.dart';
 export 'skipped_row_describer.dart';
@@ -54,7 +56,9 @@ class RestoreService {
     Duration slowAfter = const Duration(seconds: 10),
     RestoreTimerFactory? timer,
     Future<void> Function()? afterReplace,
-  })  : _afterReplace = afterReplace ?? AirtimeTrailRestoreHook.afterReplace,
+    RuleRestoreSink? rules,
+  })  : _rules = rules,
+        _afterReplace = afterReplace ?? AirtimeTrailRestoreHook.afterReplace,
         _timer = timer,
         _slowAfter = slowAfter,
         _gate = gate ?? DataOpGate.instance,
@@ -77,6 +81,11 @@ class RestoreService {
   /// Runs after a COMMITTED Replace (and after the Undo of one): the 24 h
   /// "Recorded automatically" trail goes. Never throws (see the hook).
   final Future<void> Function() _afterReplace;
+
+  /// Writes the file's `receiver_rules` into the phone's rule storage AFTER the commit and after
+  /// [_afterReplace] (so the hook's wipe comes first, then the import). Null = rules not wired:
+  /// left as the hook leaves them. Never throws.
+  final RuleRestoreSink? _rules;
 
   /// A step still running after this long emits a `slow` event (BP2: 10 s).
   final Duration _slowAfter;
@@ -199,10 +208,12 @@ class RestoreService {
     final tally = await steps.run(
         RestoreStep.writing, () => _write(db, file, mode, copy?.live));
     if (mode == RestoreMode.replace) await _afterReplace();
+    final rules = await restoreRulesAfterCommit(sink: _rules, db: db, file: file, mode: mode);
     final settings = await _applySettings(file.prefs, onlyIfUnset: mode == RestoreMode.merge);
     return RestoreResult(
       mode: mode,
       tally: tally,
+      rules: rules,
       settings: settings,
       safetyCopyKept: mode == RestoreMode.replace,
       lost: copy?.lost ?? SkippedSummary.empty,
@@ -255,6 +266,7 @@ class RestoreService {
     final tally = await steps.run(
         RestoreStep.writing, () => _write(db, file, RestoreMode.replace, null));
     await _afterReplace(); // Undo of a Replace is a Replace write too
+    final rules = await restoreRulesAfterCommit(sink: _rules, db: db, file: file, mode: RestoreMode.replace);
     final settings = await _applySettings(file.prefs, onlyIfUnset: false);
     var stillThere = false;
     try {
@@ -265,6 +277,7 @@ class RestoreService {
     return RestoreResult(
       mode: RestoreMode.replace,
       tally: tally,
+      rules: rules,
       settings: settings,
       safetyCopyStillThere: stillThere,
     );

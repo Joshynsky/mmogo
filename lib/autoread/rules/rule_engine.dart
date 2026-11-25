@@ -30,7 +30,9 @@ class Offer {
 
 abstract class RuleEngine {
   Future<void> onRecorded(ReceiverType type, String key, {required String name, required int categoryId, required DateTime at});
-  Future<void> onUndone(ReceiverType type, String key);
+  /// [recordedAutomatically]: the removed row was recorded with no tap; for a
+  /// person on Auto-record that drops the rule to Suggested.
+  Future<void> onUndone(ReceiverType type, String key, {bool recordedAutomatically = false});
   Future<void> onCategoryChanged(ReceiverType type, String key, {required int categoryId});
 
   /// "Not now": stop offering this person for now.

@@ -1,5 +1,5 @@
 /// AUTOREAD RULES store over SharedPreferences: one key per person
-/// ([ruleStorageKey]), device only, never in a backup. A corrupt value is
+/// ([ruleStorageKey]), device only (backup carrying is a later slice). A corrupt value is
 /// ignored. When "Record receiver details" is OFF the store holds nothing: it
 /// wipes what it finds and refuses writes.
 library;
@@ -87,9 +87,12 @@ class PrefsRuleStore implements RuleStore {
     required String name,
     required RuleLevel level,
     int? categoryId,
+    int? ceilingCents,
     required DateTime at,
   }) =>
       _serial(() async {
+        if (level == RuleLevel.autoRecord && !canHoldAutoRecord(type)) return false;
+        if (!isValidCeilingCents(ceilingCents)) return false;
         final p = await _fresh();
         if (!_detailsOn(p)) return false;
         final old = decodeRule(p.get(ruleStorageKey(type, key)));
@@ -106,6 +109,7 @@ class PrefsRuleStore implements RuleStore {
           created: old?.created ?? t,
           changed: t,
           lastRecorded: old?.lastRecorded,
+          ceilingCents: ceilingCents,
         );
         // A person chosen for Ask first outranks a counter-only Suggested record.
         return _write(p, next, old == null, mayDropSuggested: level != RuleLevel.suggested);
@@ -113,6 +117,7 @@ class PrefsRuleStore implements RuleStore {
 
   /// Writes a whole rule (the engine's counters). New rules are refused at the
   /// cap; an existing rule is always updated. Never drops anyone.
+  @override
   Future<bool> saveRule(ReceiverRule rule) => _serial(() async {
         final p = await _fresh();
         if (!_detailsOn(p)) return false;

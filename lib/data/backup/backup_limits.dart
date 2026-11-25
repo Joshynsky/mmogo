@@ -15,6 +15,11 @@ const int kBackupFormatVersion = 1;
 /// Mirrors `kDbVersion` in `migrations.dart` (a test pins the two together);
 /// kept as a literal here so this file stays import-free.
 ///
+/// 9 (0.2.2, item 2) adds the top-level `receiver_rules` section (each remembered person's level,
+/// ceiling and category, by seed key or name) and its counts entry. It is a FILE schema only: the
+/// database stays at version 8 (rules live in phone preferences), so this no longer mirrors
+/// `kDbVersion`. A 0.2.1 or older app refuses a schema 9 file as made by a newer version (nothing is
+/// written); a file of schema 8 or lower never carries the section and restores with no rules.
 /// 8 (0.2.1) adds one optional row key, `recorded_auto` (1 = recorded with no tap), written only
 /// when 1. A 0.2.0 or older app refuses a schema 8 file as made by a newer version (nothing is
 /// written); a file of schema 7 or lower restores with every flag 0. `format_version` stays 1.
@@ -24,7 +29,7 @@ const int kBackupFormatVersion = 1;
 /// (schema 6) is refused by 0.2.0 as made by a newer version (its validator rejects
 /// `schema_version` above 5); a 0.2.0 backup (schema 5) restores in 0.2.1 with every
 /// entry unlinked (parent null, decided 0) and the same counts.
-const int kBackupSchemaVersion = 8;
+const int kBackupSchemaVersion = 9;
 
 /// The lowest `schema_version` a file may carry (`seed_key` exists from v2).
 const int kBackupMinSchemaVersion = 2;
@@ -46,6 +51,10 @@ const int kBackupFirstSchemaWithLinkedCash = 6;
 /// First schema that may carry the group code `CASH_USE` (0.2.1, PM decision #33).
 const int kBackupFirstSchemaWithCashGroup = 7;
 
+/// First schema that carries the `receiver_rules` section and its counts entry (0.2.2). A schema 8
+/// file WITH the section, or a schema 9 file WITHOUT it, is refused (exact-key defence).
+const int kBackupFirstSchemaWithRules = 9;
+
 /// Last top-level key of every file. Lets a reader (and the auto-backup
 /// prune) see the file was written to the end.
 const String kBackupEndMarker = 'mmogo-v1';
@@ -62,6 +71,9 @@ const int kBackupMaxMapRows = 20000;
 /// Fuliza events: about 440 draws in three years, so this is ample.
 const int kBackupMaxFulizaEvents = 20000;
 const int kBackupMaxPrefsKeys = 32;
+
+/// People with a rule: the same 300 as `kRuleCap` in the rule store (a test pins the two).
+const int kBackupMaxRules = 300;
 
 /// Deepest JSON nesting a valid file has is 3 (root, array, row object). The
 /// validator's pre-scan refuses anything deeper than this before `jsonDecode`.
@@ -88,6 +100,9 @@ const int kBackupMaxDisplayNameLength = 30;
 /// the text rules (no control characters, trimmed) still apply.
 const int kBackupMaxFulizaCodeLength = 20;
 
+/// Rule key (the normalised receiver key), as the rule codec: 1..200.
+const int kBackupMaxRuleKeyLength = 200;
+
 // --- value ranges ---------------------------------------------------------------
 
 /// Epoch ms, [2007-01-01T00:00Z, 2100-01-01T00:00Z).
@@ -97,6 +112,10 @@ const int kBackupMaxEpochMs = 4102444800000;
 const int kBackupMaxClassificationFileId = 2147483647;
 const int kBackupMaxAmountCents = 10000000000; // KSh 100 million
 const int kBackupMaxCostCents = 10000000;
+
+/// A rule's ceiling in cents, 1..Ksh 1,000,000 (mirrors `kCeilingMinCents` / `kCeilingMaxCents`).
+const int kBackupMinCeilingCents = 1;
+const int kBackupMaxCeilingCents = 100000000;
 
 /// Fuliza amounts, fees and printed totals share the transaction amount cap.
 const int kBackupMaxFulizaCents = kBackupMaxAmountCents;
@@ -168,6 +187,11 @@ const List<String> kBackupMapSourceTypes = [
 /// Fuliza event kinds: the `FulizaEventKind` enum NAMES (a test pins them).
 const List<String> kBackupFulizaKinds = ['draw', 'repayFull', 'repayPartial'];
 
+/// Rule kinds in a file: the storage codes of `ReceiverType` (a test pins them). A rule row's
+/// `lv` is 0 Suggested, 1 Ask first, 2 Auto-record.
+const List<String> kBackupRuleTypes = ['SM', 'PB', 'BG', 'PO'];
+const int kBackupMaxRuleLevel = 2;
+
 const List<String> kBackupRawParseSources = ['SMS_PARSE', 'MANUAL'];
 
 /// The 12 built-in keys a schema 2 file may carry (literal, frozen).
@@ -231,8 +255,25 @@ final Set<String> kBackupLockedSeedKeys = {
 
 // --- exact key sets (const; the file's keys are never used as column names) -----
 
-/// Top-level keys of a schema 4 file (what the exporter writes, in order).
+/// Top-level keys of a schema 9 file (what the exporter writes, in order): `receiver_rules` sits
+/// between `fuliza_events` and `prefs`.
 const List<String> kBackupTopLevelKeys = [
+  'app',
+  'format_version',
+  'schema_version',
+  'created_at',
+  'counts',
+  'classifications',
+  'transactions',
+  'counterparty_map',
+  'fuliza_events',
+  'receiver_rules',
+  'prefs',
+  'end',
+];
+
+/// Top-level keys of a schema 4..8 file (literal, frozen): no `receiver_rules`.
+const List<String> kBackupTopLevelKeysV8 = [
   'app',
   'format_version',
   'schema_version',
@@ -260,8 +301,17 @@ const List<String> kBackupTopLevelKeysV3 = [
   'end',
 ];
 
-/// Counts keys of a schema 4 file.
+/// Counts keys of a schema 9 file.
 const List<String> kBackupCountsKeys = [
+  'classifications',
+  'transactions',
+  'counterparty_map',
+  'fuliza_events',
+  'receiver_rules',
+];
+
+/// Counts keys of a schema 4..8 file (literal, frozen).
+const List<String> kBackupCountsKeysV8 = [
   'classifications',
   'transactions',
   'counterparty_map',
@@ -355,6 +405,22 @@ const List<String> kBackupFulizaKeys = [
   'amount_cents',
   'fee_cents',
   'printed_total_cents',
+];
+
+/// Row keys of a `receiver_rules` row (schema >= 9), ALL present (null allowed where noted):
+/// `t` kind code, `k` normalised key, `name` label, `lv` 0..2, `cat_seed` built-in category key OR
+/// `cat_name` the person's own category name (never both; both null = no category), `ceil` cents or
+/// null, `ap` 0/1 (restored from Auto-record, awaiting a review). Category DATABASE ids never travel:
+/// a restore gives categories new ids, so the rule names its category and restore maps it back.
+const List<String> kBackupRuleKeys = [
+  't',
+  'k',
+  'name',
+  'lv',
+  'cat_seed',
+  'cat_name',
+  'ceil',
+  'ap',
 ];
 
 // --- patterns -------------------------------------------------------------------

@@ -113,12 +113,13 @@ Map<String, Object?> fulizaRow(String kind, String code,
     };
 
 /// A file of [schemaVersion]. [fuliza] is written only into a schema 4 file
-/// (the section and its counts entry), as the exporter does.
+/// (the section and its counts entry), [rules] only into a schema 9 file, as the exporter does.
 Map<String, Object?> fileJson({
   required List<Map<String, Object?>> classes,
   List<Map<String, Object?>> txs = const [],
   List<Map<String, Object?>> map = const [],
   List<Map<String, Object?>> fuliza = const [],
+  List<Map<String, Object?>> rules = const [],
   Map<String, Object?> prefs = const {},
   int schemaVersion = 2,
 }) =>
@@ -132,6 +133,7 @@ Map<String, Object?> fileJson({
         'transactions': txs.length,
         'counterparty_map': map.length,
         if (schemaVersion >= 4) 'fuliza_events': fuliza.length,
+        if (schemaVersion >= 9) 'receiver_rules': rules.length,
       },
       'classifications': classes,
       // A schema 3 row always carries agent_number (null allowed); a schema 2
@@ -144,6 +146,7 @@ Map<String, Object?> fileJson({
       ],
       'counterparty_map': map,
       if (schemaVersion >= 4) 'fuliza_events': fuliza,
+      if (schemaVersion >= 9) 'receiver_rules': rules,
       'prefs': prefs,
       'end': 'mmogo-v1',
     };
@@ -161,6 +164,20 @@ Map<String, Object?> bigFileJson(int n, {String prefix = 'X'}) => fileJson(
               amount: 100 + i, createdAt: f0 + i),
       ],
     );
+
+/// One `receiver_rules` row of a schema 9 file (invented data).
+Map<String, Object?> ruleRow(String t, String k,
+        {String name = 'Person', int lv = 1, String? catSeed, String? catName, int? ceil, int ap = 0}) =>
+    {
+      't': t,
+      'k': k,
+      'name': name,
+      'lv': lv,
+      'cat_seed': catSeed,
+      'cat_name': catName,
+      'ceil': ceil,
+      'ap': ap,
+    };
 
 /// A [ValidatedBackup] built by hand, bypassing the validator (for the
 /// trigger and index backstop tests only).

@@ -1,4 +1,5 @@
 import 'backup_settings.dart';
+import 'restore_rules.dart' show RulesRestoreOutcome;
 import 'skipped_row_describer.dart';
 
 /// How a valid backup file is applied (architecture D5).
@@ -131,9 +132,14 @@ class RestoreResult {
     this.lost = SkippedSummary.empty,
     this.identity,
     this.safetyCopyStillThere = false,
+    this.rules,
   });
 
   final RestoreMode mode;
+
+  /// What happened to the rules (0.2.2 item 2, S-4b): counts only, no wording. Null when the rules
+  /// step is not wired, or on a Merge of a file with no rules section.
+  final RulesRestoreOutcome? rules;
   final RestoreTally tally;
 
   /// Settings are applied AFTER the commit. When `settings.ok` is false the

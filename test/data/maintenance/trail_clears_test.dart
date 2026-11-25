@@ -257,7 +257,7 @@ void main() {
         final json =
             jsonDecode(utf8.decode(await backupOf(db).exportToBytes()))
                 as Map<String, dynamic>;
-        expect(json['schema_version'], 8);
+        expect(json['schema_version'], 9); // 0.2.2: schema 9 (changed on purpose)
         expect(
           utf8.decode(await backupOf(db).exportToBytes()),
           isNot(contains('autoread_airtime_trail')),
@@ -269,7 +269,7 @@ void main() {
         final tx = (json['transactions'] as List).cast<Map<String, dynamic>>();
         expect(tx.first.keys.toSet(), kBackupTransactionKeys.toSet());
         expect(kBackupTransactionKeys, hasLength(13));
-        expect(kBackupSchemaVersion, 8);
+        expect(kBackupSchemaVersion, 9);
         await db.close();
       },
     );

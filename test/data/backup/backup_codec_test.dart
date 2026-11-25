@@ -28,7 +28,7 @@ void main() {
     expect(obj.keys.toList(), kBackupTopLevelKeys);
     expect(obj['app'], 'mmogo');
     expect(obj['format_version'], 1);
-    expect(obj['schema_version'], 8); // 0.2.0 row 17: schema 5
+    expect(obj['schema_version'], 9); // 0.2.2: schema 9 (changed on purpose)
     expect(obj['created_at'], tBase);
     expect(obj['end'], 'mmogo-v1');
     expect(obj['counts'], {
@@ -36,12 +36,17 @@ void main() {
       'transactions': 5,
       'counterparty_map': 2,
       'fuliza_events': 0,
+      'receiver_rules': 0,
     });
     expect(obj['fuliza_events'], isEmpty);
+    expect(obj['receiver_rules'], isEmpty);
   });
 
   test('constants agree with the app: schema version and seed keys', () {
-    expect(kBackupSchemaVersion, kDbVersion);
+    // CHANGED ON PURPOSE (0.2.2): rules live in preferences, so the FILE schema (9) is one ahead of
+    // the database (8). The old mirror test is replaced by two pins.
+    expect(kBackupSchemaVersion, 9);
+    expect(kDbVersion, 8);
     expect(
       kBackupSeedKeys,
       AppSchema.seedClassifications.map((s) => s.seedKey).toList(),

@@ -80,9 +80,9 @@ void main() {
       expect(kBackupFulizaKinds, [for (final k in FulizaEventKind.values) k.name]);
       expect(kBackupFulizaKeys,
           ['kind', 'code', 'occurred_at', 'amount_cents', 'fee_cents', 'printed_total_cents']);
-      expect(kBackupTopLevelKeys.where((k) => !kBackupTopLevelKeysV3.contains(k)), ['fuliza_events']);
-      expect(kBackupCountsKeys.where((k) => !kBackupCountsKeysV3.contains(k)), ['fuliza_events']);
-      expect(kBackupSchemaVersion, 8);
+      expect(kBackupTopLevelKeysV8.where((k) => !kBackupTopLevelKeysV3.contains(k)), ['fuliza_events']);
+      expect(kBackupCountsKeysV8.where((k) => !kBackupCountsKeysV3.contains(k)), ['fuliza_events']);
+      expect(kBackupSchemaVersion, 9);
     });
   });
 
@@ -94,7 +94,7 @@ void main() {
       await _addEvent(db, 'repayPartial', 'BBB2222222', at: f0 + 2, amount: 40000);
       final bytes = await backupOf(db).exportToBytes();
       final obj = jsonDecode(utf8.decode(bytes)) as Map<String, Object?>;
-      expect(obj['schema_version'], 8);
+      expect(obj['schema_version'], 9);
       expect((obj['counts']! as Map)['fuliza_events'], 2);
       expect((obj['fuliza_events']! as List), hasLength(2));
       expect((obj['fuliza_events']! as List).first, {
@@ -191,7 +191,7 @@ void main() {
 
     test('a schema above the maximum is "newer", before any key check', () {
       final j = _v4()
-        ..['schema_version'] = 9
+        ..['schema_version'] = 10
         ..['brand_new'] = 1;
       _refused(j, RestoreRejectReason.newer, field: 'schema_version');
     });
@@ -366,7 +366,7 @@ void main() {
       for (final json in [
         _v4()..remove('fuliza_events'),
         _v3()..['fuliza_events'] = <Object?>[],
-        _v4()..['schema_version'] = 9,
+        _v4()..['schema_version'] = 10,
         _v4(fuliza: [fulizaRow('draw', 'AAA1111111', amount: 0)]),
       ]) {
         for (final mode in RestoreMode.values) {

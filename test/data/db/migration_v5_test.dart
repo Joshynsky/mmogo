@@ -106,7 +106,8 @@ void main() {
   test('the live version is 5, the ladder has step 5, the backup schema equals it', () {
     expect(kDbVersion, 8);
     expect(AppMigrations.steps.keys, [2, 3, 4, 5, 6, 7, 8]);
-    expect(kBackupSchemaVersion, kDbVersion); // backup_schema_version_equals_db_version_5
+    // CHANGED ON PURPOSE (0.2.2): the FILE schema (9, adds receiver_rules) is one ahead of the DB (8).
+    expect(kBackupSchemaVersion, kDbVersion + 1);
   });
 
   test('migrate_v3_to_v5_airtime_renamed_other_added_rows_intact', () async {

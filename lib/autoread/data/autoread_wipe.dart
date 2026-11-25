@@ -13,6 +13,7 @@
 library;
 
 import '../logic/reading_controller.dart';
+import '../rules/prefs_hard_rule_pause.dart' show kHardPausedPrefsKey;
 import '../rules/rule_backup_guard.dart';
 
 class AutoReadWipe {
@@ -47,6 +48,9 @@ class AutoReadWipe {
       if ((await _prefs.keys()).contains(kReadingConsentKey)) return false;
       // Every person's rule, the undone codes and the history summary go too.
       if (!await (_rules ?? RuleBackupGuard(prefs: _prefs)).wipe()) return false;
+      // The Auto-record pause switch goes too (0.2.2 item 2: Delete data clears it).
+      await _prefs.remove(kHardPausedPrefsKey);
+      if ((await _prefs.keys()).contains(kHardPausedPrefsKey)) return false;
       final s = await c.state();
       if (!s.available || s.on || s.heldCount != 0) return false;
     } catch (_) {

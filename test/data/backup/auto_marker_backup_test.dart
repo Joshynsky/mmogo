@@ -116,7 +116,7 @@ void main() {
         expect(export.skippedCount, 0);
         final json =
             jsonDecode(utf8.decode(export.bytes)) as Map<String, Object?>;
-        expect(json['schema_version'], 8);
+        expect(json['schema_version'], 9); // 0.2.2: schema 9 (changed on purpose)
         expect(json['format_version'], 1);
         final rows = {
           for (final r in _txs(json)) r['display_code']! as String: r,
@@ -319,7 +319,7 @@ void main() {
     test(
       'this build writes schema 8, format 1; the frozen 0.2.0 limits (max schema 5) refuse it; nothing else in the envelope changed',
       () async {
-        expect(kBackupSchemaVersion, 8);
+        expect(kBackupSchemaVersion, 9);
         expect(kBackupFormatVersion, 1);
         final db = await _phone();
         final json =
@@ -334,11 +334,11 @@ void main() {
     );
 
     test(
-      'this build refuses schema 9 and format 2 as newer, writing nothing',
+      'this build refuses schema 10 and format 2 as newer, writing nothing',
       () async {
         final b = await openTestDb();
         for (final j in [
-          fileJson(classes: seedRowsV5(), txs: [_fileTx(1)], schemaVersion: 9),
+          fileJson(classes: seedRowsV5(), txs: [_fileTx(1)], schemaVersion: 10),
           {
             ...fileJson(classes: seedRowsV5(), schemaVersion: 8),
             'format_version': 2,

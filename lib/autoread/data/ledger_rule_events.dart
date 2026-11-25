@@ -56,7 +56,7 @@ class LedgerRuleEvents {
   final DateTime Function() _now;
 
   static const _columns = 'display_code, source_type, counterparty_label, counterparty_phone, '
-      'paybill_account_number, classification_id, raw_parse_source';
+      'paybill_account_number, classification_id, raw_parse_source, recorded_automatically';
 
   Future<Map<String, Object?>?> _row(int id) async {
     final rows = await (await database()).rawQuery('SELECT $_columns FROM transactions WHERE id = ?', [id]);
@@ -128,7 +128,7 @@ class LedgerRuleEvents {
         final r = await _row(id);
         if (r != null) {
           final p = await personOf(r, details: details);
-          if (p != null) await engine.onUndone(p.type, p.key);
+          if (p != null) await engine.onUndone(p.type, p.key, recordedAutomatically: r['recorded_automatically'] == 1);
           final code = r['display_code'];
           if (details && r['raw_parse_source'] == 'SMS_PARSE' && code is String && code.isNotEmpty && r['source_type'] != 'CASH') {
             await undone.add(code, now: _now());

@@ -62,6 +62,7 @@ class ValidatedBackup {
     required this.counterpartyMap,
     required this.prefs,
     this.fulizaEvents = const [],
+    this.receiverRules = const [],
   });
 
   final int formatVersion;
@@ -82,6 +83,16 @@ class ValidatedBackup {
   /// Keys per `kBackupFulizaKeys`. Empty for a schema < 4 file (which has no
   /// such section); use [hasFulizaSection] to tell "none" from "not in file".
   final List<Map<String, Object?>> fulizaEvents;
+
+  /// Keys per `kBackupRuleKeys` (schema >= 9), each row checked. A Paybill row at level 2 is
+  /// ACCEPTED here as written; the restore (S-4b) turns it into Ask first. Category ids never
+  /// appear: `cat_seed` / `cat_name` name the category. Empty for an older file; use
+  /// [hasRulesSection] to tell "none" from "not in file" (a Replace from a file without the
+  /// section leaves the phone with no rules, a Merge leaves them alone).
+  final List<Map<String, Object?>> receiverRules;
+
+  /// True when the file's schema carries the `receiver_rules` section (>= 9).
+  bool get hasRulesSection => schemaVersion >= kBackupFirstSchemaWithRules;
 
   /// True when the file's schema carries the `fuliza_events` section (>= 4).
   /// A Replace from a file without it leaves the phone's Fuliza ledger alone.
@@ -183,7 +194,8 @@ class BackupValidator {
     }
 
     final v4 = schemaVersion >= kBackupFirstSchemaWithFuliza;
-    if (!_hasExactKeys(root, v4 ? kBackupTopLevelKeys : kBackupTopLevelKeysV3)) {
+    final v9 = schemaVersion >= kBackupFirstSchemaWithRules;
+    if (!_hasExactKeys(root, v9 ? kBackupTopLevelKeys : (v4 ? kBackupTopLevelKeysV8 : kBackupTopLevelKeysV3))) {
       _fail(RestoreRejectReason.corrupt, field: '(keys)');
     }
     final createdAt = root['created_at'];
@@ -202,6 +214,8 @@ class BackupValidator {
     if (mapRows is! List) _fail(RestoreRejectReason.corrupt, field: 'counterparty_map');
     final fulizaRows = v4 ? root['fuliza_events'] : const [];
     if (fulizaRows is! List) _fail(RestoreRejectReason.corrupt, field: 'fuliza_events');
+    final ruleRows = v9 ? root['receiver_rules'] : const [];
+    if (ruleRows is! List) _fail(RestoreRejectReason.corrupt, field: 'receiver_rules');
 
     // --- caps, then counts equal array lengths (catches truncation).
     if (classRows.length > kBackupMaxClassifications) {
@@ -216,9 +230,12 @@ class BackupValidator {
     if (fulizaRows.length > kBackupMaxFulizaEvents) {
       _fail(RestoreRejectReason.tooMany, table: 'fuliza_events');
     }
+    if (ruleRows.length > kBackupMaxRules) {
+      _fail(RestoreRejectReason.tooMany, table: 'receiver_rules');
+    }
     final counts = root['counts'];
     if (counts is! Map ||
-        !_hasExactKeys(counts, v4 ? kBackupCountsKeys : kBackupCountsKeysV3)) {
+        !_hasExactKeys(counts, v9 ? kBackupCountsKeys : (v4 ? kBackupCountsKeysV8 : kBackupCountsKeysV3))) {
       _fail(RestoreRejectReason.corrupt, field: 'counts');
     }
     if (counts['classifications'] is! int ||
@@ -227,7 +244,8 @@ class BackupValidator {
         counts['transactions'] != txRows.length ||
         counts['counterparty_map'] is! int ||
         counts['counterparty_map'] != mapRows.length ||
-        (v4 && (counts['fuliza_events'] is! int || counts['fuliza_events'] != fulizaRows.length))) {
+        (v4 && (counts['fuliza_events'] is! int || counts['fuliza_events'] != fulizaRows.length)) ||
+        (v9 && (counts['receiver_rules'] is! int || counts['receiver_rules'] != ruleRows.length))) {
       _fail(RestoreRejectReason.corrupt, field: 'counts');
     }
 
@@ -242,6 +260,7 @@ class BackupValidator {
     resolveBackupLinks(transactions);
     final counterpartyMap = _map(mapRows, classGroupById);
     final fulizaEvents = _fulizaEvents(fulizaRows);
+    final receiverRules = _receiverRules(ruleRows);
     final prefs = _prefs(root['prefs'], schemaVersion);
 
     return ValidatedBackup(
@@ -253,6 +272,7 @@ class BackupValidator {
       counterpartyMap: counterpartyMap,
       prefs: prefs,
       fulizaEvents: fulizaEvents,
+      receiverRules: receiverRules,
     );
   }
 
@@ -485,6 +505,46 @@ class BackupValidator {
       // The same message twice in one file, like a repeated transaction code.
       if (!seen.add('$kind $code')) {
         _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'code');
+      }
+      out.add(Map<String, Object?>.from(row));
+    }
+    return out;
+  }
+
+  // ---------------------------------------------------------------------------
+  // receiver_rules (schema >= 9)
+
+  /// Exact 8 keys per row. Kind from the four codes, key 1..200 clean trimmed text, label as a
+  /// receiver label, level 0..2, at most one of cat_seed (a built-in key) / cat_name, ceiling null
+  /// or 1..100,000,000, ap 0 or 1, no repeated (kind, key). A Paybill row at level 2 is accepted
+  /// (the restore degrades it: refusing a whole backup for it would lose the person's data).
+  static List<Map<String, Object?>> _receiverRules(List rows) {
+    const t = 'receiver_rules';
+    final out = <Map<String, Object?>>[];
+    final seen = <String>{};
+    for (var i = 0; i < rows.length; i++) {
+      final row = _row(rows[i], kBackupRuleKeys, t, i);
+      final type = _enum(row['t'], kBackupRuleTypes, t, i, 't');
+      final key = _text(row['k'], 1, kBackupMaxRuleKeyLength, t, i, 'k');
+      _text(row['name'], 1, kBackupMaxLabelLength, t, i, 'name');
+      _int(row['lv'], 0, kBackupMaxRuleLevel, t, i, 'lv');
+      final seed = row['cat_seed'];
+      final catName = row['cat_name'];
+      if (seed != null && (seed is! String || !kBackupSeedKeys.contains(seed))) {
+        _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'cat_seed');
+      }
+      if (catName != null) {
+        _text(catName, 1, kBackupMaxClassificationNameLength, t, i, 'cat_name');
+      }
+      if (seed != null && catName != null) {
+        _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'cat_name');
+      }
+      if (row['ceil'] != null) {
+        _int(row['ceil'], kBackupMinCeilingCents, kBackupMaxCeilingCents, t, i, 'ceil');
+      }
+      _int(row['ap'], 0, 1, t, i, 'ap');
+      if (!seen.add('$type\u0000$key')) {
+        _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'k');
       }
       out.add(Map<String, Object?>.from(row));
     }

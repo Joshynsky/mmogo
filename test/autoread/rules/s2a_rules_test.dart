@@ -17,6 +17,7 @@ import 'package:mmogo/autoread/rules/rule_cleanup.dart';
 import 'package:mmogo/autoread/rules/rule_codec.dart';
 import 'package:mmogo/autoread/rules/rule_model.dart';
 import 'package:mmogo/autoread/rules/rule_store.dart';
+import 'package:mmogo/data/backup/backup_limits.dart' show kBackupRuleKeys, kBackupTopLevelKeys;
 import 'package:mmogo/data/backup/backup_setting_keys.dart';
 import 'package:mmogo/data/prefs/recipient_memory.dart';
 import 'package:mmogo/domain/parsing/parsed_sms_fields.dart';
@@ -280,7 +281,10 @@ void main() {
   });
 
   group('backup guard, wipe, cleanup', () {
-    test('prefixes are pinned and none is a backup setting', () {
+    // CHANGED ON PURPOSE (0.2.2 item 2, S-4a): the old intent was "rules never travel in a backup".
+    // Rules now travel, but ONLY in the backup file's own `receiver_rules` section (schema 9); no rule
+    // key may ever be a backup SETTING (a `prefs` entry). This test keeps the second half true.
+    test('prefixes are pinned and none is a backup setting (rules travel only in the receiver_rules section)', () {
       expect(kRuleKeyPrefixes, ['autoread_rule_v1.', 'autoread_undone_codes_v1', 'autoread_hist_v1']);
       for (final s in kBackupSettingSpecs) {
         for (final pre in kRuleKeyPrefixes) {
@@ -293,6 +297,17 @@ void main() {
         expect(kBackupSettingSpecs.any((s) => s.prefsKey == k), isFalse);
       }
       expect(backupSettingSpecFor('auto_apply'), isNull);
+    });
+    test('the receiver_rules section is the ONLY way rules travel: its row keys name no prefs key, and the undone-codes list and history never travel', () {
+      expect(kBackupTopLevelKeys, contains('receiver_rules'));
+      expect(kBackupRuleKeys, isNot(contains('prefs')));
+      for (final k in [...kBackupRuleKeys, 'receiver_rules']) {
+        expect(backupSettingSpecFor(k), isNull, reason: k);
+      }
+      for (final pre in [kUndoneCodesKey, kHistorySummaryKey]) {
+        expect(kBackupTopLevelKeys.any((k) => pre.startsWith(k) || k.startsWith(pre)), isFalse, reason: pre);
+        expect(kBackupSettingSpecs.any((s) => s.prefsKey.startsWith(pre) || s.fileKey.startsWith(pre)), isFalse, reason: pre);
+      }
     });
     test('guard wipes rules, undone codes, history; leaves other keys; false when a key stays', () async {
       final p = FakeReadingPrefs();

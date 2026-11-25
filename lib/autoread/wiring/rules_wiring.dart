@@ -35,6 +35,8 @@ import '../rules/receiver_key.dart' show isRememberedPochi;
 import '../runtime.dart';
 import '../ui/levels/levels_deps.dart';
 import '../ui/notifications/suggestions_controller.dart';
+import '../../data/backup/restore_rules.dart' show RuleRestoreSink, RulesRestoreOutcome, RulesRestorePlan;
+import '../rules/rule_restore.dart';
 
 class RulesWiring {
   RulesWiring._();
@@ -139,6 +141,12 @@ class RulesWiring {
         await suggestions?.refresh();
       });
 
+  /// The restore's rules step (0.2.2 item 2, S-4b): the file's rules go into the rule store through
+  /// the SAME serial queue as [afterReplaceRestore], so on a Replace the hook's wipe (queued first, from
+  /// the trail hook) always runs BEFORE this import. The rule list shown follows. NOT passed to the
+  /// app's `RestoreService` yet (dormant until the Replace dialog and wording are signed).
+  static RuleRestoreSink restoreSink() => _WiringRestoreSink();
+
   /// The after-Replace-restore hook main installs: it CHAINS what was there ([prior]), empties the
   /// shown airtime trail ([clearTrail]) and sends every person back to Suggested. Never overwrites.
   static void Function() restoreHook({void Function()? prior, required void Function() clearTrail}) => () {
@@ -167,4 +175,16 @@ class RulesWiring {
           recordReceiverDetails: AppPrefs.readCaptureIdentityPreference,
         ),
       );
+}
+
+class _WiringRestoreSink implements RuleRestoreSink {
+  @override
+  Future<RulesRestoreOutcome> apply(RulesRestorePlan plan) => RulesWiring._serial(() async {
+        final out = await RuleRestoreApplier(
+          store: AutoReadRuntime.ruleStore,
+          detailsOn: AppPrefs.readCaptureIdentityPreference,
+        ).apply(plan);
+        await RulesWiring.suggestions?.refresh();
+        return out;
+      });
 }

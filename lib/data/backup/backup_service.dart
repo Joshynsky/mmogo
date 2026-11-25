@@ -5,6 +5,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'backup_codec.dart';
 import 'backup_limits.dart';
 import 'backup_repair.dart';
+import 'backup_rules.dart';
 import 'backup_settings.dart';
 import 'skipped_row_describer.dart';
 import 'backup_validator.dart';
@@ -51,6 +52,7 @@ class BackupExport {
     this.userClassifications = 0,
     this.fulizaEvents = 0,
     this.liveFulizaEvents,
+    this.receiverRules = 0,
   });
 
   final Uint8List bytes;
@@ -65,6 +67,10 @@ class BackupExport {
   /// events in the file plus the skipped ones).
   final int fulizaEvents;
   final int? liveFulizaEvents;
+
+  /// Rules IN the file (0.2.2). Not shown anywhere yet; 0 when no rules source is wired or
+  /// "Record receiver details" is OFF.
+  final int receiverRules;
 
   /// Recently deleted (soft-deleted) transactions left OUT of the file (PM
   /// rule); the UI tells the user how many.
@@ -163,14 +169,20 @@ class BackupService {
     required Future<Database> Function() db,
     DateTime Function()? now,
     BackupSettings? settings,
+    BackupRulesSource? rules,
     this.maxBytes = kBackupMaxBytes,
   })  : _db = db,
+        _rules = rules,
         _now = now ?? DateTime.now,
         _settings = settings ?? BackupSettings();
 
   final Future<Database> Function() _db;
   final DateTime Function() _now;
   final BackupSettings _settings;
+
+  /// Where the rules come from. Null = none travel (dormant until a later slice wires the real
+  /// source). It must answer an empty list while "Record receiver details" is OFF.
+  final BackupRulesSource? _rules;
 
   /// The size guard. Always [kBackupMaxBytes] in the app; a test lowers it.
   final int maxBytes;
@@ -283,6 +295,13 @@ class BackupService {
     final fulizaKept = List<Map<String, Object?>>.of(fuliza);
     final fulizaSkipped = <BackupSkippedRow>[];
     final prefs = await _settings.snapshot();
+    // Rules: read once (a failing source fails the export, see _readRules), mapped to the
+    // categories that will be in the file; a row the validator still refuses is left out below.
+    final ruleInputs = await _readRules();
+    _guardRows('receiver_rules', ruleInputs.length, kBackupMaxRules);
+    final ruleBuilt = buildBackupRuleRows(ruleInputs, repair.classifications);
+    final ruleKept = List<Map<String, Object?>>.of(ruleBuilt.rows);
+    final ruleSkipped = <BackupSkippedRow>[...ruleBuilt.skipped];
     final createdAt = _now().millisecondsSinceEpoch;
 
     // Round-trip guard: the file we are about to hand out must pass the same
@@ -297,6 +316,7 @@ class BackupService {
         transactions: repair.transactions,
         counterpartyMap: repair.counterpartyMap,
         fulizaEvents: fulizaKept,
+        receiverRules: ruleKept,
         prefs: prefs,
       );
       if (bytes.length > maxBytes) {
@@ -318,6 +338,16 @@ class BackupService {
           ));
           continue;
         }
+        if (table == 'receiver_rules' && index != null && index >= 0 && index < ruleKept.length) {
+          ruleKept.removeAt(index);
+          ruleSkipped.add(BackupSkippedRow(
+            table: table!,
+            rowId: null,
+            field: e.field ?? '(row)',
+            rule: e.reason.name,
+          ));
+          continue;
+        }
         if (table == null ||
             index == null ||
             !repair.skipRow(table, index, e.field ?? '(row)', e.reason.name)) {
@@ -328,22 +358,31 @@ class BackupService {
       return BackupExport(
         bytes: bytes,
         skippedRows: List.unmodifiable(
-            describeSkipped([...repair.skipped, ...fulizaSkipped], entryFacts: facts)),
+            describeSkipped([...repair.skipped, ...fulizaSkipped, ...ruleSkipped], entryFacts: facts)),
         liveClassifications: classes.length,
         liveTransactions: txs.length,
         liveCounterpartyMap: map.length,
         fulizaEvents: fulizaKept.length,
         liveFulizaEvents: fuliza.length,
+        receiverRules: ruleKept.length,
         classifications: repair.classifications.length,
         userClassifications: repair.classifications.where((c) => c['seed_key'] == null).length,
         transactions: repair.transactions.length,
         counterpartyMap: repair.counterpartyMap.length,
         excludedSoftDeleted: excluded,
-        repairedCount: repair.repairedCount,
-        skipped: List.unmodifiable([...repair.skipped, ...fulizaSkipped]),
+        repairedCount: repair.repairedCount + ruleBuilt.repaired,
+        skipped: List.unmodifiable([...repair.skipped, ...fulizaSkipped, ...ruleSkipped]),
       );
     }
     throw BackupNotRestorable(last!);
+  }
+
+  Future<List<BackupRuleInput>> _readRules() async {
+    final source = _rules;
+    if (source == null) return const [];
+    // A failing source is NOT swallowed: a file (or safety copy) quietly missing the rules would
+    // make a Replace and its Undo lose them. The export fails, nothing is written.
+    return source();
   }
 
   /// Most validator-driven skips in one export (the repair's own checks catch

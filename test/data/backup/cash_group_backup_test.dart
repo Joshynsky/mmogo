@@ -60,7 +60,7 @@ void main() {
   test('the exporter writes schema 7 and the Cash-list categories under group CASH_USE', () async {
     final a = await _phone();
     final json = jsonDecode(utf8.decode((await backupOf(a).export()).bytes)) as Map<String, Object?>;
-    expect(json['schema_version'], 8);
+    expect(json['schema_version'], 9);
     final cash = ((json['classifications']! as List).cast<Map<String, Object?>>()).where((c) => c['group'] == 'CASH_USE').toList();
     expect(cash.map((c) => c['name']).toList()..sort(), ['Fare', 'Fuel']);
     expect(cash.every((c) => c['seed_key'] == null), isTrue, reason: 'user rows, no seed key');

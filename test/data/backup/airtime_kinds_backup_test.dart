@@ -65,7 +65,7 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   test('backup_schema_version_equals_db_version_5', () {
-    expect(kBackupSchemaVersion, 8);
+    expect(kBackupSchemaVersion, 9); // 0.2.2: schema 9 (changed on purpose)
   });
 
   test('backup_locked_seed_keys_include_new_key', () {
@@ -81,7 +81,7 @@ void main() {
     await addAirtimeTx(db, 'AIR0000001', kAirtimeSeedMyself);
     await addAirtimeTx(db, 'AIR0000002', kAirtimeSeedOther);
     final json = jsonDecode(utf8.decode(await backupOf(db).exportToBytes())) as Map<String, dynamic>;
-    expect(json['schema_version'], 8);
+    expect(json['schema_version'], 9);
     final classes = (json['classifications'] as List).cast<Map<String, dynamic>>();
     expect(classes, hasLength(18));
     expect(classes.where((c) => c['seed_key'] != null).map((c) => c['seed_key']), kBackupSeedKeys);

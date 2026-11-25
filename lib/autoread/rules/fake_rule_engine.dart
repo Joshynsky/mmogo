@@ -22,7 +22,8 @@ class FakeRuleEngine implements RuleEngine {
       calls.add('recorded:${_id(type, key)}:$categoryId');
 
   @override
-  Future<void> onUndone(ReceiverType type, String key) async => calls.add('undone:${_id(type, key)}');
+  Future<void> onUndone(ReceiverType type, String key, {bool recordedAutomatically = false}) async =>
+      calls.add(recordedAutomatically ? 'undone-auto:${_id(type, key)}' : 'undone:${_id(type, key)}');
 
   @override
   Future<void> onCategoryChanged(ReceiverType type, String key, {required int categoryId}) async =>
