@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 
 import '../../../ui/shell/app_messenger.dart' show appNavigatorKey;
 import '../../logic/phone_mask.dart' show nameWithMask;
+import '../../logic/plain_name.dart' show pillPersonName;
 import '../../rules/rule_engine.dart' show Offer;
 import '../../rules/rule_model.dart';
 import 'hard_rule_ports.dart' show autoRecordUi;
@@ -22,8 +23,10 @@ import 'levels_person_row.dart';
 String levelWho(LevelPerson x) => x.type == ReceiverType.sendMoney ? nameWithMask(x.name, x.key) : x.name;
 
 /// The name the notice (the pill) gets: the plain name only, never the number or its mask (sign-off
-/// "Pill: no phone number").
-String levelNoticeName(LevelPerson x) => x.name.trim();
+/// "Pill: no phone number"). A nameless Send Money person's name can be the masked number (Set up's
+/// displayName) or the full number (a rule named by its key), so it goes through [pillPersonName] (I2c):
+/// no digit and no '*' is left; nothing left = the W2 placeholder.
+String levelNoticeName(LevelPerson x) => pillPersonName(x.name);
 
 /// The name of category [id] in [type]'s own group; null when it is not there or the list cannot be read.
 Future<String?> levelCategoryName(LevelsDeps d, ReceiverType type, int id) async {

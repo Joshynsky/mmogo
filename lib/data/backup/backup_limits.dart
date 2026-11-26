@@ -420,8 +420,9 @@ const List<String> kBackupFulizaKeys = [
 /// one of `cat_seed` / `cat_name` (the same naming as the rule's own category). Always present
 /// (the exporter writes `[]` when none and for every level above Suggested). Restore maps each
 /// entry back to the phone's id, drops entries that are not ACTIVE categories after the restore,
-/// clamps to [kBackupMaxChosenCategories] and keeps the list only at Suggested; a missing,
-/// null or unreadable `sc` restores as empty (`restore_rules.dart`).
+/// clamps to [kBackupMaxChosenCategories] and keeps the list only at Suggested (`restore_rules.dart`).
+/// A missing, null or unreadable `sc` (not a list, too many entries, or an entry that is not exactly
+/// one valid `cat_seed` / `cat_name`) REFUSES the file (`backup_validator.dart`, field `sc`).
 const List<String> kBackupRuleKeys = [
   't',
   'k',

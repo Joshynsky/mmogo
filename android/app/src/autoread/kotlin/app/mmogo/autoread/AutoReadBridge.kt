@@ -42,7 +42,8 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
         }
 
         /**
-         * 0.2.2 item 2 (B-4): an Auto-record arrival was queued (HardRuleArrival.postQueued). Tells the app, on the
+         * 0.2.2 item 2 (B-4): an Auto-record arrival was queued (HardRuleArrival.postQueued), or (I2b) a Yes tapped
+         * from the shade was queued (AskNotifier.postQueued). Tells the app, on the
          * main thread, with NO argument (nothing about the message crosses). The app imports at once only while it
          * is in front (RealWaitingRepository); otherwise its resume does. No activity: nothing happens. Never throws.
          */

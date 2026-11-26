@@ -4,7 +4,8 @@
 /// `autoRecordUi`, only for kinds that can hold it) and shows the one [RuleChangeNotice].
 /// 0.2.2 item 2 (U-OFFER, B-1): an answered offer leaves [offers] at once (before the store write) and stays
 /// gone after the write, whatever a late or stale read says; a failed write brings it back. The notice gets the
-/// plain name (never the number) and the category name.
+/// plain name (never the number: [pillPersonName], I2c, as a rule named by its key carries the full number) and
+/// the category name.
 /// The page owns it (create, dispose). Autoread build only.
 library;
 
@@ -12,6 +13,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../logic/plain_name.dart' show pillPersonName;
 import '../../rules/rule_engine.dart';
 import '../../rules/rule_model.dart';
 import '../../rules/rule_store.dart';
@@ -130,7 +132,7 @@ class SuggestionsController extends ChangeNotifier {
       o,
       () => store.setLevel(o.type, o.key, name: o.name, level: RuleLevel.askFirst, categoryId: o.categoryId, at: _clock()),
     );
-    if (ok && autoRecordUi) notice.show(o.name, RuleLevel.askFirst, null, null, categoryName: categoryName);
+    if (ok && autoRecordUi) notice.show(pillPersonName(o.name), RuleLevel.askFirst, null, null, categoryName: categoryName);
     await refresh();
     return ok;
   }
@@ -148,7 +150,7 @@ class SuggestionsController extends ChangeNotifier {
     );
     if (ok) {
       final change = onChangeCeiling;
-      notice.show(o.name, RuleLevel.autoRecord, null, change == null ? null : () => change(o), categoryName: categoryName);
+      notice.show(pillPersonName(o.name), RuleLevel.autoRecord, null, change == null ? null : () => change(o), categoryName: categoryName);
     }
     await refresh();
     return ok;

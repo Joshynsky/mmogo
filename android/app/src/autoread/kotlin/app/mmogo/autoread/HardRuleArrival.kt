@@ -75,9 +75,11 @@ internal object HardRuleArrival {
             return true
         } finally {
             // 0.2.2 (B-4): AFTER the alert is up (so the cancel of the import this push starts, B-2, comes after it),
-            // and even when no alert could be posted (the mark is written): an app in front imports now. No argument
-            // crosses. A RESUME ingest is not ordered by this: ParseRunner posts only while the mark is stored and
-            // clears the alert again if the mark went during the post (I2b).
+            // and even when no alert could be posted here (no notification manager): an app in front imports now. No
+            // argument crosses. This runs only when ParseRunner calls postQueued, i.e. only while the automatic mark
+            // reads as stored (I2b): when the mark is gone or cannot be read, ParseRunner skips postQueued and so this
+            // push too; an open app then imports the row on its next resume (or already did). A RESUME ingest is
+            // not ordered by this: ParseRunner clears the alert again if the mark went during the post (I2b).
             AutoReadBridge.onArrived()
         }
     }

@@ -8,29 +8,22 @@
 library;
 
 import '../../ui/widgets/pill_toast.dart';
+import '../logic/plain_name.dart' show pillPersonName, plainPersonName;
 import '../ui/levels/hard_rule_copy.dart' show hardAutoArrived, hardUndoStays;
 import 'queued_yes.dart';
 import 'queued_yes_toast.dart' show kQueuedYesUndo;
 
-// WORDING-MISSING -> W2 (shown only when the caller cannot name the person: no payee name on the item, or a
-// name made only of digits)
-const String _kTodoArrivalName = '[PM to write: name when the person is not known]';
+// The W2 placeholder for an unknown name now lives in ../logic/plain_name.dart (pillPersonName; I2c, unchanged text).
 // WORDING-MISSING -> W2 (shown only when the caller cannot name the category: its name could not be read)
 const String _kTodoArrivalCategory = '[PM to write: category when its name is not known]';
 
 /// Looks up a label (the person's name, the category's name) for one recorded entry; null or blank = unknown.
 typedef AutoArrivalLabel = String? Function(QueuedYesRecorded e);
 
-final RegExp _numberish = RegExp(r'[0-9*]');
-final RegExp _spaces = RegExp(r'\s+');
-
 /// The plain name for the message and the undo pill: every word that holds a digit or a mask star is dropped, so
 /// a name built as "Name 0722***456" (levelWho) or a bare number never shows a number. Blank = unknown (null).
-String? autoArrivalPlainName(String? raw) {
-  if (raw == null) return null;
-  final name = raw.trim().split(_spaces).where((w) => w.isNotEmpty && !_numberish.hasMatch(w)).join(' ');
-  return name.isEmpty ? null : name;
-}
+/// Same as the shared [plainPersonName] (I2c), kept under this name for its callers.
+String? autoArrivalPlainName(String? raw) => plainPersonName(raw);
 
 /// The labels the app's import passes (I2): [payeeByItem] = waiting item id -> the payee name on that item (as
 /// the SMS gave it, read BEFORE the import removed the item; [showAutoArrivalToasts] makes it plain), and
@@ -49,7 +42,7 @@ void showAutoArrivalToasts(
   AutoArrivalLabel? categoryOf,
 }) {
   for (final e in recorded) {
-    final name = autoArrivalPlainName(nameOf?.call(e)) ?? _kTodoArrivalName;
+    final name = pillPersonName(nameOf?.call(e));
     final category = categoryOf?.call(e)?.trim();
     PillToast.show(
       hardAutoArrived(name, e.amountCents, (category == null || category.isEmpty) ? _kTodoArrivalCategory : category),
