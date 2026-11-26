@@ -1,7 +1,12 @@
 /// AUTOREAD RULES store over SharedPreferences: one key per person
 /// ([ruleStorageKey]), device only (backup carrying is a later slice). A corrupt value is
-/// ignored. When "Record receiver details" is OFF the store holds nothing: it
-/// wipes what it finds and refuses writes.
+/// ignored.
+///
+/// "Record receiver details" OFF HIDES the rules (0.2.2 item 2, B-HIDE; PM 25-11, reverses the 0.2.1
+/// privacy wipe): while OFF all() answers empty, get() answers null and setLevel / saveRule refuse, but
+/// nothing is erased, so turning it ON brings every person back exactly as before (level, category,
+/// limit, chosen list). Only [forget], [wipeAll], [forgetEveryone] (Forget all) and Delete data
+/// (`RuleBackupGuard.wipe`) erase, and they do so whatever the switch says.
 library;
 
 import 'dart:async';
@@ -60,19 +65,15 @@ class PrefsRuleStore implements RuleStore {
     return out;
   }
 
+  /// Empty while details are OFF: the rules are hidden, never erased here (B-HIDE).
   @override
   Future<List<ReceiverRule>> all() => _serial(() async {
         final p = await _fresh();
-        if (!_detailsOn(p)) {
-          if (_ruleKeys(p).isNotEmpty) {
-            await _wipe(p);
-            _changes.add(null);
-          }
-          return const <ReceiverRule>[];
-        }
+        if (!_detailsOn(p)) return const <ReceiverRule>[];
         return _readAll(p);
       });
 
+  /// Null while details are OFF (hidden, kept).
   @override
   Future<ReceiverRule?> get(ReceiverType type, String key) => _serial(() async {
         final p = await _fresh();
@@ -98,7 +99,7 @@ class PrefsRuleStore implements RuleStore {
         final suggested = level == RuleLevel.suggested;
         if (suggested && !isValidChosenCategoryIds(chosenCategoryIds)) return false;
         final p = await _fresh();
-        if (!_detailsOn(p)) return false;
+        if (!_detailsOn(p)) return false; // OFF: refused; the hidden rule (if any) stays exactly as it was
         final old = decodeRule(p.get(ruleStorageKey(type, key)));
         final t = at.toUtc();
         final same = old != null && old.level == level;

@@ -251,11 +251,12 @@ void main() {
           notify: true, onChangeCeiling: () => openCeilingSheetOnApp(d, ReceiverType.sendMoney, _tim, 'Tim'));
       expect(r, LevelSaveResult.ok);
       await t.pump();
-      expect(find.text(hardPillStage1(levelWho(x), RuleLevel.autoRecord)), findsOneWidget);
+      // U-PILL: the caller passes no category yet (U-PERSON / I2), so only the start of the signed line is checked.
+      expect(find.textContaining(hardPillAuto(levelWho(x), '')), findsOneWidget);
       await t.pump(const Duration(milliseconds: 1600));
       await t.pumpAndSettle();
-      expect(find.text(kHardPillChangeCeiling), findsOneWidget);
-      await t.tap(find.text(kHardPillChangeCeiling));
+      expect(find.text(kHardPillChange), findsOneWidget); // a limit is set: "Change"
+      await t.tap(find.text(kHardPillChange));
       await t.pumpAndSettle();
       final sheet = t.widget<LevelSheet>(find.byType(LevelSheet));
       expect(sheet.focusCeiling, isTrue);
@@ -272,9 +273,10 @@ void main() {
       const x = LevelPerson(type: ReceiverType.sendMoney, key: _tim, name: 'Tim', level: RuleLevel.autoRecord, categoryId: 1);
       await saveLevelChoice(d, x, RuleLevel.askFirst, 1, null, notify: true, onChangeCeiling: () {});
       await t.pump();
-      expect(find.text(hardPillStage1(levelWho(x), RuleLevel.askFirst)), findsOneWidget);
+      expect(find.textContaining(hardPillAskFirst(levelWho(x), '')), findsOneWidget);
       await t.pump(const Duration(milliseconds: 1600));
-      expect(find.text(kHardPillChangeCeiling), findsNothing);
+      expect(find.text(kHardPillChange), findsNothing);
+      expect(find.text(kHardPillSetLimit), findsNothing);
       await t.pump(const Duration(seconds: 5));
       await t.pumpAndSettle();
     });

@@ -1,4 +1,4 @@
-/// §AUTOREAD.AUTO_GROUP - "Recorded automatically": the trail rows (newest
+/// §AUTOREAD.AUTO_GROUP - "Recently recorded" (0.2.2 F-5; was "Recorded automatically"): the trail rows (newest
 /// first), each with Undo and the "Change in Settings" link. The two switches
 /// live in Settings, on the Remembered page's second tab. Autoread build only.
 library;
@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../logic/airtime_auto.dart';
 import 'auto_recorded_row.dart';
+import 'levels/hard_rule_copy.dart' show kHardRecentlyRecorded;
 import 'row_parts.dart';
 
 /// Hidden while the trail is empty. [onChangeInSettings] is the link on every
@@ -26,7 +27,7 @@ class AutoGroup extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SectionHeading(kAutoRecordedHeading),
+              const SectionHeading(kHardRecentlyRecorded),
               for (final e in trail)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),

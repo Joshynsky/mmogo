@@ -164,7 +164,7 @@ void main() {
     test('a refused write counts as failed and keeps the mark (the review stays)', () async {
       final s = await _fake();
       final people = await _pending(s);
-      s.detailsOn = false;
+      s.refuseWrites = true; // B-HIDE: detailsOn = false now hides the rules too
       final a = await applyReview(s, people, ReviewChoice.confirm({reviewId(tim)}), t1);
       expect([a.auto, a.askFirst, a.failed], [0, 0, 3]);
       expect(await _pending(s), hasLength(3));
@@ -297,7 +297,7 @@ void main() {
       final s = await _fake();
       await _host(t, _Opener(s, []));
       await _tap(t, find.byKey(const Key('open')));
-      s.detailsOn = false;
+      s.refuseWrites = true; // B-HIDE: detailsOn = false now hides the rules too
       await _tap(t, _pick(tim, 'reviewPickAuto'));
       await _tap(t, find.byKey(const Key('reviewConfirm')));
       expect(_toast(), kLevelSheetSaveFailed);

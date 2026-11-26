@@ -1,12 +1,14 @@
-/// §AUTOREAD.RECORDED_AUTO_SECTION - "Recorded automatically": the 24 h trail rows (newest first)
-/// with Undo and the "Change in Settings" link. Hidden while [entries] is empty. In 0.2.1 the rows
-/// are airtime auto-records only; a person-level Auto-record level comes later. Autoread build only.
+/// §AUTOREAD.RECORDED_AUTO_SECTION - "Recently recorded" (0.2.2 F-5, signed kHardRecentlyRecorded; was
+/// "Recorded automatically"): ONE list of the 24 h trail rows (newest first) - airtime auto-records,
+/// chip records and Ask first Yes rows - with Undo and the "Change in Settings" link. Hidden while
+/// [entries] is empty. Autoread build only.
 library;
 
 import 'package:flutter/material.dart';
 
 import '../../logic/airtime_auto.dart';
 import '../auto_recorded_row.dart';
+import '../levels/hard_rule_copy.dart' show kHardRecentlyRecorded;
 import '../row_parts.dart';
 
 class RecordedAutoSection extends StatelessWidget {
@@ -24,7 +26,7 @@ class RecordedAutoSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeading(active == 0 ? kAutoRecordedHeading : '$kAutoRecordedHeading ($active)'),
+        SectionHeading(active == 0 ? kHardRecentlyRecorded : '$kHardRecentlyRecorded ($active)'),
         for (final e in entries)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),

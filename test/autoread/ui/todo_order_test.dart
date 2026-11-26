@@ -8,6 +8,7 @@ import 'package:mmogo/autoread/logic/airtime_auto.dart';
 import 'package:mmogo/autoread/model/waiting_item.dart';
 import 'package:mmogo/autoread/rules/rule_engine.dart';
 import 'package:mmogo/autoread/rules/rule_model.dart' show ReceiverType;
+import 'package:mmogo/autoread/ui/levels/hard_rule_copy.dart' show kHardRecentlyRecorded;
 import 'package:mmogo/autoread/ui/notifications/recorded_auto_section.dart';
 import 'package:mmogo/autoread/ui/notifications/suggestion_card.dart';
 import 'package:mmogo/autoread/ui/notifications/notifications_rule_copy.dart';
@@ -75,7 +76,7 @@ void main() {
       y(t, find.text('$kHeadingSuggestions (3)')),
       y(t, find.text('$kHeadingToCategorize (1)')),
       y(t, find.text('$kHeadingCouldNotRead (1)')),
-      y(t, find.text('$kAutoRecordedHeading (1)')),
+      y(t, find.text('$kHardRecentlyRecorded (1)')),
     ];
     expect(order, [...order]..sort());
     expect(order.toSet(), hasLength(7));

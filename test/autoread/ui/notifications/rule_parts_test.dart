@@ -91,7 +91,7 @@ void main() {
       final all = _texts(t).join('|');
       expect(all, isNot(contains(kHeadingSuggestions)));
       expect(all, isNot(contains(kHeadingToConfirm)));
-      expect(all, isNot(contains('Recorded automatically')));
+      expect(all, isNot(contains('Recently recorded')));
     });
 
     testWidgets('each section shows with its item', (t) async {
@@ -103,7 +103,7 @@ void main() {
       final all = _texts(t);
       expect(all, contains('$kHeadingToConfirm (1)'));
       expect(all, contains('$kHeadingSuggestions (1)'));
-      expect(all, contains('Recorded automatically (1)'));
+      expect(all, contains('Recently recorded (1)'));
     });
   });
 
@@ -117,7 +117,7 @@ void main() {
       ]))));
       await t.pump();
       final all = _texts(t);
-      expect(all, contains('Recorded automatically (1)'));
+      expect(all, contains('Recently recorded (1)'));
       expect(find.byType(AutoRecordedRow), findsNWidgets(3));
     });
   });
@@ -137,7 +137,7 @@ void main() {
       await t.pumpWidget(_section([], actions(air: _air([AutoRecorded(rowId: 1, amountCents: 5000, at: kFakeNow)]))));
       expect(find.byKey(const Key('todo-empty')), findsNothing);
       final top = t.getTopLeft(find.byKey(const Key('nothing-waiting-top'))).dy;
-      final auto = t.getTopLeft(find.text('Recorded automatically (1)')).dy;
+      final auto = t.getTopLeft(find.text('Recently recorded (1)')).dy;
       expect(top, lessThan(auto));
     });
 

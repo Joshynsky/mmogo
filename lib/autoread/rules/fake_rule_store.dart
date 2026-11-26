@@ -9,17 +9,23 @@ import 'rule_store.dart';
 class FakeRuleStore implements RuleStore {
   final Map<String, ReceiverRule> _rules = {};
 
-  /// Mirrors the "Record receiver details" switch; OFF refuses setLevel.
+  /// Mirrors the "Record receiver details" switch. Like PrefsRuleStore (B-HIDE): OFF hides the rules
+  /// (all() empty, get() null) and refuses setLevel / saveRule; nothing is erased, so ON brings them back.
   bool detailsOn = true;
+
+  /// Test knob: refuses setLevel / saveRule like a store that cannot write, but (unlike [detailsOn] = false)
+  /// keeps every rule readable. Tests that used `detailsOn = false` as "a store that refuses every write"
+  /// use this since B-HIDE made OFF hide the rules too.
+  bool refuseWrites = false;
   final StreamController<void> _changes = StreamController<void>.broadcast(sync: true);
 
   static String _id(ReceiverType t, String k) => '${t.code}.$k';
 
   @override
-  Future<List<ReceiverRule>> all() async => List.unmodifiable(_rules.values);
+  Future<List<ReceiverRule>> all() async => detailsOn ? List.unmodifiable(_rules.values) : const <ReceiverRule>[];
 
   @override
-  Future<ReceiverRule?> get(ReceiverType type, String key) async => _rules[_id(type, key)];
+  Future<ReceiverRule?> get(ReceiverType type, String key) async => detailsOn ? _rules[_id(type, key)] : null;
 
   @override
   Future<bool> setLevel(ReceiverType type, String key,
@@ -29,7 +35,7 @@ class FakeRuleStore implements RuleStore {
       int? ceilingCents,
       List<int> chosenCategoryIds = const <int>[],
       required DateTime at}) async {
-    if (!detailsOn) return false;
+    if (!detailsOn || refuseWrites) return false;
     if (level == RuleLevel.autoRecord && !canHoldAutoRecord(type)) return false;
     if (!isValidCeilingCents(ceilingCents)) return false;
     // Like PrefsRuleStore.setLevel: the chosen list is kept only at Suggested.
@@ -73,7 +79,7 @@ class FakeRuleStore implements RuleStore {
 
   @override
   Future<bool> saveRule(ReceiverRule rule) async {
-    if (!detailsOn) return false;
+    if (!detailsOn || refuseWrites) return false;
     final id = _id(rule.type, rule.key);
     if (!_rules.containsKey(id) && _rules.length >= kRuleCap) return false;
     _rules[id] = rule;

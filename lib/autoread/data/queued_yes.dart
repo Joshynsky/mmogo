@@ -13,6 +13,8 @@
 ///    said record) uses the same key with a string value. [AutoMarks] / [pickAutoMarks] / the importer re-run the
 ///    decision at import ([QueuedYesImporter.autoRecheck]); any failed check drops the mark and the item keeps
 ///    waiting. While [autoRecordLive] is false every automatic mark is dropped unrecorded.
+///  - 0.2.2 item 2 (B-2): every mark the importer finishes, Yes or automatic, recorded or dropped, ends in
+///    [QueuedYesImporter.cancelAlert] of that item's phone alert, so no "Queued" alert stays in the shade.
 /// Lives under `lib/autoread/` so the standard build drops it. No message text is read or stored here.
 library;
 
@@ -235,6 +237,7 @@ class QueuedYesImporter {
     this.autoMarks,
     this.autoRecheck,
     this.markAutomatic,
+    this.cancelAlert,
     bool? live,
   })  : _now = now ?? DateTime.now,
         _live = live ?? autoRecordLive;
@@ -260,8 +263,24 @@ class QueuedYesImporter {
   /// Marks the written row recorded_automatically = 1 (Undo then drops the person to Suggested, S-3).
   final Future<void> Function(int rowId)? markAutomatic;
 
+  /// 0.2.2 item 2 (B-2): removes the phone alert of one item. Called for EVERY mark the run finishes (recorded,
+  /// already recorded, or dropped), after the marks are removed: the "Queued. It will be added when mmogo opens."
+  /// alert is then either done or no longer true. A save that throws keeps its mark AND its alert. Null = none.
+  final Future<void> Function(String itemId)? cancelAlert;
+
   /// [autoRecordLive]; false = every automatic mark is dropped, nothing is recorded from one.
   final bool _live;
+
+  /// Never throws: one failed cancel does not stop the others (the alert is cosmetic; the entry is settled).
+  Future<void> _cancelAlerts(Iterable<String> ids) async {
+    final c = cancelAlert;
+    if (c == null) return;
+    for (final id in ids) {
+      try {
+        await c(id);
+      } catch (_) {}
+    }
+  }
 
   /// Records every queued Yes that is still valid. Never throws. A save that fails keeps its mark (tried
   /// again at the next ingest, until the mark expires); everything else is removed.
@@ -300,6 +319,7 @@ class QueuedYesImporter {
         }
       }
       await marks.remove(finished);
+      await _cancelAlerts(finished);
     } catch (_) {}
   }
 
@@ -314,6 +334,7 @@ class QueuedYesImporter {
       final recheck = autoRecheck;
       if (!_live || recheck == null) {
         await am.remove(all.keys);
+        await _cancelAlerts(all.keys);
         return;
       }
       final now = _now();
@@ -343,6 +364,7 @@ class QueuedYesImporter {
         }
       }
       await am.remove(finished);
+      await _cancelAlerts(finished);
     } catch (_) {}
   }
 }

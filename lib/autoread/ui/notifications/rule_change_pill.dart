@@ -1,12 +1,15 @@
-/// §AUTOREAD.RULE_CHANGE_PILL - the one pill after a level change (0.2.2 item 2, slice U3; mock pill-1..pill-4).
+/// §AUTOREAD.RULE_CHANGE_PILL - the one pill after a level change (0.2.2 item 2, slices U3 + U-PILL; mock
+/// mock-remembered-v2 p-auto-pill, p-auto-pill-any, p-ask-pill).
 ///
-/// [RuleChangePill] is the real [RuleChangeNotice]. Stage 1 says "{name} set to {level}". Ask first and Suggested
-/// end there after [kRuleChangePillShortHold]. Auto-record stays [kRuleChangePillExpandAfter], then the SAME pill
-/// grows into stage 2 ("{name} is on Auto-record with ..." + "You can change this." + "Change ceiling"), which stays
-/// at least [kPillToastMinDuration]. Like PillToast (not edited: shared): top centre on the app navigator's
-/// overlay ([appNavigatorKey]), a newer pill replaces the older one, a swipe up dismisses, live region plus an
-/// announcement for each stage, 44 px button, reduced motion = no slide, fade or resize animation. Hold times grow
-/// with a large text size (as PillToast does); the expand delay does not.
+/// [RuleChangePill] is the real [RuleChangeNotice]. The words and the drawn stages live in
+/// §AUTOREAD.RULE_CHANGE_PILL_BODY (rule_change_pill_body.dart): name and category, never a phone number. Ask first
+/// and Suggested show one line for [kRuleChangePillShortHold]. Auto-record shows its line for
+/// [kRuleChangePillExpandAfter]; then the SAME pill box grows (F-2): the line stays and the limit line + button
+/// ("Set a limit" / "Change", both call onChangeCeiling) appear under it, held [kRuleChangePillLongHold]. The change
+/// is drawn at once (the grow animation is later, PM 25-11). Like PillToast (not edited: shared): top centre on the
+/// app navigator's overlay ([appNavigatorKey]), a newer pill replaces the older one, a swipe up dismisses, one live
+/// region plus an announcement for each stage, 44 px button, reduced motion = no slide or fade. Hold times grow with
+/// a large text size (as PillToast does); the expand delay does not.
 library;
 
 import 'dart:async';
@@ -20,17 +23,19 @@ import '../../../ui/theme/app_colors.dart';
 import '../../../ui/widgets/pill_toast.dart';
 import '../../../ui/widgets/tap_target.dart';
 import '../../rules/rule_model.dart';
-import '../levels/hard_rule_copy.dart';
 import '../levels/hard_rule_ports.dart';
+import 'rule_change_pill_body.dart';
 
 /// How long an Auto-record pill stays at stage 1 before it expands (signed: about 1.5 s).
 const Duration kRuleChangePillExpandAfter = Duration(milliseconds: 1500);
 
-/// How long an Ask first / Suggested pill stays (stage 1 only). The mock's own number: PM to confirm.
+/// How long an Ask first / Suggested pill stays (stage 1 only). The mock's own number: PM to confirm (W2).
 const Duration kRuleChangePillShortHold = Duration(milliseconds: 2500);
 
-/// Stage 2 stays at least this long (the app's toast minimum).
-const Duration kRuleChangePillLongHold = kPillToastMinDuration;
+/// How long stage 2 stays (F-2: longer than the 6 s toast minimum, so the limit line and its button can be read
+/// and reached). The number is the builder's.
+// PM to confirm
+const Duration kRuleChangePillLongHold = Duration(seconds: 10);
 
 /// The real notice: draws the one pill. Installed by RulesWiring.install (I1) as LevelsDeps.notice and as the
 /// suggestions controller's notice.
@@ -51,6 +56,7 @@ class RuleChangePill implements RuleChangeNotice {
         name: name,
         level: level,
         ceilingCents: ceilingCents,
+        categoryName: categoryName,
         onChangeCeiling: onChangeCeiling,
         onGone: live.remove,
       ),
@@ -87,6 +93,7 @@ class _RuleChangePillView extends StatefulWidget {
     required this.name,
     required this.level,
     required this.ceilingCents,
+    required this.categoryName,
     required this.onChangeCeiling,
     required this.onGone,
   });
@@ -94,6 +101,7 @@ class _RuleChangePillView extends StatefulWidget {
   final String name;
   final RuleLevel level;
   final int? ceilingCents;
+  final String? categoryName;
   final VoidCallback? onChangeCeiling;
   final VoidCallback onGone;
 
@@ -113,6 +121,15 @@ class _RuleChangePillViewState extends State<_RuleChangePillView> with SingleTic
   bool get _expands => widget.level == RuleLevel.autoRecord;
   bool get _reduce => MediaQuery.of(context).disableAnimations;
 
+  RuleChangePillLines get _lines => ruleChangePillLines(
+        name: widget.name,
+        level: widget.level,
+        category: widget.categoryName,
+        limitCents: widget.ceilingCents,
+        stage2: _expanded,
+        hasButton: widget.onChangeCeiling != null,
+      );
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -123,7 +140,7 @@ class _RuleChangePillViewState extends State<_RuleChangePillView> with SingleTic
     } else {
       _c.forward();
     }
-    _announce(hardPillStage1(widget.name, widget.level));
+    _announce(_lines.spoken);
     _timer = _expands ? Timer(kRuleChangePillExpandAfter, _expand) : Timer(_scaled(kRuleChangePillShortHold), _leave);
   }
 
@@ -138,7 +155,7 @@ class _RuleChangePillViewState extends State<_RuleChangePillView> with SingleTic
   void _expand() {
     if (!mounted || _leaving) return;
     setState(() => _expanded = true);
-    _announce('${hardPillStage2(widget.name, widget.ceilingCents)} $kHardPillStage2Sub');
+    _announce(_lines.spoken);
     _timer = Timer(_scaled(kRuleChangePillLongHold), _leave);
   }
 
@@ -161,6 +178,7 @@ class _RuleChangePillViewState extends State<_RuleChangePillView> with SingleTic
     widget.onGone();
   }
 
+  /// "Set a limit" and "Change" both land here.
   void _changeCeiling() {
     if (_acted) return;
     _acted = true;
@@ -179,25 +197,21 @@ class _RuleChangePillViewState extends State<_RuleChangePillView> with SingleTic
     final fill = dark ? p.card : p.ink;
     final ink = dark ? p.ink : p.background;
     final accent = dark ? p.primary : p.toastAction;
+    final side = dark ? BorderSide(color: p.frameLine) : BorderSide.none;
 
-    final Widget body = _expanded ? _stage2(ink, accent) : _stage1(ink, accent);
+    // One box for both stages (F-2): the same Material grows from a stadium to a rounded card, drawn at once.
     final pill = Material(
       type: MaterialType.canvas,
       color: fill,
       elevation: 6,
       shadowColor: Colors.black,
       shape: _expanded
-          ? RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(22),
-              side: dark ? BorderSide(color: p.frameLine) : BorderSide.none,
-            )
-          : StadiumBorder(side: dark ? BorderSide(color: p.frameLine) : BorderSide.none),
+          ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: side)
+          : StadiumBorder(side: side),
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxW, minWidth: _expanded ? maxW : 0, minHeight: kMinTapTarget),
-        child: _reduce
-            ? body
-            : AnimatedSize(duration: const Duration(milliseconds: 200), curve: Curves.easeOutCubic, child: body),
+        child: RuleChangePillBody(lines: _lines, ink: ink, accent: accent, onButton: _changeCeiling),
       ),
     );
     final slide = Tween<Offset>(begin: const Offset(0, -1.4), end: Offset.zero)
@@ -220,77 +234,4 @@ class _RuleChangePillViewState extends State<_RuleChangePillView> with SingleTic
       ),
     );
   }
-
-  Widget _stage1(Color ink, Color accent) => Padding(
-        padding: const EdgeInsetsDirectional.only(start: 16, end: 18, top: 6, bottom: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ExcludeSemantics(child: Icon(Icons.check_circle_rounded, size: 18, color: accent)),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Semantics(
-                container: true,
-                liveRegion: true,
-                child: Text(
-                  hardPillStage1(widget.name, widget.level),
-                  style: TextStyle(color: ink, fontSize: 14, height: 1.3, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-
-  Widget _stage2(Color ink, Color accent) => Padding(
-        padding: const EdgeInsetsDirectional.only(start: 16, end: 8, top: 12, bottom: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Semantics(
-              container: true,
-              liveRegion: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 8),
-                    child: Text(
-                      hardPillStage2(widget.name, widget.ceilingCents),
-                      style: TextStyle(color: ink, fontSize: 14, height: 1.3, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    kHardPillStage2Sub,
-                    style: TextStyle(color: ink.withValues(alpha: 0.9), fontSize: 13, height: 1.3),
-                  ),
-                ],
-              ),
-            ),
-            if (widget.onChangeCeiling != null)
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: TextButton(
-                  onPressed: _changeCeiling,
-                  style: TextButton.styleFrom(
-                    foregroundColor: accent,
-                    minimumSize: const Size(kMinTapTarget, kMinTapTarget),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    textStyle: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                  child: const Text(kHardPillChangeCeiling),
-                ),
-              )
-            else
-              const SizedBox(height: 8),
-          ],
-        ),
-      );
 }

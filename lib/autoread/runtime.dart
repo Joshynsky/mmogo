@@ -53,7 +53,7 @@ class AutoReadRuntime {
     try {
       await ReadingControllerHolder.instance?.reconcile();
     } catch (_) {}
-    await ruleCleanup.enforceDetailsOff(); // details OFF keeps no rule (never throws)
+    await ruleCleanup.enforceDetailsOff(); // details OFF: undone codes + summary go, rules stay hidden (never throws)
   }
 
   /// Sets the controller and the Delete data hook. Safe to call twice.

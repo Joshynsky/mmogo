@@ -13,7 +13,8 @@
 ///   ([kHeldWindow]) still applies.
 ///
 /// Ingest runs on [ingest]: the app calls it on start, on resume and after a
-/// notification tap. A timer on the next expiry re-emits so the bell numbers
+/// notification tap; it also runs itself when Kotlin pushes an Auto-record
+/// arrival while the app is in front (0.2.2 B-4, see [_onArrived]). A timer on the next expiry re-emits so the bell numbers
 /// drop without a user action. All state changes run one after another.
 ///
 /// Save order (see [saveCategory]): transaction first, then the waiting item
@@ -24,6 +25,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show ValueNotifier, visibleForTesting;
+import 'package:flutter/widgets.dart' show AppLifecycleState, WidgetsBinding;
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -107,7 +109,9 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
     AutoMarks? autoMarks,
     Future<bool> Function(WaitingItem item)? autoRecheck,
     bool? autoRecordLive,
-  })  : _queuedYesOn = queuedYes,
+    bool Function()? inFront,
+  })  : _inFront = inFront ?? _appInFront,
+        _queuedYesOn = queuedYes,
         _autoMarks = autoMarks,
         _autoRecheck = autoRecheck,
         _autoLive = autoRecordLive,
@@ -127,7 +131,30 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
         _readAirtimeAuto = readAirtimeAuto ?? _prefsReadAirtimeAuto,
         _writeAirtimeAuto = writeAirtimeAuto ?? _prefsWriteAirtimeAuto,
         _readAirtimeAutoOther = readAirtimeAutoOther ?? _prefsReadAirtimeAutoOther,
-        _writeAirtimeAutoOther = writeAirtimeAutoOther ?? _prefsWriteAirtimeAutoOther;
+        _writeAirtimeAutoOther = writeAirtimeAutoOther ?? _prefsWriteAirtimeAutoOther {
+    _arrivedSub = bridge.arrived.listen((_) => _onArrived(), onError: (Object _) {});
+  }
+
+  // 0.2.2 item 2 (B-4): Kotlin pushes `onArrived` after it queued an Auto-record arrival. While the app is in
+  // front the import runs at once (the same [ingest] as open and resume; its queue means a resume or a second
+  // arrival at the same moment finds the mark already finished, so nothing is recorded twice). In the background
+  // nothing runs here: the resume ingest records it when the user comes back, with the toast in view.
+  final bool Function() _inFront;
+  StreamSubscription<void>? _arrivedSub;
+
+  static bool _appInFront() {
+    try {
+      return WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+    } catch (_) {
+      return false; // no binding (a plain test): never import on our own
+    }
+  }
+
+  void _onArrived() {
+    // Not before the app's own first ingest (it runs after the consent check on start).
+    if (_closed || !_ingestStarted || !_inFront()) return;
+    unawaited(ingest().catchError((Object _) {}));
+  }
 
   final AutoReadBridge _bridge;
   final PendingItemsStore _store;
@@ -170,6 +197,7 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
     autoMarks: _autoMarks ?? PrefsAutoMarks(),
     autoRecheck: _autoRecheck ?? HardRuleRecheck().passes,
     markAutomatic: _markAutomatic,
+    cancelAlert: _bridge.cancelAlert, // B-2: the "Queued" alert leaves the shade once its mark is finished
     live: _autoLive,
   );
   Map<int, String> _namesWritten = const {};
@@ -256,6 +284,8 @@ class RealWaitingRepository implements AutoReadWaitingRepository {
     _closed = true;
     // A second dispose() must stay harmless (tests and shutdown can both call it).
     if (firstClose) undecided.dispose();
+    unawaited(_arrivedSub?.cancel());
+    _arrivedSub = null;
     _describer.clear();
     _timer?.cancel();
     unawaited(_changes.close());

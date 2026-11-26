@@ -107,8 +107,19 @@ class MethodChannelAutoReadBridge implements AutoReadBridge {
   /// added here BEFORE it is added to [tapped], so a listener of both knows the reason when the tap arrives.
   Stream<String> get categorizeTapped => _categorizeTapped.stream;
 
+  final StreamController<void> _arrived = StreamController<void>.broadcast();
+
+  /// 0.2.2 item 2 (B-4): pushed `onArrived` (Kotlin, after it queued an Auto-record arrival). Carries nothing; the
+  /// listener (the waiting repository) decides whether to import now (only while the app is in front).
+  @override
+  Stream<void> get arrived => _arrived.stream;
+
   /// Handles pushed calls. Unknown methods are ignored.
   Future<dynamic> _onCall(MethodCall call) async {
+    if (call.method == 'onArrived') {
+      if (_arrived.hasListener) _arrived.add(null);
+      return null;
+    }
     if (call.method != 'onTapped') return null;
     final args = call.arguments;
     if (args is! Map) return null;
@@ -173,6 +184,16 @@ class MethodChannelAutoReadBridge implements AutoReadBridge {
       for (final e in r)
         if (e is String && isValidHeldId(e)) e,
     ];
+  }
+
+  /// 0.2.2 (B-2). Any failure (an older platform side without the call, a channel error) is swallowed: a
+  /// leftover alert is cosmetic, the entry is already recorded.
+  @override
+  Future<void> cancelAlert(String id) async {
+    if (!isValidHeldId(id)) return;
+    try {
+      await _invoke('cancelAlert', {'id': id});
+    } catch (_) {}
   }
 
   /// Not a channel call: the counter lives in Flutter preferences (Dart-owned).

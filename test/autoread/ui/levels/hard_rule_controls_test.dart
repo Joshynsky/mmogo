@@ -427,7 +427,7 @@ void main() {
 
     testWidgets('a store that refuses every write: save-failed toast, no onDone', (t) async {
       final store = await _store();
-      store.detailsOn = false;
+      store.refuseWrites = true; // B-HIDE: detailsOn = false now hides the rules too
       final done = <int>[];
       await _pump(t, HardRuleResetFooter(bulk: RuleBulkOps(store), onDone: done.add));
       await t.tap(find.byKey(const Key('hardResetButton')));

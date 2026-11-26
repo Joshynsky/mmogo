@@ -145,9 +145,10 @@ class RulesWiring {
     _tail = Future<void>.value(); // a stuck earlier step must not block the next install
   }
 
-  /// "Record receiver details" went OFF: no rule, undone code or summary may be kept.
+  /// "Record receiver details" went OFF: the undone codes and the summary go. B-HIDE (PM 25-11): the rules
+  /// are NOT erased; the store hides them until ON (Forget all and Delete data still erase).
   static Future<void> _detailsOff() => _serial(() async {
-        await AutoReadRuntime.ruleGuard.wipe();
+        await AutoReadRuntime.ruleGuard.clearDetailsOffData();
         await summary.clear();
         await suggestions?.refresh();
       });

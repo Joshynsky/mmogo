@@ -74,7 +74,9 @@ void main() {
       expect(changed, 3);
     });
 
-    test('turning "Record receiver details" OFF wipes the rules, the undone codes and the summary', () async {
+    // CHANGED ON PURPOSE (0.2.2 item 2, B-HIDE, PM 25-11): OFF used to wipe the rules too; now the rules
+    // stay (hidden) and come back at ON, while the undone codes and the summary still go.
+    test('turning "Record receiver details" OFF hides the rules and clears the undone codes and the summary', () async {
       final store = AutoReadRuntime.ruleStore;
       await store.setLevel(sm, '0712345678', name: 'Jane', level: RuleLevel.askFirst, categoryId: 1, at: DateTime.utc(2026, 11, 1));
       await AutoReadRuntime.undoneCodes.add('CODE000001', now: DateTime.now());
@@ -84,9 +86,12 @@ void main() {
       await AppPrefs.writeCaptureIdentityPreference(false);
       await Future<void>.delayed(const Duration(milliseconds: 50));
       await p.reload();
-      expect(p.getKeys().where((k) => k.startsWith('autoread_rule_v1.')), isEmpty);
+      expect(p.getKeys().where((k) => k.startsWith('autoread_rule_v1.')).length, 1, reason: 'kept, hidden');
+      expect(await store.all(), isEmpty);
       expect(p.containsKey(kUndoneCodesKey), isFalse);
       expect(p.containsKey(kHistSummaryPrefKey), isFalse);
+      await AppPrefs.writeCaptureIdentityPreference(true);
+      expect((await store.get(sm, '0712345678'))?.level, RuleLevel.askFirst, reason: 'ON brings Jane back');
     });
   });
 

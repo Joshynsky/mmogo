@@ -148,7 +148,9 @@ void main() {
       expect(await s2.setLevel(sm, 'new', name: 'n', level: RuleLevel.askFirst, categoryId: 1, at: t0), isFalse);
       expect((await s2.all()).length, kRuleCap);
     });
-    test('details OFF: nothing read, nothing written, found rules wiped', () async {
+    // CHANGED ON PURPOSE (0.2.2 item 2, B-HIDE, PM 25-11): details OFF used to wipe the found rules; now it
+    // hides them (nothing read, nothing written) and keeps them, and ON brings them back.
+    test('details OFF: nothing read, nothing written, found rules kept hidden', () async {
       final s = PrefsRuleStore();
       await s.setLevel(sm, '0712', name: 'A', level: RuleLevel.askFirst, categoryId: 1, at: t0);
       final p = await SharedPreferences.getInstance();
@@ -156,7 +158,10 @@ void main() {
       expect(await s.get(sm, '0712'), isNull);
       expect(await s.setLevel(sm, '0713', name: 'B', level: RuleLevel.askFirst, categoryId: 1, at: t0), isFalse);
       expect(await s.all(), isEmpty);
-      expect(p.getKeys().where((k) => k.startsWith(kRuleKeyPrefix)), isEmpty);
+      expect(p.getKeys().where((k) => k.startsWith(kRuleKeyPrefix)).length, 1);
+      await p.setBool(kReceiverDetailsPrefsKey, true);
+      expect((await s.get(sm, '0712'))?.level, RuleLevel.askFirst);
+      expect(await s.get(sm, '0713'), isNull);
     });
   });
 
@@ -360,7 +365,9 @@ void main() {
       expect(await s.get(ReceiverType.pochi, 'AMY'), isNull);
       expect(await s.get(sm, '0712'), isNotNull);
     });
-    test('cleanup: details OFF at launch wipes rules, undone codes and history', () async {
+    // CHANGED ON PURPOSE (0.2.2 item 2, B-HIDE, PM 25-11): details OFF at launch used to wipe the rules too;
+    // now only the undone codes and the history go and the rule keys stay (hidden by the store).
+    test('cleanup: details OFF at launch clears undone codes and history, keeps the rules', () async {
       SharedPreferences.setMockInitialValues({
         kReceiverDetailsPrefsKey: false,
         '${kRuleKeyPrefix}SM.x': 'v',
@@ -371,7 +378,7 @@ void main() {
       final c = RuleCleanup(PrefsRuleStore(), guard: RuleBackupGuard(prefs: SharedReadingPrefs()));
       await c.enforceDetailsOff();
       final p = await SharedPreferences.getInstance();
-      expect(p.getKeys().where((k) => kRuleKeyPrefixes.any(k.startsWith)), isEmpty);
+      expect(p.getKeys().where((k) => kRuleKeyPrefixes.any(k.startsWith)).toList(), ['${kRuleKeyPrefix}SM.x']);
       expect(p.getInt('keep'), 1);
     });
   });

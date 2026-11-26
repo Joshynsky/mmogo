@@ -46,4 +46,13 @@ abstract class AutoReadBridge {
 
   /// The current generation (bumped when the held store is wiped).
   Future<int> readGeneration();
+
+  /// 0.2.2 item 2 (B-2): removes the phone alert of item [id] from the shade (the "Queued" alert once its entry
+  /// was recorded, or once its mark was dropped). Only that one notification id; never another feature's notice.
+  /// Never throws; an invalid id does nothing.
+  Future<void> cancelAlert(String id);
+
+  /// 0.2.2 item 2 (B-4): one event each time Kotlin says a queued Auto-record arrival is ready to import (pushed
+  /// `onArrived`, no arguments, nothing about the message). Broadcast; events nobody listens to are dropped.
+  Stream<void> get arrived;
 }

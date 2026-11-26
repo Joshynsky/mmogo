@@ -3,6 +3,8 @@
 /// claim is exclusive until ack or release.
 library;
 
+import 'dart:async';
+
 import '../../autoread/held_window.dart';
 import '../model/waiting_item.dart';
 import 'autoread_bridge.dart';
@@ -85,4 +87,20 @@ class FakeAutoReadBridge implements AutoReadBridge {
     calls.add('readGeneration');
     return _generation;
   }
+
+  /// 0.2.2 (B-2): every alert id cancelled, in order. Kept apart from [calls] so call-order tests stay as they were.
+  final List<String> cancelledAlerts = [];
+
+  @override
+  Future<void> cancelAlert(String id) async {
+    if (isValidHeldId(id)) cancelledAlerts.add(id);
+  }
+
+  final StreamController<void> _arrived = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get arrived => _arrived.stream;
+
+  /// Test helper (0.2.2 B-4): Kotlin's pushed `onArrived`.
+  void pushArrived() => _arrived.add(null);
 }

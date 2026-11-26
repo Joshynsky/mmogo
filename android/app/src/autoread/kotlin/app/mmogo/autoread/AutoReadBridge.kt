@@ -7,6 +7,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -37,6 +39,18 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
 
         fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
             current?.handlePermissionsResult(requestCode, permissions, grantResults)
+        }
+
+        /**
+         * 0.2.2 item 2 (B-4): an Auto-record arrival was queued (HardRuleArrival.postQueued). Tells the app, on the
+         * main thread, with NO argument (nothing about the message crosses). The app imports at once only while it
+         * is in front (RealWaitingRepository); otherwise its resume does. No activity: nothing happens. Never throws.
+         */
+        fun onArrived() {
+            try {
+                current?.notifyArrived()
+            } catch (_: Throwable) {
+            }
         }
     }
 
@@ -69,6 +83,13 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
                 "ackHeld" -> {
                     val id = BridgeLogic.idArg(call.arguments)
                     if (id != null) store.ack(id)
+                    result.success(null)
+                }
+                "cancelAlert" -> {
+                    // 0.2.2 item 2 (B-2): the app recorded (or dropped) a queued item; its alert leaves the shade.
+                    // Only this item's notification id (Notifier.cancel), never another channel's notice.
+                    val id = BridgeLogic.idArg(call.arguments)
+                    if (id != null) Notifier.cancel(activity, id)
                     result.success(null)
                 }
                 "listHeldIds" -> result.success(store.listIds())
@@ -240,6 +261,16 @@ class AutoReadBridge(private val activity: Activity, private val channel: Method
                 channel.invokeMethod("onTapped", if (action == null) mapOf("id" to id) else mapOf("id" to id, "action" to action))
             }
         } catch (_: Throwable) {
+        }
+    }
+
+    private fun notifyArrived() {
+        if (activity.isFinishing || activity.isDestroyed) return
+        Handler(Looper.getMainLooper()).post {
+            try {
+                channel.invokeMethod("onArrived", null)
+            } catch (_: Throwable) {
+            }
         }
     }
 
