@@ -87,7 +87,12 @@ class AutoRecorded {
     this.inRecentlyDeleted = false,
     this.partyLabel,
     this.categoryName,
+    this.recordedAutomatically = false,
   });
+
+  /// 0.2.2 F-5: the ledger row is marked `recorded_automatically = 1` (written with no tap). Yes and Parse
+  /// rows stay false. Airtime auto rows are also marked, but keep their own look (no tag).
+  final bool recordedAutomatically;
 
   /// 0.2.2: set for a non-airtime entry (a chip record or an Ask first Yes): who it went to, and the
   /// category it was recorded under. Both null for airtime (its title is built from [airtimeOther]).

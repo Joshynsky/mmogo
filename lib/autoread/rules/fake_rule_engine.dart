@@ -21,6 +21,8 @@ class FakeRuleEngine implements RuleEngine {
   Future<void> onRecorded(ReceiverType type, String key, {required String name, required int categoryId, required DateTime at}) async =>
       calls.add('recorded:${_id(type, key)}:$categoryId');
 
+  /// Logs the no-tap marker only; like `PrefsRuleEngine` it never changes a
+  /// level (D-U: Undo of a no-tap entry keeps Auto-record).
   @override
   Future<void> onUndone(ReceiverType type, String key, {bool recordedAutomatically = false}) async =>
       calls.add(recordedAutomatically ? 'undone-auto:${_id(type, key)}' : 'undone:${_id(type, key)}');

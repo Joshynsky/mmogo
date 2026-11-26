@@ -1,7 +1,9 @@
 /// AUTOREAD QUEUED_YES toast: tells the user that a Yes tapped on a phone alert was recorded when mmogo opened,
-/// with Undo (the row moves to Recently deleted, the same soft delete as every other Undo).
-/// Shown as a top pill toast on the root overlay, so it appears on whatever page is open. A missing overlay
-/// (a test, a closing app) shows nothing; the entry is recorded either way.
+/// with Undo (the row moves to Recently deleted, the same soft delete as every other Undo; the person's level is
+/// not touched). Shown as a top pill toast on the root overlay, so it appears on whatever page is open; after
+/// Undo the same top pill says where the row went ([kQueuedYesUndone], F-3: never a bottom snackbar). The no-tap
+/// (Auto-record) twin is §AUTOREAD.HARD_RULE_ARRIVAL_TOAST. A missing overlay (a test, a closing app) shows
+/// nothing; the entry is recorded either way.
 library;
 
 import '../../domain/format/money.dart';

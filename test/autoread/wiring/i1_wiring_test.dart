@@ -7,6 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/autoread/rules/rule_model.dart';
 import 'package:mmogo/autoread/runtime.dart';
 import 'package:mmogo/autoread/ui/levels/hard_rule_pause_card.dart';
 import 'package:mmogo/autoread/ui/levels/hard_rule_ports.dart';
@@ -98,6 +99,11 @@ void main() {
     testWidgets('flip in Settings: the card follows; flip on the card: the Settings row follows', (t) async {
       RulesWiring.install();
       final d = LevelsDeps.instance!;
+      // Item 2 redesign U-CTRL (B-6): the page row is hidden while nobody is on Auto-record, so one is.
+      // Real store over mock prefs: written outside the fake clock (it may wait on real timers).
+      final saved = await t.runAsync(() => d.store.setLevel(ReceiverType.sendMoney, '0722000555',
+          name: 'Tim Otieno', level: RuleLevel.autoRecord, categoryId: 1, at: DateTime.utc(2026, 11, 26)));
+      expect(saved, isTrue);
       t.view.physicalSize = const Size(400, 1600);
       t.view.devicePixelRatio = 1;
       addTearDown(t.view.reset);

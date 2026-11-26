@@ -1,7 +1,11 @@
 /// §AUTOREAD.LEVELS.HARD_RULE_PAUSED_BANNER: the amber "Auto-record is paused. {n} people are asked first
-/// until you resume." banner with Resume (mock ctl-a-paused on the Remembered page, ctl-a-todo on To do).
-/// Shown only while paused; follows [HardRulePausePort.changes]. Draws nothing while [autoRecordUi] is false.
+/// until you resume." banner with Resume, on the To do page only (mock ctl-a-todo; item 2 redesign: the
+/// Remembered page has no banner, reversal 4). Shown only while paused AND at least one person is on
+/// Auto-record (B-6: never "0 people"); the count goes through peopleCount (hardPausedBanner). Follows
+/// [HardRulePausePort.changes] and the rule store's changes. Draws nothing while [autoRecordUi] is false.
 library;
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
@@ -15,7 +19,7 @@ class HardRulePausedBanner extends StatefulWidget {
 
   final HardRulePausePort port;
 
-  /// For the count of people on Auto-record (null = 0).
+  /// For the count of people on Auto-record (null = 0, so nothing is drawn).
   final RuleBulkOps? bulk;
 
   @override
@@ -25,9 +29,39 @@ class HardRulePausedBanner extends StatefulWidget {
 class _HardRulePausedBannerState extends State<HardRulePausedBanner> with HardRulePauseWatch<HardRulePausedBanner> {
   int? _n;
   bool _busy = false;
+  StreamSubscription<void>? _sub;
+  Object? _store;
+  int _countSeq = 0;
 
   @override
   HardRulePausePort? get pausePort => widget.port;
+
+  @override
+  void initState() {
+    super.initState();
+    _follow();
+  }
+
+  @override
+  void didUpdateWidget(covariant HardRulePausedBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(_store, widget.bulk?.store)) _follow();
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  /// Recounts when someone joins or leaves Auto-record while paused.
+  void _follow() {
+    _sub?.cancel();
+    _store = widget.bulk?.store;
+    _sub = widget.bulk?.store.changes.listen((_) {
+      if (paused == true) _count();
+    });
+  }
 
   @override
   void onPauseRead(bool value) {
@@ -35,8 +69,9 @@ class _HardRulePausedBannerState extends State<HardRulePausedBanner> with HardRu
   }
 
   Future<void> _count() async {
+    final seq = ++_countSeq;
     final n = await hardAutoRecordCount(widget.bulk);
-    if (mounted) setState(() => _n = n);
+    if (mounted && seq == _countSeq) setState(() => _n = n);
   }
 
   Future<void> _resume() async {
@@ -49,7 +84,7 @@ class _HardRulePausedBannerState extends State<HardRulePausedBanner> with HardRu
   @override
   Widget build(BuildContext context) {
     final n = _n;
-    if (!autoRecordUi || paused != true || n == null) return const SizedBox.shrink();
+    if (!autoRecordUi || paused != true || n == null || n <= 0) return const SizedBox.shrink();
     final p = AppPalette.of(context);
     final text = hardPausedBanner(n);
     return Semantics(

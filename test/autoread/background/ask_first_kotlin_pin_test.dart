@@ -185,7 +185,8 @@ void main() {
   group('security shape', () {
     test('the manifest is unchanged: the two receivers, two permissions, no new component, nothing exported but the app', () {
       final m = File('android/app/src/autoread/AndroidManifest.xml').readAsStringSync();
-      expect(RegExp('<receiver').allMatches(m), hasLength(2));
+      // 0.2.2 item 2 (B-PAUSE): + PauseActionReceiver (not exported); still no service, provider or activity.
+      expect(RegExp('<receiver').allMatches(m), hasLength(3));
       expect(RegExp('<uses-permission ').allMatches(m), hasLength(2));
       expect(m, isNot(contains('<service')));
       expect(m, isNot(contains('<provider')));

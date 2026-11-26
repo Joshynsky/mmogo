@@ -458,7 +458,7 @@ void main() {
     expect(kept!.level, RuleLevel.suggested);
     expect(kept.categoryId, 2);
     expect(r.store.calls.single, (level: RuleLevel.suggested, categoryId: 2, ceilingCents: null));
-    expect(r.notice.calls.single.name, nameWithMask('Grace', _grace));
+    expect(r.notice.calls.single.name, 'Grace'); // U-PERSON: the pill gets the plain name, no mask
     expect(r.notice.calls.single.level, RuleLevel.suggested);
     expect(r.notice.calls.single.onChangeCeiling, isNull);
     // Grace is listed in the closed Suggested group now.
@@ -498,7 +498,7 @@ void main() {
     final call = r.notice.calls.single;
     expect(call.level, RuleLevel.autoRecord);
     expect(call.ceilingCents, 50000);
-    expect(call.name, nameWithMask('Tim', _tim));
+    expect(call.name, 'Tim'); // U-PERSON: the pill gets the plain name, no mask
     expect(_inRow('SM.$_tim', find.text(hardRowRecordsUpTo('Family', 50000))), findsOneWidget); // the group stayed open
     call.onChangeCeiling!();
     await t.pumpAndSettle();

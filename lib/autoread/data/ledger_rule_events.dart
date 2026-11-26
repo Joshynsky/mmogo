@@ -128,6 +128,8 @@ class LedgerRuleEvents {
         final r = await _row(id);
         if (r != null) {
           final p = await personOf(r, details: details);
+          // The no-tap marker is passed on, but the engine keeps the level (D-U): an Auto-record person
+          // stays on Auto-record; the undone code below stops the same message being recorded again.
           if (p != null) await engine.onUndone(p.type, p.key, recordedAutomatically: r['recorded_automatically'] == 1);
           final code = r['display_code'];
           if (details && r['raw_parse_source'] == 'SMS_PARSE' && code is String && code.isNotEmpty && r['source_type'] != 'CASH') {

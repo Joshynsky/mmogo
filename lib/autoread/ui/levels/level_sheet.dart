@@ -1,11 +1,8 @@
-/// §AUTOREAD.LEVELS.LEVEL_SHEET: the sheet behind a person's level button.
-/// 0.2.1 offers Suggested and Ask first ([kSheetLevels]); the 0.2.2
-/// Auto-record level adds one entry there. Ask first needs a category, picked from the categories of the
-/// person's own group only. The sheet stays short: the category is a row that opens its own small sheet ([showCategoryPickSheet]).
-/// 0.2.2 (only while [autoRecordUi]): three radio options (mock lvl-tim/amina/mboga/kplc), Auto-record
-/// greyed with a reason where the type cannot hold it, the ceiling field ([CeilingField]) inside the
-/// Auto-record option, and the confirm dialog ([showHardRuleConfirm]) before a NEW Auto-record.
-/// Flag off = the 0.2.1 sheet exactly.
+/// §AUTOREAD.LEVELS.LEVEL_SHEET: the sheet behind a person's level button, opened by [showLevelSheet].
+/// Flag off: the 0.2.1 sheet exactly ([kSheetLevels]: Suggested and Ask first; Ask first needs a category from
+/// the person's own group, picked on its own small sheet, [showCategoryPickSheet]).
+/// 0.2.2 (only while [autoRecordUi]): the person sheet of the item 2 redesign ([PersonSheet],
+/// person_sheet.dart; mock-remembered-v2 p-*). [LevelSheet] picks one of the two.
 library;
 
 import 'package:flutter/material.dart';
@@ -16,12 +13,12 @@ import '../../rules/rule_model.dart';
 import '../../../ui/widgets/bottom_sheet_shell.dart';
 import '../category_choices.dart';
 import 'category_pick_sheet.dart';
-import 'hard_rule_confirm_dialog.dart';
 import 'hard_rule_copy.dart';
 import 'hard_rule_ports.dart' show autoRecordUi;
-import 'level_sheet_ceiling.dart';
 import 'levels_copy.dart';
 import 'levels_person_row.dart';
+import 'person_sheet.dart';
+import 'setup_ports.dart';
 
 /// The words of a level tag on the 0.2.1 sheet (two levels). Moved here from the removed
 /// level_filter_row.dart (PM D3, I1): the sheet is its only user.
@@ -35,13 +32,13 @@ const List<RuleLevel> kSheetLevels = [RuleLevel.suggested, RuleLevel.askFirst];
 
 enum LevelSaveResult { ok, capReached, failed }
 
-/// What the sheet calls on Save. [ceilingCents] is the Auto-record ceiling (0.2.2); callers ignore it
-/// until the sheet offers Auto-record.
+/// What the sheet calls on Save. [ceilingCents] is the Auto-record limit (0.2.2 sheet only). The chosen
+/// Suggest list is not passed: the save keeps the stored one (saveLevelChoice).
 typedef LevelSaveFn = Future<LevelSaveResult> Function(RuleLevel level, int? categoryId, {int? ceilingCents});
 
 /// The one-line reason Auto-record is greyed for [type]; null when the type can hold it. Withdrawals have
 /// no [ReceiverType] (they never hold a rule), so kHardWhyNotWithdrawal has no row to sit on today.
-String? autoRecordWhyNot(ReceiverType type) => canHoldAutoRecord(type) ? null : kHardWhyNotPaybill;
+String? autoRecordWhyNot(ReceiverType type) => canHoldAutoRecord(type) ? null : kHardPaybillAlwaysAsks;
 
 Future<void> showLevelSheet(
   BuildContext context, {
@@ -49,70 +46,86 @@ Future<void> showLevelSheet(
   required CategoryChoices categories,
   required LevelSaveFn onSave,
   bool focusCeiling = false,
+  PickCategories? pickCategories,
+  int? paymentCount,
 }) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => LevelSheet(person: person, categories: categories, onSave: onSave, focusCeiling: focusCeiling),
+    builder: (_) => LevelSheet(
+      person: person,
+      categories: categories,
+      onSave: onSave,
+      focusCeiling: focusCeiling,
+      pickCategories: pickCategories,
+      paymentCount: paymentCount,
+    ),
   );
 }
 
-class LevelSheet extends StatefulWidget {
-  const LevelSheet({super.key, required this.person, required this.categories, required this.onSave, this.focusCeiling = false});
+class LevelSheet extends StatelessWidget {
+  const LevelSheet({
+    super.key,
+    required this.person,
+    required this.categories,
+    required this.onSave,
+    this.focusCeiling = false,
+    this.pickCategories,
+    this.paymentCount,
+  });
   final LevelPerson person;
   final CategoryChoices categories;
   final LevelSaveFn onSave;
 
-  /// Opens with the ceiling field focused (the pill's "Change ceiling"); only when Auto-record shows.
+  /// Opens with the limit field focused (the pill's "Set a limit" / "Change"); only when Auto-record shows.
   final bool focusCeiling;
 
+  /// The category chips picker (LevelsDeps.pickCategories, single choice). Null = the older list sheet.
+  /// 0.2.2 sheet only.
+  final PickCategories? pickCategories;
+
+  /// "{k} payments" in the 0.2.2 sheet's header; null = not shown.
+  final int? paymentCount;
+
   @override
-  State<LevelSheet> createState() => _LevelSheetState();
+  Widget build(BuildContext context) => autoRecordUi
+      ? PersonSheet(
+          person: person,
+          categories: categories,
+          onSave: onSave,
+          focusCeiling: focusCeiling,
+          pickCategories: pickCategories,
+          paymentCount: paymentCount,
+        )
+      : _LegacyLevelSheet(person: person, categories: categories, onSave: onSave);
 }
 
-class _LevelSheetState extends State<LevelSheet> {
-  /// Read once: the 0.2.2 three-level sheet, else the 0.2.1 one.
-  final bool _hard = autoRecordUi;
-  late final List<RuleLevel> _levels = _hard ? RuleLevel.values : kSheetLevels;
-  late final bool _autoAllowed = _hard && canHoldAutoRecord(widget.person.type);
-  late RuleLevel _level = _startLevel();
+/// The 0.2.1 sheet (flag off), unchanged: two level chips, the note, the category row for Ask first.
+class _LegacyLevelSheet extends StatefulWidget {
+  const _LegacyLevelSheet({required this.person, required this.categories, required this.onSave});
+  final LevelPerson person;
+  final CategoryChoices categories;
+  final LevelSaveFn onSave;
+
+  @override
+  State<_LegacyLevelSheet> createState() => _LegacyLevelSheetState();
+}
+
+class _LegacyLevelSheetState extends State<_LegacyLevelSheet> {
+  late RuleLevel _level = kSheetLevels.contains(widget.person.level) ? widget.person.level : RuleLevel.suggested;
   // Starts as the rule's category, else the most-used one; cleared on load when it is not in this group's list.
   late int? _cat = widget.person.categoryId ?? (widget.person.topIds.isEmpty ? null : widget.person.topIds.first);
   List<CategoryChoice> _cats = const [];
   bool _loaded = false;
   bool _saving = false;
   String? _error;
-  // The ceiling field (0.2.2). Starts with the stored ceiling, also for an autoPending person.
-  late final TextEditingController _ceil = TextEditingController(text: ceilingFieldText(widget.person.ceilingCents));
-  final FocusNode _ceilFocus = FocusNode();
-  CeilingProblem? _ceilProblem;
-
-  RuleLevel _startLevel() {
-    final l = widget.person.level;
-    if (!_levels.contains(l)) return RuleLevel.suggested;
-    // A stored Auto-record the type cannot hold (the store never writes one) shows its highest level.
-    if (l == RuleLevel.autoRecord && !canHoldAutoRecord(widget.person.type)) return RuleLevel.askFirst;
-    return l;
-  }
 
   @override
   void initState() {
     super.initState();
     _load();
-    if (widget.focusCeiling && _level == RuleLevel.autoRecord) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _ceilFocus.requestFocus();
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _ceil.dispose();
-    _ceilFocus.dispose();
-    super.dispose();
   }
 
   Future<void> _load() async {
@@ -135,47 +148,15 @@ class _LevelSheetState extends State<LevelSheet> {
     });
   }
 
-  bool get _needsCat => _level != RuleLevel.suggested;
-  bool get _canSave => !_saving && (!_needsCat || _cat != null) && (_level != RuleLevel.autoRecord || _catName != null);
+  bool get _canSave => !_saving && (_level != RuleLevel.askFirst || _cat != null);
   String? get _catName => _cat == null ? null : _cats.where((c) => int.tryParse(c.id) == _cat).map((c) => c.name).firstOrNull;
 
-  /// The ceiling to save; `ok: false` (and [_ceilProblem] set) when the text is refused. An unchanged
-  /// field keeps the stored cents exactly.
-  ({bool ok, int? cents}) _readCeiling() {
-    final stored = widget.person.ceilingCents;
-    if (stored != null && _ceil.text == ceilingFieldText(stored)) return (ok: true, cents: stored);
-    final r = parseCeiling(_ceil.text);
-    if (!r.ok) {
-      setState(() => _ceilProblem = r.problem);
-      return (ok: false, cents: null);
-    }
-    return (ok: true, cents: r.cents);
-  }
-
   Future<void> _save() async {
-    int? ceiling;
-    if (_level == RuleLevel.autoRecord) {
-      if (!_autoAllowed) return; // never asks the store for an Auto-record this type cannot hold
-      final c = _readCeiling();
-      if (!c.ok) return; // Save does nothing while the ceiling is refused
-      ceiling = c.cents;
-    }
     setState(() {
       _saving = true;
       _error = null;
     });
-    // A NEW Auto-record asks first; a change on an existing Auto-record (the ceiling) does not.
-    if (_level == RuleLevel.autoRecord && widget.person.level != RuleLevel.autoRecord) {
-      final yes = await showHardRuleConfirm(context, name: _displayName, category: _catName!, ceilingCents: ceiling);
-      if (!mounted) return;
-      if (!yes) {
-        setState(() => _saving = false); // Cancel keeps the sheet open; nothing saved
-        return;
-      }
-    }
-    final r = _hard
-        ? await widget.onSave(_level, _needsCat ? _cat : null, ceilingCents: ceiling)
-        : await widget.onSave(_level, _level == RuleLevel.askFirst ? _cat : null);
+    final r = await widget.onSave(_level, _level == RuleLevel.askFirst ? _cat : null);
     if (!mounted) return;
     if (r == LevelSaveResult.ok) {
       Navigator.of(context).pop();
@@ -195,70 +176,8 @@ class _LevelSheetState extends State<LevelSheet> {
   @override
   Widget build(BuildContext context) {
     final p = AppPalette.of(context);
-    final name = _displayName;
-    return BottomSheetShell(palette: p, children: [...(_hard ? _hardTop(p, name) : _top(p, name)), _actions(p)]);
+    return BottomSheetShell(palette: p, children: [..._top(p, _displayName), _actions(p)]);
   }
-
-  /// The 0.2.2 top: title, three radio options (mock lvl-*), then the category row for Ask first and
-  /// Auto-record.
-  List<Widget> _hardTop(AppPalette p, String name) {
-    return [
-      Semantics(
-        header: true,
-        child: Text(
-          hardSheetTitle(name),
-          key: const Key('levelSheetTitle'),
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: p.ink),
-        ),
-      ),
-      Semantics(
-        // Radio group; the options carry their own checked state.
-        container: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final l in _levels) ...[
-              if (l != _levels.first) const SizedBox(height: 8),
-              LevelOption(
-                key: Key('levelChoice${l.name}'),
-                title: hardRuleLevelName(l),
-                note: l == RuleLevel.autoRecord && !_autoAllowed
-                    ? (autoRecordWhyNot(widget.person.type) ?? kHardWhyNotPaybill)
-                    : _hardNote(l),
-                selected: _level == l,
-                enabled: l != RuleLevel.autoRecord || _autoAllowed,
-                onTap: _saving ? null : () => _pick(l),
-                extra: l == RuleLevel.autoRecord && _level == l && _autoAllowed
-                    ? CeilingField(
-                        controller: _ceil,
-                        focusNode: _ceilFocus,
-                        problem: _ceilProblem,
-                        onChanged: (_) {
-                          if (_ceilProblem != null) setState(() => _ceilProblem = null);
-                        },
-                      )
-                    : null,
-              ),
-            ],
-          ],
-        ),
-      ),
-      if (_needsCat) ..._categoryPart(p),
-    ];
-  }
-
-  void _pick(RuleLevel l) => setState(() {
-    _level = l;
-    _ceilProblem = null;
-  });
-
-  String _hardNote(RuleLevel l) => switch (l) {
-    RuleLevel.suggested => hardSheetNoteSuggested(widget.person.name),
-    // No category chosen yet: today's Ask first note (there is no category to quote).
-    RuleLevel.askFirst => _catName == null ? kLevelSheetAskFirstNote : hardSheetNoteAskFirst(_catName!),
-    RuleLevel.autoRecord => kHardSheetNoteAutoRecord,
-  };
 
   List<Widget> _top(AppPalette p, String name) {
     final w = <Widget>[
@@ -411,104 +330,5 @@ class _LevelSheetState extends State<LevelSheet> {
   Future<void> _openPicker() async {
     final id = await showCategoryPickSheet(context, categories: _cats, selected: _cat);
     if (id != null && mounted) setState(() => _cat = id);
-  }
-}
-
-/// One radio option of the 0.2.2 sheet: title, note (or the greyed reason), and [extra] under it (the
-/// ceiling field). A disabled option is drawn muted with an empty radio, says "disabled" to a screen
-/// reader and ignores taps; the reason line is the non-colour cue.
-class LevelOption extends StatelessWidget {
-  const LevelOption({
-    super.key,
-    required this.title,
-    required this.note,
-    required this.selected,
-    required this.enabled,
-    this.onTap,
-    this.extra,
-  });
-  final String title;
-  final String note;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback? onTap;
-  final Widget? extra;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = AppPalette.of(context);
-    final tap = enabled ? onTap : null;
-    final on = selected && enabled;
-    final hasExtra = extra != null;
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: on ? p.tint : Colors.transparent,
-        border: Border.all(color: on ? p.primary : p.line, width: 1.5),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Semantics(
-              inMutuallyExclusiveGroup: true,
-              checked: on,
-              enabled: enabled,
-              label: '$title. $note',
-              excludeSemantics: true,
-              onTap: tap,
-              child: InkWell(
-                onTap: tap,
-                child: Container(
-                  constraints: const BoxConstraints(minHeight: 44),
-                  padding: EdgeInsetsDirectional.fromSTEB(12, 10, 12, hasExtra ? 4 : 10),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        on ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                        size: 22,
-                        color: enabled ? (on ? p.primary : p.mutedInk) : p.line,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: enabled ? (on ? p.tintInk : p.ink) : p.mutedInk,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              note,
-                              key: enabled ? null : const Key('levelWhyNot'),
-                              style: TextStyle(
-                                fontSize: 13,
-                                height: 1.35,
-                                fontStyle: enabled ? FontStyle.normal : FontStyle.italic,
-                                color: enabled ? (on ? p.tintInk : p.softInk) : p.mutedInk,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            if (hasExtra) Padding(padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 10), child: extra),
-          ],
-        ),
-      ),
-    );
   }
 }

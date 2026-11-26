@@ -30,8 +30,10 @@ class Offer {
 
 abstract class RuleEngine {
   Future<void> onRecorded(ReceiverType type, String key, {required String name, required int categoryId, required DateTime at});
-  /// [recordedAutomatically]: the removed row was recorded with no tap; for a
-  /// person on Auto-record that drops the rule to Suggested.
+  /// [recordedAutomatically]: the removed row was recorded with no tap. It does
+  /// not change the level: a person on Auto-record stays on Auto-record with
+  /// the same category and limit (D-U, PM 25-11). Only a Suggested person's
+  /// run starts again.
   Future<void> onUndone(ReceiverType type, String key, {bool recordedAutomatically = false});
   Future<void> onCategoryChanged(ReceiverType type, String key, {required int categoryId});
 

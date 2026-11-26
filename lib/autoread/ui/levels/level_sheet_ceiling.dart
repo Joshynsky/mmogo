@@ -108,7 +108,7 @@ class CeilingField extends StatelessWidget {
                       isDense: true,
                       constraints: const BoxConstraints(minHeight: 44),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                      hintText: kHardCeilingPlaceholder,
+                      hintText: kHardLimitNotSet,
                       hintStyle: TextStyle(color: p.mutedInk),
                       filled: true,
                       fillColor: p.card,
@@ -123,7 +123,7 @@ class CeilingField extends StatelessWidget {
           const SizedBox(height: 4),
           if (bad == null)
             Text(
-              kHardCeilingHint,
+              kHardLimitEmptyHint,
               key: const Key('ceilingHint'),
               style: TextStyle(fontSize: 12, height: 1.35, color: p.mutedInk),
             )

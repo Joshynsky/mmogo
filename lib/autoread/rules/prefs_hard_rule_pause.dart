@@ -5,6 +5,8 @@
 /// never pauses or unpauses by itself. While paused every Auto-record rule
 /// behaves as Ask first; rules, levels and ceilings stay saved.
 /// Reads fail closed (a failure or a 2 s timeout reads as paused).
+/// B-PAUSE: the pinned phone notice's Resume button (Kotlin, mmogo may be closed) writes this key = `false`,
+/// which reads as not paused; [pauseResumeStep] is the Dart mirror of what that button decides.
 library;
 
 import 'dart:async';
@@ -13,6 +15,28 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const String kHardPausedPrefsKey = 'autoread_hard_paused';
 const Duration kHardPauseBound = Duration(seconds: 2);
+
+/// What the pinned paused notice's Resume button does with the stored value it read (0.2.2 item 2,
+/// B-PAUSE). Kotlin mirror: PauseNotice.resumeStep / ResumeStep (PauseActionReceiver.kt runs it with mmogo
+/// closed; a Dart test pins both).
+enum PauseResumeStep {
+  /// Stored value is exactly `true`: write `false` (read as not paused), then remove the notice.
+  resume,
+
+  /// Absent or exactly `false`: nothing to resume; the notice is stale and goes.
+  already,
+
+  /// Anything else, or the value could not be read: do nothing; the pause and the notice stay (fail closed).
+  keep,
+}
+
+/// Dart mirror of the Kotlin Resume decision. [unreadable] = the preference file could not be read.
+PauseResumeStep pauseResumeStep(Object? raw, {bool unreadable = false}) {
+  if (unreadable) return PauseResumeStep.keep;
+  if (raw == true) return PauseResumeStep.resume;
+  if (raw == null || raw == false) return PauseResumeStep.already;
+  return PauseResumeStep.keep;
+}
 
 class PrefsHardRulePause {
   PrefsHardRulePause({Future<SharedPreferences> Function()? prefs}) : _prefs = prefs ?? SharedPreferences.getInstance;

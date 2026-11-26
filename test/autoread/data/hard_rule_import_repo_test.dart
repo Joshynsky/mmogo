@@ -1,8 +1,8 @@
 // 0.2.2 item 2 slice B2d, the repository side, end to end on the real in-memory database and real (mock) preferences:
 // an AUTOMATIC mark Kotlin wrote is re-checked at ingest from the stored rule, pause and details; passing writes ONE
-// row through the repository's own save with recorded_automatically = 1; Undo moves it to Recently deleted and the
-// ledger hook drops the person to Suggested (S-3), so the same message is not recorded again and the next one is
-// not automatic. Any failed check leaves the item waiting. With the flag false (the default) nothing is recorded.
+// row through the repository's own save with recorded_automatically = 1; Undo moves it to Recently deleted, the
+// person stays on Auto-record (D-U, PM 25-11; was S-3 "drops to Suggested") and the 24 h undone code stops the same
+// message being recorded again. Any failed check leaves the item waiting. With the flag false (the default) nothing is recorded.
 @Tags(['autoread'])
 library;
 
@@ -161,7 +161,8 @@ void main() {
     r.dispose();
   });
 
-  test('Undo: Recently deleted, the person drops to Suggested, the same message is not recorded again, the next is not automatic', () async {
+  // D-U: changed on purpose (was "the person drops to Suggested ... the next is not automatic").
+  test('Undo: Recently deleted, the person stays on Auto-record, the same message is not recorded again', () async {
     await setAuto();
     final item = await arrive(1);
     final r = repo();
@@ -181,7 +182,8 @@ void main() {
     expect(await liveRows(), isEmpty);
     expect((await db.query('transactions', where: 'id = ?', whereArgs: [rowId])).single['deleted_at'], isNotNull);
     final rule = (await rules.get(ReceiverType.sendMoney, _key))!;
-    expect(rule.level, RuleLevel.suggested);
+    expect(rule.level, RuleLevel.autoRecord);
+    expect(rule.categoryId, cat);
 
     // The same message arrives again with a (stale) automatic mark: the undone code is never recorded again.
     final again = await arrive(2);
@@ -189,10 +191,10 @@ void main() {
     expect(await liveRows(), isEmpty);
     expect(await markLeft(again.id), isFalse);
 
-    // The next message from that person is labelled Suggested, not auto.
+    // The next message from that person is still labelled Auto-record (the level was kept).
     final hint = await RuleLabeler(rules: rules, history: FakeHistoryReader(), live: true, paused: () async => false)
         .label(sampleFields(1, _t0));
-    expect(hint?.level, isNot(RuleLevel.autoRecord));
+    expect(hint?.level, RuleLevel.autoRecord);
     expect(item.id, isNot(again.id));
     r.dispose();
   });

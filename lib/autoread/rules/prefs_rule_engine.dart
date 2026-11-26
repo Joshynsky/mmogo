@@ -48,25 +48,17 @@ class PrefsRuleEngine implements RuleEngine {
     await _store.saveRule(r.copyWith(name: name, run: same ? r.run + 1 : 1, runCategoryId: categoryId, lastRecorded: t));
   }
 
-  /// Undo: the run starts again. An Undo of a row recorded with no tap
-  /// ([recordedAutomatically]) for a person on Auto-record drops that rule to
-  /// Suggested: run 0, ceiling and autoPending cleared, no category.
+  /// Undo: for a Suggested person the run starts again. Any other level is
+  /// left as it is, whether or not the row was recorded with no tap
+  /// ([recordedAutomatically]): an Undo of a no-tap entry keeps the person on
+  /// Auto-record with the same category and limit (D-U, PM 25-11; reverses
+  /// S-3). To stop Auto-record the user changes the level or uses Pause. The
+  /// undone code (24 h) is kept by the caller, so that message is never
+  /// recorded again.
   @override
   Future<void> onUndone(ReceiverType type, String key, {bool recordedAutomatically = false}) async {
     final r = await _store.get(type, key);
     if (r == null) return;
-    if (recordedAutomatically && r.level == RuleLevel.autoRecord) {
-      await _store.saveRule(ReceiverRule(
-        type: r.type,
-        key: r.key,
-        name: r.name,
-        level: RuleLevel.suggested,
-        created: r.created,
-        changed: DateTime.now().toUtc(),
-        lastRecorded: r.lastRecorded,
-      ));
-      return;
-    }
     if (r.level != RuleLevel.suggested || r.run == 0) return;
     await _store.saveRule(r.copyWith(run: 0));
   }

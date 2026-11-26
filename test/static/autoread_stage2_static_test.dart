@@ -93,7 +93,8 @@ void main() {
       for (final w in ['FOREGROUND_SERVICE', 'REQUEST_IGNORE_BATTERY_OPTIMIZATIONS', 'WAKE_LOCK', 'RECEIVE_BOOT_COMPLETED', 'SCHEDULE_EXACT_ALARM', 'USE_FULL_SCREEN_INTENT']) {
         expect(manifest, isNot(contains(w)), reason: w);
       }
-      expect(RegExp('<receiver').allMatches(manifest), hasLength(2), reason: 'SmsReceiver and ParseActionReceiver only');
+      // 0.2.2 item 2 (B-PAUSE): + PauseActionReceiver (Resume on the pinned paused notice; not exported, no service).
+      expect(RegExp('<receiver').allMatches(manifest), hasLength(3), reason: 'SmsReceiver, ParseActionReceiver and PauseActionReceiver only');
     });
   });
 

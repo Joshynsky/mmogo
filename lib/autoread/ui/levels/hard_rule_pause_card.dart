@@ -1,9 +1,13 @@
-/// §AUTOREAD.LEVELS.HARD_RULE_PAUSE_CARD: the amber, reversible "Pause all Auto-record" switch card on the
-/// Remembered page (mock ctl-a), plus the two pieces every pause control shares: [HardRulePauseWatch] (the
-/// state read from [HardRulePausePort.changes], so the card, the banner, the Settings row and the To do tag
-/// stay in sync and snap back after a failed write) and [setHardRulePause] (write + toast).
+/// §AUTOREAD.LEVELS.HARD_RULE_PAUSE_CARD: the reversible "Pause all Auto-record" switch ROW at the top of the
+/// Remembered page (item 2 redesign, mock-remembered-v2 page-all / page-paused; amber switch only when on,
+/// hidden while nobody is on Auto-record, B-6), plus the pieces every pause control shares:
+/// [HardRulePauseWatch] (the state read from [HardRulePausePort.changes], so the row, the To do banner, the
+/// Settings row and the To do tag stay in sync and snap back after a failed write), [setHardRulePause]
+/// (write + toast) and [hardPauseSwitch] (the Settings row's switch).
 /// Draws nothing while [autoRecordUi] is false (dormant).
 library;
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
@@ -100,7 +104,7 @@ Future<bool> setHardRulePause(HardRulePausePort port, RuleBulkOps? bulk, bool pa
   return ok;
 }
 
-/// The amber switch colours shared by the card and the Settings row (mock `.sw.amb`).
+/// The Settings row's amber switch (mock `.sw.amb`; the page row uses [hardPauseRowSwitch]).
 Switch hardPauseSwitch(AppPalette p, {Key? key, required bool value, ValueChanged<bool>? onChanged}) => Switch(
       key: key,
       value: value,
@@ -111,13 +115,35 @@ Switch hardPauseSwitch(AppPalette p, {Key? key, required bool value, ValueChange
       trackOutlineColor: WidgetStatePropertyAll(p.sun),
     );
 
-/// The card: title, one line, the amber switch. The whole card is one switch for a screen reader.
+/// The page row's switch (mock-remembered-v2 `.sw`): neutral when off, amber only when on (PM 25-11: "only
+/// the switch turns amber"). Not colour-only: the thumb moves (mirrored in RTL by [Switch]) and carries a
+/// pause mark while on; a screen reader hears the toggled state.
+Switch hardPauseRowSwitch(AppPalette p, {Key? key, required bool value, ValueChanged<bool>? onChanged}) => Switch(
+      key: key,
+      value: value,
+      onChanged: onChanged,
+      activeThumbColor: p.ink,
+      activeTrackColor: p.sun,
+      inactiveThumbColor: p.mutedInk,
+      inactiveTrackColor: p.track,
+      trackOutlineColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? p.sun : p.mutedInk),
+      thumbIcon: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? Icon(Icons.pause, size: 16, color: p.sun) : null),
+    );
+
+/// The "Pause all Auto-record" switch row at the top of the Remembered page's second tab (item 2 redesign,
+/// mock page-all / page-paused): title, the signed line, the switch. The whole row is one switch for a
+/// screen reader. Same port as the Settings row; a failed write snaps back (the port fires either way).
+/// Hidden while nobody is on Auto-record (B-6): it follows [RuleBulkOps.store]'s changes. With no [bulk]
+/// (or a count that cannot be read) it is shown: a switch that does nothing harms less than a missing one.
+/// Q1 (Pause switches itself off when the last person leaves Auto-record) is NOT done here: B-PAUSE's
+/// pause_notice_sync.dart owns it; this row only hides.
 class HardRulePauseCard extends StatefulWidget {
   const HardRulePauseCard({super.key, required this.port, this.bulk});
 
   final HardRulePausePort port;
 
-  /// For the resume toast's count (null = 0).
+  /// For the resume toast's count and the hide-at-0 count (null = always shown, toast count 0).
   final RuleBulkOps? bulk;
 
   @override
@@ -127,8 +153,59 @@ class HardRulePauseCard extends StatefulWidget {
 class _HardRulePauseCardState extends State<HardRulePauseCard> with HardRulePauseWatch<HardRulePauseCard> {
   bool _busy = false;
 
+  /// People on Auto-record; null = not known (no bulk, or the read failed): shown.
+  int? _auto;
+  bool _counted = false;
+  StreamSubscription<void>? _sub;
+  Object? _store;
+  int _countSeq = 0;
+
   @override
   HardRulePausePort? get pausePort => widget.port;
+
+  @override
+  void initState() {
+    super.initState();
+    _follow();
+  }
+
+  @override
+  void didUpdateWidget(covariant HardRulePauseCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // LevelsDeps.bulk is a new object on every read: follow the store, not the wrapper.
+    if (!identical(_store, widget.bulk?.store)) _follow();
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  void _follow() {
+    _sub?.cancel();
+    _store = widget.bulk?.store;
+    _sub = widget.bulk?.store.changes.listen((_) => _count());
+    _count();
+  }
+
+  Future<void> _count() async {
+    final bulk = widget.bulk;
+    final seq = ++_countSeq;
+    int? n;
+    if (bulk != null) {
+      try {
+        n = (await bulk.countByLevel())[RuleLevel.autoRecord] ?? 0;
+      } catch (_) {
+        n = null;
+      }
+    }
+    if (!mounted || seq != _countSeq) return;
+    setState(() {
+      _auto = n;
+      _counted = true;
+    });
+  }
 
   Future<void> _set(bool v) async {
     if (_busy) return;
@@ -140,7 +217,7 @@ class _HardRulePauseCardState extends State<HardRulePauseCard> with HardRulePaus
   @override
   Widget build(BuildContext context) {
     final on = paused;
-    if (!autoRecordUi || on == null) return const SizedBox.shrink();
+    if (!autoRecordUi || on == null || !_counted || _auto == 0) return const SizedBox.shrink();
     final p = AppPalette.of(context);
     final change = _busy ? null : () => _set(!on);
     return Semantics(
@@ -154,31 +231,31 @@ class _HardRulePauseCardState extends State<HardRulePauseCard> with HardRulePaus
       child: Material(
         color: p.surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: p.sun, width: 1.5),
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: p.line, width: 1.5),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           key: const Key('hardPauseCard'),
           onTap: change,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
+            constraints: const BoxConstraints(minHeight: 48),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+              padding: const EdgeInsetsDirectional.fromSTEB(14, 6, 6, 6),
               child: Row(children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(kHardPauseTitle, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: p.ink)),
-                      const SizedBox(height: 2),
-                      Text(kHardPauseSub, style: TextStyle(fontSize: 12.5, height: 1.35, color: p.mutedInk)),
+                      Text(kHardPauseTitle, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: p.ink)),
+                      const SizedBox(height: 1),
+                      Text(kHardPauseSub, style: TextStyle(fontSize: 12.5, height: 1.3, color: p.mutedInk)),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                hardPauseSwitch(p, key: const Key('hardPauseSwitch'), value: on, onChanged: _busy ? null : _set),
+                const SizedBox(width: 10),
+                hardPauseRowSwitch(p, key: const Key('hardPauseSwitch'), value: on, onChanged: _busy ? null : _set),
               ]),
             ),
           ),

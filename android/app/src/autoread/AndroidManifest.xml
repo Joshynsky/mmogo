@@ -24,5 +24,11 @@
             android:name="app.mmogo.autoread.ParseActionReceiver"
             android:enabled="false"
             android:exported="false"/>
+        <!-- 0.2.2 item 2 (B-PAUSE): the Resume button of the pinned "Auto-record is paused" notice
+             (PauseNotice). Not exported, no intent-filter, no permission: only our own immutable explicit
+             PendingIntent reaches it. Enabled, so Resume works with mmogo closed. No service. -->
+        <receiver
+            android:name="app.mmogo.autoread.PauseActionReceiver"
+            android:exported="false"/>
     </application>
 </manifest>

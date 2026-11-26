@@ -2,6 +2,10 @@
 /// was recorded, when, Undo, and the "Change in Settings" link. Autoread flavor
 /// only. Data and rules live in `logic/airtime_auto.dart`; this file draws and
 /// forwards taps.
+///
+/// 0.2.2 F-5: a person row written with no tap (`recordedAutomatically`) carries the signed text tag
+/// [kHardAutoRecordTag] above the title, and the row's spoken label starts with it (text, not colour
+/// only). Airtime rows are also marked but keep their own look: no tag.
 library;
 
 import 'package:flutter/material.dart';
@@ -12,6 +16,7 @@ import '../../ui/theme/app_colors.dart';
 import '../../ui/widgets/notif_colors.dart';
 import '../../ui/widgets/notif_shape_icon.dart';
 import '../logic/airtime_auto.dart';
+import 'levels/hard_rule_copy.dart' show kHardAutoRecordTag;
 
 /// One auto-recorded entry: what was recorded, when, and Undo.
 class AutoRecordedRow extends StatelessWidget {
@@ -39,6 +44,7 @@ class AutoRecordedRow extends StatelessWidget {
     final title = party != null ? '$party, $amount' : autoRecordedTitle(amount, other: entry.airtimeOther);
     final sub = category != null ? recordedAsSub(category) : kAutoRecordedSub;
     final age = rowAgeText(entry.at, now);
+    final tag = entry.recordedAutomatically && party != null ? kHardAutoRecordTag : null;
     final String foot;
     final NotifRowAction? action;
     if (entry.inRecentlyDeleted) {
@@ -55,6 +61,7 @@ class AutoRecordedRow extends StatelessWidget {
     return NotifRowShell(
       key: Key('auto-recorded-${entry.rowId}'),
       icon: Icon(Icons.check_circle, size: 26, color: notifShapeColor(p, NotifShape.pill)),
+      chip: tag,
       title: title,
       subtitle: sub,
       footText: foot,
@@ -67,7 +74,7 @@ class AutoRecordedRow extends StatelessWidget {
               onTap: onChangeInSettings!,
             ),
       dimmed: entry.inRecentlyDeleted,
-      spokenLabel: '$title. $sub $foot.',
+      spokenLabel: tag == null ? '$title. $sub $foot.' : '$tag. $title. $sub $foot.',
     );
   }
 }

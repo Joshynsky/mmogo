@@ -84,7 +84,8 @@ void main() {
   test('a Yes on an `auto` item Kotlin did not record is valid (same question); the manifest is unchanged', () {
     expect(_kt('AskFirstLogic.kt'), contains(r'''Regex("\"rl\"\\s*:\\s*\"(ask|auto)\"")'''));
     final m = File('android/app/src/autoread/AndroidManifest.xml').readAsStringSync();
-    expect(RegExp('<receiver').allMatches(m), hasLength(2));
+    // 0.2.2 item 2 (B-PAUSE): + PauseActionReceiver (not exported).
+    expect(RegExp('<receiver').allMatches(m), hasLength(3));
     expect(RegExp('<uses-permission ').allMatches(m), hasLength(2));
   });
 }

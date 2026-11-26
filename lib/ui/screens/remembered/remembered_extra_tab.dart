@@ -59,6 +59,26 @@ abstract class RememberedForgetAllCopy {
   Future<RememberedForgetAllText?> forgetAllText(List<String> nameKeys);
 }
 
+/// Optional (0.2.2 item 2 U-FORGET, B-5): an extra tab whose Forget all also removes people who are NOT
+/// on the recipients list (for example people with only a rule), so the page can enable its Forget all
+/// button when the list is empty but such people exist. [forgetAllExtraPeople] gets the same keys as
+/// [RememberedForgetAllCopy.forgetAllText] and returns how many people Forget all removes ON TOP of
+/// them, each once: a person who is already one of [nameKeys] is NOT counted again (the page adds the
+/// names itself). So names + this = the dialog's count. A throw means the count is not known: the page
+/// then leaves the button enabled and the dialog's own count decides (its failure line if that fails too).
+abstract class RememberedForgetAllCount {
+  Future<int> forgetAllExtraPeople(List<String> nameKeys);
+}
+
+/// The page's count getter for the people Forget all removes beyond [nameKeys]. Default 0 (names only)
+/// when there is no extra tab or the tab does not implement [RememberedForgetAllCount]; a negative
+/// answer is read as 0. Throws when the tab's count throws.
+Future<int> rememberedForgetAllExtra(RememberedExtraTab? tab, List<String> nameKeys) async {
+  if (tab is! RememberedForgetAllCount) return 0;
+  final n = await (tab as RememberedForgetAllCount).forgetAllExtraPeople(nameKeys);
+  return n < 0 ? 0 : n;
+}
+
 /// Optional: an extra tab that also wants to hear what happens on the recipients list, so what it keeps
 /// about a name goes with the name. The page calls these AFTER the change was stored. Plain Dart; a
 /// tab without it simply hears nothing. [key] is the remembered-name key (never shown or logged).

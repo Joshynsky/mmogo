@@ -1,8 +1,8 @@
 // 0.2.2 item 2 U-RECENT (F-5): the one list is headed "Recently recorded" (signed kHardRecentlyRecorded),
 // the old heading "Recorded automatically" is gone, airtime auto rows keep their own look, and the
-// heading and person rows hold at 200% text in light and dark (airtime rows: HANDOFF, skipped test). The "Auto-record" tag is NOT built: the trail row does not
-// carry recorded_automatically (HANDOFF in ITEM2-R-U-RECENT-REPORT-2026-11-25.md); the last test pins
-// that no row shows the tag until it does.
+// heading and person rows hold at 200% text in light and dark (airtime rows: HANDOFF, skipped test). The "Auto-record" tag
+// (U-RECENT-TAG) shows only on no-tap person rows: see recently_recorded_tag_test.dart; the last test here pins
+// that rows with no flag show no tag.
 @Tags(['autoread'])
 library;
 
@@ -95,7 +95,7 @@ void main() {
     expect(t.takeException(), isNull);
   }, skip: true); // HANDOFF: news_row.dart foot row overflow at 200% (see ITEM2-R-U-RECENT-REPORT)
 
-  testWidgets('NOT BUILT (HANDOFF): no row shows the Auto-record tag while the trail row has no recorded_automatically',
+  testWidgets('rows with no recorded_automatically flag show no Auto-record tag (U-RECENT-TAG)',
       (t) async {
     await t.pumpWidget(_host(_section(_mixed())));
     expect(find.text(kHardAutoRecordTag), findsNothing);

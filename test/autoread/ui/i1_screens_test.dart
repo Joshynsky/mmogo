@@ -200,21 +200,24 @@ void main() {
           ),
         );
 
-    testWidgets('flag on, paused: the banner on top and the tag on the To confirm row', (t) async {
+    // Item 2 redesign U-CTRL (B-6): with nobody counted on Auto-record the banner is hidden (it used to
+    // say "0 people"); the To confirm row's tag still says paused.
+    testWidgets('flag on, paused, nobody counted: no "0 people" banner, the tag on the To confirm row', (t) async {
       debugAutoRecordUiOverride = true;
       await _app(t, section(pause: FakeHardRulePausePort(paused: true)));
-      expect(find.text(hardPausedBanner(0)), findsOneWidget);
+      expect(find.text(hardPausedBanner(0)), findsNothing);
+      expect(find.byKey(const Key('hardPausedBanner')), findsNothing);
       expect(find.byKey(const Key('ask-first-paused-tag')), findsOneWidget);
-      expect(t.getTopLeft(find.byKey(const Key('todoPausedBanner'))).dy,
-          lessThan(t.getTopLeft(find.byKey(const Key('ask-first-paused-tag'))).dy));
     });
 
-    testWidgets('the app\'s port (LevelsDeps.instance) is used when none is given', (t) async {
+    testWidgets('the app\'s port (LevelsDeps.instance) is used when none is given; banner on top', (t) async {
       debugAutoRecordUiOverride = true;
       LevelsDeps.instance = _deps(await _store(), pause: FakeHardRulePausePort(paused: true));
       await _app(t, section());
       expect(find.text(hardPausedBanner(1)), findsOneWidget);
       expect(find.byKey(const Key('ask-first-paused-tag')), findsOneWidget);
+      expect(t.getTopLeft(find.byKey(const Key('todoPausedBanner'))).dy,
+          lessThan(t.getTopLeft(find.byKey(const Key('ask-first-paused-tag'))).dy));
     });
 
     testWidgets('not paused: no banner, no gap, no tag', (t) async {
@@ -251,8 +254,8 @@ void main() {
           notify: true, onChangeCeiling: () => openCeilingSheetOnApp(d, ReceiverType.sendMoney, _tim, 'Tim'));
       expect(r, LevelSaveResult.ok);
       await t.pump();
-      // U-PILL: the caller passes no category yet (U-PERSON / I2), so only the start of the signed line is checked.
-      expect(find.textContaining(hardPillAuto(levelWho(x), '')), findsOneWidget);
+      // U-PILL: only the start of the signed line is checked (these deps' categories have no number ids).
+      expect(find.textContaining(hardPillAuto(x.name, '')), findsOneWidget); // U-PERSON: plain name, no mask
       await t.pump(const Duration(milliseconds: 1600));
       await t.pumpAndSettle();
       expect(find.text(kHardPillChange), findsOneWidget); // a limit is set: "Change"
@@ -273,7 +276,7 @@ void main() {
       const x = LevelPerson(type: ReceiverType.sendMoney, key: _tim, name: 'Tim', level: RuleLevel.autoRecord, categoryId: 1);
       await saveLevelChoice(d, x, RuleLevel.askFirst, 1, null, notify: true, onChangeCeiling: () {});
       await t.pump();
-      expect(find.textContaining(hardPillAskFirst(levelWho(x), '')), findsOneWidget);
+      expect(find.textContaining(hardPillAskFirst(x.name, '')), findsOneWidget); // U-PERSON: plain name, no mask
       await t.pump(const Duration(milliseconds: 1600));
       expect(find.text(kHardPillChange), findsNothing);
       expect(find.text(kHardPillSetLimit), findsNothing);

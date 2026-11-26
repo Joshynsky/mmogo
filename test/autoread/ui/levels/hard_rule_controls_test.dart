@@ -1,5 +1,7 @@
 // Slice U4 (0.2.2 item 2): the page controls of layout A. Pause card, paused banner, Settings row (one
 // switch, three places, kept in sync), the red Reset footer with its counts-only confirm. Invented data.
+// Item 2 redesign U-CTRL: the card is now the switch row and the footer the bottom bar; their new rules
+// (hide at 0, amber only when on, Set up, wrap at 200%) are in hard_rule_u_ctrl_test.dart.
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -415,14 +417,13 @@ void main() {
       });
     }
 
-    testWidgets('nobody above Suggested: no dialog, the 0 count line', (t) async {
+    // U-CTRL (item 2 redesign, mock page-noauto / page-empty): the link is hidden while nobody would change.
+    testWidgets('nobody above Suggested: no Reset link at all (nothing to reset)', (t) async {
       final store = await hardTestStore([hardTestRule('0700000222', name: 'Wanjiru')]);
       await _pump(t, HardRuleResetFooter(bulk: RuleBulkOps(store)));
-      await t.tap(find.byKey(const Key('hardResetButton')));
-      await t.pumpAndSettle();
+      expect(find.byKey(const Key('hardResetButton')), findsNothing);
+      expect(find.text(kHardResetButton), findsNothing);
       expect(find.byType(AlertDialog), findsNothing);
-      expect(_toastText(t), hardResetToast(0));
-      await _clearToast(t);
     });
 
     testWidgets('a store that refuses every write: save-failed toast, no onDone', (t) async {

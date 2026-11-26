@@ -5,7 +5,8 @@
 /// (`raw_parse_source = 'SMS_PARSE'`; 0.2.2: any kind, so a suggested-chip record and an Ask first Yes
 /// are listed too, with the person and the category name); otherwise it is hidden (nothing to undo, no stored "could not undo"). The
 /// amount, the kind (the row's category seed key) and "moved to Recently
-/// deleted" (`deleted_at` set) all come from the row. One bounded, parameterised
+/// deleted" (`deleted_at` set) all come from the row, and so does "written with no tap"
+/// (`recorded_automatically`, 0.2.2 F-5: the Auto-record tag). One bounded, parameterised
 /// query (at most [kTrailMaxEntries] ids).
 library;
 
@@ -25,7 +26,7 @@ Future<List<AutoRecorded>> joinTrail(
   final rows = await db.rawQuery(
     'SELECT t.id AS id, t.amount_cents AS amount_cents, t.deleted_at AS deleted_at, c.seed_key AS seed_key, '
     't.source_type AS source_type, t.counterparty_label AS label, t.counterparty_phone AS phone, '
-    'c.name AS category_name '
+    'c.name AS category_name, t.recorded_automatically AS recorded_auto '
     'FROM transactions t JOIN classifications c ON c.id = t.classification_id '
     "WHERE t.raw_parse_source = 'SMS_PARSE' AND t.id IN ($marks)",
     ids,
@@ -42,6 +43,7 @@ Future<List<AutoRecorded>> joinTrail(
           partyLabel: r['source_type'] == 'AIRTIME' ? null : _party(r),
           categoryName: r['source_type'] == 'AIRTIME' ? null : r['category_name'] as String?,
           inRecentlyDeleted: r['deleted_at'] != null,
+          recordedAutomatically: r['recorded_auto'] == 1,
         ),
   ];
 }

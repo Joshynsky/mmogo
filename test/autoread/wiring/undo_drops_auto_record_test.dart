@@ -1,6 +1,7 @@
-// Item 2 slice S-3: Undo of a row recorded with no tap (recorded_automatically = 1) drops that
-// person's Auto-record rule to Suggested (run 0, ceiling and autoPending cleared). Undo of a tapped
-// row does not. Dormant: nothing records automatically yet. Invented data only.
+// Item 2 slice S-3, reversed by D-U (PM 25-11, slice B-DU): Undo of a row recorded with no tap
+// (recorded_automatically = 1) KEEPS the person on Auto-record with the same category and limit; the
+// 24 h undone code still stops that message being recorded again. Undo of a tapped row changes nothing
+// either. The file name is kept from S-3. Dormant: nothing records automatically yet. Invented data only.
 @Tags(['autoread'])
 library;
 
@@ -66,19 +67,19 @@ void main() {
     await events.removed(id);
   }
 
-  test('undo of an auto-recorded row: Auto-record person drops to Suggested, ceiling and category cleared', () async {
+  // D-U (was S-3 "drops to Suggested"): changed on purpose.
+  test('undo of an auto-recorded row: Auto-record person stays on Auto-record, the rule is untouched', () async {
     await setAuto();
-    // a stored rule carrying a leftover run and the pending marker, to prove they are cleared
+    // a stored rule carrying a leftover run and the pending marker, to prove nothing is cleared
     final r = (await store.get(sm, key))!;
     await store.saveRule(r.copyWith(run: 4, runCategoryId: cats[0], autoPending: true));
+    final before = (await store.get(sm, key))!;
     await undoRow(await row('AUTO000001', auto: true));
     final d = (await store.get(sm, key))!;
-    expect(d.level, RuleLevel.suggested);
-    expect(d.run, 0);
-    expect(d.runCategoryId, isNull);
-    expect(d.ceilingCents, isNull);
-    expect(d.autoPending, isFalse);
-    expect(d.categoryId, isNull);
+    expect(d, before);
+    expect(d.level, RuleLevel.autoRecord);
+    expect(d.categoryId, cats[0]);
+    expect(d.ceilingCents, 5000);
     expect(d.name, 'Jane Doe');
   });
 
@@ -127,13 +128,16 @@ void main() {
     expect(await undone.contains('CODE000001', now: DateTime.now()), isTrue);
   });
 
-  test('Recently deleted restore of the row does not put the person back on Auto-record', () async {
+  // D-U (was S-3 "restore does not put the person back"): changed on purpose; the person never left.
+  test('undo then Recently deleted restore of the row: the person is on Auto-record throughout', () async {
     await setAuto();
+    final before = (await store.get(sm, key))!;
     final id = await row('REST000001', auto: true);
     await undoRow(id);
+    expect(await store.get(sm, key), before);
     await TransactionDao.restore(db, id: id);
     await events.ledgerChanged(id);
-    expect((await store.get(sm, key))!.level, RuleLevel.suggested);
+    expect(await store.get(sm, key), before);
   });
 
   test('a failing store does not throw out of removed()', () async {

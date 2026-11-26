@@ -18,7 +18,8 @@ import 'remembered_tab_pills.dart';
 /// user told us are Send Money or Pochi. Lists [RecipientMemory.list] newest
 /// first with the stored (upper case) name and type; Change to the other type
 /// (the row keeps its place), Forget one, Forget all (asks first; a tap outside
-/// and Back both mean Cancel); an empty state.
+/// and Back both mean Cancel); an empty state. 0.2.2 U-FORGET (B-5): Forget all is enabled when names +
+/// the extra tab's people ([rememberedForgetAllExtra], each person once) > 0, disabled-looking only at 0.
 ///
 /// PRIVACY: a name never goes into a snackbar, an error line or a log. The
 /// only places a name is drawn are the row itself and its screen-reader label.
@@ -47,10 +48,27 @@ class _RememberedScreenState extends State<RememberedScreen> {
   bool _error = false;
   late int _tab = widget.openExtraTab && widget.extraTab != null ? 1 : 0;
 
+  /// 0.2.2 U-FORGET (B-5): people Forget all removes on top of the names (the extra tab's count, each
+  /// person once; 0 = names only). Null = the count could not be taken: the button stays enabled and the
+  /// dialog's own count decides. Never a name, never shown.
+  int? _extra = 0;
+  int _countRun = 0;
+
+  /// Forget all has someone to forget: names + the extra tab's people > 0 (an unknown extra count counts
+  /// as someone). The disabled look is only for a true 0.
+  bool get _anyoneToForget => _entries.isNotEmpty || (_extra ?? 1) > 0;
+
   @override
   void initState() {
     super.initState();
+    widget.extraTab?.listenable.addListener(_recount);
     _reload();
+  }
+
+  @override
+  void dispose() {
+    widget.extraTab?.listenable.removeListener(_recount);
+    super.dispose();
   }
 
   Future<void> _reload() async {
@@ -60,6 +78,21 @@ class _RememberedScreenState extends State<RememberedScreen> {
       _entries = all;
       _loaded = true;
     });
+    await _recount();
+  }
+
+  /// Takes the extra tab's count again (after a load, a tab switch, or when the tab says it changed).
+  /// Only the latest run is kept.
+  Future<void> _recount() async {
+    final run = ++_countRun;
+    int? extra;
+    try {
+      extra = await rememberedForgetAllExtra(widget.extraTab, [for (final e in _entries) e.key]);
+    } catch (_) {
+      extra = null;
+    }
+    if (!mounted || run != _countRun || extra == _extra) return;
+    setState(() => _extra = extra);
   }
 
   void _toast(String text) {
@@ -193,7 +226,10 @@ class _RememberedScreenState extends State<RememberedScreen> {
                     palette: palette,
                     labels: [extra.recipientsTabLabel, extra.tabLabel()],
                     selected: _tab,
-                    onSelect: (i) => setState(() => _tab = i),
+                    onSelect: (i) {
+                      setState(() => _tab = i);
+                      _recount(); // rules may have changed on the second tab
+                    },
                   ),
                 ),
                 // Both tabs stay built, so each keeps its own scroll place.
@@ -263,11 +299,12 @@ class _RememberedScreenState extends State<RememberedScreen> {
               height: 46,
               child: OutlinedButton(
                 key: const Key('rememberedForgetAll'),
-                onPressed: _entries.isEmpty || _busy ? null : _forgetAll,
+                // B-5: enabled when names + the extra tab's people > 0 (rule people with no names too).
+                onPressed: !_anyoneToForget || _busy ? null : _forgetAll,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: palette.error,
                   disabledForegroundColor: palette.mutedInk,
-                  side: BorderSide(color: _entries.isEmpty ? palette.line : palette.error, width: 1.5),
+                  side: BorderSide(color: _anyoneToForget ? palette.error : palette.line, width: 1.5),
                   shape: const StadiumBorder(),
                 ),
                 child: Text(
