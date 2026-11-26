@@ -448,7 +448,6 @@ void main() {
       final s = _Saver();
       await _open(t, kplc, s);
       expect(find.text(kHardPaybillAlwaysAsks), findsOneWidget);
-      expect(find.text(kHardWhyNotPaybill), findsNothing);
       final sem = t.ensureSemantics();
       final n = _node(t, RuleLevel.autoRecord);
       expect(n.flagsCollection.isEnabled.name, 'isFalse');

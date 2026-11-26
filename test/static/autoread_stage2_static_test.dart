@@ -67,6 +67,12 @@ void main() {
     test('the APK checker knows the stage 2 receiver only in the autoread flavor and bans stage 2 strings in the standard libapp', () {
       final ps = _read('tool/check_apk_manifest.ps1');
       expect(ps, contains('app.mmogo.autoread.ParseActionReceiver'));
+      // 0.2.2 item 2 (B-PAUSE, I2b): the paused notice's Resume receiver, exactly one, not exported; five receivers.
+      expect(ps, contains('app.mmogo.autoread.PauseActionReceiver'));
+      expect(ps, contains("Check 'PauseActionReceiver: exported=false'"));
+      expect(ps, contains(r'($pauseIdx.Count -eq 1)'));
+      expect(ps, contains(r'($recvIdx.Count -eq 5)'));
+      expect(ps, isNot(contains(r'($recvIdx.Count -eq 4)')));
       expect(ps, contains("'autoread_bg'"));
       expect(ps, contains("'autoread/background/parse_entry'"));
     });

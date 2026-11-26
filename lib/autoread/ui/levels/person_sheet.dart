@@ -170,6 +170,7 @@ class _PersonSheetState extends State<PersonSheet> {
         choices: _cats,
         initial: [?_cat.id],
         usedBefore: widget.person.topIds.toSet(),
+        name: widget.person.name,
       );
       id = got == null || got.isEmpty ? null : got.first;
     } else {

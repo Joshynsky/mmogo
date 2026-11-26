@@ -5,11 +5,15 @@
 /// - sets `LevelsDeps.instance` (so Settings shows the Suggest rows and the Remembered page its second
 ///   tab lists people), with a real Suggest settings port and a "people with history" source;
 /// - listens to the ledger hooks (add, edit, delete, restore, bulk) and to the "Record receiver
-///   details" switch (OFF wipes the rules, the undone codes and the summary).
+///   details" switch (OFF clears the undone codes and the summary; B-HIDE: the rules are only hidden until
+///   ON, Forget all and Delete data still erase them).
 /// - 0.2.2 item 2 (I1): the real Auto-record screen objects: ONE pause port ([pausePort], shared by the
 ///   Remembered page card and banner, the To do banner and tag and the Settings row), the one pill
 ///   ([RuleChangePill]) as the notice of the level sheet AND of the offers list (with its Change ceiling),
 ///   and the restore result's rule notes next to the backup seams ([installBackupRules]).
+/// - 0.2.2 item 2 redesign (I2): the Set up list ([LedgerSetupRecipientsSource]) and the category chips picker
+///   ([showCategoryChipsPicker]) into LevelsDeps, and the pinned "paused" notice sync ([pauseNotice]; main.dart
+///   calls its resumed() on every app resume).
 ///
 /// Everything is lazy (the database is opened by whoever asks first). Auto-read build only.
 library;
@@ -21,11 +25,13 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart' show Database;
 import '../../data/db/app_database.dart';
 import '../../data/db/ledger_hooks.dart';
 import '../../data/prefs/app_prefs.dart';
+import '../bridge/pause_notice_bridge.dart';
 import '../data/all_category_choices.dart';
 import '../data/known_people.dart';
 import '../data/lazy_category_choices.dart';
 import '../data/ledger_rule_events.dart';
 import '../data/pending_items_store.dart';
+import '../data/setup_recipients_source.dart';
 import '../data/suggested_chips_source.dart';
 import '../background/labelling_pending_store.dart';
 import '../history/fallback_history_reader.dart';
@@ -34,9 +40,11 @@ import '../history/history_reader.dart';
 import '../history/history_summary_writer.dart';
 import '../history/rule_labeler.dart';
 import '../history/summary_history_reader.dart';
+import '../rules/pause_notice_sync.dart';
 import '../rules/prefs_suggest_settings.dart';
 import '../rules/receiver_key.dart' show isRememberedPochi;
 import '../runtime.dart';
+import '../ui/levels/category_chips_picker.dart' show showCategoryChipsPicker;
 import '../ui/levels/hard_rule_ports.dart' show HardRulePausePort, PrefsHardRulePausePort;
 import '../ui/levels/level_sheet_open.dart' show openOfferCeilingSheet;
 import '../ui/levels/levels_deps.dart';
@@ -90,6 +98,10 @@ class RulesWiring {
   /// reinstall (the stored value is the truth; this only shares the change signal).
   static final HardRulePausePort pausePort = PrefsHardRulePausePort();
 
+  /// The pinned "Auto-record is paused" phone notice, kept in step with [pausePort] and the rules (B-PAUSE).
+  /// Set by [install], removed by [uninstall]; main.dart calls `resumed()` on every app resume.
+  static PauseNoticeSync? pauseNotice;
+
   /// Safe to call twice. Sets the hooks, [LevelsDeps.instance] and [suggestions].
   static void install() {
     if (installed) return;
@@ -125,8 +137,24 @@ class RulesWiring {
       known: KnownPeopleSource(database: () => database(), detailsOn: AppPrefs.readCaptureIdentityPreference).call,
       pause: pausePort,
       notice: const RuleChangePill(),
+      setup: LedgerSetupRecipientsSource(
+          database: () => database(),
+          store: AutoReadRuntime.ruleStore,
+          detailsOn: AppPrefs.readCaptureIdentityPreference,
+          pochiRemembered: (name) => isRememberedPochi(name)),
+      pickCategories: showCategoryChipsPicker,
     );
+    pauseNotice ??= PauseNoticeSync(
+      pause: pausePort,
+      store: AutoReadRuntime.ruleStore,
+      bridge: pauseNoticeBridge(),
+      detailsOn: AppPrefs.readCaptureIdentityPreference,
+    );
+    unawaited(pauseNotice!.start()); // app open: posts again after a reboot or a swipe
   }
+
+  /// The pause notice's channel to Android; a test swaps it for a fake.
+  static PauseNoticeBridge Function() pauseNoticeBridge = () => MethodChannelPauseNoticeBridge();
 
   /// Removes the hooks (tests, or a restart of the app object). Leaves the stored data alone.
   static void uninstall() {
@@ -139,6 +167,8 @@ class RulesWiring {
     RuleBackupSeams.uninstall(); // both rule seams go together
     uninstallRestoreRuleMessages(); // and the restore result's rule notes with them
     LevelsDeps.instance = null;
+    pauseNotice?.dispose(); // the notice itself stays (it must stay while mmogo is closed)
+    pauseNotice = null;
     suggestions?.dispose();
     suggestions = null;
     _events = null;
@@ -204,9 +234,11 @@ class RulesWiring {
       };
 
   /// Delete data finished: the summary is already wiped with the rules; nothing is rebuilt (no rows).
+  /// The pause key is removed directly (not through the port), so the notice sync reads again at once.
   static Future<void> afterDeleteData() => _serial(() async {
         await summary.clear();
         await suggestions?.refresh();
+        await pauseNotice?.recheck();
       });
 
   /// A store that labels what it saves (who, level, up to 2 categories) for the in-app Parse; the

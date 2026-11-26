@@ -74,8 +74,10 @@ internal object HardRuleArrival {
             nm.notify(NotifierPure.notificationId(heldId), b.build())
             return true
         } finally {
-            // 0.2.2 (B-4): AFTER the alert is up (so the app's cancel, B-2, always comes after it), and even when no
-            // alert could be posted (the mark is written): an app in front imports now. No argument crosses.
+            // 0.2.2 (B-4): AFTER the alert is up (so the cancel of the import this push starts, B-2, comes after it),
+            // and even when no alert could be posted (the mark is written): an app in front imports now. No argument
+            // crosses. A RESUME ingest is not ordered by this: ParseRunner posts only while the mark is stored and
+            // clears the alert again if the mark went during the post (I2b).
             AutoReadBridge.onArrived()
         }
     }

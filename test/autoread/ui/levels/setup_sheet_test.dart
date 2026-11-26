@@ -13,6 +13,7 @@ import 'package:mmogo/autoread/rules/rule_model.dart';
 import 'package:mmogo/autoread/ui/levels/hard_rule_copy.dart';
 import 'package:mmogo/autoread/ui/levels/levels_copy.dart';
 import 'package:mmogo/autoread/ui/levels/setup_ports.dart';
+import 'package:mmogo/autoread/ui/levels/setup_row.dart';
 import 'package:mmogo/autoread/ui/levels/setup_sheet.dart';
 import 'package:mmogo/autoread/ui/levels/setup_type_chips.dart';
 import 'package:mmogo/ui/theme/app_palette_scope.dart';
@@ -104,7 +105,8 @@ Future<_Harness> _open(
   return h;
 }
 
-Finder _row(SetupRecipient r) => find.byKey(Key('setupRow.${r.type.code}.${r.key}'));
+// I2: the row key no longer holds the recipient key (privacy hygiene), so a row is found by its recipient.
+Finder _row(SetupRecipient r) => find.byWidgetPredicate((w) => w is SetupRow && w.recipient == r);
 Finder get _rows => find.byWidgetPredicate((w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('setupRow.'));
 
 List<String> _rowNames(WidgetTester t) => [
@@ -199,6 +201,20 @@ void main() {
     }
     expect(all.contains('0722***555'), isTrue);
     sem.dispose();
+  });
+
+  testWidgets('I2 privacy: no row widget key and no SetupRecipient.toString holds a full key', (t) async {
+    await _open(t);
+    final keys = [for (final e in _rows.evaluate()) (e.widget.key! as ValueKey<String>).value];
+    expect(keys, hasLength(_people().length));
+    expect(keys.toSet(), hasLength(keys.length)); // still one key per row
+    for (final r in _people()) {
+      for (final k in keys) {
+        expect(k.contains(r.key), isFalse, reason: k);
+      }
+      expect(r.toString().contains(r.key), isFalse, reason: r.toString());
+    }
+    expect(_people()[2].toString(), contains('0722***555'));
   });
 
   testWidgets('type chips filter the list; the chosen chip shows its name and count; All shows everyone', (t) async {
@@ -304,10 +320,11 @@ void main() {
     h.pickDone!.complete();
     await t.pumpAndSettle();
     expect(src.calls, [null, null]);
-    expect(find.descendant(of: _row(bob), matching: find.text(kHardLevelAskFirst)), findsOneWidget);
+    final bobAfter = src.recipients[2]; // I2: rows are found by recipient now, and Bob's level changed
+    expect(find.descendant(of: _row(bobAfter), matching: find.text(kHardLevelAskFirst)), findsOneWidget);
     final focused = FocusManager.instance.primaryFocus;
     expect(focused, isNotNull);
-    expect(find.descendant(of: _row(bob), matching: find.byWidgetPredicate((w) => w is Focus && w.focusNode == focused)),
+    expect(find.descendant(of: _row(bobAfter), matching: find.byWidgetPredicate((w) => w is Focus && w.focusNode == focused)),
         findsOneWidget);
   });
 

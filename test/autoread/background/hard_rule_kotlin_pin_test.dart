@@ -81,7 +81,7 @@ void main() {
     });
   });
 
-  test('a Yes on an `auto` item Kotlin did not record is valid (same question); the manifest is unchanged', () {
+  test('a Yes on an `auto` item Kotlin did not record is valid (same question); the manifest has three receivers (+ PauseActionReceiver) and two permissions', () {
     expect(_kt('AskFirstLogic.kt'), contains(r'''Regex("\"rl\"\\s*:\\s*\"(ask|auto)\"")'''));
     final m = File('android/app/src/autoread/AndroidManifest.xml').readAsStringSync();
     // 0.2.2 item 2 (B-PAUSE): + PauseActionReceiver (not exported).

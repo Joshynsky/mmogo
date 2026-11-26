@@ -168,11 +168,14 @@ Check 'manifest contains none of RECEIVE_SMS, READ_SMS, POST_NOTIFICATIONS, BIND
   $recvIdx = @(0..($nodes.Count - 1) | Where-Object { $nodes[$_].Type -eq 'receiver' })
   $svcIdx = @(0..($nodes.Count - 1) | Where-Object { $nodes[$_].Type -eq 'service' })
   $smsIdx = @($recvIdx | Where-Object { $nodes[$_].Attrs['android:name'] -eq 'app.mmogo.autoread.SmsReceiver' })
-  $otherRecv = @($recvIdx | Where-Object { $allowedReceivers -notcontains $nodes[$_].Attrs['android:name'] -and $nodes[$_].Attrs['android:name'] -ne 'app.mmogo.autoread.SmsReceiver' -and $nodes[$_].Attrs['android:name'] -ne 'app.mmogo.autoread.ParseActionReceiver' } | ForEach-Object { $nodes[$_].Attrs['android:name'] })
+  # 0.2.2 item 2 (B-PAUSE, I2b): + exactly one app.mmogo.autoread.PauseActionReceiver (the Resume button of the paused notice).
+  $ownRecv = @('app.mmogo.autoread.SmsReceiver', 'app.mmogo.autoread.ParseActionReceiver', 'app.mmogo.autoread.PauseActionReceiver')
+  $otherRecv = @($recvIdx | Where-Object { $allowedReceivers -notcontains $nodes[$_].Attrs['android:name'] -and $ownRecv -notcontains $nodes[$_].Attrs['android:name'] } | ForEach-Object { $nodes[$_].Attrs['android:name'] })
   $recvNames = ($recvIdx | ForEach-Object { $nodes[$_].Attrs['android:name'] }) -join ', '
   $unexpR = ''; if ($otherRecv.Count) { $unexpR = '  UNEXPECTED: ' + ($otherRecv -join ', ') }
   $parseIdx = @($recvIdx | Where-Object { $nodes[$_].Attrs['android:name'] -eq 'app.mmogo.autoread.ParseActionReceiver' })
-  Check 'receivers = the two 0.1.1 baseline plugin receivers plus exactly one SmsReceiver plus exactly one ParseActionReceiver (stage 2)' (($otherRecv.Count -eq 0) -and ($smsIdx.Count -eq 1) -and ($parseIdx.Count -eq 1) -and ($recvIdx.Count -eq 4)) ("receivers: $recvNames" + $unexpR)
+  $pauseIdx = @($recvIdx | Where-Object { $nodes[$_].Attrs['android:name'] -eq 'app.mmogo.autoread.PauseActionReceiver' })
+  Check 'receivers = the two 0.1.1 baseline plugin receivers plus exactly one SmsReceiver plus exactly one ParseActionReceiver (stage 2) plus exactly one PauseActionReceiver (0.2.2)' (($otherRecv.Count -eq 0) -and ($smsIdx.Count -eq 1) -and ($parseIdx.Count -eq 1) -and ($pauseIdx.Count -eq 1) -and ($recvIdx.Count -eq 5)) ("receivers: $recvNames" + $unexpR)
   $svcText = 'none'; if ($svcIdx.Count) { $svcText = ($svcIdx | ForEach-Object { $nodes[$_].Attrs['android:name'] }) -join ', ' }
   Check 'no <service> element' ($svcIdx.Count -eq 0) ("services: $svcText")
   if ($smsIdx.Count -eq 1) {
@@ -199,6 +202,12 @@ Check 'manifest contains none of RECEIVE_SMS, READ_SMS, POST_NOTIFICATIONS, BIND
     Check 'ParseActionReceiver: exported=false' (($pa.ContainsKey('android:exported')) -and -not (Bool $pa['android:exported'])) ("exported attr: " + $pa['android:exported'])
     Check 'ParseActionReceiver: no intent-filter and no child element' ($pkids.Count -eq 0) ("children: $($pkids.Count)")
   } else { Check 'ParseActionReceiver present exactly once' $false "found $($parseIdx.Count)" }
+  if ($pauseIdx.Count -eq 1) {
+    $qa = $nodes[$pauseIdx[0]].Attrs
+    $qkids = @(Kids $nodes $pauseIdx[0])
+    Check 'PauseActionReceiver: exported=false' (($qa.ContainsKey('android:exported')) -and -not (Bool $qa['android:exported'])) ("exported attr: " + $qa['android:exported'])
+    Check 'PauseActionReceiver: no intent-filter and no child element' ($qkids.Count -eq 0) ("children: $($qkids.Count)")
+  } else { Check 'PauseActionReceiver present exactly once' $false "found $($pauseIdx.Count)" }
   # providers: the 0.1.1 baseline has exactly these two
   $allowedProviders = @('dev.fluttercommunity.plus.share.ShareFileProvider', 'androidx.startup.InitializationProvider')
   $provIdx = @(0..($nodes.Count - 1) | Where-Object { $nodes[$_].Type -eq 'provider' })

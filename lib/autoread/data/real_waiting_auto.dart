@@ -65,7 +65,10 @@ extension RealWaitingAutoRecord on RealWaitingRepository {
 
   Future<void> _importQueuedYesWork() async {
     try {
-      final recorded = await _queuedYes.run(await _store.list());
+      final items = await _store.list();
+      // The payee names, read before the import removes the recorded items (the no-tap message names them).
+      final payee = {for (final i in items) i.id: i.parsed?.counterpartyLabel};
+      final recorded = await _queuedYes.run(items);
       if (recorded.isNotEmpty) {
         for (final r in recorded) {
           await _noteTrail(r.rowId);
@@ -75,13 +78,29 @@ extension RealWaitingAutoRecord on RealWaitingRepository {
           cb(recorded);
         } else {
           showQueuedYesToasts([for (final r in recorded) if (!r.automatic) r], undoQueuedYes);
-          // 0.2.2 B2d: rows Auto-record wrote (no tap); Undo = the same soft delete, and the ledger hook drops
-          // the person to Suggested because the row is marked recorded_automatically (S-3).
-          showAutoArrivalToasts([for (final r in recorded) if (r.automatic) r], undoQueuedYes);
+          // 0.2.2 B2d: rows Auto-record wrote (no tap); Undo = the same soft delete, and the person STAYS on
+          // Auto-record (D-U, reverses S-3; the ledger hook leaves the rule alone). The message gets the plain
+          // payee name (no digits, hard_rule_arrival_toast.dart) and the category's name.
+          final auto = [for (final r in recorded) if (r.automatic) r];
+          if (auto.isNotEmpty) {
+            final labels = autoArrivalLabels(payee, await _categoryNamesOf({for (final r in auto) r.categoryId}));
+            showAutoArrivalToasts(auto, undoQueuedYes, nameOf: labels.nameOf, categoryOf: labels.categoryOf);
+          }
         }
       }
     } catch (_) {}
     await _refreshCategoryNames();
+  }
+
+  /// Category id -> name for [ids] (empty when they cannot be read; the message then shows its placeholder).
+  Future<Map<int, String>> _categoryNamesOf(Set<int> ids) async {
+    try {
+      final rows = await (await _database())
+          .rawQuery('SELECT id, name FROM classifications WHERE id IN (${List.filled(ids.length, '?').join(',')})', [...ids]);
+      return {for (final r in rows) if (r['id'] is int && r['name'] is String) r['id'] as int: r['name'] as String};
+    } catch (_) {
+      return const {};
+    }
   }
 
   Future<bool> _categoryActive(int id) async => (await (await _database())

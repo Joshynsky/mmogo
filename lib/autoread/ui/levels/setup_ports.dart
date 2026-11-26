@@ -54,7 +54,8 @@ class SetupRecipient {
   int get hashCode => Object.hash(type, key, displayName, maskedNumber, paymentCount, level);
 
   @override
-  String toString() => 'SetupRecipient(${type.code}, $key, $displayName, $maskedNumber, $paymentCount, ${level?.name})';
+  // Never the key: a Send Money key is the full phone number (I2 privacy hygiene); the masked number only.
+  String toString() => 'SetupRecipient(${type.code}, $displayName, $maskedNumber, $paymentCount, ${level?.name})';
 }
 
 /// Where the Set up sheet's list comes from (the ledger; slice B-SRC).
@@ -74,7 +75,8 @@ enum CategoryPickMode { one, upTo2 }
 /// [choices]: the categories to offer for this person's type (LevelsDeps.choicesFor). [initial]: the ids chosen
 /// when it opens (placed first). [usedBefore]: ids this person was paid under before (marked with a dot and a
 /// text label). Ids are `int.parse(CategoryChoice.id)`; a choice whose id is not a whole number is not offered
-/// (as category_pick_sheet.dart does).
+/// (as category_pick_sheet.dart does). [name]: the person's plain name for the picker's title (I2; null = the
+/// title without a name).
 /// Returns the chosen ids in the order chosen (at most 1 for [CategoryPickMode.one], at most
 /// [kMaxChosenCategories] for [CategoryPickMode.upTo2]), or null when the picker was closed without a choice.
 typedef PickCategories = Future<List<int>?> Function(
@@ -83,4 +85,5 @@ typedef PickCategories = Future<List<int>?> Function(
   required List<CategoryChoice> choices,
   required List<int> initial,
   required Set<int> usedBefore,
+  String? name,
 });

@@ -227,6 +227,8 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
     if (kAutoReadCompiled && state == AppLifecycleState.resumed) {
       AutoReadRuntime.reconcile().then((_) => _realWaiting?.ingest()).then((_) => _realWaiting?.refreshUndecided());
       unawaited(RulesWiring.rebuildSummary());
+      // B-PAUSE: a swiped pinned "paused" notice comes back; a Resume tapped in the shade reaches every switch.
+      unawaited(RulesWiring.pauseNotice?.resumed() ?? Future<void>.value());
     }
   }
 

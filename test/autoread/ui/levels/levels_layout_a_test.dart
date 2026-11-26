@@ -283,7 +283,8 @@ void main() {
     expect(t.getSize(find.byKey(const Key('levelButton.SM.$_grace'))).height, greaterThanOrEqualTo(44));
   });
 
-  testWidgets('Suggested lists every Suggested person; no chosen list = "Suggests from last 10 payments", chosen = their names',
+  // I2: in 0.2.2 a stored chosen list (a restored `sc`) does NOT change the row line (chosen lists are 0.2.3).
+  testWidgets('Suggested lists every Suggested person; every row says "Suggests from last 10 payments", a chosen list too',
       (t) async {
     final r = _Rig();
     await r.seed();
@@ -291,7 +292,8 @@ void main() {
     await _pump(t, r);
     await _tapGroup(t, RuleLevel.suggested);
     expect(_inRow('BG.5512', find.text(kHardSuggestsFromLast10)), findsOneWidget);
-    expect(_inRow('SM.$_grace', find.text(hardRowSuggests('Bills, Family'))), findsOneWidget);
+    expect(_inRow('SM.$_grace', find.text(kHardSuggestsFromLast10)), findsOneWidget);
+    expect(_inRow('SM.$_grace', find.text(hardRowSuggests('Bills, Family'))), findsNothing); // 0.2.3
     expect(_toggleText(t, RuleLevel.suggested), kHardGroupHide);
   });
 
@@ -354,8 +356,6 @@ void main() {
     expect(find.text(kHardDetailsOffCard), findsOneWidget);
     expect(find.text(kHardTurnOnInSettings), findsOneWidget);
     expect(find.text(kHardOpenSettings), findsNothing);
-    expect(find.text(kHardDetailsOffLine), findsNothing);
-    expect(find.text(kHardDetailsOffEmpty), findsNothing);
     expect(t.getSize(find.byKey(const Key('levelsOpenSettings'))).height, greaterThanOrEqualTo(44));
     expect(find.byKey(const Key('levelGroup.autoRecord')), findsNothing);
     expect(find.byKey(const Key('levelRow.SM.$_tim')), findsNothing);

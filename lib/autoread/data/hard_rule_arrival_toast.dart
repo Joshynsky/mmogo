@@ -12,9 +12,10 @@ import '../ui/levels/hard_rule_copy.dart' show hardAutoArrived, hardUndoStays;
 import 'queued_yes.dart';
 import 'queued_yes_toast.dart' show kQueuedYesUndo;
 
-// WORDING-MISSING -> W2 (shown only when the caller cannot name the person; today's caller passes no names, I2)
+// WORDING-MISSING -> W2 (shown only when the caller cannot name the person: no payee name on the item, or a
+// name made only of digits)
 const String _kTodoArrivalName = '[PM to write: name when the person is not known]';
-// WORDING-MISSING -> W2 (shown only when the caller cannot name the category; today's caller passes none, I2)
+// WORDING-MISSING -> W2 (shown only when the caller cannot name the category: its name could not be read)
 const String _kTodoArrivalCategory = '[PM to write: category when its name is not known]';
 
 /// Looks up a label (the person's name, the category's name) for one recorded entry; null or blank = unknown.
@@ -31,9 +32,16 @@ String? autoArrivalPlainName(String? raw) {
   return name.isEmpty ? null : name;
 }
 
+/// The labels the app's import passes (I2): [payeeByItem] = waiting item id -> the payee name on that item (as
+/// the SMS gave it, read BEFORE the import removed the item; [showAutoArrivalToasts] makes it plain), and
+/// [categoryById] = category id -> its name. A missing entry = unknown (the W2 placeholder shows).
+({AutoArrivalLabel nameOf, AutoArrivalLabel categoryOf}) autoArrivalLabels(
+        Map<String, String?> payeeByItem, Map<int, String> categoryById) =>
+    (nameOf: (e) => payeeByItem[e.itemId], categoryOf: (e) => categoryById[e.categoryId]);
+
 /// One message per recorded entry; a newer pill replaces the older one. [undo] moves that entry's row to Recently
 /// deleted; the rule is left as it is (D-U). [nameOf] and [categoryOf] give the person's name and the category
-/// name; until a caller passes them the W2 placeholders show (Auto-record is dormant, so nobody sees them yet).
+/// name (the app passes them through [autoArrivalLabels]); an unknown one shows its W2 placeholder.
 void showAutoArrivalToasts(
   List<QueuedYesRecorded> recorded,
   Future<void> Function(QueuedYesRecorded e) undo, {

@@ -1,7 +1,7 @@
 /// §AUTOREAD.LEVELS.HARD_RULE_PORTS: the seams the 0.2.2 Auto-record screens share, so no two screen
 /// slices edit the same file: the pause switch ([HardRulePausePort]), the one notice after a level change
 /// ([RuleChangeNotice]), the page-wide rule operations ([RuleBulkOps]) and the one UI flag ([autoRecordUi]).
-/// All built on the existing RuleStore (`all` / `setLevel`); the RuleStore interface is not changed.
+/// All built on the RuleStore (`all` / `setLevel`, and C2's chosen list, `forgetEveryone` / `countEveryone`).
 library;
 
 import 'package:flutter/foundation.dart';
@@ -11,7 +11,7 @@ import '../../rules/hard_rule_decision.dart' show autoRecordLive;
 import '../../rules/prefs_hard_rule_pause.dart';
 import '../../rules/rule_model.dart';
 import '../../rules/rule_store.dart';
-import 'hard_rule_copy.dart';
+import '../notifications/rule_change_pill_body.dart' show ruleChangePillLines;
 
 // ---------------------------------------------------------------- the UI flag
 
@@ -82,13 +82,16 @@ abstract class RuleChangeNotice {
   void show(String name, RuleLevel level, int? ceilingCents, VoidCallback? onChangeCeiling, {String? categoryName});
 }
 
-/// Plain stand-in until the real two-stage pill (slice U3): one PillToast with the stage 1 line.
+/// Plain stand-in for the real two-stage pill (the default when no notice is given; the app installs
+/// RuleChangePill): one PillToast with the signed stage 1 line (rule_change_pill_body.dart picks it).
 class PillToastRuleChangeNotice implements RuleChangeNotice {
   const PillToastRuleChangeNotice();
 
   @override
   void show(String name, RuleLevel level, int? ceilingCents, VoidCallback? onChangeCeiling, {String? categoryName}) =>
-      PillToast.show(hardPillStage1(name, level));
+      PillToast.show(ruleChangePillLines(
+              name: name, level: level, category: categoryName, limitCents: ceilingCents, stage2: false, hasButton: false)
+          .line1);
 }
 
 // ---------------------------------------------------------------- page-wide operations

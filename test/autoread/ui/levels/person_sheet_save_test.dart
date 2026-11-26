@@ -10,6 +10,7 @@ import 'package:mmogo/autoread/history/fake_history_reader.dart';
 import 'package:mmogo/autoread/rules/fake_rule_store.dart';
 import 'package:mmogo/autoread/rules/rule_model.dart';
 import 'package:mmogo/autoread/ui/category_choices.dart';
+import 'package:mmogo/autoread/ui/levels/category_chips_picker.dart';
 import 'package:mmogo/autoread/ui/levels/hard_rule_copy.dart';
 import 'package:mmogo/autoread/ui/levels/hard_rule_ports.dart';
 import 'package:mmogo/autoread/ui/levels/level_sheet.dart';
@@ -277,6 +278,7 @@ void main() {
       await t.tap(find.byKey(const Key('personChooseCategory')));
       await t.pumpAndSettle();
       expect(picker.calls.single.mode, CategoryPickMode.one);
+      expect(picker.calls.single.name, 'Tim Otieno'); // I2: the person's plain name goes to the picker title
       await t.tap(find.byKey(const Key('levelSheetSave')));
       await t.pumpAndSettle();
       final after = await store.get(ReceiverType.sendMoney, _timKey);
@@ -284,6 +286,15 @@ void main() {
       expect(after.categoryId, 3);
       expect(notice.calls.single.categoryName, 'Bills');
       expect(notice.calls.single.name, 'Tim Otieno');
+    });
+
+    testWidgets('I2: the real chips picker (the installed port) titles itself with the person name', (t) async {
+      await openFor(t, _deps(FakeRuleStore(), FakeCategoryRuleChangeNotice(), pick: showCategoryChipsPicker));
+      await t.tap(find.byKey(const Key('levelChoiceaskFirst')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const Key('personChooseCategory')));
+      await t.pumpAndSettle();
+      expect(find.text(hardPickerTitleOne('Tim Otieno')), findsOneWidget);
     });
 
     testWidgets('a given count wins over the Set up source; a failing source shows no count', (t) async {

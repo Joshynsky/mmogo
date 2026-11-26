@@ -129,7 +129,7 @@ extension on _Env {
     String? code,
   }) async =>
       db.insert('transactions', {
-        'display_code': code ?? 'TST${DateTime.now().microsecondsSinceEpoch}',
+        'display_code': code ?? 'TST${DateTime.now().microsecondsSinceEpoch}${_seq++}', // I2: + a counter (two rows in one clock tick collided on Windows)
         'source_type': type,
         'amount_cents': amount,
         'transaction_cost_cents': 0,
@@ -146,6 +146,8 @@ extension on _Env {
 
   Object? stored() => prefs.map[_key] == null ? null : jsonDecode(prefs.map[_key]!);
 }
+
+var _seq = 0;
 
 void main() {
   late _Env e;

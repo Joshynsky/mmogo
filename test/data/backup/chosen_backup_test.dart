@@ -178,18 +178,12 @@ void main() {
       expect((await to.get(ReceiverType.buyGoods, '55'))!.chosenCategoryIds, isEmpty);
     });
 
-    test('clamp: more than 2 keeps the first 2 found; an entry twice is kept once', () async {
-      final db = await openTestDb();
-      addTearDown(db.close);
-      final store = FakeRuleStore();
-      await _svc(db, _sink(store)).restore(
-          _bytes([
-            ruleRow('SM', 'a', lv: 0, sc: [_seed(_transport), _seed(_rent), _seed(_groceries)]),
-            ruleRow('SM', 'b', lv: 0, sc: [_seed(_rent), _seed(_rent), _seed(_groceries)]),
-          ]),
-          RestoreMode.replace);
-      expect((await store.get(ReceiverType.sendMoney, 'a'))!.chosenCategoryIds, await _seedIds(db, [_transport, _rent]));
-      expect((await store.get(ReceiverType.sendMoney, 'b'))!.chosenCategoryIds, await _seedIds(db, [_rent, _groceries]));
+    // I2: a file with more than 2 entries is now refused by the validator (field sc), so the planner's clamp
+    // (the defence behind it) is tested on the planner itself.
+    test('clamp (planner): more than 2 keeps the first 2 found; an entry twice is kept once', () {
+      const cats = RuleCategoryLookup(idBySeed: {_transport: 11, _rent: 12, _groceries: 13}, activeIds: {11, 12, 13});
+      expect(restoredChosenIds([_seed(_transport), _seed(_rent), _seed(_groceries)], cats), [11, 12]);
+      expect(restoredChosenIds([_seed(_rent), _seed(_rent), _seed(_groceries)], cats), [12, 13]);
     });
 
     test('a deleted category is dropped: inactive own category, parked built-in, unknown name', () async {
@@ -205,14 +199,19 @@ void main() {
           _bytes([
             ruleRow('SM', 'a', lv: 0, sc: [_own('Gone hobby'), _own('Live hobby')]),
             ruleRow('SM', 'b', lv: 0, sc: [_seed(_transport), _own('Ghost')]),
-            ruleRow('SM', 'c', lv: 0, sc: [_own('Ghost'), _seed(_transport), _seed(_rent), _seed(_groceries)]),
           ], classes: classes),
           RestoreMode.replace);
       expect((await store.get(ReceiverType.sendMoney, 'a'))!.chosenCategoryIds, [await classId(db, 'SEND_MONEY', 'Live hobby')]);
       final b = (await store.get(ReceiverType.sendMoney, 'b'))!;
       expect(b.chosenCategoryIds, isEmpty, reason: 'none left = Last 10 payments; the rule itself is kept');
       expect(b.level, RuleLevel.suggested);
-      expect((await store.get(ReceiverType.sendMoney, 'c'))!.chosenCategoryIds, await _seedIds(db, [_rent, _groceries]),
+      // I2: 4 entries no longer pass the validator; the planner still skips dropped ones before counting 2.
+      final rent = await seedId(db, _rent);
+      final groceries = await seedId(db, _groceries);
+      expect(
+          restoredChosenIds([_own('Ghost'), _seed(_transport), _seed(_rent), _seed(_groceries)],
+              RuleCategoryLookup(idBySeed: {_rent: rent, _groceries: groceries}, activeIds: {rent, groceries})),
+          [rent, groceries],
           reason: 'dropped entries do not use up the 2 places');
     });
 
@@ -233,24 +232,52 @@ void main() {
       }
     });
 
-    test('an unreadable sc (the validator does not check it) restores as empty and never refuses the rule', () async {
-      final db = await openTestDb();
-      addTearDown(db.close);
-      final store = FakeRuleStore();
+    // I2 (plan section 12, PM 25-11 strict): the validator now checks `sc`, so an unreadable list refuses the
+    // file (field `sc`) instead of restoring as empty. The planner still reads any value as empty (defence).
+    test('an unreadable sc is refused by the validator (field sc); the planner still reads it as empty', () async {
       final odd = <Object?>[
         null,
         'x',
         5,
         {'cat_seed': _rent},
-        [null, 5, 'x', <String, Object?>{}, _seed('SEND_MONEY:nope'), {'cat_seed': _rent, 'cat_name': 'Rent'}, {'cat_seed': 7}],
+        [null],
+        [5],
+        ['x'],
+        [<String, Object?>{}],
+        [_seed('SEND_MONEY:nope')],
+        [{'cat_seed': _rent, 'cat_name': 'Rent'}],
+        [{'cat_seed': 7}],
+        [{'cat_name': ' padded '}],
+        [{'cat_name': ''}],
+        [{'other': 'x'}],
+        [_seed(_rent), _seed(_transport), _seed(_groceries)], // more than kBackupMaxChosenCategories
       ];
-      final r = await _svc(db, _sink(store)).restore(
-          _bytes([for (var i = 0; i < odd.length; i++) {...ruleRow('SM', 'k$i', lv: 0), 'sc': odd[i]}]),
-          RestoreMode.replace);
-      expect(r.rules!.added, odd.length);
-      expect(r.rules!.refused, 0);
-      for (final x in await store.all()) {
-        expect(x.chosenCategoryIds, isEmpty, reason: x.key);
+      for (var i = 0; i < odd.length; i++) {
+        try {
+          BackupValidator.validate(_bytes([{...ruleRow('SM', 'k$i', lv: 0), 'sc': odd[i]}]));
+          fail('accepted sc #$i: ${odd[i]}');
+        } on RestoreRejected catch (e) {
+          expect(e.reason, RestoreRejectReason.invalidRow, reason: '#$i');
+          expect(e.field, 'sc', reason: '#$i');
+          expect(e.table, 'receiver_rules', reason: '#$i');
+        }
+      }
+      // The planner (after the validator) never refuses on its own.
+      for (final v in odd) {
+        final ids = restoredChosenIds(v, const RuleCategoryLookup(idBySeed: {_rent: 2}, activeIds: {2}));
+        expect(ids.length, lessThanOrEqualTo(kBackupMaxChosenCategories));
+        expect(ids.every((id) => id == 2), isTrue);
+      }
+    });
+
+    test('a valid sc passes the validator: empty, one seed, a seed and a clean own name (2 = the most)', () {
+      for (final ok in <List<Object?>>[
+        const [],
+        [_seed(_rent)],
+        [_own('My own'), _seed(_rent)],
+      ]) {
+        final v = BackupValidator.validate(_bytes([{...ruleRow('SM', 'a', lv: 0), 'sc': ok}]));
+        expect(v.receiverRules.single['sc'], ok);
       }
     });
 
@@ -289,7 +316,8 @@ void main() {
       final store = PrefsRuleStore();
       final r = await _svc(db, _sink(store)).restore(
           // A ceiling on a Suggested row makes Reset everyone touch this rule (needsReset).
-          _bytes([ruleRow('SM', 'a', lv: 0, ceil: 5000, sc: [_seed(_rent), _seed(_rent), _seed(_transport), _seed(_groceries)])]),
+          // I2: at most 2 entries (the validator refuses more).
+          _bytes([ruleRow('SM', 'a', lv: 0, ceil: 5000, sc: [_seed(_rent), _seed(_transport)])]),
           RestoreMode.replace);
       expect(r.rules!.added, 1);
       final want = await _seedIds(db, [_rent, _transport]);

@@ -514,9 +514,10 @@ class BackupValidator {
   // ---------------------------------------------------------------------------
   // receiver_rules (schema >= 9)
 
-  /// Exact 8 keys per row. Kind from the four codes, key 1..200 clean trimmed text, label as a
+  /// Exact 9 keys per row. Kind from the four codes, key 1..200 clean trimmed text, label as a
   /// receiver label, level 0..2, at most one of cat_seed (a built-in key) / cat_name, ceiling null
-  /// or 1..100,000,000, ap 0 or 1, no repeated (kind, key). A Paybill row at level 2 is accepted
+  /// or 1..100,000,000, ap 0 or 1, `sc` a list of chosen categories ([_chosenList]), no repeated
+  /// (kind, key). A Paybill row at level 2 is accepted
   /// (the restore degrades it: refusing a whole backup for it would lose the person's data).
   static List<Map<String, Object?>> _receiverRules(List rows) {
     const t = 'receiver_rules';
@@ -543,12 +544,38 @@ class BackupValidator {
         _int(row['ceil'], kBackupMinCeilingCents, kBackupMaxCeilingCents, t, i, 'ceil');
       }
       _int(row['ap'], 0, 1, t, i, 'ap');
+      _chosenList(row['sc'], t, i);
       if (!seen.add('$type\u0000$key')) {
         _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'k');
       }
       out.add(Map<String, Object?>.from(row));
     }
     return out;
+  }
+
+  /// A rule row's `sc` (0.2.2 item 2, B-BK; strict, PM 25-11): a list of at most
+  /// [kBackupMaxChosenCategories] entries, each a map with exactly one key: `cat_seed` (a built-in
+  /// key in [kBackupSeedKeys]) or `cat_name` (clean trimmed text, as the rule's own `cat_name`).
+  /// Anything else refuses the file (field `sc`), like every other field of the row.
+  static void _chosenList(Object? sc, String t, int i) {
+    if (sc is! List || sc.length > kBackupMaxChosenCategories) {
+      _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'sc');
+    }
+    for (final e in sc) {
+      if (e is! Map || e.length != 1) {
+        _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'sc');
+      }
+      if (e.containsKey('cat_seed')) {
+        final seed = e['cat_seed'];
+        if (seed is! String || !kBackupSeedKeys.contains(seed)) {
+          _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'sc');
+        }
+      } else if (e.containsKey('cat_name')) {
+        _text(e['cat_name'], 1, kBackupMaxClassificationNameLength, t, i, 'sc');
+      } else {
+        _fail(RestoreRejectReason.invalidRow, table: t, rowIndex: i, field: 'sc');
+      }
+    }
   }
 
   // ---------------------------------------------------------------------------

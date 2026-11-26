@@ -22,6 +22,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../data/prefs/app_prefs.dart' show AppPrefs;
 import '../model/rule_hint.dart';
 import '../model/waiting_item.dart';
 import '../rules/hard_rule_decision.dart' show autoRecordLive;
@@ -260,7 +261,7 @@ class QueuedYesImporter {
   /// doubt = false: the mark is dropped and the item keeps waiting as Ask first.
   final Future<bool> Function(WaitingItem item)? autoRecheck;
 
-  /// Marks the written row recorded_automatically = 1 (Undo then drops the person to Suggested, S-3).
+  /// Marks the written row recorded_automatically = 1 (Undo keeps the person on Auto-record, D-U).
   final Future<void> Function(int rowId)? markAutomatic;
 
   /// 0.2.2 item 2 (B-2): removes the phone alert of one item. Called for EVERY mark the run finishes (recorded,
@@ -390,10 +391,12 @@ class CategoryNameCache {
 
 /// True when some stored rule is above Suggested (Ask first, or a stored Auto-record shown as Ask first). Only
 /// then does the alert need category names, so the database is not opened for them otherwise. Never throws.
+/// While "Record receiver details" is OFF the rules are hidden (B-HIDE) and none asks: false (I2).
 Future<bool> anyAskFirstRuleStored({Future<SharedPreferences> Function()? prefs}) async {
   try {
     final p = await (prefs ?? SharedPreferences.getInstance)();
     await p.reload();
+    if (!(p.getBool(AppPrefs.keyCaptureIdentityPreference) ?? true)) return false;
     return p.getKeys().where((k) => k.startsWith(kRuleKeyPrefix)).any((k) {
       final r = decodeRule(p.get(k));
       return r != null && r.level != RuleLevel.suggested;

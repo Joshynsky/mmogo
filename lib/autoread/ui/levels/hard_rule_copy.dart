@@ -12,8 +12,9 @@
 ///
 /// Item 2 redesign (C1, 25-11): "limit" replaces "ceiling" in every user-facing value (key names may keep
 /// "Ceiling"). Every counted line goes through [peopleCount] ("1 person" / "{n} people"). Keys whose
-/// arguments changed got NEW functions next to the old ones; the old ones stay until slice I2 deletes
-/// the keys nothing uses any more (each is marked `OLD: I2 deletes when unused`).
+/// arguments changed got NEW functions next to the old ones; slice I2 (26-11) deleted the old keys nothing used
+/// any more, with their pins. Keys marked `// 0.2.3` are signed but not shown in 0.2.2 ("Categories I choose"
+/// moved to 0.2.3, plan section 11): never delete them.
 /// NOT here on purpose (still open PM items): the confirm buttons "Turn on" / "Cancel" ([kHardConfirmTurnOn]
 /// is unchanged) and the Settings row "0 names" subtitle.
 library;
@@ -45,32 +46,20 @@ String hardRuleLevelName(RuleLevel l) => switch (l) {
     };
 
 // ---------------------------------------------------------------- level sheet
-// SIGN WORDING-DRAFT (mock sheet_t)
-String hardSheetTitle(String name) => 'What should mmogo do for $name?';
 // SIGN WORDING-DRAFT (mock n_sug)
 String hardSheetNoteSuggested(String name) => "mmogo offers $name's most-used categories on the alert. Nothing records without a tap.";
-// SIGN WORDING-DRAFT (mock n_ask)
-String hardSheetNoteAskFirst(String category) => 'mmogo asks "Record as $category?" with one tap each time.';
-// SIGN WORDING-DRAFT (mock n_auto)
-const String kHardSheetNoteAutoRecord = 'Recorded with no tap. You get a notice every time, and you can Undo it.';
 
 // ---------------------------------------------------------------- limit field (key names keep "Ceiling")
 // SIGN WORDING-DRAFT (mock ceil_l; PM-signed label, "(optional)" dropped 25-11)
 const String kHardCeilingLabel = 'Ask first above Ksh';
 // SIGN WORDING-DRAFT (the "Ksh" prefix drawn in the mock field)
 const String kHardCeilingPrefix = 'Ksh';
-// SIGN WORDING-DRAFT (mock-remembered-v2 ceil_ph, "limit" per PM 25-11)
-const String kHardCeilingPlaceholder = 'No limit';
-// SIGN WORDING-DRAFT (mock-remembered-v2 ceil_h, "limit" per PM 25-11)
-const String kHardCeilingHint = 'Leave empty for no limit. A payment above this amount is asked first.';
 // SIGN WORDING-DRAFT (mock ceil_e)
 const String kHardCeilingError = 'Enter an amount above 0, or leave it empty.';
 // SIGN PLACEHOLDER: the mock has no line for a limit above Ksh 1,000,000 (plan section 5). PM to write.
 const String kTodoHardCeilingTooHigh = '[PM to write: limit above Ksh 1,000,000]';
 
 // ---------------------------------------------------------------- greyed Auto-record reasons
-// OLD: I2 deletes when unused (replaced by kHardPaybillAlwaysAsks). SIGN WORDING-DRAFT (mock why_bill)
-const String kHardWhyNotPaybill = 'Not for Paybill. Ask first is the highest level.';
 // SIGNED 25-11 ("Paybill line")
 const String kHardPaybillAlwaysAsks = 'Paybill payments always ask first.';
 // SIGN WORDING-DRAFT (mock why_agent)
@@ -103,23 +92,6 @@ const String kHardOfferAskFirst = 'Ask me first';
 const String kHardOfferAutoRecord = 'Auto-record';
 
 // ---------------------------------------------------------------- the one pill (never a number)
-// OLD: I2 deletes when unused (replaced by hardPillSuggested / hardPillAskFirst / hardPillAuto).
-// SIGN WORDING-DRAFT (mock pill_sug / pill_ask / pill_auto)
-String hardPillStage1(String name, RuleLevel level) => switch (level) {
-      RuleLevel.suggested => '$name set to Suggested',
-      RuleLevel.askFirst => '$name set to Ask first',
-      RuleLevel.autoRecord => '$name set to Auto-record',
-    };
-// OLD: I2 deletes when unused (replaced by kHardPillAnyAmount / hardPillUpTo). "limit" per PM 25-11.
-// SIGN WORDING-DRAFT (mock pill2_t with pill_noceil / pill_ceil)
-String hardPillStage2(String name, int? ceilingCents) =>
-    '$name is on Auto-record with ${ceilingCents == null ? 'no limit' : 'a limit of ${kshTrim(ceilingCents)}'}.';
-// OLD: I2 deletes when unused. SIGN WORDING-DRAFT (mock pill2_s)
-const String kHardPillStage2Sub = 'You can change this.';
-// OLD: I2 deletes when unused (replaced by kHardPillSetLimit / kHardPillChange). "limit" per PM 25-11.
-// SIGN WORDING-DRAFT (mock pill_chg)
-const String kHardPillChangeCeiling = 'Change limit';
-
 // SIGNED 25-11 ("Pill", Suggested)
 String hardPillSuggested(String name) => '$name set to Suggested';
 // SIGNED 25-11 ("Pill", Ask first)
@@ -202,18 +174,12 @@ const String kHardGroupHide = 'Hide';
 const String kHardSearchPlaceholder = 'Search people';
 // SIGN WORDING-DRAFT (mock empty_f)
 const String kHardSearchEmpty = 'Nobody matches.';
-// SIGN WORDING-DRAFT (mock row_auto0, "limit" per PM 25-11)
-const String kHardRowAutoNoCeiling = 'Auto-record, no limit';
-// SIGN WORDING-DRAFT (mock row_autoc)
-String hardRowAutoCeiling(int ceilingCents) => 'Auto-record up to ${kshTrim(ceilingCents)}';
 // SIGN WORDING-DRAFT (mock row_paused)
 const String kHardRowPaused = 'Paused: asking first';
 // SIGN WORDING-DRAFT (mock row_only_ask)
 const String kHardRowAskFirstHighest = 'Ask first is the highest level here';
 // SIGNED 25-11 ("Signed at sign-off": the line on Suggested rows with no chosen list)
 const String kHardSuggestsFromLast10 = 'Suggests from last 10 payments';
-// OLD: I2 deletes when unused (replaced by kHardDetailsOffCard). SIGN WORDING-DRAFT (mock off_line)
-const String kHardDetailsOffLine = 'Record receiver details is off. No names are kept, so there are no rules.';
 // SIGNED 25-11 ("Details-off card")
 const String kHardDetailsOffCard =
     "Record receiver details is off, so mmogo doesn't use your saved people or record them for you. "
@@ -222,8 +188,6 @@ const String kHardDetailsOffCard =
 const String kHardTurnOnInSettings = 'Turn it on in Settings';
 // SIGN WORDING-DRAFT (mock off_btn / off_ok; signed 25-11 as the restore details-off button)
 const String kHardOpenSettings = 'Open Settings';
-// OLD: I2 deletes when unused. SIGN WORDING-DRAFT (mock rst-off-page empty line, not in the key table)
-const String kHardDetailsOffEmpty = 'Nobody is remembered while Record receiver details is off.';
 // SIGNED 25-11 ("Redesign": the bottom bar button)
 const String kHardSetUpButton = 'Set up';
 // SIGNED 25-11 ("Redesign": the Set up sheet title; also the Set up button's spoken name, mock setup_aria)
@@ -234,27 +198,36 @@ const String kHardRecentlyRecorded = 'Recently recorded';
 const String kHardAutoRecordTag = kHardLevelAutoRecord;
 
 // ---------------------------------------------------------------- Suggest from (person sheet)
+// Section 11 (PM 25-11): "Categories I choose" moved to 0.2.3. The keys marked `// 0.2.3` are not shown in 0.2.2;
+// keep them (never delete). kHardSuggestChoose stays in use as the up-to-2 picker's no-name title.
+// 0.2.3
 // SIGNED 25-11 ("Signed at sign-off": Suggest words)
 const String kHardSuggestFrom = 'Suggest from:';
+// 0.2.3
 // SIGNED 25-11 ("Signed at sign-off": Suggest words)
 const String kHardSuggestLast10 = 'Last 10 payments';
 // SIGNED 25-11 ("Signed at sign-off": Suggest words)
 const String kHardSuggestChoose = 'Categories I choose';
 // SIGNED 25-11 ("Signed at sign-off": the heading named in "the two How Suggest works texts")
 const String kHardSuggestHowTitle = 'How Suggest works';
+// 0.2.3
 // SIGNED 25-11 ("Signed at sign-off": How Suggest works, Last 10 payments; mock-remembered-v2 sug_hist_p)
 String hardSuggestHowLast10(String name) =>
     "When you pay $name, the alert says Tap Parse. Then mmogo suggests the categories you used most in $name's "
     'last 10 payments. Nothing records without a tap.';
+// 0.2.3
 // SIGNED 25-11 ("Signed at sign-off": How Suggest works, Categories I choose; mock-remembered-v2 sug_pick_p).
 // [max] = the most categories a person can choose (C2's kMaxChosenCategories, 2).
 String hardSuggestHowChosen(String name, int max) =>
     'When you pay $name, the alert shows your categories as buttons straight away, with no Parse tap. '
     'Choose up to $max. Nothing records without a tap.';
+// 0.2.3
 // SIGNED 25-11 ("Signed at sign-off": Suggest words)
 const String kHardSuggestAlertPreview = 'Your alert will show:';
+// 0.2.3
 // SIGNED 25-11 ("Signed at sign-off": Suggest words)
 const String kHardSuggestNoneChosen = 'None chosen yet';
+// 0.2.3
 // SIGNED 25-11 ("Signed at sign-off": the must-choose error)
 const String kHardSuggestNeedOne = 'Choose at least one category, or pick Last 10 payments.';
 
@@ -286,10 +259,13 @@ const String kHardSetTo = 'Set to';
 const String kHardLevelSuggestButton = 'Suggest';
 // SIGN WORDING-DRAFT (mock-remembered-v2 back: every sheet's back arrow, spoken)
 const String kHardBack = 'Back';
+// 0.2.3
 // SIGN WORDING-DRAFT (mock-remembered-v2 p-sug-chosen sug_cur_l)
 const String kHardSuggestCurrentLabel = 'Categories to suggest';
+// 0.2.3
 // SIGN WORDING-DRAFT (mock-remembered-v2 p-sug-pick0 sug_choose)
 const String kHardSuggestChooseButton = 'Choose categories';
+// 0.2.3
 // SIGN WORDING-DRAFT (mock-remembered-v2 p-sug-chosen sug_change): "Categories ({k} of {m})"
 String hardSuggestChangeButton(int k, int m) => 'Categories ($k of $m)';
 // SIGN WORDING-DRAFT (mock-remembered-v2 p-keep sug_keep): {level} = the level the person had
@@ -356,6 +332,7 @@ String hardSetUpAccount(String maskedAccount) => 'account $maskedAccount';
 const String kHardAirtimeMyself = 'Myself';
 // SIGN WORDING-DRAFT (mock-remembered-v2 setup-at air_other)
 const String kHardAirtimeOther = 'Other number';
+// 0.2.3 (the row line for a chosen list; 0.2.2 rows always say kHardSuggestsFromLast10)
 // SIGN WORDING-DRAFT (mock-remembered-v2 page-sug row_sug): {categories} = the chosen names joined by ", "
 String hardRowSuggests(String categories) => 'Suggests $categories';
 // SIGN WORDING-DRAFT (mock-remembered-v2 page-open row_ask)
@@ -396,7 +373,3 @@ const String kHardRestoreOffTitle = 'Backup restored';
 String hardRestoreOffBody(int n) =>
     'Settings for ${peopleCount(n)} were left out because Record receiver details is off. '
     'Turn it on, then restore again to bring them back.';
-
-// ---------------------------------------------------------------- arrival (slice B2)
-// OLD: I2 deletes when unused (replaced by hardAutoArrived). SIGN PLACEHOLDER (plan section 5).
-const String kTodoAutoRecordArrivedToast = '[PM to write: recorded by Auto-record toast]';

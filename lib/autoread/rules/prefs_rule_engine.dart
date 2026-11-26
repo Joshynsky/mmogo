@@ -1,4 +1,4 @@
-/// AUTOREAD RULES engine: counts records in a row with the same category per
+/// §AUTOREAD.RULE_ENGINE - the AUTOREAD RULES engine: counts records in a row with the same category per
 /// person and offers "Ask first next time?". 0.2.1: only Suggested people are
 /// counted and offered; Ask first and Auto-record people are never counted.
 library;

@@ -107,7 +107,10 @@ String levelRowLine(LevelPerson x, {required bool paused}) {
   final cat = x.categoryNames.isEmpty ? null : x.categoryNames.first;
   switch (x.level) {
     case RuleLevel.suggested:
-      return x.chosenCategoryNames.isEmpty ? kHardSuggestsFromLast10 : hardRowSuggests(x.chosenCategoryNames.join(', '));
+      // 0.2.2 (plan section 11): every Suggested row says "Suggests from last 10 payments", even when a restored
+      // backup carries a chosen list (`sc`), because the alert does not use chosen lists before 0.2.3.
+      // 0.2.3: return x.chosenCategoryNames.isEmpty ? kHardSuggestsFromLast10 : hardRowSuggests(x.chosenCategoryNames.join(', '));
+      return kHardSuggestsFromLast10;
     case RuleLevel.askFirst:
       return cat == null ? kHardNoCategoryYet : hardRowAsks(cat);
     case RuleLevel.autoRecord:

@@ -78,17 +78,15 @@ void main() {
   group('copy', () {
     test('PM-signed edits are applied', () {
       expect(kHardCeilingLabel, 'Ask first above Ksh');
-      expect(kHardWhyNotPaybill.toLowerCase(), isNot(contains('yet')));
       expect(kHardWhyNotWithdrawal.toLowerCase(), isNot(contains('yet')));
     });
 
     test('pill and row lines keep the name and format amounts in whole shillings', () {
-      expect(hardPillStage1('Amina Wanjiku', RuleLevel.autoRecord), 'Amina Wanjiku set to Auto-record');
-      expect(hardPillStage1('Gary', RuleLevel.askFirst), 'Gary set to Ask first');
-      expect(hardPillStage1('Gary', RuleLevel.suggested), 'Gary set to Suggested');
-      expect(hardPillStage2('Amina', null), 'Amina is on Auto-record with no limit.');
-      expect(hardPillStage2('Tim', 200000), 'Tim is on Auto-record with a limit of Ksh 2,000.');
-      expect(hardRowAutoCeiling(50000), 'Auto-record up to Ksh 500');
+      // I2: the old stage 1/2 pill lines and the old row line were deleted; the signed ones replace them.
+      expect(hardPillAuto('Amina Wanjiku', 'Food'), 'Amina Wanjiku set to Auto-record as Food');
+      expect(hardPillSuggested('Gary'), 'Gary set to Suggested');
+      expect(hardPillUpTo(200000), 'Records up to Ksh 2,000.');
+      expect(hardRowRecordsUpTo('Food', 50000), 'Records as Food, up to Ksh 500');
       expect(hardOfferBody('Tim', 'Food', 4), contains('as Food 4 times in a row'));
       expect([for (final l in RuleLevel.values) hardRuleLevelName(l)], ['Suggested', 'Ask first', 'Auto-record']);
     });

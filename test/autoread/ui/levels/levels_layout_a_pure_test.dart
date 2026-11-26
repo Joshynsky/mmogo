@@ -42,7 +42,7 @@ void main() {
     final chosen = _p('S', RuleLevel.suggested).withChosenFrom(
         hardTestRuleChosen([7, 4]), const {4: 'Bills', 7: 'Family'});
     expect(chosen.chosenCategoryIds, [7, 4]);
-    expect(levelRowLine(chosen, paused: false), hardRowSuggests('Family, Bills'));
+    expect(levelRowLine(chosen, paused: false), kHardSuggestsFromLast10); // I2: 0.2.2 always; the chosen line is 0.2.3
     expect(levelRowLine(_p('G', RuleLevel.askFirst, cats: ['Food']), paused: false), hardRowAsks('Food'));
     expect(levelRowLine(_p('G', RuleLevel.askFirst, cats: ['Food']), paused: true), hardRowAsks('Food')); // only Auto-record pauses
     expect(levelRowLine(_p('A', RuleLevel.autoRecord, ceiling: 200000, cats: ['Rent']), paused: false),

@@ -54,11 +54,14 @@ SetupRecipient setupTestRecipient(
 
 /// One recorded picker call.
 class PickCall {
-  PickCall(this.mode, this.choices, this.initial, this.usedBefore);
+  PickCall(this.mode, this.choices, this.initial, this.usedBefore, [this.name]);
   final CategoryPickMode mode;
   final List<CategoryChoice> choices;
   final List<int> initial;
   final Set<int> usedBefore;
+
+  /// The person's name passed for the title (I2); null = none given.
+  final String? name;
 }
 
 /// Stands in for the chips picker: records each call and answers with [answer] (null = closed without a
@@ -75,8 +78,9 @@ class FakeCategoryPicker {
     required List<CategoryChoice> choices,
     required List<int> initial,
     required Set<int> usedBefore,
+    String? name,
   }) async {
-    calls.add(PickCall(mode, List.unmodifiable(choices), List.unmodifiable(initial), Set.unmodifiable(usedBefore)));
+    calls.add(PickCall(mode, List.unmodifiable(choices), List.unmodifiable(initial), Set.unmodifiable(usedBefore), name));
     return answer == null ? null : List<int>.unmodifiable(answer!);
   }
 }

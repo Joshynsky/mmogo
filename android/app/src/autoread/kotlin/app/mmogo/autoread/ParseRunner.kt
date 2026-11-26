@@ -137,7 +137,14 @@ object ParseRunner {
                     // 0.2.2 (B2c): an Auto-record person is decided again HERE from the stored values (fail closed,
                     // only behind HardRuleLogic.AUTO_RECORD_LIVE): record = the automatic mark and the queued alert.
                     if (parsed && HardRuleArrival.queueIfAuto(ctx, job.id, System.currentTimeMillis())) {
-                        HardRuleArrival.postQueued(ctx, job.id)
+                        // 0.2.2 (I2b): a resume ingest between the mark and the alert records it and clears the
+                        // alert before it exists; the "Queued" line would then stay. Post only while the automatic
+                        // mark is still stored, and clear it again if the mark went during the post (the app removes
+                        // the mark BEFORE it cancels, so one of the two always wins).
+                        if (autoMarkHeld(ctx, job.id)) {
+                            HardRuleArrival.postQueued(ctx, job.id)
+                            if (!autoMarkHeld(ctx, job.id)) Notifier.cancel(ctx, job.id)
+                        }
                     } else {
                         // An `auto` item Kotlin did not record asks like an Ask first one (its own hint category).
                         val askCategoryId = dartAskCategoryId ?: if (parsed) HardRuleArrival.autoHintCategory(ctx, job.id) else null
@@ -168,4 +175,12 @@ object ParseRunner {
             }
         }
     }
+
+    /** The automatic mark of [id] is still stored (the app has not imported it yet). Unreadable: false (no alert). */
+    private fun autoMarkHeld(ctx: Context, id: String): Boolean =
+        try {
+            HardRuleLogic.isAutoMark(ctx.getSharedPreferences(AskStore.FLUTTER_PREFS, Context.MODE_PRIVATE).all[AskStore.yesKey(id)])
+        } catch (_: Throwable) {
+            false
+        }
 }

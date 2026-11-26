@@ -185,13 +185,19 @@ class _LevelsTabState extends State<LevelsTab> with WidgetsBindingObserver {
     _openSheet(now, focusCeiling: true);
   }
 
-  void _openSheet(LevelPerson x, {bool focusCeiling = false}) {
+  /// The person's sheet. While the Auto-record screens are on it gets the chips picker and the "{k} payments"
+  /// count (read from the Set up source; none when it cannot be read), as openLevelSheetFor does.
+  Future<void> _openSheet(LevelPerson x, {bool focusCeiling = false}) async {
     final d = widget.deps;
     if (d == null) return;
-    showLevelSheet(context,
+    final count = _hard ? await levelPaymentCount(d, x.type, x.key) : null;
+    if (!mounted) return;
+    await showLevelSheet(context,
         person: x,
         categories: d.choicesFor(x.type),
         focusCeiling: focusCeiling,
+        pickCategories: d.pickCategories,
+        paymentCount: count,
         onSave: (l, c, {ceilingCents}) => _save(x, l, c, ceilingCents));
   }
 

@@ -2,7 +2,8 @@
 /// of levels_tab.dart, 0.2.2 item 2 U-PAGE): the tab's labels and help, its body ([LevelsTab]), and the
 /// hooks that make the recipients list's Forget / Change to Send Money / Forget all reach the rules. Flag
 /// on, Forget all erases EVERY rule with C2's `forgetEveryone` (the hidden ones too while Record receiver
-/// details is off) and its dialog counts everyone with `countEveryone`, each person once.
+/// details is off) and its dialog counts everyone with `countEveryone`, each person once. The same count
+/// ([RememberedForgetAllCount]) enables the page's button for people with only a rule (U-FORGET, B-5).
 library;
 
 import 'package:flutter/widgets.dart';
@@ -27,7 +28,8 @@ RememberedExtraTab levelsExtraTab(AirtimeAutoController controller,
         {LevelsDeps? deps, RuleCleanup? cleanup, Future<bool> Function()? detailsOn, LevelsSlots slots = const LevelsSlots()}) =>
     _LevelsExtraTab(controller, deps, cleanup, detailsOn, slots);
 
-class _LevelsExtraTab implements RememberedExtraTab, RememberedForgetHooks, RememberedForgetAllCopy {
+class _LevelsExtraTab
+    implements RememberedExtraTab, RememberedForgetHooks, RememberedForgetAllCopy, RememberedForgetAllCount {
   _LevelsExtraTab(this.c, this.deps, this.cleanup, this.detailsOn, this.slots);
   final AirtimeAutoController c;
   final LevelsDeps? deps;
@@ -57,21 +59,27 @@ class _LevelsExtraTab implements RememberedExtraTab, RememberedForgetHooks, Reme
     }
   }
 
-  /// Flag on (PM 25-11): the TRUE count of everyone Forget all removes: every remembered name plus every
-  /// person with a rule (C2 countEveryone: the hidden ones too), each once (a Pochi rule lives under its
-  /// remembered name's key, so that person counts once; other rules are keyed by number and are separate
-  /// people). Flag off: null = today's dialog.
+  /// Flag on (U-FORGET B-5): how many people Forget all removes ON TOP of the remembered names [nameKeys]:
+  /// every person with a rule (C2 countEveryone: the hidden ones too), minus the Pochi rules that live
+  /// under one of those names' keys (that person is already counted as a name). The page enables its
+  /// button with names + this, and the dialog below uses the same sum, so both agree. Flag off: 0.
+  @override
+  Future<int> forgetAllExtraPeople(List<String> nameKeys) async {
+    if (!autoRecordUi) return 0;
+    final d = deps;
+    if (d == null) return 0;
+    final names = nameKeys.toSet();
+    final everyone = await d.store.countEveryone(); // a failure throws: the count is not known
+    final shared = (await d.store.all()).where((r) => r.type == ReceiverType.pochi && names.contains(r.key)).length;
+    return everyone - shared;
+  }
+
+  /// Flag on (PM 25-11): the TRUE count of everyone Forget all removes: every remembered name plus
+  /// [forgetAllExtraPeople], each once. Flag off: null = today's dialog.
   @override
   Future<RememberedForgetAllText?> forgetAllText(List<String> nameKeys) async {
     if (!autoRecordUi) return null;
-    final names = nameKeys.toSet();
-    final d = deps;
-    var n = names.length;
-    if (d != null) {
-      final everyone = await d.store.countEveryone(); // a failure throws: no dialog
-      final shared = (await d.store.all()).where((r) => r.type == ReceiverType.pochi && names.contains(r.key)).length;
-      n += everyone - shared;
-    }
+    final n = nameKeys.toSet().length + await forgetAllExtraPeople(nameKeys); // a failure throws: no dialog
     return RememberedForgetAllText(title: hardForgetTitle(n), body: kHardForgetBody, ok: kHardForgetOk, toast: hardForgetToast(n));
   }
 
@@ -84,7 +92,7 @@ class _LevelsExtraTab implements RememberedExtraTab, RememberedForgetHooks, Reme
   @override
   String tabLabel() => kLevelsTabLabel;
   @override
-  String get forgetAllLabel => kLevelsForgetAllLabel;
+  String get forgetAllLabel => autoRecordUi ? kHardForgetButton : kLevelsForgetAllLabel;
   @override
   String get forgetAllNote => kLevelsForgetAllNote;
   @override

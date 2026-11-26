@@ -1,8 +1,7 @@
 // 0.2.2 item 2 U-FORGET (B-5) with the real Levels tab: the page's Forget all count (names + the tab's
 // extra people) and the tab's own dialog count (countEveryone) agree, each person once, also while
-// Record receiver details is OFF and the rules are hidden. The Levels tab does not implement
-// RememberedForgetAllCount yet (levels_extra_tab.dart is not this slice's file): [_Counted] wraps it with
-// EXACTLY the method this slice's HANDOFF asks I2 to add, so I2 can move it in and drop the wrapper.
+// Record receiver details is OFF and the rules are hidden. I2: the real tab (levelsExtraTab, as the app
+// wires it) implements RememberedForgetAllCount itself; the U-FORGET test wrapper is gone.
 // Dormant: debugAutoRecordUiOverride is set per test and reset in tearDown. Invented names only.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +10,7 @@ import 'package:mmogo/autoread/rules/fake_rule_store.dart';
 import 'package:mmogo/autoread/rules/rule_model.dart';
 import 'package:mmogo/autoread/ui/levels/hard_rule_copy.dart';
 import 'package:mmogo/autoread/ui/levels/hard_rule_ports.dart';
-import 'package:mmogo/autoread/ui/levels/levels_deps.dart';
+import 'package:mmogo/autoread/ui/levels/levels_copy.dart' show kLevelsForgetAllLabel;
 import 'package:mmogo/autoread/ui/levels/levels_extra_tab.dart';
 import 'package:mmogo/data/prefs/recipient_memory.dart';
 import 'package:mmogo/domain/parsing/parsed_sms_fields.dart';
@@ -22,49 +21,6 @@ import 'package:mmogo/ui/theme/app_palette_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../support/hard_rule_fakes.dart';
-
-/// The real Levels tab plus the count I2 is asked to add to it (HANDOFF 1 of the U-FORGET report).
-class _Counted implements RememberedExtraTab, RememberedForgetHooks, RememberedForgetAllCopy, RememberedForgetAllCount {
-  _Counted(this.inner, this.deps);
-  final RememberedExtraTab inner;
-  final LevelsDeps deps;
-
-  // --- the HANDOFF method, as it would read inside _LevelsExtraTab ---
-  @override
-  Future<int> forgetAllExtraPeople(List<String> nameKeys) async {
-    if (!autoRecordUi) return 0;
-    final names = nameKeys.toSet();
-    final everyone = await deps.store.countEveryone(); // hidden rules too
-    final shared = (await deps.store.all()).where((r) => r.type == ReceiverType.pochi && names.contains(r.key)).length;
-    return everyone - shared;
-  }
-
-  @override
-  Future<RememberedForgetAllText?> forgetAllText(List<String> nameKeys) =>
-      (inner as RememberedForgetAllCopy).forgetAllText(nameKeys);
-  @override
-  Future<void> onAllNamesForgotten() => (inner as RememberedForgetHooks).onAllNamesForgotten();
-  @override
-  Future<void> onNameChangedToSendMoney(String key) => (inner as RememberedForgetHooks).onNameChangedToSendMoney(key);
-  @override
-  Future<void> onNameForgotten(String key) => (inner as RememberedForgetHooks).onNameForgotten(key);
-  @override
-  Listenable get listenable => inner.listenable;
-  @override
-  String get pageTitle => inner.pageTitle;
-  @override
-  String get recipientsTabLabel => inner.recipientsTabLabel;
-  @override
-  String tabLabel() => inner.tabLabel();
-  @override
-  String get forgetAllLabel => inner.forgetAllLabel;
-  @override
-  String get forgetAllNote => inner.forgetAllNote;
-  @override
-  RememberedExtraHelp get help => inner.help;
-  @override
-  Widget buildBody(BuildContext context) => inner.buildBody(context);
-}
 
 Future<RecipientMemory> _memory({bool names = true}) async {
   SharedPreferences.setMockInitialValues({});
@@ -84,6 +40,8 @@ Future<FakeRuleStore> _store() => hardTestStore([
       hardTestRule('254700000002', name: 'Grace', level: RuleLevel.askFirst, categoryId: 2),
     ]);
 
+RememberedExtraTab? _tab;
+
 Future<void> _pump(WidgetTester t, RecipientMemory m, FakeRuleStore store) async {
   t.view.physicalSize = const Size(400, 900);
   t.view.devicePixelRatio = 1;
@@ -94,7 +52,7 @@ Future<void> _pump(WidgetTester t, RecipientMemory m, FakeRuleStore store) async
     controller: AppPaletteController('ocean', 'light'),
     child: MaterialApp(
       navigatorKey: appNavigatorKey,
-      home: RememberedScreen(memory: m, extraTab: _Counted(levelsExtraTab(airtime, deps: deps), deps)),
+      home: RememberedScreen(memory: m, extraTab: _tab = levelsExtraTab(airtime, deps: deps)),
     ),
   ));
   await t.pumpAndSettle();
@@ -140,6 +98,7 @@ void main() {
     await t.tap(_bar);
     await t.pumpAndSettle();
     expect(_inDialog(hardForgetTitle(4)), findsOneWidget);
+    expect(await rememberedForgetAllExtra(_tab, const ['JANE ATIENO', 'ZED STORES']), 2); // 2 names + 2 = 4
     expect(_inDialog(hardForgetTitle(5)), findsNothing);
     await t.tap(find.byKey(const Key('forgetAllCancel')));
     await t.pumpAndSettle();
@@ -149,6 +108,8 @@ void main() {
     final store = await _store();
     await _pump(t, await _memory(names: false), store);
     expect(_enabled(t), isTrue);
+    expect(_tab, isA<RememberedForgetAllCount>()); // the real tab, no wrapper
+    expect(await rememberedForgetAllExtra(_tab, const []), 3); // the page's count
     await t.tap(_bar);
     await t.pumpAndSettle();
     expect(_inDialog(hardForgetTitle(3)), findsOneWidget);
@@ -160,5 +121,11 @@ void main() {
     debugAutoRecordUiOverride = false;
     await _pump(t, await _memory(names: false), await _store());
     expect(_enabled(t), isFalse);
+    expect(find.text(kLevelsForgetAllLabel), findsOneWidget); // the 0.2.1 label
+  });
+
+  testWidgets('flag on: the button reads the signed "Forget all people"', (t) async {
+    await _pump(t, await _memory(names: false), await _store());
+    expect(find.text(kHardForgetButton), findsOneWidget);
   });
 }

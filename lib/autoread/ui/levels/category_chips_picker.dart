@@ -50,8 +50,7 @@ List<int> chipsPickerStart(List<CategoryChoice> choices, Iterable<int> initial, 
   return out;
 }
 
-/// Opens the picker. Matches [PickCategories]; [name] (optional, not in the port yet: see the U-PICK report
-/// HANDOFF) puts the person's name in the title.
+/// Opens the picker. Matches [PickCategories]; [name] (optional) puts the person's name in the title.
 Future<List<int>?> showCategoryChipsPicker(
   BuildContext context, {
   required CategoryPickMode mode,
