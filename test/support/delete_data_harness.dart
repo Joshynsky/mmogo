@@ -80,7 +80,10 @@ Future<void> openDeleteSheet(WidgetTester tester) async {
   }
   await tester.ensureVisible(deleteRow);
   await tester.pumpAndSettle();
-  await tester.tap(deleteRow);
+  // Settings builds every row now (item 3 slice E), so the row is no longer scrolled in by scrollUntilVisible. At
+  // 320 dp and 160% text the squeezed row is taller than the screen: tap near its top, which ensureVisible put in view.
+  final r = tester.getRect(deleteRow);
+  await tester.tapAt(Offset(r.center.dx, r.height > 120 ? r.top + 22 : r.center.dy));
   await tester.pumpAndSettle();
 }
 

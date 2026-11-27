@@ -123,6 +123,7 @@ class RestoreService {
         phoneRecentlyDeleted: await count(
             'SELECT COUNT(*) AS n FROM transactions WHERE deleted_at IS NOT NULL'),
         fileFulizaEvents: file.fulizaEvents.length,
+        fileRules: file.receiverRules.length,
         newFulizaEvents: plan.newFulizaEvents.length,
         phoneFulizaEvents: await count('SELECT COUNT(*) AS n FROM fuliza_events'),
       );

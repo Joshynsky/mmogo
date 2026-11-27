@@ -22,7 +22,8 @@ class AppPaletteController extends ValueNotifier<String> {
 
   String _appearance;
 
-  /// `system` (follow the phone, the default) | `light` | `dark`.
+  /// `system` (follow the phone, the default) | `light` | `dark` | `black`
+  /// (item 4: dark level 2; System never gives black).
   String get appearance => _appearance;
 
   /// Reads the stored palette id and appearance (defensive: a missing/corrupt/
@@ -45,7 +46,7 @@ class AppPaletteController extends ValueNotifier<String> {
   /// Applies the appearance at once (Settings' three icons) and persists it in
   /// the background. Device-only: never in a backup.
   void selectAppearance(String mode) {
-    if (mode == _appearance || (mode != 'system' && mode != 'light' && mode != 'dark')) return;
+    if (mode == _appearance || (mode != 'system' && mode != 'light' && mode != 'dark' && mode != 'black')) return;
     _appearance = mode;
     notifyListeners();
     AppPrefs.writeAppearanceMode(mode);
@@ -55,7 +56,7 @@ class AppPaletteController extends ValueNotifier<String> {
   /// it is `system`.
   Brightness brightnessFor(Brightness phone) => switch (_appearance) {
     'light' => Brightness.light,
-    'dark' => Brightness.dark,
+    'dark' || 'black' => Brightness.dark,
     _ => phone,
   };
 }

@@ -115,7 +115,7 @@ void main() {
       expect(jane.categoryId, isNull);
     });
 
-    test('Auto-record comes back as Ask first, waiting, ceiling kept; the pending flag survives', () async {
+    test('Auto-record comes back AT Auto-record, pending, ceiling kept; the pending flag survives', () async {
       final store = FakeRuleStore();
       final bytes = _bytes([
         ruleRow('SM', '0700000001', lv: 2, ceil: 250000, catSeed: 'SEND_MONEY:rent'),
@@ -125,14 +125,15 @@ void main() {
       ]);
       final r = await _svc(db, _sink(store)).restore(bytes, RestoreMode.replace);
       final a = (await _get(store, ReceiverType.sendMoney, '0700000001'))!;
-      expect(a.level, RuleLevel.askFirst);
+      expect(a.level, RuleLevel.autoRecord);
       expect(a.autoPending, isTrue);
       expect(a.ceilingCents, 250000);
       expect((await _get(store, ReceiverType.buyGoods, '111'))!.autoPending, isTrue);
       expect((await _get(store, ReceiverType.buyGoods, '222'))!.autoPending, isFalse);
       expect((await _get(store, ReceiverType.pochi, 'ANN'))!.autoPending, isFalse, reason: 'Suggested never waits');
       expect(r.rules!.autoRecordAsAskFirst, 1);
-      expect([for (final x in await store.all()) x.level], isNot(contains(RuleLevel.autoRecord)));
+      expect([for (final x in await store.all()) if (x.level == RuleLevel.autoRecord) x.autoPending], [true],
+          reason: 'every restored Auto-record person is pending');
     });
 
     test('Paybill at level 2 comes back as Ask first, counted apart, no marker', () async {
@@ -220,21 +221,23 @@ void main() {
   group('Merge', () {
     test('keeps the phone\'s rule for the same receiver and adds only for receivers with none', () async {
       final store = FakeRuleStore();
-      await store.setLevel(ReceiverType.sendMoney, '1', name: 'Phone', level: RuleLevel.suggested, at: _at);
+      await store.setLevel(ReceiverType.sendMoney, '1', name: 'Phone', level: RuleLevel.askFirst, at: _at);
       await store.setLevel(ReceiverType.sendMoney, '9', name: 'Other', level: RuleLevel.askFirst, at: _at);
       final r = await _svc(db, _sink(store)).restore(
           _bytes([ruleRow('SM', '1', name: 'File', lv: 1, ceil: 5), ruleRow('BG', '77', name: 'Till', lv: 2)]),
           RestoreMode.merge);
       final kept = (await _get(store, ReceiverType.sendMoney, '1'))!;
       expect(kept.name, 'Phone');
-      expect(kept.level, RuleLevel.suggested);
+      expect(kept.level, RuleLevel.askFirst);
       expect(kept.ceilingCents, isNull);
       expect(await _get(store, ReceiverType.sendMoney, '9'), isNotNull);
       final till = (await _get(store, ReceiverType.buyGoods, '77'))!;
-      expect(till.level, RuleLevel.askFirst);
+      expect(till.level, RuleLevel.autoRecord);
       expect(till.autoPending, isTrue);
       expect(r.rules!.added, 1);
       expect(r.rules!.keptPhone, 1);
+      expect(r.rules!.keptLocalNames, ['Phone']);
+      expect(r.rules!.replaced, 0);
       expect(r.rules!.phoneRulesCleared, isFalse);
     });
 
@@ -336,6 +339,7 @@ void main() {
       final r = await svc.restore(_bytes([ruleRow('SM', '1', lv: 2, ceil: 700)]), RestoreMode.replace);
       final all = await store.all();
       expect(all.map((x) => x.key), ['1']);
+      expect(all.single.level, RuleLevel.autoRecord);
       expect(all.single.autoPending, isTrue);
       expect(all.single.ceilingCents, 700);
       expect(r.rules!.added, 1);
@@ -354,7 +358,7 @@ void main() {
   });
 
   group('Undo of a Replace', () {
-    test('brings the old rules back (Auto-record as Ask first, waiting, ceiling kept)', () async {
+    test('brings the old rules back (Auto-record pending, ceiling kept)', () async {
       final store = FakeRuleStore();
       await store.setLevel(ReceiverType.sendMoney, '0700000009',
           name: 'Old', level: RuleLevel.autoRecord, ceilingCents: 4200, at: _at);
@@ -375,7 +379,7 @@ void main() {
       final u = await svc.undoLastReplace();
       expect(u.rules!.added, 2);
       final back = (await _get(store, ReceiverType.sendMoney, '0700000009'))!;
-      expect(back.level, RuleLevel.askFirst);
+      expect(back.level, RuleLevel.autoRecord);
       expect(back.autoPending, isTrue);
       expect(back.ceilingCents, 4200);
       expect((await _get(store, ReceiverType.buyGoods, '55'))!.level, RuleLevel.askFirst);
@@ -384,10 +388,10 @@ void main() {
   });
 
   group('planRulesRestore (pure)', () {
-    test('Auto-record never leaves the plan at level 2', () {
+    test('Auto-record stays level 2 with the marker; a Paybill drops to Ask first, no marker', () {
       final f = BackupValidator.validate(_bytes([ruleRow('SM', '1', lv: 2), ruleRow('PB', '2', lv: 2)]));
       final plan = planRulesRestore(f, RestoreMode.replace, const RuleCategoryLookup());
-      expect(plan.rows.map((r) => r.level), everyElement(lessThan(2)));
+      expect(plan.rows.map((r) => (r.level, r.autoPending)), [(2, true), (1, false)]);
       expect(plan.replace, isTrue);
       expect(plan.hasSection, isTrue);
     });

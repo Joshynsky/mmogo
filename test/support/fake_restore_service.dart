@@ -17,6 +17,7 @@ RestorePreview fakePreview({
   int phoneCls = 3,
   int phoneMap = 7,
   int deleted = 4,
+  int fileRules = 0,
 }) => RestorePreview(
   fileSchemaVersion: 2,
   fileCreatedAt: DateTime(2026, 9, 20, 10, 15).millisecondsSinceEpoch,
@@ -31,6 +32,7 @@ RestorePreview fakePreview({
   phoneUserClassifications: phoneCls,
   phoneCounterpartyMap: phoneMap,
   phoneRecentlyDeleted: deleted,
+  fileRules: fileRules,
 );
 
 const _types = ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'POCHI', 'AIRTIME'];

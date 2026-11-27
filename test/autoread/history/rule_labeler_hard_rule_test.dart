@@ -11,7 +11,6 @@ import 'package:mmogo/autoread/history/rule_labeler.dart';
 import 'package:mmogo/autoread/model/rule_hint.dart';
 import 'package:mmogo/autoread/model/waiting_item.dart';
 import 'package:mmogo/autoread/rules/fake_rule_store.dart';
-import 'package:mmogo/autoread/rules/hard_rule_decision.dart';
 import 'package:mmogo/autoread/rules/rule_model.dart';
 import 'package:mmogo/domain/parsing/parsed_sms_fields.dart';
 
@@ -50,10 +49,9 @@ void main() {
     paused = false;
   });
 
-  test('dormant default: autoRecordLive false gives today\'s Ask first hint, no fromAutoRecord', () async {
-    expect(autoRecordLive, isFalse);
+  test('flag false gives the Ask first hint, no fromAutoRecord', () async {
     await auto();
-    final h = await lab(live: null).label(_msg());
+    final h = await lab(live: false).label(_msg());
     expect(h, const RuleHint(level: RuleLevel.askFirst, type: ReceiverType.sendMoney, key: _key, suggested: [7]));
   });
 

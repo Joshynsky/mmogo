@@ -106,9 +106,9 @@ void main() {
   group('constants pinned on both sides', () {
     final logic = _kt('HardRuleLogic.kt');
 
-    test('the dormancy flag is false in Dart AND in Kotlin (flipping is step G2: edit both and this test)', () {
-      expect(autoRecordLive, isFalse);
-      expect(_const(logic, 'AUTO_RECORD_LIVE'), 'false');
+    test('the Auto-record flag is true in Dart AND in Kotlin (the 0.2.2 flip, step G2: both edited with this test)', () {
+      expect(autoRecordLive, isTrue);
+      expect(_const(logic, 'AUTO_RECORD_LIVE'), 'true');
     });
 
     test('the keys and limits Kotlin reads are the ones Dart writes', () {

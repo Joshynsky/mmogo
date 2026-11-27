@@ -27,13 +27,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 final _morning = DateTime(2026, 9, 24, 9, 30);
 
 class _FakeHomeDb implements Database {
-  _FakeHomeDb({
-    required this.now,
-    this.thisTotal = 0,
-    this.priorTotal = 0,
-    this.types = const {},
-    this.recentCount = 0,
-  });
+  _FakeHomeDb({required this.now, this.thisTotal = 0, this.priorTotal = 0, this.types = const {}, this.recentCount = 0});
 
   final DateTime now;
   final int thisTotal;
@@ -111,12 +105,7 @@ Future<void> _pumpHome(
 
   await tester.pumpWidget(
     MaterialApp(
-      home: HomeScreen(
-        db: db,
-        clock: clock ?? () => now ?? db.now,
-        startUpdates: startUpdates,
-        showWhatsNew: showWhatsNew,
-      ),
+      home: HomeScreen(db: db, clock: clock ?? () => now ?? db.now, startUpdates: startUpdates, showWhatsNew: showWhatsNew),
       onGenerateRoute: (settings) {
         _pushed.add(settings);
         return MaterialPageRoute(
@@ -138,9 +127,8 @@ Color? _boxColor(WidgetTester tester, Key key) {
   return (c.decoration as BoxDecoration?)?.color ?? c.color;
 }
 
-ScrollPosition _homeScroll(WidgetTester tester) => tester
-    .state<ScrollableState>(find.descendant(of: find.byKey(const Key('homeScroll')), matching: find.byType(Scrollable)))
-    .position;
+ScrollPosition _homeScroll(WidgetTester tester) =>
+    tester.state<ScrollableState>(find.descendant(of: find.byKey(const Key('homeScroll')), matching: find.byType(Scrollable))).position;
 
 Finder _recentRows({bool skipOffstage = true}) => find.byWidgetPredicate(
   (w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('homeRecentRow-'),
@@ -188,12 +176,7 @@ void main() {
     testWidgets('bars: fixed order, length = share of the total, type colours', (tester) async {
       await _pumpHome(tester, db);
       const order = ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'CASH'];
-      const expectedShare = {
-        'SEND_MONEY': 350000 / 550000,
-        'PAYBILL': 120000 / 550000,
-        'BUY_GOODS': 0.0,
-        'CASH': 80000 / 550000,
-      };
+      const expectedShare = {'SEND_MONEY': 350000 / 550000, 'PAYBILL': 120000 / 550000, 'BUY_GOODS': 0.0, 'CASH': 80000 / 550000};
 
       final ys = [for (final c in order) tester.getTopLeft(find.byKey(Key('homeTypeRow-$c'))).dy];
       expect(ys, orderedEquals([...ys]..sort()), reason: 'Send Money, Paybill, Buy Goods, Cash top to bottom');
@@ -294,9 +277,7 @@ void main() {
       expect(fake.sumStarts, contains(DateTime(2026, 9, 14).millisecondsSinceEpoch));
     });
 
-    testWidgets('CW1: the first day of the week preference moves the week (Sunday first starts Sun 20 Sep)', (
-      tester,
-    ) async {
+    testWidgets('CW1: the first day of the week preference moves the week (Sunday first starts Sun 20 Sep)', (tester) async {
       SharedPreferences.setMockInitialValues({'tour_seen_$homeTourId': true, 'first_day_of_week': 7});
       final fake = _FakeHomeDb(now: _morning, thisTotal: 300000, priorTotal: 200000);
       await _pumpHome(tester, fake);
@@ -321,11 +302,7 @@ void main() {
     for (final brightness in Brightness.values) {
       final palette = AppPalette.forBrightness(brightness);
       testWidgets('${brightness.name}: spending up is red', (tester) async {
-        await _pumpHome(
-          tester,
-          _FakeHomeDb(now: _morning, thisTotal: 400000, priorTotal: 100000),
-          brightness: brightness,
-        );
+        await _pumpHome(tester, _FakeHomeDb(now: _morning, thisTotal: 400000, priorTotal: 100000), brightness: brightness);
         final f = find.text('▲ 300% vs last month');
         expect(f, findsOneWidget);
         expect(_textColor(tester, f), palette.diffUp);
@@ -333,16 +310,13 @@ void main() {
       });
 
       testWidgets('${brightness.name}: spending down is the primary Ocean', (tester) async {
-        await _pumpHome(
-          tester,
-          _FakeHomeDb(now: _morning, thisTotal: 88000, priorTotal: 100000),
-          brightness: brightness,
-        );
+        await _pumpHome(tester, _FakeHomeDb(now: _morning, thisTotal: 88000, priorTotal: 100000), brightness: brightness);
         final f = find.text('▼ 12% vs last month');
         expect(f, findsOneWidget);
         expect(_textColor(tester, f), palette.diffDown);
-        expect(palette.diffDown, palette.primary);
-        expect(palette.diffDown, brightness == Brightness.light ? const Color(0xFF0A6E8A) : const Color(0xFF3FB6D4));
+        // Ocean 2: dark's "down" text is the brighter cyan (the softer primary fails 4.5:1 on its tint).
+        if (brightness == Brightness.light) expect(palette.diffDown, palette.primary);
+        expect(palette.diffDown, brightness == Brightness.light ? const Color(0xFF0A6E8A) : const Color(0xFF4DB3CF));
       });
     }
   });
@@ -422,12 +396,7 @@ void main() {
     });
 
     testWidgets('fallback: when not even one row fits, the page scrolls instead of squeezing', (tester) async {
-      await _pumpHome(
-        tester,
-        _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 30),
-        size: const Size(320, 480),
-        textScale: 2.0,
-      );
+      await _pumpHome(tester, _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 30), size: const Size(320, 480), textScale: 2.0);
       // (skipOffstage: false — the list starts below the fold here.)
       expect(find.byKey(const Key('homeRecentFallback'), skipOffstage: false), findsOneWidget);
       expect(find.byKey(const Key('homeRecentFit'), skipOffstage: false), findsNothing);
@@ -457,11 +426,9 @@ void main() {
         expect(_boxColor(tester, const Key('homeRecentCard')), palette.card);
         expect(_boxColor(tester, const Key('primaryBottomNav')), palette.card);
         final fab = tester.widget<Material>(find.byKey(const Key('primaryFab')));
-        expect(fab.color, palette.primary);
-        final plus = tester.widget<Icon>(
-          find.descendant(of: find.byKey(const Key('primaryFab')), matching: find.byIcon(Icons.add)),
-        );
-        expect(plus.color, palette.onPrimary);
+        expect(fab.color, palette.addFill);
+        final plus = tester.widget<Icon>(find.descendant(of: find.byKey(const Key('primaryFab')), matching: find.byIcon(Icons.add)));
+        expect(plus.color, palette.addInk);
         final homeLabel = find.descendant(of: find.byKey(const Key('primaryBottomNav')), matching: find.text('Home'));
         expect(_textColor(tester, homeLabel), palette.primary);
         final appBar = tester.widget<AppBar>(find.byType(AppBar));
@@ -478,9 +445,7 @@ void main() {
   });
 
   group('pull to refresh (T21)', () {
-    testWidgets('re-queries and recomputes the time-derived values: the greeting and the period bounds', (
-      tester,
-    ) async {
+    testWidgets('re-queries and recomputes the time-derived values: the greeting and the period bounds', (tester) async {
       var clock = DateTime(2026, 9, 30, 11, 50);
       final db = _FakeHomeDb(now: clock, thisTotal: 1000, recentCount: 2);
       await _pumpHome(tester, db, clock: () => clock);
@@ -614,11 +579,7 @@ void main() {
 
     testWidgets('with an injected database and no seam, the real modal is never started', (tester) async {
       SharedPreferences.setMockInitialValues({'onboarding_complete': true});
-      await _pumpHome(
-        tester,
-        _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 3),
-        startUpdates: () async {},
-      );
+      await _pumpHome(tester, _FakeHomeDb(now: _morning, thisTotal: 1000, recentCount: 3), startUpdates: () async {});
       expect(find.byKey(const Key('whatsNewDialog')), findsNothing);
     });
   });

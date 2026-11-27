@@ -431,10 +431,10 @@ class AppPrefs {
   static Future<bool> writeWhereItWentStyle(WhereItWentStyle style) =>
       _writeLook((p) => p.setString(keyWhereItWentStyle, style == WhereItWentStyle.strip ? 'strip' : 'button'));
 
-  /// The whole-app light/dark choice: `system` (default) | `light` | `dark`.
+  /// The whole-app light/dark choice: `system` (default) | `light` | `dark` | `black`.
   /// DEVICE-ONLY: never in a backup (not in the allowlist).
   static const keyAppearanceMode = 'appearance_mode';
-  static const _validAppearance = {'system', 'light', 'dark'};
+  static const _validAppearance = {'system', 'light', 'dark', 'black'};
 
   /// Anything unset, of another type, unknown or unreadable gives `system`.
   static Future<String> readAppearanceMode() async {

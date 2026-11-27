@@ -5,6 +5,7 @@ library;
 // hard_rule_copy keys only, counts only). Flag off = nothing; n = 0 = nothing; details-off drop =
 // title, count body, Open Settings; Auto-record people back on Ask first = the count line; install /
 // uninstall set the lib/ui holder; the installed messages drawn in the real result sheet.
+import 'package:mmogo/ui/copy/backup_copy.dart' show restoreRulesNeedKeep;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/autoread/ui/levels/hard_rule_copy.dart';
@@ -32,8 +33,7 @@ void main() {
   test('flag off: no Auto-record review line', () {
     debugAutoRecordUiOverride = false;
     expect(restoreRuleNotes(const RulesRestoreOutcome(autoRecordAsAskFirst: 2)), isEmpty);
-    expect(restoreRuleNotes(const RulesRestoreOutcome(droppedForPrivacy: 1, autoRecordAsAskFirst: 2)).single.title,
-        kHardRestoreOffTitle);
+    expect(restoreRuleNotes(const RulesRestoreOutcome(droppedForPrivacy: 1, autoRecordAsAskFirst: 2)).single.title, kHardRestoreOffTitle);
   });
 
   group('flag on', () {
@@ -41,7 +41,9 @@ void main() {
 
     test('n = 0 on both counts: nothing (other counts do not speak)', () {
       expect(restoreRuleNotes(RulesRestoreOutcome.none), isEmpty);
-      expect(restoreRuleNotes(const RulesRestoreOutcome(added: 5, keptPhone: 2, paybillAsAskFirst: 1)), isEmpty);
+      // Counts of added / kept now speak as the Rules line (0.2.2 restore); a Paybill count alone does not.
+      expect(restoreRuleNotes(const RulesRestoreOutcome(paybillAsAskFirst: 1)), isEmpty);
+      expect(restoreRuleNotes(const RulesRestoreOutcome(added: 5, keptPhone: 2)).single.body, 'Rules: 5 added, 2 kept from this phone.');
     });
 
     test('details OFF drop: title, counts-only body, Open Settings', () {
@@ -52,16 +54,16 @@ void main() {
     });
 
     test('Auto-record people back on Ask first: the review count line, no button', () {
-      final n = restoreRuleNotes(const RulesRestoreOutcome(added: 4, autoRecordAsAskFirst: 2)).single;
+      final n = restoreRuleNotes(const RulesRestoreOutcome(added: 4, autoRecordAsAskFirst: 2)).last;
       expect(n.title, isNull);
-      expect(n.body, hardRestoreToast(2));
+      expect(n.body, restoreRulesNeedKeep(2));
       expect(n.settingsButton, isNull);
     });
 
     test('install / uninstall set and clear the lib/ui holder', () {
       expect(RestoreRulesNotes.builder, isNull);
       installRestoreRuleMessages();
-      expect(RestoreRulesNotes.notesFor(const RulesRestoreOutcome(autoRecordAsAskFirst: 1)).single.body, hardRestoreToast(1));
+      expect(RestoreRulesNotes.notesFor(const RulesRestoreOutcome(autoRecordAsAskFirst: 1)).single.body, restoreRulesNeedKeep(1));
       uninstallRestoreRuleMessages();
       expect(RestoreRulesNotes.builder, isNull);
     });
@@ -78,23 +80,25 @@ void main() {
         settings: const SettingsApplyResult(ok: true),
         rules: const RulesRestoreOutcome(added: 5, autoRecordAsAskFirst: 3),
       );
-      await t.pumpWidget(AppPaletteScope(
-        controller: AppPaletteController('ocean', 'light'),
-        child: MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (c) => TextButton(
-                key: const Key('open'),
-                onPressed: () => showRestoreResultSheet(c, r, kind: RestoreSheetKind.replaced),
-                child: const Text('open'),
+      await t.pumpWidget(
+        AppPaletteScope(
+          controller: AppPaletteController('ocean', 'light'),
+          child: MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (c) => TextButton(
+                  key: const Key('open'),
+                  onPressed: () => showRestoreResultSheet(c, r, kind: RestoreSheetKind.replaced),
+                  child: const Text('open'),
+                ),
               ),
             ),
           ),
         ),
-      ));
+      );
       await t.tap(find.byKey(const Key('open')));
       await t.pumpAndSettle();
-      expect(find.text(hardRestoreToast(3)), findsOneWidget);
+      expect(find.text(restoreRulesNeedKeep(3)), findsOneWidget);
       expect(find.text(kHardOpenSettings), findsNothing);
     });
   });

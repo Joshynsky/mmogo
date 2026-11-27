@@ -21,9 +21,8 @@ void _setPhone(WidgetTester tester, Brightness brightness) {
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
 }
 
-SystemUiOverlayStyle _overlay(WidgetTester tester) => tester
-    .widget<AnnotatedRegion<SystemUiOverlayStyle>>(find.byType(AnnotatedRegion<SystemUiOverlayStyle>).first)
-    .value;
+SystemUiOverlayStyle _overlay(WidgetTester tester) =>
+    tester.widget<AnnotatedRegion<SystemUiOverlayStyle>>(find.byType(AnnotatedRegion<SystemUiOverlayStyle>).first).value;
 
 Color? _textColor(WidgetTester tester, String text) => tester.widget<Text>(find.text(text)).style?.color;
 
@@ -58,11 +57,11 @@ void main() {
       expect(p.dotIdle, const Color(0xFFC3CFD3));
       expect(p.ink, const Color(0xFF13262E));
       expect(p.softInk, const Color(0xFF3E5058));
-      expect(p.mutedInk, const Color(0xFF5B6B72));
-      expect(p.background, const Color(0xFFF4F8F9));
+      expect(p.mutedInk, const Color(0xFF52626A));
+      expect(p.background, const Color(0xFFEEF4F6));
       expect(p.surface, const Color(0xFFFFFFFF));
       expect(p.textCard, const Color(0xFFE8F0F2));
-      expect(p.line, const Color(0xFFD3DFE3));
+      expect(p.line, const Color(0xFFC5D5DB));
       expect(p.frameLine, const Color(0xFFB5D6DF));
       expect(p.skipBg, const Color(0xD9FFFFFF));
       expect(p.skipInk, const Color(0xFF073B4C));
@@ -77,7 +76,7 @@ void main() {
       // T21 Analytics tokens (Analytics mock v4 `.phone`).
       expect(p.bar, const Color(0xFF9CC9D6));
       expect(p.barOn, const Color(0xFF0A6E8A));
-      expect(p.highlight, const Color(0xFFFFF4D6));
+      expect(p.highlight, const Color(0xFFFFF1C2));
       expect(p.toastAction, const Color(0xFF8FD3E6));
       expect(p.onDelete, const Color(0xFFFFFFFF));
     });
@@ -85,24 +84,24 @@ void main() {
     test('dark tokens are the mock v3 .phone.dark values', () {
       const p = AppPalette.dark;
       expect(p.brightness, Brightness.dark);
-      expect(p.primary, const Color(0xFF3FB6D4));
-      expect(p.onPrimary, const Color(0xFF06212B));
+      expect(p.primary, const Color(0xFF3A9FBC));
+      expect(p.onPrimary, const Color(0xFF04202A));
       expect(p.deep, const Color(0xFFBFE4EE));
       expect(p.backBg, const Color(0xFFCFE9F0));
       expect(p.backInk, const Color(0xFF073B4C));
       expect(p.tint, const Color(0xFF133640));
       expect(p.tintInk, const Color(0xFFBFE4EE));
-      expect(p.brightPill, const Color(0xFF3FB6D4));
+      expect(p.brightPill, const Color(0xFF3A9FBC));
       expect(p.dotIdle, const Color(0xFF3A4E56));
       expect(p.ink, const Color(0xFFE6F0F3));
-      expect(p.softInk, const Color(0xFFA3B7BF));
-      expect(p.mutedInk, const Color(0xFFA3B7BF));
-      expect(p.background, const Color(0xFF0E1A1F));
-      expect(p.surface, const Color(0xFF0E1A1F));
-      expect(p.textCard, const Color(0xFF1A2C34));
-      expect(p.line, const Color(0xFF2E444D));
+      expect(p.softInk, const Color(0xFFA9BDC5));
+      expect(p.mutedInk, const Color(0xFFA9BDC5));
+      expect(p.background, const Color(0xFF0B161B));
+      expect(p.surface, const Color(0xFF0B161B));
+      expect(p.textCard, const Color(0xFF15262D));
+      expect(p.line, const Color(0xFF36545F));
       expect(p.frameLine, const Color(0xFF2E5561));
-      expect(p.skipBg, const Color(0xEB1A2C34));
+      expect(p.skipBg, const Color(0xEB15262D));
       expect(p.skipInk, const Color(0xFFBFE4EE));
       expect(p.sun, const Color(0xFFFFB703));
       expect(p.systemOverlayStyle.statusBarColor, const Color(0x00000000));
@@ -112,7 +111,7 @@ void main() {
       expect(p.systemOverlayStyle.systemNavigationBarIconBrightness, Brightness.light);
       // T21 Analytics tokens (Analytics mock v4 `.phone.dark`).
       expect(p.bar, const Color(0xFF2E5561));
-      expect(p.barOn, const Color(0xFF3FB6D4));
+      expect(p.barOn, const Color(0xFF3A9FBC));
       expect(p.highlight, const Color(0xFF3A3320));
       expect(p.toastAction, const Color(0xFF2E5561));
       expect(p.onDelete, const Color(0xFF2A0E0C));
@@ -124,12 +123,12 @@ void main() {
       expect(AppColors.sun, const Color(0xFFFFB703));
       // T20: the PM-approved chart colours (home-colours-mock v4 --c1..--c4).
       const l = AppPalette.light;
-      expect(l.typeSendMoney, const Color(0xFF1283A3));
+      expect(l.typeSendMoney, const Color(0xFF2563B0));
       expect(l.typePaybill, const Color(0xFF5B4FC4));
       expect(l.typeBuyGoods, const Color(0xFFC2366B));
       expect(l.typeCash, const Color(0xFFB07800));
       const d = AppPalette.dark;
-      expect(d.typeSendMoney, const Color(0xFF2AA3C4));
+      expect(d.typeSendMoney, const Color(0xFF5FAEF2));
       expect(d.typePaybill, const Color(0xFF8479E8));
       expect(d.typeBuyGoods, const Color(0xFFE0628F));
       expect(d.typeCash, const Color(0xFFBF8A00));
@@ -139,15 +138,15 @@ void main() {
       expect(d.typeColor('CASH'), d.typeCash);
       // Home tokens (mock .phone / .phone.dark).
       expect(l.card, const Color(0xFFFFFFFF));
-      expect(d.card, const Color(0xFF1A2C34));
-      expect(l.track, const Color(0xFFE8F0F2));
-      expect(d.track, const Color(0xFF26404A));
+      expect(d.card, const Color(0xFF15262D));
+      expect(l.track, const Color(0xFFCFDDE3));
+      expect(d.track, const Color(0xFF2C4A55));
       expect(d.track, isNot(d.background));
       expect(d.track, isNot(d.card));
       expect(l.diffUp, const Color(0xFFC62828));
       expect(d.diffUp, const Color(0xFFFF8A80));
       expect(l.diffDown, const Color(0xFF0A6E8A));
-      expect(d.diffDown, const Color(0xFF3FB6D4));
+      expect(d.diffDown, const Color(0xFF4DB3CF));
       // Parties/Analytics' donut colours are untouched until their rework.
       expect(AppColors.sourceSendMoney, const Color(0xFF00A651));
       expect(AppColors.sourcePaybill, const Color(0xFF3D7FE0));
@@ -248,10 +247,7 @@ void main() {
   // light ThemeData on a dark phone.
   group('The real app follows the Appearance choice (S9a)', () {
     Future<ThemeData> homeTheme(WidgetTester tester, Brightness phone, {String? appearance}) async {
-      SharedPreferences.setMockInitialValues({
-        AppPrefs.keyOnboardingComplete: true,
-        'appearance_mode': ?appearance,
-      });
+      SharedPreferences.setMockInitialValues({AppPrefs.keyOnboardingComplete: true, 'appearance_mode': ?appearance});
       tester.platformDispatcher.platformBrightnessTestValue = phone;
       final shown = switch (appearance) {
         'light' => Brightness.light,

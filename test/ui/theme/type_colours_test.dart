@@ -37,22 +37,14 @@ final _sets = <String, AppPalette>{
   'indigo dark': AppPalette.indigoDark,
 };
 
-const _codes = [
-  'SEND_MONEY',
-  'PAYBILL',
-  'BUY_GOODS',
-  'CASH',
-  'POCHI_LA_BIASHARA',
-  'AGENT_WITHDRAWAL',
-  'AIRTIME',
-];
+const _codes = ['SEND_MONEY', 'PAYBILL', 'BUY_GOODS', 'CASH', 'POCHI_LA_BIASHARA', 'AGENT_WITHDRAWAL', 'AIRTIME'];
 
 /// The expected chart colour of every cell: [set][code]. The first four are
 /// the 0.1.1 values (pinned), the last three the CB3 values (Ocean & Sun: the
 /// signed mock's --c5..--c7).
 const _chart = <String, List<String>>{
-  'ocean light': ['#1283A3', '#5B4FC4', '#C2366B', '#B07800', '#1B6E2A', '#5F6F77', '#CC461C'],
-  'ocean dark': ['#2AA3C4', '#8479E8', '#E0628F', '#BF8A00', '#4DBF63', '#9AAAB1', '#F2784B'],
+  'ocean light': ['#2563B0', '#5B4FC4', '#C2366B', '#B07800', '#1B6E2A', '#5F6F77', '#CC461C'],
+  'ocean dark': ['#5FAEF2', '#8479E8', '#E0628F', '#BF8A00', '#4DBF63', '#9AAAB1', '#F2784B'],
   'leaf light': ['#0E8A4A', '#3D6FD6', '#C2366B', '#B07800', '#6A3FB5', '#646B66', '#CC461C'],
   'leaf dark': ['#2FB36A', '#7FA2F0', '#E0628F', '#BF8A00', '#9D70E6', '#A0A8A2', '#F2784B'],
   'indigo light': ['#5B54E8', '#0C77A6', '#C0397F', '#9A5B06', '#14532A', '#666677', '#E2603A'],
@@ -81,7 +73,7 @@ void main() {
   });
 
   test('text-use shades: only where white/ink on the chart colour fails 4.5:1', () {
-    expect(_hex(AppPalette.light.typePillFill('SEND_MONEY')), '#0F7C9B'); // chosen here: #1283A3 gives 4.37
+    expect(_hex(AppPalette.light.typePillFill('SEND_MONEY')), '#2563B0'); // Ocean 2: the chart blue already clears 4.5:1 with white
     expect(_hex(AppPalette.light.typePillFill('CASH')), '#8C6100');
     expect(_hex(AppPalette.leafLight.typePillFill('SEND_MONEY')), '#0B7F44');
     expect(_hex(AppPalette.leafLight.typePillFill('CASH')), '#8C6100');
@@ -149,9 +141,9 @@ void main() {
     ]);
   });
 
-  test('the shade chosen for Ocean Send Money reaches 4.5:1 with white; the old chart colour does not', () {
+  test('Ocean Send Money (Ocean 2 blue) reaches 4.5:1 with white', () {
     expect(_ratio(Colors.white, AppPalette.light.typePillFill('SEND_MONEY')), greaterThanOrEqualTo(4.5));
-    expect(_ratio(Colors.white, AppPalette.light.typeSendMoney), lessThan(4.5)); // 4.37
+    expect(_ratio(Colors.white, AppPalette.light.typeSendMoney), greaterThanOrEqualTo(4.5)); // 6.02
   });
 
   test('error token (EP1): #B3261E light, #FF8A8E dark; >= 4.5:1 on the card and the page background', () {

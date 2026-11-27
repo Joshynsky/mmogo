@@ -28,7 +28,7 @@ class _CountDb implements Database {
 
 const _sub2 = 'Auto-record airtime: 2 of 2 on · 1 name, kept on this phone';
 const _sub0 = 'Auto-record airtime: 0 of 2 on · 1 name, kept on this phone';
-const _row = 'Remembered, suggestions and auto-record';
+const _row = 'People';
 
 Future<void> _put(String k, bool v) async => (await SharedPreferences.getInstance()).setBool(k, v);
 
@@ -79,9 +79,8 @@ Future<void> _pump(WidgetTester t, AirtimeAutoController? c, RecipientMemory mem
       child: MaterialApp(
         navigatorKey: _nav,
         routes: {
-          Routes.rememberedRecipients: (ctx) => c == null
-              ? RememberedScreen(memory: mem)
-              : rememberedPageFor(c, args: ModalRoute.of(ctx)?.settings.arguments, memory: mem),
+          Routes.rememberedRecipients: (ctx) =>
+              c == null ? RememberedScreen(memory: mem) : rememberedPageFor(c, args: ModalRoute.of(ctx)?.settings.arguments, memory: mem),
         },
         home: SettingsScreen(
           db: _CountDb(),
@@ -170,10 +169,7 @@ void main() {
     final mem = await _seeded();
     final c = _controller();
     await _pump(t, c, mem);
-    _nav.currentState!.pushNamed(
-      Routes.rememberedRecipients,
-      arguments: const RememberedRouteArgs(openAutoRecord: true),
-    );
+    _nav.currentState!.pushNamed(Routes.rememberedRecipients, arguments: const RememberedRouteArgs(openAutoRecord: true));
     await t.pumpAndSettle();
     expect(find.byKey(const Key('autoRecordMyself')).hitTestable(), findsOneWidget);
   });

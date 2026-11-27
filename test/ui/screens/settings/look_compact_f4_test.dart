@@ -68,8 +68,7 @@ Future<void> _pump(
   await tester.pumpAndSettle();
 }
 
-Finder _in(String rowKey, String childKey) =>
-    find.descendant(of: find.byKey(Key(rowKey)), matching: find.byKey(Key(childKey)));
+Finder _in(String rowKey, String childKey) => find.descendant(of: find.byKey(Key(rowKey)), matching: find.byKey(Key(childKey)));
 
 bool _stacked(WidgetTester t, String rowKey) => _in(rowKey, 'compactStacked').evaluate().isNotEmpty;
 
@@ -129,9 +128,8 @@ void main() {
     testWidgets('the chosen option is filled with the primary colour AND set in heavier type', (tester) async {
       await _pump(tester, width: 800, prefs: {'year_view_amounts': 'months'});
       final p = AppPalettes.ocean.light;
-      Material material(String key) => tester.widget<Material>(
-        find.ancestor(of: find.byKey(Key(key)), matching: find.byType(Material)).first,
-      );
+      Material material(String key) =>
+          tester.widget<Material>(find.ancestor(of: find.byKey(Key(key)), matching: find.byType(Material)).first);
       FontWeight? weight(String key, String word) =>
           tester.widget<Text>(find.descendant(of: find.byKey(Key(key)), matching: find.text(word))).style!.fontWeight;
       expect(material('yearView-months').color, p.primary);
@@ -171,8 +169,16 @@ void main() {
       // Roboto-like widths: the mock's minimum control width (8.8 em + 38) dominates.
       for (final (scale, limit) in [(1.0, 314.4), (1.3, 370.3), (1.6, 426.2)]) {
         final control = 8.8 * 13 * scale + 38;
-        expect(compactStacks(cardWidth: limit - 0.5, textFactor: scale, controlWidth: control), isTrue, reason: '$scale');
-        expect(compactStacks(cardWidth: limit + 0.5, textFactor: scale, controlWidth: control), isFalse, reason: '$scale');
+        expect(
+          compactStacks(cardWidth: limit - 0.5, textFactor: scale, controlWidth: control),
+          isTrue,
+          reason: '$scale',
+        );
+        expect(
+          compactStacks(cardWidth: limit + 0.5, textFactor: scale, controlWidth: control),
+          isFalse,
+          reason: '$scale',
+        );
       }
       // Appearance: 86 + 72 x text + 140 + 4.
       expect(compactStacks(cardWidth: 301.9, textFactor: 1.0, controlWidth: 140), isTrue);
@@ -213,7 +219,9 @@ void main() {
       }
     }
 
-    testWidgets('stacked at 320 dp, text 1.6: the control fills its own line under the title, the icon stays beside the title', (tester) async {
+    testWidgets('stacked at 320 dp, text 1.6: the control fills its own line under the title, the icon stays beside the title', (
+      tester,
+    ) async {
       await _pump(tester, width: 320, scale: 1.6);
       for (final r in _rowKeys) {
         expect(_stacked(tester, r), isTrue, reason: r);
@@ -225,27 +233,37 @@ void main() {
       expect(control.left, row.left + 14);
       expect(control.right, row.right - 14, reason: 'full width');
       // The icon tile is beside the title (same line), not on its own line.
-      final icon = tester.getRect(find.descendant(of: find.byKey(const Key('settingsYearViewRow')), matching: find.byIcon(Icons.bar_chart_outlined)));
+      final icon = tester.getRect(
+        find.descendant(of: find.byKey(const Key('settingsYearViewRow')), matching: find.byIcon(Icons.bar_chart_outlined)),
+      );
       expect(icon.left, lessThan(title.left));
       expect(icon.top, lessThan(title.bottom));
       expect(icon.bottom, greaterThan(title.top));
     });
 
-    testWidgets('Appearance stacked: the icons carry the small labels System, Light, Dark', (tester) async {
+    testWidgets('Appearance stacked: the icons carry the small labels System, Light, Dark, Black', (tester) async {
       await _pump(tester, width: 320, scale: 1.3);
       expect(_stacked(tester, 'settingsAppearanceRow'), isTrue);
-      for (final w in ['System', 'Light', 'Dark']) {
-        expect(find.descendant(of: find.byKey(const Key('settingsAppearanceRow')), matching: find.text(w)), findsOneWidget, reason: w);
+      for (final w in ['System', 'Light', 'Dark', 'Black']) {
+        expect(
+          find.descendant(of: find.byKey(const Key('settingsAppearanceRow')), matching: find.text(w)),
+          findsOneWidget,
+          reason: w,
+        );
       }
     });
 
-    testWidgets('Appearance beside: icons only (no labels), a 140 dp control of three 44 x 44 buttons', (tester) async {
+    testWidgets('Appearance beside: icons only (no labels), a 186 dp control of four 44 x 44 buttons', (tester) async {
       await _pump(tester, width: 800);
       expect(_stacked(tester, 'settingsAppearanceRow'), isFalse);
-      for (final w in ['System', 'Light', 'Dark']) {
-        expect(find.descendant(of: find.byKey(const Key('settingsAppearanceRow')), matching: find.text(w)), findsNothing, reason: w);
+      for (final w in ['System', 'Light', 'Dark', 'Black']) {
+        expect(
+          find.descendant(of: find.byKey(const Key('settingsAppearanceRow')), matching: find.text(w)),
+          findsNothing,
+          reason: w,
+        );
       }
-      for (final m in ['system', 'light', 'dark']) {
+      for (final m in ['system', 'light', 'dark', 'black']) {
         expect(tester.getSize(find.byKey(Key('appearance-$m'))), const Size(44, 44));
       }
       final control = find.ancestor(of: find.byKey(const Key('appearance-system')), matching: find.byType(Semantics)).evaluate().isNotEmpty;
@@ -267,10 +285,15 @@ void main() {
   });
 
   group('A4: Appearance', () {
-    testWidgets('three icon buttons with the spoken names System, Light, Dark and a selected state', (tester) async {
+    testWidgets('four icon buttons with the spoken names System, Light, Dark, Black and a selected state', (tester) async {
       final h = tester.ensureSemantics();
       await _pump(tester, width: 800);
-      for (final (id, name, on) in [('system', 'System', true), ('light', 'Light', false), ('dark', 'Dark', false)]) {
+      for (final (id, name, on) in [
+        ('system', 'System', true),
+        ('light', 'Light', false),
+        ('dark', 'Dark', false),
+        ('black', 'Black', false),
+      ]) {
         final s = tester.getSemantics(find.byKey(Key('appearance-$id')));
         expect(s.label, name);
         expect(s.flagsCollection.isButton, isTrue);
@@ -289,6 +312,10 @@ void main() {
       await tester.tap(find.byKey(const Key('appearance-dark')));
       await tester.pumpAndSettle();
       expect(tester.widget<Text>(caption).data, 'Always dark.');
+      await tester.tap(find.byKey(const Key('appearance-black')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<Text>(caption).data, 'Always dark, on a true black page.');
+      expect((await SharedPreferences.getInstance()).getString('appearance_mode'), 'black');
       await tester.tap(find.byKey(const Key('appearance-system')));
       await tester.pumpAndSettle();
       expect(tester.widget<Text>(caption).data, 'Follows your phone’s setting.');
@@ -299,10 +326,8 @@ void main() {
   });
 
   group('0.1.3 F4: the Appearance row icon follows the mode', () {
-    IconData leading(WidgetTester t) => t
-        .widgetList<Icon>(find.descendant(of: find.byKey(const Key('settingsAppearanceRow')), matching: find.byType(Icon)))
-        .first
-        .icon!;
+    IconData leading(WidgetTester t) =>
+        t.widgetList<Icon>(find.descendant(of: find.byKey(const Key('settingsAppearanceRow')), matching: find.byType(Icon))).first.icon!;
 
     for (final m in const [
       ('system', Icons.smartphone_outlined),
@@ -357,7 +382,9 @@ void main() {
     });
 
     for (final scale in [1.0, 1.3, 1.6]) {
-      testWidgets('R21: the dialog on a 320 x 568 phone at text $scale: Cancel stays visible and nothing is wasted above it', (tester) async {
+      testWidgets('R21: the dialog on a 320 x 568 phone at text $scale: Cancel stays visible and nothing is wasted above it', (
+        tester,
+      ) async {
         await _pump(tester, width: 320, height: 568, scale: scale);
         await tester.ensureVisible(find.byKey(const Key('settingsFirstDayRow')));
         await tester.pumpAndSettle();

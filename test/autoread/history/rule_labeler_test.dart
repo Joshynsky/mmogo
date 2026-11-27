@@ -48,7 +48,7 @@ void main() {
   late FakeRuleStore rules;
 
   RuleLabeler labeler(HistoryReader h, {Future<bool> Function()? details, Duration? cap}) =>
-      RuleLabeler(rules: rules, history: h, recordReceiverDetails: details, cap: cap ?? kLabelCap);
+      RuleLabeler(rules: rules, history: h, recordReceiverDetails: details, cap: cap ?? kLabelCap, live: false);
 
   setUp(() {
     rules = FakeRuleStore();
@@ -80,7 +80,7 @@ void main() {
       expect(hint, const RuleHint(level: RuleLevel.askFirst, type: ReceiverType.sendMoney, key: '0712345678', suggested: [7]));
     });
 
-    test('a stored Auto-record level is NEVER emitted in 0.2.1: it is labelled Ask first', () async {
+    test('with the flag false a stored Auto-record level is labelled Ask first', () async {
       await rules.setLevel(ReceiverType.sendMoney, '0712345678',
           name: 'Jane', level: RuleLevel.autoRecord, categoryId: 7, at: _at);
       final hint = await labeler(FakeHistoryReader()).label(_sm());

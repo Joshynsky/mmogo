@@ -33,6 +33,7 @@ const _newCopyFiles = [
   'lib/ui/copy/whats_new_copy.dart',
   'lib/autoread/ui/whats_new_autoread_copy.dart',
   'lib/ui/whats_new/whats_new_cards.dart',
+  'lib/ui/whats_new/whats_new_items.dart',
   'lib/ui/whats_new/whats_new_pager.dart',
   'lib/ui/whats_new/whats_new_entry.dart',
   'lib/ui/whats_new/whats_new_hook.dart',
@@ -50,7 +51,10 @@ const _banned = <String>[
 
 List<String> bannedHits(String text) {
   final low = text.toLowerCase();
-  return [for (final b in _banned) if (low.contains(b)) b];
+  return [
+    for (final b in _banned)
+      if (low.contains(b)) b,
+  ];
 }
 
 void main() {
@@ -85,10 +89,7 @@ void main() {
       expect(files.containsKey(path), isTrue, reason: path);
       var src = _noLineComments(files[path]!);
       // The constant's NAME holds the word "Erases"; it is the exempt W3 sentence by reference.
-      src = src
-          .replaceAll(kUninstallErasesNotice, '')
-          .replaceAll(kPrivacySentenceStandard, '')
-          .replaceAll('kUninstallErasesNotice', '');
+      src = src.replaceAll(kUninstallErasesNotice, '').replaceAll(kPrivacySentenceStandard, '').replaceAll('kUninstallErasesNotice', '');
       expect(bannedHits(src), isEmpty, reason: path);
     }
   });
@@ -107,31 +108,30 @@ void main() {
       kWhatsNewBannerHead,
       kWhatsNewBannerBody,
       kWhatsNewBannerLink,
-      kWhatsNewWithdrawalsTitle,
-      kWhatsNewWithdrawalsSummary,
-      ...kWhatsNewWithdrawalsBody,
-      kWhatsNewSuggestTitle,
-      kWhatsNewSuggestSummary,
-      ...kWhatsNewSuggestBody,
-      kWhatsNewSuggestLast,
-      kWhatsNewPaidToTitle,
-      kWhatsNewPaidToSummary,
-      kWhatsNewPaidToBody,
+      kWhatsNewBlackTitle,
+      kWhatsNewBlackSummary,
+      kWhatsNewBlackBody,
+      kWhatsNewSearchTitle,
+      kWhatsNewSearchSummary,
+      kWhatsNewSearchBody,
+      kWhatsNewRegroupTitle,
+      kWhatsNewRegroupSummary,
+      kWhatsNewRegroupBody,
       kWhatsNewBackupsTitle,
       kWhatsNewBackupsSummary,
       kWhatsNewBackupsBody,
-      kWhatsNewPochiTitle,
-      kWhatsNewPochiSummary,
-      kWhatsNewPochiBody,
-      kWhatsNewUpdatesTitle,
-      kWhatsNewUpdatesSummary,
-      kWhatsNewUpdatesBody,
-      kWhatsNewLinksTitle,
-      kWhatsNewLinksSummary,
-      kWhatsNewLinksBody,
-      kWhatsNewPillTitle,
-      kWhatsNewPillSummary,
-      kWhatsNewPillBody,
+      kWhatsNewOceanTitle,
+      kWhatsNewOceanSummary,
+      kWhatsNewOceanBody,
+      kWhatsNewHomeTitle,
+      kWhatsNewHomeSummary,
+      kWhatsNewHomeBody,
+      kWhatsNewSameNameTitle,
+      kWhatsNewSameNameBody,
+      kWhatsNewNotNowTitle,
+      kWhatsNewNotNowBody,
+      kWhatsNewReceiverTitle,
+      kWhatsNewReceiverBody,
       kWhatsNewCard5Title,
       kWhatsNewCard5Summary,
       kWhatsNewCard5Body,
@@ -139,20 +139,30 @@ void main() {
       // The auto-read build's words follow the same rules.
       kWhatsNewAutoBannerHead,
       kWhatsNewAutoBannerBody,
-      kWhatsNewAutoWithdrawalsExtra,
-      ...kWhatsNewAutoSuggestBody,
-      kWhatsNewAskTitle,
-      kWhatsNewAskSummary,
-      ...kWhatsNewAskBody,
-      kWhatsNewNotifTitle,
-      kWhatsNewNotifSummary,
-      kWhatsNewNotifBody,
-      kWhatsNewHideTitle,
-      kWhatsNewHideSummary,
-      ...kWhatsNewHideBody,
-      kWhatsNewRecordedTitle,
-      kWhatsNewRecordedSummary,
-      kWhatsNewRecordedBody,
+      kWhatsNewAutoBannerLink,
+      kWhatsNewAutoEntryExtra,
+      kWhatsNewAutoBackupsTitle,
+      kWhatsNewAutoBackupsSummary,
+      kWhatsNewAutoBackupsIntro,
+      kWhatsNewAutoBackupsOlder,
+      kWhatsNewAutoBackupsKeepIt,
+      kWhatsNewAutoRecordTitle,
+      kWhatsNewAutoRecordSummary,
+      ...kWhatsNewAutoRecordBody,
+      kWhatsNewPauseTitle,
+      kWhatsNewPauseSummary,
+      kWhatsNewPauseBody,
+      kWhatsNewSuggestTitle,
+      kWhatsNewSuggestSummary,
+      kWhatsNewSuggestBody,
+      kWhatsNewResetTitle,
+      kWhatsNewResetSummary,
+      kWhatsNewResetBody,
+      kWhatsNewTodoTitle,
+      kWhatsNewTodoBody,
+      kWhatsNewFixesTitle,
+      kWhatsNewFixesSummary,
+      kWhatsNewFixesBody,
       kWhatsNewPrivacyAutoReadSummary,
       kWhatsNewPrivacyAutoReadBody,
     ].join('\n').replaceAll(kUninstallErasesNotice, '').replaceAll(kPrivacySentenceStandard, '');
@@ -165,7 +175,7 @@ void main() {
       expect(s.toLowerCase(), isNot(contains('autoread')), reason: s);
     }
     final shared = _lib()['lib/ui/copy/whats_new_pager_copy.dart']!;
-    expect(shared.toLowerCase(), isNot(contains('auto-read')) , reason: 'the shared copy file holds the standard words only');
+    expect(shared.toLowerCase(), isNot(contains('auto-read')), reason: 'the shared copy file holds the standard words only');
   });
 
   test('the Privacy item: the closed line is the signed sentence (mock), the auto-read build has its own words', () {
@@ -182,7 +192,7 @@ void main() {
   test('the page copy never retypes a fixed sentence: it uses the named constants', () {
     final src = _noLineComments(_lib()['lib/ui/copy/whats_new_pager_copy.dart']!);
     expect(src, isNot(contains(r'$kNetworkSentence')), reason: 'the full W7 would repeat the canonical sentence');
-    expect(src, contains('kBackupNotRestorableByOlderV5'), reason: 'the backup sentence has one source');
+    expect(src, contains('kBackupNotRestorableByOlderV6'), reason: 'the backup sentence has one source');
     expect(src, contains('kPrivacySentenceStandard'));
     expect(src, isNot(contains(r'$kFirstDayRegrouped')), reason: 'F4 R4: card 2 has its own text; the line is for the First day dialog');
     expect(src, isNot(contains('GitHub sees your IP')));

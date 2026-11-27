@@ -53,6 +53,7 @@ class _RememberedScreenState extends State<RememberedScreen> {
   /// dialog's own count decides. Never a name, never shown.
   int? _extra = 0;
   int _countRun = 0;
+  bool _tabChosen = false;
 
   /// Forget all has someone to forget: names + the extra tab's people > 0 (an unknown extra count counts
   /// as someone). The disabled look is only for a true 0.
@@ -63,6 +64,19 @@ class _RememberedScreenState extends State<RememberedScreen> {
     super.initState();
     widget.extraTab?.listenable.addListener(_recount);
     _reload();
+    _openOnPeople();
+  }
+
+  /// 0.2.2: with no deep link, open on the second tab when it holds people (the recipients tab is often
+  /// empty while the people are one tap away). A tab the person already chose is never overridden.
+  Future<void> _openOnPeople() async {
+    final t = widget.extraTab;
+    if (t is! RememberedOpensOnPeople || widget.openExtraTab) return;
+    var holds = false;
+    try {
+      holds = await (t as RememberedOpensOnPeople).holdsPeople();
+    } catch (_) {}
+    if (holds && mounted && !_tabChosen) setState(() => _tab = 1);
   }
 
   @override
@@ -227,7 +241,10 @@ class _RememberedScreenState extends State<RememberedScreen> {
                     labels: [extra.recipientsTabLabel, extra.tabLabel()],
                     selected: _tab,
                     onSelect: (i) {
-                      setState(() => _tab = i);
+                      setState(() {
+                        _tab = i;
+                        _tabChosen = true;
+                      });
                       _recount(); // rules may have changed on the second tab
                     },
                   ),

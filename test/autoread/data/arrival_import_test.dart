@@ -207,9 +207,9 @@ void main() {
       expect(await liveRows(), isEmpty);
     });
 
-    test('flag false (the default): the arrival imports, records nothing, drops the mark, clears the alert', () async {
+    test('flag false: the arrival imports, records nothing, drops the mark, clears the alert', () async {
       await setLevel(RuleLevel.autoRecord);
-      final r = repo(live: null);
+      final r = repo(live: false);
       await r.ingest();
       final item = await arrive(1);
       bridge.pushArrived();

@@ -39,10 +39,7 @@ import '../../support/waiting_fakes.dart';
 
 class _Cats implements CategoryChoices {
   @override
-  Future<List<CategoryChoice>> categories() async => const [
-        CategoryChoice(id: '1', name: 'Family'),
-        CategoryChoice(id: '2', name: 'Food'),
-      ];
+  Future<List<CategoryChoice>> categories() async => const [CategoryChoice(id: '1', name: 'Family'), CategoryChoice(id: '2', name: 'Food')];
   @override
   Future<CategoryChoice> create(String name) => throw UnimplementedError();
 }
@@ -50,36 +47,40 @@ class _Cats implements CategoryChoices {
 const _tim = '0722123555';
 
 LevelsDeps _deps(FakeRuleStore store, {HardRulePausePort? pause, RuleChangeNotice? notice}) => LevelsDeps(
-      store: store,
-      history: FakeHistoryReader(),
-      categories: _Cats(),
-      suggest: FakeSuggestSettings(),
-      now: () => kHardTestNow,
-      pause: pause,
-      notice: notice ?? FakeRuleChangeNotice(),
-    );
+  store: store,
+  history: FakeHistoryReader(),
+  categories: _Cats(),
+  suggest: FakeSuggestSettings(),
+  now: () => kHardTestNow,
+  pause: pause,
+  notice: notice ?? FakeRuleChangeNotice(),
+);
 
 Future<FakeRuleStore> _store({bool pending = false}) => hardTestStore([
-      hardTestRule(_tim, name: 'Tim', level: RuleLevel.autoRecord, categoryId: 1, ceilingCents: 200000),
-      if (pending) hardTestRule('0711000222', name: 'Grace', level: RuleLevel.askFirst, categoryId: 2, autoPending: true),
-    ]);
+  hardTestRule(_tim, name: 'Tim', level: RuleLevel.autoRecord, categoryId: 1, ceilingCents: 200000),
+  if (pending) hardTestRule('0711000222', name: 'Grace', level: RuleLevel.autoRecord, categoryId: 2, autoPending: true),
+]);
 
-AirtimeAutoController _airtime() =>
-    AirtimeAutoController(onSwitch: (_) async {}, onSwitchOther: (_) async {}, onUndo: (_) async {});
+AirtimeAutoController _airtime() => AirtimeAutoController(onSwitch: (_) async {}, onSwitchOther: (_) async {}, onUndo: (_) async {});
 
 Future<void> _app(WidgetTester t, Widget home, {double scale = 1, String mode = 'light'}) async {
   t.view.physicalSize = const Size(390, 1400);
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.reset);
-  await t.pumpWidget(AppPaletteScope(
-    controller: AppPaletteController('ocean', mode),
-    child: MaterialApp(
-      navigatorKey: appNavigatorKey,
-      home: Builder(
-        builder: (c) => MediaQuery(data: MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)), child: home),
+  await t.pumpWidget(
+    AppPaletteScope(
+      controller: AppPaletteController('ocean', mode),
+      child: MaterialApp(
+        navigatorKey: appNavigatorKey,
+        home: Builder(
+          builder: (c) => MediaQuery(
+            data: MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)),
+            child: home,
+          ),
+        ),
       ),
     ),
-  ));
+  );
   await t.pumpAndSettle();
 }
 
@@ -87,11 +88,17 @@ Future<void> _remembered(WidgetTester t, LevelsDeps d, {bool details = true, dou
   SharedPreferences.setMockInitialValues({});
   final mem = RecipientMemory(nowMs: () => 1000);
   await _app(
-      t,
-      rememberedPageFor(_airtime(),
-          args: const RememberedRouteArgs(openAutoRecord: true), memory: mem, levels: d, detailsOn: () async => details),
-      scale: scale,
-      mode: mode);
+    t,
+    rememberedPageFor(
+      _airtime(),
+      args: const RememberedRouteArgs(openAutoRecord: true),
+      memory: mem,
+      levels: d,
+      detailsOn: () async => details,
+    ),
+    scale: scale,
+    mode: mode,
+  );
 }
 
 // 0.2.2 item 2 redesign (U-PAGE): the slots group was REWRITTEN ON PURPOSE: the tab now takes the pause
@@ -116,7 +123,7 @@ void main() {
       expect(find.byKey(const Key('hardPauseCard')), findsOneWidget);
       expect(find.byType(HardRulePausedBanner), findsNothing);
       expect(find.text(hardPausedBanner(1)), findsNothing);
-      expect(find.text(hardReviewLine(1)), findsOneWidget);
+      expect(find.text(hardRestoredBanner(1)), findsOneWidget);
       expect(find.byKey(const Key('hardResetButton')), findsOneWidget);
       double y(Key k) => t.getTopLeft(find.byKey(k)).dy;
       expect(y(const Key('slotPauseSwitch')), lessThan(y(const Key('slotReviewLine'))));
@@ -126,7 +133,7 @@ void main() {
     testWidgets('not paused, nobody pending: the review line takes no room', (t) async {
       debugAutoRecordUiOverride = true;
       await _remembered(t, _deps(await _store(), pause: FakeHardRulePausePort()));
-      expect(find.byKey(const Key('reviewLine')), findsNothing);
+      expect(find.byKey(const Key('restoredBanner')), findsNothing);
       expect(t.getSize(find.byKey(const Key('slotReviewLine'), skipOffstage: false)).height, 0);
       expect(find.byKey(const Key('hardPauseCard')), findsOneWidget);
     });
@@ -153,8 +160,7 @@ void main() {
     for (final mode in ['light', 'dark']) {
       testWidgets('200% text, $mode: no overflow with every slot drawn', (t) async {
         debugAutoRecordUiOverride = true;
-        await _remembered(t, _deps(await _store(pending: true), pause: FakeHardRulePausePort(paused: true)),
-            scale: 2, mode: mode);
+        await _remembered(t, _deps(await _store(pending: true), pause: FakeHardRulePausePort(paused: true)), scale: 2, mode: mode);
         expect(t.takeException(), isNull);
         expect(find.byKey(const Key('hardResetButton')), findsOneWidget);
       });
@@ -183,22 +189,22 @@ void main() {
     }
 
     Widget section({HardRulePausePort? pause}) => Scaffold(
-          body: SingleChildScrollView(
-            child: WaitingSection(
-              waiting: [item()],
-              now: kFakeNow,
-              pause: pause,
-              actions: WaitingActions(
-                ruleHintFor: (_) => const RuleHint(
-                    level: RuleLevel.askFirst, type: ReceiverType.sendMoney, key: _tim, suggested: [5], fromAutoRecord: true),
-                categoryNameOf: (id) => id == 5 ? 'Family & friends' : null,
-                onAskFirstYes: (w, h) async {},
-                onAskFirstChange: (w, h) {},
-                onAskFirstLater: (w, h) {},
-              ),
-            ),
+      body: SingleChildScrollView(
+        child: WaitingSection(
+          waiting: [item()],
+          now: kFakeNow,
+          pause: pause,
+          actions: WaitingActions(
+            ruleHintFor: (_) =>
+                const RuleHint(level: RuleLevel.askFirst, type: ReceiverType.sendMoney, key: _tim, suggested: [5], fromAutoRecord: true),
+            categoryNameOf: (id) => id == 5 ? 'Family & friends' : null,
+            onAskFirstYes: (w, h) async {},
+            onAskFirstChange: (w, h) {},
+            onAskFirstLater: (w, h) {},
           ),
-        );
+        ),
+      ),
+    );
 
     // Item 2 redesign U-CTRL (B-6): with nobody counted on Auto-record the banner is hidden (it used to
     // say "0 people"); the To confirm row's tag still says paused.
@@ -216,8 +222,10 @@ void main() {
       await _app(t, section());
       expect(find.text(hardPausedBanner(1)), findsOneWidget);
       expect(find.byKey(const Key('ask-first-paused-tag')), findsOneWidget);
-      expect(t.getTopLeft(find.byKey(const Key('todoPausedBanner'))).dy,
-          lessThan(t.getTopLeft(find.byKey(const Key('ask-first-paused-tag'))).dy));
+      expect(
+        t.getTopLeft(find.byKey(const Key('todoPausedBanner'))).dy,
+        lessThan(t.getTopLeft(find.byKey(const Key('ask-first-paused-tag'))).dy),
+      );
     });
 
     testWidgets('not paused: no banner, no gap, no tag', (t) async {
@@ -243,15 +251,21 @@ void main() {
   });
 
   group('the one pill as the notice, Change ceiling opens the sheet focused', () {
-    testWidgets('a level-page save shows the pill; Auto-record expands; Change ceiling opens the sheet focused',
-        (t) async {
+    testWidgets('a level-page save shows the pill; Auto-record expands; Change ceiling opens the sheet focused', (t) async {
       debugAutoRecordUiOverride = true;
       final store = await _store();
       final d = _deps(store, notice: const RuleChangePill());
       await _app(t, const Scaffold(body: SizedBox()));
       const x = LevelPerson(type: ReceiverType.sendMoney, key: _tim, name: 'Tim', level: RuleLevel.askFirst, categoryId: 1);
-      final r = await saveLevelChoice(d, x, RuleLevel.autoRecord, 1, 50000,
-          notify: true, onChangeCeiling: () => openCeilingSheetOnApp(d, ReceiverType.sendMoney, _tim, 'Tim'));
+      final r = await saveLevelChoice(
+        d,
+        x,
+        RuleLevel.autoRecord,
+        1,
+        50000,
+        notify: true,
+        onChangeCeiling: () => openCeilingSheetOnApp(d, ReceiverType.sendMoney, _tim, 'Tim'),
+      );
       expect(r, LevelSaveResult.ok);
       await t.pump();
       // U-PILL: only the start of the signed line is checked (these deps' categories have no number ids).
@@ -264,8 +278,7 @@ void main() {
       final sheet = t.widget<LevelSheet>(find.byType(LevelSheet));
       expect(sheet.focusCeiling, isTrue);
       expect(sheet.person.ceilingCents, 50000);
-      final input = t.widget<EditableText>(
-          find.descendant(of: find.byKey(const Key('ceilingInput')), matching: find.byType(EditableText)));
+      final input = t.widget<EditableText>(find.descendant(of: find.byKey(const Key('ceilingInput')), matching: find.byType(EditableText)));
       expect(input.focusNode.hasFocus, isTrue);
     });
 
@@ -316,16 +329,22 @@ void main() {
 
   group('CollapsingPadding', () {
     testWidgets('an empty child takes no room; a drawn one gets the padding (RTL mirrors start/end)', (t) async {
-      await t.pumpWidget(const Directionality(
-        textDirection: TextDirection.rtl,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          CollapsingPadding(key: Key('empty'), padding: EdgeInsets.all(10), child: SizedBox.shrink()),
-          CollapsingPadding(
-              key: Key('full'),
-              padding: EdgeInsetsDirectional.fromSTEB(4, 6, 20, 8),
-              child: SizedBox(key: Key('box'), height: 30)),
-        ]),
-      ));
+      await t.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.rtl,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              CollapsingPadding(key: Key('empty'), padding: EdgeInsets.all(10), child: SizedBox.shrink()),
+              CollapsingPadding(
+                key: Key('full'),
+                padding: EdgeInsetsDirectional.fromSTEB(4, 6, 20, 8),
+                child: SizedBox(key: Key('box'), height: 30),
+              ),
+            ],
+          ),
+        ),
+      );
       expect(t.getSize(find.byKey(const Key('empty'))).height, 0);
       expect(t.getSize(find.byKey(const Key('full'))).height, 44);
       final box = t.getTopLeft(find.byKey(const Key('box')));

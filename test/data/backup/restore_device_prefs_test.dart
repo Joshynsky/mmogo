@@ -97,9 +97,11 @@ void main() {
       expect(kRememberedRecipientsNotInBackup, contains('The names mmogo remembers are kept'));
       expect(kRememberedRecipientsNotInBackup, contains('Replace and Undo leave them alone'));
       expect(kRememberedRecipientsNotInBackup, contains('Delete data clears them'));
-      // 0.2.1: the levels are not in a backup and Replace resets them (PM option B, 20-11-2026).
-      expect(kRememberedRecipientsNotInBackup, contains('is not in a backup'));
-      expect(kRememberedRecipientsNotInBackup, contains('Replace puts everyone back to Suggested'));
+      // 0.2.2 (slice D): a backup carries the levels; an old file has none and everyone goes back to Suggested.
+      expect(kRememberedRecipientsNotInBackup, isNot(contains('is not in a backup')));
+      expect(kRememberedRecipientsNotInBackup, contains("puts in the people's settings the file has"));
+      expect(kRememberedRecipientsNotInBackup, contains('waits for your Keep'));
+      expect(kRememberedRecipientsNotInBackup, contains('made before 0.2.2'));
     });
 
     test('lib/data/backup never names the key (the existing guard still holds)', () {

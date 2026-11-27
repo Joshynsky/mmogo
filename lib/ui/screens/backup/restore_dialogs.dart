@@ -131,6 +131,9 @@ class _MergeDialogState extends State<_MergeDialog> {
                   : restoreCountsLine(p.fileTransactions, p.fileClassifications, p.fileCounterpartyMap),
               key: const Key('restoreInFile'),
             ),
+            if (p.fileRules > 0)
+              _KeyValue(kRestoreRulesLabel, restoreRulesValue(p.fileRules),
+                  key: const Key('restoreRulesInFile')),
             _KeyValue(
               'New to this phone',
               '${p.newTransactions} ${p.newTransactions == 1 ? 'transaction' : 'transactions'}',

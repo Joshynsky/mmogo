@@ -3,15 +3,15 @@
 /// not working: fix" row (only when Read is on and a permission is missing),
 /// Delete held messages (with a confirmation) and the restricted-settings help.
 ///
-/// Placed right after "Your data" in Settings: what it holds and removes is
-/// the user's data, and the help and delete rows belong next to the other
-/// data actions. Autoread flavor only; the Settings screen reaches it inside
-/// `if (kAutoReadCompiled)`.
+/// Placed after Adding entries in Settings (item 3 slice E): Read, Parse, What alerts show, Hide details
+/// after, Trouble turning it on, Delete held messages. The Suggest and Pause rows are in their own section
+/// ([AutoRecordSettingsSection]). Autoread flavor only; the Settings screen reaches it inside `if (kAutoReadCompiled)`.
 library;
 
 import 'package:flutter/material.dart';
 
 import '../../ui/widgets/pill_toast.dart';
+import '../../ui/screens/settings/settings_row_target.dart';
 import '../../ui/screens/settings/settings_widgets.dart';
 import '../../ui/theme/app_colors.dart';
 import '../logic/reading_controller.dart';
@@ -19,7 +19,6 @@ import 'alert_minutes_dialog.dart';
 import 'consent_sheet.dart';
 import 'details_upgrade_card.dart';
 import 'restricted_help_sheet.dart';
-import 'settings/suggest_settings_section.dart';
 import 'settings_autoread_copy.dart';
 
 class ReadingSettingsSection extends StatefulWidget {
@@ -248,41 +247,54 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
           palette: palette,
           child: Column(
             children: [
-              SettingsToggle(
-                key: const Key('readingSwitch'),
-                palette: palette,
-                icon: Icons.sms_outlined,
-                label: kReadLabel,
-                subtitle: _status(s),
-                first: true,
-                value: s.on,
-                onChanged: (!s.available || _busy) ? null : _onSwitch,
+              SettingsRowTarget(
+                id: 'reading.read',
+                child: SettingsToggle(
+                  key: const Key('readingSwitch'),
+                  palette: palette,
+                  icon: Icons.sms_outlined,
+                  label: kReadLabel,
+                  subtitle: _status(s),
+                  first: true,
+                  value: s.on,
+                  onChanged: (!s.available || _busy) ? null : _onSwitch,
+                ),
               ),
-              SettingsToggle(
-                key: const Key('parseSwitch'),
-                palette: palette,
-                icon: Icons.touch_app_outlined,
-                label: kParseLabel,
-                subtitle: s.on ? kConsentParseDesc : kParseGreyLine,
-                value: s.on && s.parseOn, // F6 (0.2.2): greyed AND shown off while Read is off; the stored choice is kept in the prefs
-                onChanged: (!s.available || !s.on || _busy) ? null : _onParse,
+              SettingsRowTarget(
+                id: 'reading.parse',
+                child: SettingsToggle(
+                  key: const Key('parseSwitch'),
+                  palette: palette,
+                  icon: Icons.touch_app_outlined,
+                  label: kParseLabel,
+                  subtitle: s.on ? kConsentParseDesc : kParseGreyLine,
+                  value: s.on && s.parseOn, // F6 (0.2.2): greyed AND shown off while Read is off; the stored choice is kept in the prefs
+                  onChanged: (!s.available || !s.on || _busy) ? null : _onParse,
+                ),
               ),
-              SettingsLink(
-                key: const Key('alertsRow'),
-                palette: palette,
-                icon: Icons.notifications_active_outlined,
-                label: kAlertsLabel,
-                subtitle: s.alertDetails ? kAlertsDetails : kAlertsGeneric,
-                onTap: (s.available && !_busy) ? _onAlerts : null,
+              SettingsRowTarget(
+                id: 'reading.alerts',
+                alsoFor: s.alertDetails ? const {} : const {'reading.hide'}, // no minutes row while alerts are generic
+                child: SettingsLink(
+                  key: const Key('alertsRow'),
+                  palette: palette,
+                  icon: Icons.notifications_active_outlined,
+                  label: kAlertsLabel,
+                  subtitle: s.alertDetails ? kAlertsDetails : kAlertsGeneric,
+                  onTap: (s.available && !_busy) ? _onAlerts : null,
+                ),
               ),
               if (s.alertDetails)
-                SettingsLink(
-                  key: const Key('alertMinutesRow'),
-                  palette: palette,
-                  icon: Icons.timer_outlined,
-                  label: kAlertMinutesLabel,
-                  subtitle: alertMinutesText(s.alertMinutes),
-                  onTap: (s.available && !_busy) ? _onAlertMinutes : null,
+                SettingsRowTarget(
+                  id: 'reading.hide',
+                  child: SettingsLink(
+                    key: const Key('alertMinutesRow'),
+                    palette: palette,
+                    icon: Icons.timer_outlined,
+                    label: kAlertMinutesLabel,
+                    subtitle: alertMinutesText(s.alertMinutes),
+                    onTap: (s.available && !_busy) ? _onAlertMinutes : null,
+                  ),
                 ),
               if (s.autostartHelp)
                 Padding(
@@ -299,26 +311,31 @@ class _ReadingSettingsSectionState extends State<ReadingSettingsSection> with Wi
                   warningDot: true,
                   onTap: _busy ? null : _onFix,
                 ),
-              SettingsLink(
-                key: const Key('readingDeleteHeld'),
-                palette: palette,
-                icon: Icons.delete_sweep_outlined,
-                label: kDeleteHeldLabel,
-                subtitle: s.heldCount == 0 ? kDeleteHeldNone : deleteHeldSubtitle(s.heldCount),
-                onTap: (s.available && s.heldCount > 0 && !_busy) ? _onDeleteHeld : null,
+              SettingsRowTarget(
+                id: 'reading.trouble',
+                child: SettingsLink(
+                  key: const Key('readingHelpRow'),
+                  palette: palette,
+                  icon: Icons.help_outline,
+                  label: kHelpRowLabel,
+                  subtitle: kHelpRowSubtitle,
+                  onTap: _openHelp,
+                ),
               ),
-              SettingsLink(
-                key: const Key('readingHelpRow'),
-                palette: palette,
-                icon: Icons.help_outline,
-                label: kHelpRowLabel,
-                subtitle: kHelpRowSubtitle,
-                onTap: _openHelp,
+              SettingsRowTarget(
+                id: 'reading.deleteHeld',
+                child: SettingsLink(
+                  key: const Key('readingDeleteHeld'),
+                  palette: palette,
+                  icon: Icons.delete_sweep_outlined,
+                  label: kDeleteHeldLabel,
+                  subtitle: s.heldCount == 0 ? kDeleteHeldNone : deleteHeldSubtitle(s.heldCount),
+                  onTap: (s.available && s.heldCount > 0 && !_busy) ? _onDeleteHeld : null,
+                ),
               ),
             ],
           ),
         ),
-        const SuggestSettingsSection(),
       ],
     );
   }

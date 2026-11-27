@@ -12,7 +12,7 @@ class AppInfo {
 
   /// Must equal `pubspec.yaml`'s `version:` value exactly (build-name +
   /// `+`build-number).
-  static const version = '0.2.1+6';
+  static const version = '0.2.2+7';
 
   /// `0.2.1` — the user-facing build-name part of [version].
   static String get versionName => version.split('+').first;

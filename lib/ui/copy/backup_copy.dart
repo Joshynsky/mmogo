@@ -195,3 +195,25 @@ String deletedToast(int n) => 'Deleted ${_n(n, 'file', 'files')}.';
 String deletedPartlyToast(int deleted, int failed) => 'Deleted $deleted. $failed could not be deleted.';
 
 const kFolderWorking = 'Working...';
+
+// ---------------------------------------------------------------- Rules line (restore keeps rules, 26-11)
+// DRAFT WORDING, PM signs in W2. The restore dialog and result sheet say what happened to the people's
+// settings. Counts come from RulesRestoreOutcome (added, keptPhone, replaced, keptLocalNames).
+const kRestoreRulesLabel = 'Rules';
+
+/// The Rules line: "Rules: 5 added, 2 replaced, 1 kept from this phone." Zero parts are left out; null when all are 0.
+String? restoreRulesLine({required int added, required int replaced, required int keptPhone}) {
+  final parts = [
+    if (added > 0) '$added added',
+    if (replaced > 0) '$replaced replaced',
+    if (keptPhone > 0) '$keptPhone kept from this phone',
+  ];
+  return parts.isEmpty ? null : '$kRestoreRulesLabel: ${parts.join(', ')}.';
+}
+
+/// Merge: who kept this phone's setting (the file's was not used: already Ask first or Auto-record here).
+String restoreRulesKeptNames(List<String> names) => 'Kept this phone\'s setting for ${names.join(', ')}.';
+
+/// Result sheet pointer to the banner on Remembered (replaces "Check N Auto-record people").
+String restoreRulesNeedKeep(int n) =>
+    '$n ${n == 1 ? 'person' : 'people'} on Auto-record ${n == 1 ? 'needs' : 'need'} a Keep.';

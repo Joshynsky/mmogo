@@ -17,8 +17,8 @@ import '../logic/reading_fakes.dart';
 class _CountDb implements Database {
   @override
   Future<List<Map<String, Object?>>> rawQuery(String sql, [List<Object?>? arguments]) async => [
-        {'cnt': 0},
-      ];
+    {'cnt': 0},
+  ];
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -28,12 +28,14 @@ Future<void> _pump(WidgetTester t) async {
   t.view.physicalSize = const Size(400, 5200);
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.reset);
-  await t.pumpWidget(MaterialApp(
-    home: AppPaletteScope(
-      controller: AppPaletteController(),
-      child: SettingsScreen(db: _CountDb(), exportCsv: (_, _) async {}),
+  await t.pumpWidget(
+    MaterialApp(
+      home: AppPaletteScope(
+        controller: AppPaletteController(),
+        child: SettingsScreen(db: _CountDb(), exportCsv: (_, _) async {}),
+      ),
     ),
-  ));
+  );
   await t.pumpAndSettle();
 }
 
@@ -63,7 +65,7 @@ void main() {
     expect(find.text('ABOUT'), findsOneWidget);
   });
 
-  testWidgets('the autoread Settings screen shows the rows between Your data and About', (t) async {
+  testWidgets('the autoread Settings screen shows the rows between Adding entries and Auto-record', (t) async {
     if (!kAutoReadCompiled) return; // see the standard test above
     ReadingControllerHolder.instance = ReadingController(
       bridge: FakeReadingBridge(),
@@ -75,8 +77,10 @@ void main() {
     expect(find.text(kReadLabel), findsOneWidget);
     expect(find.text(kDeleteHeldLabel), findsOneWidget);
     expect(find.text(kHelpRowLabel), findsOneWidget);
-    expect(y(find.text('Delete data')) < y(find.text(kReadingSectionLabel.toUpperCase())), isTrue);
-    expect(y(find.text(kReadingSectionLabel.toUpperCase())) < y(find.text('ABOUT')), isTrue);
+    expect(y(find.text('ADDING ENTRIES')) < y(find.text(kReadingSectionLabel.toUpperCase())), isTrue);
+    expect(y(find.text(kReadingSectionLabel.toUpperCase())) < y(find.text(kDeleteHeldLabel)), isTrue);
+    expect(y(find.text(kDeleteHeldLabel)) < y(find.text('YOUR DATA')), isTrue);
+    expect(y(find.text(kHelpRowLabel)) < y(find.text(kDeleteHeldLabel)), isTrue); // Trouble turning it on comes before Delete held
   });
 
   testWidgets('autoread build with no controller wired shows no rows (fails quiet)', (t) async {

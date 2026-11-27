@@ -36,8 +36,11 @@ const kCompactWidestLabels = ['Quarter', 'Monthly'];
 bool compactStacks({required double cardWidth, required double textFactor, required double controlWidth}) =>
     cardWidth < kCompactFixedWidth + kCompactTitleMin * textFactor + controlWidth + kCompactSafety;
 
-/// How much the current text scale enlarges text (1.0 = normal).
-double compactTextFactor(BuildContext context) => MediaQuery.textScalerOf(context).scale(100) / 100;
+/// How much the current text scale enlarges text (1.0 = normal). Measured at 14,
+/// the size of the row titles: Android 14's non-linear font scaling enlarges
+/// small text much more than big text, so measuring at 100 under-counted (item 4
+/// emulator look: at 200% "Appearance" broke mid-word beside the control).
+double compactTextFactor(BuildContext context) => MediaQuery.textScalerOf(context).scale(14) / 14;
 
 double compactMeasure(BuildContext context, String text, TextStyle style) {
   final tp = TextPainter(

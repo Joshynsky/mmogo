@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mmogo/ui/theme/app_colors.dart';
 import 'package:mmogo/ui/whats_new/whats_new_cards.dart';
+import 'package:mmogo/ui/whats_new/whats_new_items.dart';
 import 'package:mmogo/ui/theme/app_theme.dart';
 
 double _lum(Color c) {
@@ -131,7 +132,14 @@ void main() {
           theme: AppTheme.forPalette(p),
           home: Scaffold(
             body: WhatsNewItemView(
-              item: whatsNewItems().firstWhere((i) => i.id == 'suggest'),
+              item: const WhatsNewItem(
+                id: 'autorecord',
+                title: 't',
+                summary: 's',
+                origin: 'o',
+                paragraphs: ['p'],
+                settingsTarget: 'settings.remembered',
+              ),
               number: 2,
               open: true,
               palette: p,

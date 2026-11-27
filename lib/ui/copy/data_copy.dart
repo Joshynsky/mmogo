@@ -22,8 +22,7 @@ const kBackupNotEncryptedShort = 'Backups are not encrypted.';
 /// F3: the "?" sheet of the Backup page ("About backups"). W3 stays visible on
 /// the page; the phone-to-phone sentence is here only ([kPhoneTransferNotice]).
 const kBackupHelpTitle = 'About backups';
-const kBackupContentsNote =
-    'A backup contains names and phone numbers; anyone who gets the file can read it. Keep it somewhere private.';
+const kBackupContentsNote = 'A backup contains names and phone numbers; anyone who gets the file can read it. Keep it somewhere private.';
 const kBackupHelpParagraphs = [kPhoneTransferNotice, kBackupContentsNote];
 
 /// W2: shown once each time a backup folder is picked, before it is saved, and
@@ -58,7 +57,13 @@ const kWhyRestoreAsks =
 // WORDING-DRAFT (0.2.1, PM picked option B 20-11-2026): the names kept, then the levels reset.
 const kRememberedRecipientsNotInBackup =
     'The names mmogo remembers are kept. Replace and Undo leave them alone. Delete data clears them. '
-    "Each person's level (Suggested or Ask first) is not in a backup: Replace puts everyone back to Suggested.";
+    "Replace also puts in the people's settings the file has; anyone on Auto-record waits for your Keep. "
+    'A file with none (made before 0.2.2) puts everyone back to Suggested.';
+
+/// 0.2.2 (slice D, finding 2): the rules line of the first restore dialog. Absent when the file has none.
+// WORDING-DRAFT
+const kRestoreRulesLabel = "People's settings";
+String restoreRulesValue(int n) => '$n in the file';
 
 /// XFER (amendment 8): the backup file is the only route to a new phone.
 const kPhoneTransferNotice =
@@ -76,9 +81,13 @@ const kBackupNotRestorableByOlderV4 = 'A backup made with 0.2.0 cannot be restor
 // WORDING-DRAFT (0.2.1, signed mock 20-11-2026)
 const kBackupNotRestorableByOlderV5 = 'A backup made with 0.2.1 cannot be restored by 0.2.0 or older.';
 
+/// 0.2.2: backups now carry each person's settings. The What's new Backups item's direction lines.
+// WORDING-SIGNED (0.2.2, PM 26-11-2026)
+const kBackupNotRestorableByOlderV6 = 'A backup made with 0.2.2 cannot be restored by 0.2.1 or older.';
+const kBackupOlderStillRestoreV6 = 'Backups from 0.2.1 and earlier still restore.';
+
 /// W3: why a backup matters (Backup page header, What's-new, Privacy page).
-const kUninstallErasesNotice =
-    'Uninstalling mmogo erases your data from this phone. Only a backup you saved can bring it back.';
+const kUninstallErasesNotice = 'Uninstalling mmogo erases your data from this phone. Only a backup you saved can bring it back.';
 
 // --- B17: the Restore flow (prototype wording, `ui-surfaces.md` W4, W5) -------
 
@@ -117,8 +126,7 @@ const kBackupHasNoEntries = 'This backup has no entries.';
 /// Replace confirmation.
 const kReplaceConfirmTitle = 'Replace everything on this phone?';
 const kReplaceConfirmButton = 'Replace everything';
-const kReplaceEmptyFileNote =
-    'This backup has no entries. Replacing with it will leave this phone with no transactions at all.';
+const kReplaceEmptyFileNote = 'This backup has no entries. Replacing with it will leave this phone with no transactions at all.';
 
 /// Replace confirmation: why Undo is not exact (B15/B16 ruling b).
 const kUndoNotExactNotice =
@@ -140,8 +148,7 @@ String _n(int n, String one, String many) => '$n ${n == 1 ? one : many}';
 const kResultMergedTitle = 'Merged from the backup';
 const kResultReplacedTitle = 'Replaced from the backup';
 const kResultUndoneTitle = 'Previous data restored';
-const kResultMergeNote =
-    'Skipped entries were already on this phone (matched by M\u2011Pesa code). Nothing here was changed or deleted.';
+const kResultMergeNote = 'Skipped entries were already on this phone (matched by M\u2011Pesa code). Nothing here was changed or deleted.';
 const kResultReplaceNote = 'Everything on this phone now matches the file.';
 const kResultSafetyCopyNote = 'A safety copy of what was on this phone is kept in the app, so you can undo.';
 const kResultUndoneNote = 'The data from before the replace is back. Entries added after the replace were not kept.';
@@ -153,22 +160,19 @@ String resultUndoneLostNote(int n) =>
     'Entries added after the replace were not kept.';
 
 /// S10b A2 (PM placeholder): the safety copy could not be removed after Undo.
-const kResultSafetyCopyStillThere =
-    'The safety copy could not be removed. It stays in the app until the next Replace or Delete data.';
+const kResultSafetyCopyStillThere = 'The safety copy could not be removed. It stays in the app until the next Replace or Delete data.';
 const kSettingsNotApplied = 'Restored, but some settings could not be applied.';
 
 /// Auto-backup card (B21), wording from the signed-off prototype.
 const kAutoBackupPausedSubtitle = 'Auto-backup is paused. Choose a folder again to resume.';
-const kAutoBackupOffSubtitle =
-    'Off. mmogo can save a backup file to a folder you choose, after every N saved entries.';
+const kAutoBackupOffSubtitle = 'Off. mmogo can save a backup file to a folder you choose, after every N saved entries.';
 const kAutoBackupOnNoFolderSubtitle = 'On. Choose a folder to start.';
 const kAutoBackupPausedBannerTitle = 'Auto-backup is paused.';
-const kAutoBackupPausedBannerBody =
-    ' mmogo can no longer use the folder you picked. Choose a folder again to resume.';
+const kAutoBackupPausedBannerBody = ' mmogo can no longer use the folder you picked. Choose a folder again to resume.';
 const kAutoBackupNoFolderBanner = 'No folder yet. Choose where the backup files go and auto-backup starts.';
+
 /// S10b A6: replaces the old "Last auto-backup failed" banner. No button, no stripe.
-const kAutoBackupStuckLine =
-    'The last automatic backup did not finish and was stopped. It will try again after your next saved entry.';
+const kAutoBackupStuckLine = 'The last automatic backup did not finish and was stopped. It will try again after your next saved entry.';
 const kAutoBackupPausedStatus = 'No automatic retry while paused.';
 const kAutoBackupFolderHint =
     'On Android 11 and later, top-level folders such as Downloads are refused. '
@@ -180,8 +184,7 @@ String autoBackupOnSubtitle(int n) => 'On. A new file after every $n saved ${n =
 String autoBackupSetupIntro(int n, int k) =>
     'mmogo will save a backup file to a folder you choose, after every $n saved '
     '${n == 1 ? 'entry' : 'entries'}, and keep the newest $k.';
-String autoBackupIsOnToast(int n) =>
-    'Auto-backup is on. The first backup is made after $n saved ${n == 1 ? 'entry' : 'entries'}.';
+String autoBackupIsOnToast(int n) => 'Auto-backup is on. The first backup is made after $n saved ${n == 1 ? 'entry' : 'entries'}.';
 
 // --- B27 / B28 / B49: the Updates page and its Settings row ------------------
 

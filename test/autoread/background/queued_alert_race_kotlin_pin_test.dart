@@ -82,7 +82,7 @@ void main() {
       final arrival = _kt('HardRuleArrival.kt');
       final queue = arrival.substring(arrival.indexOf('fun queueIfAuto'), arrival.indexOf('fun autoHintCategory'));
       expect(queue, contains('if (!HardRuleLogic.AUTO_RECORD_LIVE) return false'));
-      expect(_kt('HardRuleLogic.kt'), contains('const val AUTO_RECORD_LIVE = false'));
+      expect(_kt('HardRuleLogic.kt'), contains('const val AUTO_RECORD_LIVE = true'));
     });
   });
 

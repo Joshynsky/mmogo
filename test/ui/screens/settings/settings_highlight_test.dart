@@ -91,15 +91,14 @@ void main() {
     );
     await tester.tap(find.byKey(const Key('go')));
     await tester.pumpAndSettle();
-    const head = Key('whatsNewItemHead-suggest');
+    const head = Key('whatsNewItemHead-autorecord');
     await tester.ensureVisible(find.byKey(head));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(head));
-    await tester.pumpAndSettle();
+    // Auto-record is the first row and starts open.
     await tester.ensureVisible(find.byKey(const Key('whatsNewCalSettings')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('whatsNewCalSettings')));
     await tester.pumpAndSettle();
     expect(got, [kSettingsTargetRemembered]);
-  });
+  }, skip: !kAutoReadCompiled);
 }

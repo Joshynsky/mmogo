@@ -34,8 +34,8 @@ HardRuleDecision _d(
     decideHardRule(rule: r, kind: kind, amountCents: amount, paused: paused, detailsOn: detailsOn);
 
 void main() {
-  test('autoRecordLive is pinned false (dormant)', () {
-    expect(autoRecordLive, isFalse);
+  test('autoRecordLive is pinned true (live since the 0.2.2 flip)', () {
+    expect(autoRecordLive, isTrue);
   });
 
   group('decideHardRule', () {

@@ -146,7 +146,7 @@ class _PagerDot extends StatelessWidget {
               width: on ? 16 : 8,
               height: 8,
               decoration: BoxDecoration(
-                color: on ? palette.primary : palette.line,
+                color: on ? palette.activeDot : palette.line,
                 borderRadius: const BorderRadius.all(Radius.circular(4)),
               ),
             ),

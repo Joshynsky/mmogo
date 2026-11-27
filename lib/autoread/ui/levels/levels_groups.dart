@@ -105,22 +105,32 @@ class _Header extends StatelessWidget {
         child: Container(
           constraints: const BoxConstraints(minHeight: kMinTapTarget + 8),
           padding: const EdgeInsetsDirectional.fromSTEB(14, 10, 10, 10),
-          child: Row(children: [
-            Flexible(
-              child: Text(name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: p.ink)),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-              decoration: BoxDecoration(color: p.tint, borderRadius: BorderRadius.circular(999)),
-              child: Text('$count', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: p.tintInk)),
-            ),
-            const Spacer(),
-            Text(action,
-                key: Key('levelGroupToggle.${level.name}'),
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.primary)),
-            Icon(open ? Icons.expand_less : Icons.expand_more, size: 20, color: p.primary),
-          ]),
+          // Item 4 emulator look (200% text): a Row squeezed the title until it broke mid-word
+          // ("Sugges/ted"). A Wrap keeps the title whole and drops the action to its own line.
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: 4,
+            children: [
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Flexible(
+                  child: Text(name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: p.ink)),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                  decoration: BoxDecoration(color: p.tint, borderRadius: BorderRadius.circular(999)),
+                  child: Text('$count', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: p.tintInk)),
+                ),
+              ]),
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(action,
+                    key: Key('levelGroupToggle.${level.name}'),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.primary)),
+                Icon(open ? Icons.expand_less : Icons.expand_more, size: 20, color: p.primary),
+              ]),
+            ],
+          ),
         ),
       ),
     );

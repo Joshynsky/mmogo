@@ -93,6 +93,9 @@ class AppPalette {
     this.pillSendMoney,
     this.pillCash,
     this.onPillAirtime,
+    this.fabBg,
+    this.fabInk,
+    this.dotOn,
     required this.bar,
     required this.barOn,
     required this.highlight,
@@ -232,6 +235,71 @@ class AppPalette {
   /// colour — see the new palettes' own dark `onTypeColor`).
   final Color onTypeColor;
 
+  /// Item 4 (Ocean 2): the Add button's fill and icon, and the active pager
+  /// dot. Null = the primary colours (Leaf and Indigo are unchanged).
+  final Color? fabBg;
+  final Color? fabInk;
+  final Color? dotOn;
+
+  Color get addFill => fabBg ?? primary;
+  Color get addInk => fabInk ?? onPrimary;
+  Color get activeDot => dotOn ?? primary;
+
+  /// Item 4: "Black", the second level of dark. Same accents, text and type
+  /// colours; only the greys change: page true black, cards one step up.
+  /// A light palette returns itself.
+  AppPalette toBlack() {
+    if (brightness != Brightness.dark) return this;
+    const card = Color(0xFF0F1011);
+    return AppPalette(
+      brightness: brightness,
+      primary: primary,
+      onPrimary: onPrimary,
+      deep: deep,
+      backBg: backBg,
+      backInk: backInk,
+      tint: tint,
+      tintInk: tintInk,
+      brightPill: brightPill,
+      dotIdle: dotIdle,
+      ink: ink,
+      softInk: softInk,
+      mutedInk: mutedInk,
+      background: const Color(0xFF000000),
+      surface: const Color(0xFF000000),
+      textCard: card,
+      line: const Color(0xFF26292C),
+      frameLine: frameLine,
+      skipBg: const Color(0xEB0F1011),
+      skipInk: skipInk,
+      sun: sun,
+      card: card,
+      track: const Color(0xFF1C1E20),
+      diffUp: diffUp,
+      diffDown: diffDown,
+      typeSendMoney: typeSendMoney,
+      typePaybill: typePaybill,
+      typeBuyGoods: typeBuyGoods,
+      typeCash: typeCash,
+      typePochi: typePochi,
+      typeWithdrawal: typeWithdrawal,
+      typeAirtime: typeAirtime,
+      error: error,
+      pillSendMoney: pillSendMoney,
+      pillCash: pillCash,
+      onPillAirtime: onPillAirtime,
+      fabBg: fabBg,
+      fabInk: fabInk,
+      dotOn: dotOn,
+      bar: bar,
+      barOn: barOn,
+      highlight: highlight,
+      toastAction: toastAction,
+      onDelete: onDelete,
+      onTypeColor: onTypeColor,
+    );
+  }
+
   /// The chart colour for a `source_type` code (the seven stored types);
   /// [mutedInk] for anything else.
   Color typeColor(String sourceType) => switch (sourceType) {
@@ -291,20 +359,20 @@ class AppPalette {
     dotIdle: Color(0xFFC3CFD3),
     ink: Color(0xFF13262E),
     softInk: Color(0xFF3E5058),
-    mutedInk: Color(0xFF5B6B72),
-    background: Color(0xFFF4F8F9), // Mist
+    mutedInk: Color(0xFF52626A),
+    background: Color(0xFFEEF4F6), // Mist
     surface: Color(0xFFFFFFFF),
     textCard: Color(0xFFE8F0F2),
-    line: Color(0xFFD3DFE3),
+    line: Color(0xFFC5D5DB),
     frameLine: Color(0xFFB5D6DF),
     skipBg: Color(0xD9FFFFFF), // rgba(255,255,255,.85)
     skipInk: Color(0xFF073B4C),
     sun: AppColors.sun,
     card: Color(0xFFFFFFFF),
-    track: Color(0xFFE8F0F2),
+    track: Color(0xFFCFDDE3),
     diffUp: Color(0xFFC62828),
     diffDown: Color(0xFF0A6E8A),
-    typeSendMoney: Color(0xFF1283A3),
+    typeSendMoney: Color(0xFF2563B0),
     typePaybill: Color(0xFF5B4FC4),
     typeBuyGoods: Color(0xFFC2366B),
     typeCash: Color(0xFFB07800),
@@ -312,43 +380,46 @@ class AppPalette {
     typeWithdrawal: Color(0xFF5F6F77),
     typeAirtime: Color(0xFFCC461C),
     error: Color(0xFFB3261E),
-    pillSendMoney: Color(0xFF0F7C9B), // white 4.80:1 (the chart colour #1283A3 gives 4.37)
+    pillSendMoney: Color(0xFF2563B0), // white 4.80:1 (the chart colour #1283A3 gives 4.37)
     pillCash: Color(0xFF8C6100),
     bar: Color(0xFF9CC9D6),
     barOn: Color(0xFF0A6E8A),
-    highlight: Color(0xFFFFF4D6),
+    highlight: Color(0xFFFFF1C2),
     toastAction: Color(0xFF8FD3E6),
     onDelete: Color(0xFFFFFFFF),
     onTypeColor: Color(0xFFFFFFFF),
+    fabBg: AppColors.sun, // Ocean 2: the Add button is the Sun
+    fabInk: Color(0xFF13262E),
+    dotOn: AppColors.sun,
   );
 
   static const dark = AppPalette(
     brightness: Brightness.dark,
-    primary: Color(0xFF3FB6D4), // Bright ocean; dark text 7.03:1
-    onPrimary: Color(0xFF06212B),
+    primary: Color(0xFF3A9FBC), // Bright ocean; dark text 7.03:1
+    onPrimary: Color(0xFF04202A),
     deep: Color(0xFFBFE4EE),
     backBg: Color(0xFFCFE9F0), // Pale ocean
     backInk: Color(0xFF073B4C), // 9.53:1
     tint: Color(0xFF133640), // Deep tint
     tintInk: Color(0xFFBFE4EE),
-    brightPill: Color(0xFF3FB6D4),
+    brightPill: Color(0xFF3A9FBC),
     dotIdle: Color(0xFF3A4E56),
     ink: Color(0xFFE6F0F3), // Light ink
-    softInk: Color(0xFFA3B7BF),
-    mutedInk: Color(0xFFA3B7BF),
-    background: Color(0xFF0E1A1F), // Night
-    surface: Color(0xFF0E1A1F),
-    textCard: Color(0xFF1A2C34), // Night card
-    line: Color(0xFF2E444D),
+    softInk: Color(0xFFA9BDC5),
+    mutedInk: Color(0xFFA9BDC5),
+    background: Color(0xFF0B161B), // Night
+    surface: Color(0xFF0B161B),
+    textCard: Color(0xFF15262D), // Night card
+    line: Color(0xFF36545F),
     frameLine: Color(0xFF2E5561),
-    skipBg: Color(0xEB1A2C34), // rgba(26,44,52,.92)
+    skipBg: Color(0xEB15262D), // rgba(26,44,52,.92)
     skipInk: Color(0xFFBFE4EE),
     sun: AppColors.sun,
-    card: Color(0xFF1A2C34), // Night card
-    track: Color(0xFF26404A), // lighter than card AND page, so pills/bars show on both
+    card: Color(0xFF15262D), // Night card
+    track: Color(0xFF2C4A55), // lighter than card AND page, so pills/bars show on both
     diffUp: Color(0xFFFF8A80),
-    diffDown: Color(0xFF3FB6D4),
-    typeSendMoney: Color(0xFF2AA3C4),
+    diffDown: Color(0xFF4DB3CF),
+    typeSendMoney: Color(0xFF5FAEF2),
     typePaybill: Color(0xFF8479E8),
     typeBuyGoods: Color(0xFFE0628F),
     typeCash: Color(0xFFBF8A00),
@@ -357,11 +428,14 @@ class AppPalette {
     typeAirtime: Color(0xFFF2784B),
     error: Color(0xFFFF8A8E),
     bar: Color(0xFF2E5561),
-    barOn: Color(0xFF3FB6D4),
+    barOn: Color(0xFF3A9FBC),
     highlight: Color(0xFF3A3320),
     toastAction: Color(0xFF2E5561),
     onDelete: Color(0xFF2A0E0C),
     onTypeColor: Color(0xFF0E1A1F), // Night; dark initials so >= 3:1 on every type colour
+    fabBg: AppColors.sun,
+    fabInk: Color(0xFF13262E),
+    dotOn: AppColors.sun,
   );
 
   // --- Leaf & Gold (T23): the
@@ -559,7 +633,8 @@ class AppPalette {
   /// `system` follows the phone, `light` and `dark` override it.
   static AppPalette of(BuildContext context) {
     final scope = AppPaletteScope.of(context);
-    return forId(scope.value, scope.brightnessFor(MediaQuery.platformBrightnessOf(context)));
+    final p = forId(scope.value, scope.brightnessFor(MediaQuery.platformBrightnessOf(context)));
+    return scope.appearance == 'black' ? p.toBlack() : p;
   }
 
   /// The system bars for the primary pages (T21, backlog "System bars

@@ -46,10 +46,8 @@ Material _barMaterial(WidgetTester tester) =>
 Color? _navColor(WidgetTester tester) =>
     (tester.widget<Container>(find.byKey(const Key('primaryBottomNav'))).decoration! as BoxDecoration).color;
 
-Color? _navLabelColor(WidgetTester tester, String label) => tester
-    .widget<Text>(find.descendant(of: find.byKey(const Key('primaryBottomNav')), matching: find.text(label)))
-    .style
-    ?.color;
+Color? _navLabelColor(WidgetTester tester, String label) =>
+    tester.widget<Text>(find.descendant(of: find.byKey(const Key('primaryBottomNav')), matching: find.text(label))).style?.color;
 
 /// The page-level region the system reads the gesture/nav bar colour from
 /// (T21 system-bar fix).
@@ -111,9 +109,7 @@ void main() {
       expect(tester.getRect(find.byKey(const Key('primaryFab'))).bottom, lessThanOrEqualTo(navRect.bottom));
     });
 
-    testWidgets('B48: the bottom bar reads Home, Analytics, + (FAB), Paid to, Profile with the person icon', (
-      tester,
-    ) async {
+    testWidgets('B48: the bottom bar reads Home, Analytics, + (FAB), Paid to, Profile with the person icon', (tester) async {
       await tester.pumpWidget(_settingsLike());
       await tester.pumpAndSettle();
       final nav = find.byKey(const Key('primaryBottomNav'));
@@ -128,9 +124,7 @@ void main() {
       expect(find.descendant(of: nav, matching: find.byIcon(Icons.settings_rounded)), findsNothing);
     });
 
-    testWidgets('Ocean & Sun chrome: title ink, Ocean nav + FAB', (
-      tester,
-    ) async {
+    testWidgets('Ocean & Sun chrome: title ink, Ocean nav + FAB', (tester) async {
       await tester.pumpWidget(_settingsLike());
       await tester.pumpAndSettle();
       const p = AppPalette.light;
@@ -143,12 +137,10 @@ void main() {
       expect(_navLabelColor(tester, 'Profile'), p.primary, reason: 'active item is Ocean');
       expect(_navLabelColor(tester, 'Home'), p.mutedInk);
       final fab = tester.widget<Material>(find.byKey(const Key('primaryFab')));
-      expect(fab.color, p.primary);
-      expect(fab.color, const Color(0xFF0A6E8A));
-      final plus = tester.widget<Icon>(
-        find.descendant(of: find.byKey(const Key('primaryFab')), matching: find.byIcon(Icons.add)),
-      );
-      expect(plus.color, p.onPrimary);
+      expect(fab.color, p.addFill);
+      expect(fab.color, AppColors.sun); // Ocean 2: the Add button is the Sun
+      final plus = tester.widget<Icon>(find.descendant(of: find.byKey(const Key('primaryFab')), matching: find.byIcon(Icons.add)));
+      expect(plus.color, p.addInk);
     });
   });
 
@@ -160,7 +152,7 @@ void main() {
       expect(tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor, AppColors.bg);
       expect(_barMaterial(tester).color, AppColors.bg);
       expect(_navColor(tester), AppPalette.light.card);
-      expect(tester.widget<Material>(find.byKey(const Key('primaryFab'))).color, AppPalette.light.primary);
+      expect(tester.widget<Material>(find.byKey(const Key('primaryFab'))).color, AppPalette.light.addFill);
       expect(tester.widget<AppBar>(find.byType(AppBar)).systemOverlayStyle, AppPalette.light.systemOverlayStyle);
       expect(_bottomOverlay(tester), AppPalette.light.systemOverlayStyle);
     });
@@ -173,7 +165,7 @@ void main() {
       expect(tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor, p.background);
       expect(_barMaterial(tester).color, p.background);
       expect(_navColor(tester), p.card);
-      expect(tester.widget<Material>(find.byKey(const Key('primaryFab'))).color, p.primary);
+      expect(tester.widget<Material>(find.byKey(const Key('primaryFab'))).color, p.addFill);
       expect(tester.widget<AppBar>(find.byType(AppBar)).systemOverlayStyle, p.systemOverlayStyle);
       expect(_bottomOverlay(tester), p.systemOverlayStyle);
       expect(_bottomOverlay(tester).systemNavigationBarColor, p.card);
@@ -188,11 +180,7 @@ void main() {
           home: PrimaryScaffold(
             title: 'Home',
             activeIndex: 0,
-            body: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => log.add('body'),
-              child: const SizedBox.expand(),
-            ),
+            body: GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => log.add('body'), child: const SizedBox.expand()),
           ),
           onGenerateRoute: (settings) {
             log.add('route ${settings.name}');
@@ -245,15 +233,14 @@ void main() {
           home: PrimaryScaffold(
             title: 'Home',
             activeIndex: 0,
-            body: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => log.add('body'),
-              child: const SizedBox.expand(),
-            ),
+            body: GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => log.add('body'), child: const SizedBox.expand()),
           ),
           onGenerateRoute: (settings) {
             log.add('route ${settings.name}');
-            return MaterialPageRoute(settings: settings, builder: (_) => const Scaffold(body: Text('NEXT')));
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (_) => const Scaffold(body: Text('NEXT')),
+            );
           },
         ),
       );
@@ -314,10 +301,7 @@ void main() {
           counts: tracker.value,
           child: MaterialApp(
             home: PrimaryScaffold(title: 'Profile', activeIndex: 4, body: const SizedBox.shrink()),
-            routes: {
-              Routes.updates: (_) => const UpdatesScreen(),
-              Routes.notifications: (_) => const NotificationsRoute(),
-            },
+            routes: {Routes.updates: (_) => const UpdatesScreen(), Routes.notifications: (_) => const NotificationsRoute()},
           ),
         ),
       );

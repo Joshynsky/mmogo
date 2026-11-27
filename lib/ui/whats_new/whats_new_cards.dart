@@ -4,210 +4,16 @@ import '../../autoread/autoread_feature.dart';
 import '../../autoread/ui/whats_new_autoread_copy.dart';
 import '../copy/whats_new_copy.dart';
 import '../copy/whats_new_pager_copy.dart';
-import '../screens/settings/settings_targets.dart';
 import '../theme/app_colors.dart';
 import '../widgets/tap_target.dart';
+import 'whats_new_items.dart';
 
-/// §UI.WHATSNEW.CARDS — the items of the What's-new page (0.1.2 A5a; they were
-/// the six cards of the pager). A hook file (see `kAutoReadHookFiles`): the
-/// auto-read build's banner, intro and items are reached only inside
-/// `if (kAutoReadCompiled)`, so the standard build drops them.
+/// §UI.WHATSNEW.CARDS — the banner and the accordion row of the What's-new page (0.1.2 A5a; the
+/// items and their words are in `whats_new_items.dart`). A hook file (see `kAutoReadHookFiles`): the
+/// auto-read build's banner is reached only inside `if (kAutoReadCompiled)`.
 ///
-/// One item = a closed row (number, title, one-line summary) that opens to its
-/// full text. The page owns which rows are open.
-
-/// A second "open this Settings area" button on an item (0.2.1 #10): its [target] id, its [label] and its [key].
-class WhatsNewLink {
-  const WhatsNewLink({required this.target, required this.label, required this.key});
-
-  final String target;
-  final String label;
-  final Key key;
-}
-
-/// What one item says. [paragraphs] come first; the two route buttons and the
-/// privacy emphasis are item extras.
-class WhatsNewItem {
-  const WhatsNewItem({
-    required this.id,
-    required this.title,
-    required this.summary,
-    required this.origin,
-    this.paragraphs = const [],
-    this.settingsTarget,
-    this.extraLinks = const [],
-    this.backupButton = false,
-    this.boldFirst = false,
-    this.group = WhatsNewGroup.headline,
-  });
-
-  final String id;
-  final String title;
-  final String summary;
-
-  /// Which update the item came from: [kWhatsNewTagNew] or [kWhatsNewTagFrom013].
-  final String origin;
-  final List<String> paragraphs;
-
-  /// The Settings area the "Change in Settings" button opens and outlines (null: no button).
-  final String? settingsTarget;
-
-  /// More Settings buttons, after the first one.
-  final List<WhatsNewLink> extraLinks;
-  final bool backupButton;
-
-  /// The first paragraph is the signed Privacy sentence: shown in the ink colour, bold.
-  final bool boldFirst;
-
-  /// Where the page puts the item: always shown, in the "More changes" fold, or last (Privacy).
-  final WhatsNewGroup group;
-}
-
-/// The three places an item can sit on the page (signed mock 20-11-2026).
-enum WhatsNewGroup { headline, more, last }
-
-/// The page's items for this build (signed mock 20-11-2026). Four headline items, then the
-/// "More changes" fold, then Privacy last. The standard build never gets the auto-read-only items
-/// or the lines that auto-read adds to shared items: they are reached only inside
-/// `if (kAutoReadCompiled)`.
-List<WhatsNewItem> whatsNewItems() => [
-  // Headline.
-  WhatsNewItem(
-    id: 'withdrawals',
-    origin: kWhatsNewTagNew,
-    title: kWhatsNewWithdrawalsTitle,
-    summary: kWhatsNewWithdrawalsSummary,
-    paragraphs: [...kWhatsNewWithdrawalsBody, if (kAutoReadCompiled) kWhatsNewAutoWithdrawalsExtra],
-  ),
-  if (kAutoReadCompiled)
-    const WhatsNewItem(
-      id: 'ask',
-      origin: kWhatsNewTagNew,
-      title: kWhatsNewAskTitle,
-      summary: kWhatsNewAskSummary,
-      paragraphs: kWhatsNewAskBody,
-    ),
-  WhatsNewItem(
-    id: 'suggest',
-    origin: kWhatsNewTagNew,
-    title: kWhatsNewSuggestTitle,
-    summary: kWhatsNewSuggestSummary,
-    paragraphs: [...kWhatsNewSuggestBody, if (kAutoReadCompiled) ...kWhatsNewAutoSuggestBody, kWhatsNewSuggestLast],
-    settingsTarget: kSettingsTargetRemembered,
-  ),
-  if (!kAutoReadCompiled)
-    const WhatsNewItem(
-      id: 'paidto',
-      origin: kWhatsNewTagNew,
-      title: kWhatsNewPaidToTitle,
-      summary: kWhatsNewPaidToSummary,
-      paragraphs: [kWhatsNewPaidToBody],
-    ),
-  const WhatsNewItem(
-    id: 'backups',
-    origin: kWhatsNewTagNew,
-    title: kWhatsNewBackupsTitle,
-    summary: kWhatsNewBackupsSummary,
-    paragraphs: [kWhatsNewBackupsBody],
-  ),
-  // More changes.
-  if (kAutoReadCompiled) ...const [
-    WhatsNewItem(
-      id: 'notif',
-      origin: kWhatsNewTagNew,
-      title: kWhatsNewNotifTitle,
-      summary: kWhatsNewNotifSummary,
-      paragraphs: [kWhatsNewNotifBody],
-      group: WhatsNewGroup.more,
-    ),
-    WhatsNewItem(
-      id: 'paidto',
-      origin: kWhatsNewTagNew,
-      title: kWhatsNewPaidToTitle,
-      summary: kWhatsNewPaidToSummary,
-      paragraphs: [kWhatsNewPaidToBody],
-      group: WhatsNewGroup.more,
-    ),
-  ],
-  const WhatsNewItem(
-    id: 'pochi',
-    origin: kWhatsNewTagNew,
-    title: kWhatsNewPochiTitle,
-    summary: kWhatsNewPochiSummary,
-    paragraphs: [kWhatsNewPochiBody],
-    group: WhatsNewGroup.more,
-  ),
-  if (kAutoReadCompiled) ...const [
-    WhatsNewItem(
-      id: 'hide',
-      origin: kWhatsNewTagNew,
-      title: kWhatsNewHideTitle,
-      summary: kWhatsNewHideSummary,
-      paragraphs: kWhatsNewHideBody,
-      group: WhatsNewGroup.more,
-    ),
-    WhatsNewItem(
-      id: 'recorded',
-      origin: kWhatsNewTagNew,
-      title: kWhatsNewRecordedTitle,
-      summary: kWhatsNewRecordedSummary,
-      paragraphs: [kWhatsNewRecordedBody],
-      group: WhatsNewGroup.more,
-    ),
-  ],
-  const WhatsNewItem(
-    id: 'updates',
-    origin: kWhatsNewTagNew,
-    title: kWhatsNewUpdatesTitle,
-    summary: kWhatsNewUpdatesSummary,
-    paragraphs: [kWhatsNewUpdatesBody],
-    group: WhatsNewGroup.more,
-  ),
-  const WhatsNewItem(
-    id: 'links',
-    origin: kWhatsNewTagNew,
-    title: kWhatsNewLinksTitle,
-    summary: kWhatsNewLinksSummary,
-    paragraphs: [kWhatsNewLinksBody],
-    group: WhatsNewGroup.more,
-  ),
-  const WhatsNewItem(
-    id: 'pill',
-    origin: kWhatsNewTagNew,
-    title: kWhatsNewPillTitle,
-    summary: kWhatsNewPillSummary,
-    paragraphs: [kWhatsNewPillBody],
-    group: WhatsNewGroup.more,
-  ),
-  // Last.
-  if (kAutoReadCompiled)
-    const WhatsNewItem(
-      id: 'privacy',
-      origin: kWhatsNewTagNew,
-      title: kWhatsNewCard5Title,
-      summary: kWhatsNewPrivacyAutoReadSummary,
-      paragraphs: [kWhatsNewPrivacyAutoReadBody, kWhatsNewPrivacyRules],
-      boldFirst: true,
-      group: WhatsNewGroup.last,
-    )
-  else
-    const WhatsNewItem(
-      id: 'privacy',
-      origin: kWhatsNewTagNew,
-      title: kWhatsNewCard5Title,
-      summary: kWhatsNewCard5Summary,
-      paragraphs: [kWhatsNewCard5Body, kWhatsNewPrivacyRules],
-      boldFirst: true,
-      group: WhatsNewGroup.last,
-    ),
-];
-
-/// The line under the title for this build.
-String whatsNewIntro() => kWhatsNewIntro;
-
-/// The banner at the very top: a tinted note saying which version this is.
-/// The standard build's banner has the link to the mmogo page; the auto-read
-/// build's has none.
+/// The banner at the very top: a tinted note saying which version this is. Both builds' banners
+/// end with a link that opens the install guide (0.2.2).
 class WhatsNewBanner extends StatelessWidget {
   const WhatsNewBanner({super.key, required this.palette, required this.onOpenSite});
 
@@ -237,26 +43,23 @@ class WhatsNewBanner extends StatelessWidget {
             key: const Key('whatsNewBannerBody'),
             style: TextStyle(fontSize: 13, height: 1.5, color: palette.tintInk),
           ),
-          if (kAutoReadCompiled)
-            const SizedBox(height: 10)
-          else
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: TextButton(
-                key: const Key('whatsNewBannerLink'),
-                onPressed: onOpenSite,
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(kMinTapTarget, kMinTapTarget),
-                  padding: EdgeInsets.zero,
-                  foregroundColor: palette.tintInk,
-                  tapTargetSize: MaterialTapTargetSize.padded,
-                ),
-                child: const Text(
-                  kWhatsNewBannerLink,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, decoration: TextDecoration.underline),
-                ),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton(
+              key: const Key('whatsNewBannerLink'),
+              onPressed: onOpenSite,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(kMinTapTarget, kMinTapTarget),
+                padding: EdgeInsets.zero,
+                foregroundColor: palette.tintInk,
+                tapTargetSize: MaterialTapTargetSize.padded,
+              ),
+              child: Text(
+                kAutoReadCompiled ? kWhatsNewAutoBannerLink : kWhatsNewBannerLink,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, decoration: TextDecoration.underline),
               ),
             ),
+          ),
         ],
       ),
     );
@@ -397,8 +200,7 @@ class WhatsNewItemView extends StatelessWidget {
               kWhatsNewOpenInSettings,
               onOpenSettings == null ? null : () => onOpenSettings!(item.settingsTarget),
             ),
-          for (final l in item.extraLinks)
-            _button(l.key, l.label, onOpenSettings == null ? null : () => onOpenSettings!(l.target)),
+          for (final l in item.extraLinks) _button(l.key, l.label, onOpenSettings == null ? null : () => onOpenSettings!(l.target)),
           if (item.backupButton) _button(const Key('whatsNewOpenBackup'), kWhatsNewOpenBackup, onOpenBackup),
         ],
       ),

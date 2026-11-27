@@ -18,6 +18,7 @@ import 'hard_rule_ports.dart' show autoRecordUi;
 import 'levels_copy.dart';
 import 'levels_deps.dart';
 import 'levels_help.dart';
+import 'levels_people_count.dart';
 import 'levels_tab.dart' show LevelsSlots, LevelsTab;
 
 /// The page object the Remembered screen takes as its second tab.
@@ -29,7 +30,12 @@ RememberedExtraTab levelsExtraTab(AirtimeAutoController controller,
     _LevelsExtraTab(controller, deps, cleanup, detailsOn, slots);
 
 class _LevelsExtraTab
-    implements RememberedExtraTab, RememberedForgetHooks, RememberedForgetAllCopy, RememberedForgetAllCount {
+    implements
+        RememberedExtraTab,
+        RememberedForgetHooks,
+        RememberedForgetAllCopy,
+        RememberedForgetAllCount,
+        RememberedOpensOnPeople {
   _LevelsExtraTab(this.c, this.deps, this.cleanup, this.detailsOn, this.slots);
   final AirtimeAutoController c;
   final LevelsDeps? deps;
@@ -81,6 +87,13 @@ class _LevelsExtraTab
     if (!autoRecordUi) return null;
     final n = nameKeys.toSet().length + await forgetAllExtraPeople(nameKeys); // a failure throws: no dialog
     return RememberedForgetAllText(title: hardForgetTitle(n), body: kHardForgetBody, ok: kHardForgetOk, toast: hardForgetToast(n));
+  }
+
+  /// The page opens on this tab when it lists anyone (Suggested, Ask first or Auto-record).
+  @override
+  Future<bool> holdsPeople() async {
+    final d = deps;
+    return d != null && await levelsPeopleCount(d) > 0;
   }
 
   @override

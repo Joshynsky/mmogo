@@ -138,10 +138,10 @@ class _StartupGateState extends State<StartupGate> {
           return MaterialApp(
             title: 'mmogo',
             theme: AppTheme.forPalette(set.light),
-            darkTheme: AppTheme.forPalette(set.dark),
+            darkTheme: AppTheme.forPalette(widget.controller.appearance == 'black' ? set.dark.toBlack() : set.dark),
             themeMode: switch (widget.controller.appearance) {
               'light' => ThemeMode.light,
-              'dark' => ThemeMode.dark,
+              'dark' || 'black' => ThemeMode.dark,
               _ => ThemeMode.system,
             },
             debugShowCheckedModeBanner: false,

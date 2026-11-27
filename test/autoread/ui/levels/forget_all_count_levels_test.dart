@@ -35,10 +35,10 @@ Future<RecipientMemory> _memory({bool names = true}) async {
 
 /// Three people with a rule: JANE ATIENO (Pochi, the same person as the remembered name) and two numbers.
 Future<FakeRuleStore> _store() => hardTestStore([
-      hardTestRule('JANE ATIENO', type: ReceiverType.pochi, name: 'JANE ATIENO', level: RuleLevel.askFirst, categoryId: 1),
-      hardTestRule('254700000001', name: 'Tim', level: RuleLevel.autoRecord, categoryId: 1, ceilingCents: 200000),
-      hardTestRule('254700000002', name: 'Grace', level: RuleLevel.askFirst, categoryId: 2),
-    ]);
+  hardTestRule('JANE ATIENO', type: ReceiverType.pochi, name: 'JANE ATIENO', level: RuleLevel.askFirst, categoryId: 1),
+  hardTestRule('254700000001', name: 'Tim', level: RuleLevel.autoRecord, categoryId: 1, ceilingCents: 200000),
+  hardTestRule('254700000002', name: 'Grace', level: RuleLevel.askFirst, categoryId: 2),
+]);
 
 RememberedExtraTab? _tab;
 
@@ -48,13 +48,21 @@ Future<void> _pump(WidgetTester t, RecipientMemory m, FakeRuleStore store) async
   addTearDown(t.view.reset);
   final deps = hardTestDeps(store: store);
   final airtime = AirtimeAutoController(onSwitch: (_) async {}, onSwitchOther: (_) async {}, onUndo: (_) async {});
-  await t.pumpWidget(AppPaletteScope(
-    controller: AppPaletteController('ocean', 'light'),
-    child: MaterialApp(
-      navigatorKey: appNavigatorKey,
-      home: RememberedScreen(memory: m, extraTab: _tab = levelsExtraTab(airtime, deps: deps)),
+  await t.pumpWidget(
+    AppPaletteScope(
+      controller: AppPaletteController('ocean', 'light'),
+      child: MaterialApp(
+        navigatorKey: appNavigatorKey,
+        home: RememberedScreen(
+          memory: m,
+          extraTab: _tab = levelsExtraTab(airtime, deps: deps),
+        ),
+      ),
     ),
-  ));
+  );
+  await t.pumpAndSettle();
+  // The page opens on the people tab when it holds people (0.2.2); these tests use the recipients tab.
+  await t.tap(find.byKey(const Key('rememberedTab0')));
   await t.pumpAndSettle();
 }
 
@@ -71,8 +79,7 @@ void main() {
   setUp(() => debugAutoRecordUiOverride = true);
   tearDown(() => debugAutoRecordUiOverride = null);
 
-  testWidgets('details OFF, rules hidden, no names: enabled; the dialog counts the hidden people; all erased; then disabled',
-      (t) async {
+  testWidgets('details OFF, rules hidden, no names: enabled; the dialog counts the hidden people; all erased; then disabled', (t) async {
     final store = await _store();
     store.detailsOn = false; // all() is empty now, countEveryone still sees 3
     expect(await store.all(), isEmpty);

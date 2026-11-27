@@ -2,12 +2,15 @@
 /// set_after): the offer switch and the "Suggest after" picker (2 to 10,
 /// default 3; shown only while the switch is on). Reads and writes through
 /// [SuggestSettingsPort]; nothing is stored here.
+/// Item 3 slice E: as the Auto-record section ([title], [leading] = the People row) the card reads People,
+/// Pause all Auto-record, Offer Ask first, Offer after N in a row. Each row is a Settings search target.
 /// 0.2.2 (mock ctl-a-set): the amber "Pause all Auto-record" row under them, the same switch as the
 /// Remembered page's card (one [HardRulePausePort], so both stay in sync). Only while [autoRecordUi].
 library;
 
 import 'package:flutter/material.dart';
 
+import '../../../ui/screens/settings/settings_row_target.dart';
 import '../../../ui/screens/settings/settings_widgets.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../../../ui/widgets/pill_toast.dart';
@@ -20,7 +23,7 @@ import '../levels/levels_deps.dart';
 class SuggestSettingsSection extends StatefulWidget {
   /// [port] null = the app's one ([LevelsDeps.instance]); when that is unset
   /// too, nothing is drawn.
-  const SuggestSettingsSection({super.key, this.port, this.pause, this.bulk});
+  const SuggestSettingsSection({super.key, this.port, this.pause, this.bulk, this.showLabel = true, this.title, this.leading});
   final SuggestSettingsPort? port;
 
   /// The pause switch (0.2.2); null = the app's one ([LevelsDeps.instance]); none = no row.
@@ -28,6 +31,15 @@ class SuggestSettingsSection extends StatefulWidget {
 
   /// For the resume toast's count; null = the app's one ([LevelsDeps.instance]).
   final RuleBulkOps? bulk;
+
+  /// The "Suggestions" title above the card; false inside the Reading section, which has its own title.
+  final bool showLabel;
+
+  /// A title above the card in place of "Suggestions" (the Auto-record section passes its own).
+  final String? title;
+
+  /// The first row of the card (the People row); with it the card is drawn even while the ports load or are missing.
+  final Widget? leading;
 
   @override
   State<SuggestSettingsSection> createState() => _SuggestSettingsSectionState();
@@ -96,37 +108,59 @@ class _SuggestSettingsSectionState extends State<SuggestSettingsSection> {
   @override
   Widget build(BuildContext context) {
     final on = _on;
-    if (_port == null || on == null) return const SizedBox.shrink();
+    final lead = widget.leading;
+    final ready = _port != null && on != null;
+    if (!ready && lead == null) return const SizedBox.shrink();
     final palette = AppPalette.of(context);
     final pause = widget.pause ?? LevelsDeps.instance?.pause;
+    final showPause = ready && autoRecordUi && pause != null;
+    final title = widget.title;
     return Column(
       key: const Key('suggestSettings'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SettingsSectionLabel(kSuggestSectionLabel, palette: palette),
+        if (title != null)
+          SettingsSectionLabel(title, palette: palette)
+        else if (widget.showLabel)
+          SettingsSectionLabel(kSuggestSectionLabel, palette: palette)
+        else
+          const SizedBox(height: 12),
         SettingsCard(
           palette: palette,
           child: Column(children: [
-            SettingsToggle(
-              key: const Key('suggestSwitch'),
-              palette: palette,
-              icon: Icons.auto_awesome_outlined,
-              label: kSuggestSwitchLabel,
-              subtitle: kSuggestSwitchSub,
-              first: true,
-              value: on,
-              onChanged: _busy ? null : _setOn,
-            ),
-            if (on)
-              SettingsLink(
-                key: const Key('suggestAfterRow'),
-                palette: palette,
-                icon: Icons.format_list_numbered,
-                label: kSuggestAfterLabel,
-                subtitle: '${suggestAfterOption(_after)}. $kSuggestAfterSub',
-                onTap: _busy ? null : _pickAfter,
+            ?lead,
+            if (showPause)
+              SettingsRowTarget(
+                id: 'auto.pause',
+                child: _PauseRow(port: pause, bulk: widget.bulk ?? LevelsDeps.instance?.bulk, first: lead == null),
               ),
-            if (autoRecordUi && pause != null) _PauseRow(port: pause, bulk: widget.bulk ?? LevelsDeps.instance?.bulk),
+            if (ready)
+              SettingsRowTarget(
+                id: 'auto.askFirst',
+                alsoFor: on == true ? const {} : const {'auto.afterN'}, // no "after N" row while the offer is off
+                child: SettingsToggle(
+                  key: const Key('suggestSwitch'),
+                  palette: palette,
+                  icon: Icons.auto_awesome_outlined,
+                  label: kSuggestSwitchLabel,
+                  subtitle: kSuggestSwitchSub,
+                  first: lead == null && !showPause,
+                  value: on,
+                  onChanged: _busy ? null : _setOn,
+                ),
+              ),
+            if (ready && on == true)
+              SettingsRowTarget(
+                id: 'auto.afterN',
+                child: SettingsLink(
+                  key: const Key('suggestAfterRow'),
+                  palette: palette,
+                  icon: Icons.format_list_numbered,
+                  label: kSuggestAfterLabel,
+                  subtitle: '${suggestAfterOption(_after)}. $kSuggestAfterSub',
+                  onTap: _busy ? null : _pickAfter,
+                ),
+              ),
           ]),
         ),
       ],
@@ -137,7 +171,8 @@ class _SuggestSettingsSectionState extends State<SuggestSettingsSection> {
 /// The amber Settings row (mock `set_pause_row`): the whole row is one switch for a screen reader; the
 /// row is tinted amber while paused (the words say it too, so the colour is not the only sign).
 class _PauseRow extends StatefulWidget {
-  const _PauseRow({required this.port, this.bulk});
+  const _PauseRow({required this.port, this.bulk, this.first = false});
+  final bool first;
   final HardRulePausePort port;
   final RuleBulkOps? bulk;
 
@@ -179,7 +214,7 @@ class _PauseRowState extends State<_PauseRow> with HardRulePauseWatch<_PauseRow>
           onTap: change,
           child: Container(
             constraints: const BoxConstraints(minHeight: 44),
-            decoration: BoxDecoration(border: Border(top: BorderSide(color: palette.line))),
+            decoration: BoxDecoration(border: widget.first ? null : Border(top: BorderSide(color: palette.line))),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             child: Row(children: [
               SettingsRowIcon(icon: Icons.pause_circle_outline, palette: palette),

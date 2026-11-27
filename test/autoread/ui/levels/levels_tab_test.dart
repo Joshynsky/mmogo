@@ -2,6 +2,7 @@
 // on the S0 fakes. Invented names only.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/autoread/ui/levels/hard_rule_ports.dart' show debugAutoRecordUiOverride;
 import 'package:mmogo/autoread/history/fake_history_reader.dart';
 import 'package:mmogo/autoread/logic/airtime_auto.dart';
 import 'package:mmogo/autoread/rules/fake_rule_store.dart';
@@ -18,10 +19,10 @@ import 'package:mmogo/ui/theme/app_palette_scope.dart';
 class _Cats implements CategoryChoices {
   @override
   Future<List<CategoryChoice>> categories() async => const [
-        CategoryChoice(id: '1', name: 'Family'),
-        CategoryChoice(id: '2', name: 'Food'),
-        CategoryChoice(id: '3', name: 'Fuel'),
-      ];
+    CategoryChoice(id: '1', name: 'Family'),
+    CategoryChoice(id: '2', name: 'Food'),
+    CategoryChoice(id: '3', name: 'Fuel'),
+  ];
   @override
   Future<CategoryChoice> create(String name) => throw UnimplementedError();
 }
@@ -41,41 +42,41 @@ final _at = DateTime(2026, 11, 19, 9);
 
 class _Rig {
   final store = FakeRuleStore();
-  final history = FakeHistoryReader(history: {
-    'SM.0711': [2, 3],
-    'SM.0722': [1],
-  });
+  final history = FakeHistoryReader(
+    history: {
+      'SM.0711': [2, 3],
+      'SM.0722': [1],
+    },
+  );
   final airtime = AirtimeAutoController(onSwitch: (_) async {}, onSwitchOther: (_) async {}, onUndo: (_) async {});
   List<KnownPerson> known = const [
     KnownPerson(type: ReceiverType.sendMoney, key: '0711', name: 'Tim'),
     KnownPerson(type: ReceiverType.sendMoney, key: '0722', name: 'Grace'),
     KnownPerson(type: ReceiverType.pochi, key: 'Amina', name: 'Amina'),
   ];
-  LevelsDeps get deps => LevelsDeps(
-        store: store,
-        history: history,
-        categories: _Cats(),
-        suggest: _Port(),
-        known: () async => known,
-        now: () => _at,
-      );
+  LevelsDeps get deps =>
+      LevelsDeps(store: store, history: history, categories: _Cats(), suggest: _Port(), known: () async => known, now: () => _at);
 }
 
 Future<void> _pump(WidgetTester t, _Rig r, {double scale = 1, double width = 390, LevelsDeps? deps, bool noDeps = false}) async {
   t.view.physicalSize = Size(width, 900);
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.reset);
-  await t.pumpWidget(AppPaletteScope(
-    controller: AppPaletteController('ocean', 'light'),
-    child: MaterialApp(
-      home: Builder(
-        builder: (c) => MediaQuery(
-          data: MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)),
-          child: Scaffold(body: LevelsTab(controller: r.airtime, deps: noDeps ? null : (deps ?? r.deps))),
+  await t.pumpWidget(
+    AppPaletteScope(
+      controller: AppPaletteController('ocean', 'light'),
+      child: MaterialApp(
+        home: Builder(
+          builder: (c) => MediaQuery(
+            data: MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)),
+            child: Scaffold(
+              body: LevelsTab(controller: r.airtime, deps: noDeps ? null : (deps ?? r.deps)),
+            ),
+          ),
         ),
       ),
     ),
-  ));
+  );
   await t.pumpAndSettle();
 }
 
@@ -94,6 +95,10 @@ Future<void> _openSuggested(WidgetTester t) async {
 // 0.2.2 item 2 redesign (U-PAGE): the group and search tests were rewritten on purpose again (folded groups,
 // one open, no search on the page).
 void main() {
+  // The Auto-record screens are live since the 0.2.2 flip; these tests cover the Ask first / Suggested screens.
+  setUp(() => debugAutoRecordUiOverride = false);
+  tearDown(() => debugAutoRecordUiOverride = null);
+
   testWidgets('empty: no people yet shows the empty line, airtime switches still there', (t) async {
     final r = _Rig()..known = const [];
     await _pump(t, r);
@@ -275,7 +280,14 @@ void main() {
   for (final c in [(1.3, 390.0), (2.0, 390.0), (1.3, 500.0)]) {
     testWidgets('large text ${c.$1} at ${c.$2.toInt()} px wide: no overflow, rows and sheet fit', (t) async {
       final r = _Rig();
-      await r.store.setLevel(ReceiverType.sendMoney, '0722', name: 'Grace Wanjiru Long Name Here', level: RuleLevel.askFirst, categoryId: 2, at: _at);
+      await r.store.setLevel(
+        ReceiverType.sendMoney,
+        '0722',
+        name: 'Grace Wanjiru Long Name Here',
+        level: RuleLevel.askFirst,
+        categoryId: 2,
+        at: _at,
+      );
       await _pump(t, r, scale: c.$1, width: c.$2);
       expect(t.takeException(), isNull);
       await _openSuggested(t);

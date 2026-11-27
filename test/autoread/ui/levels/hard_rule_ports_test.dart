@@ -31,13 +31,13 @@ void main() {
   group('autoRecordUi', () {
     tearDown(() => debugAutoRecordUiOverride = null);
 
-    test('follows autoRecordLive (false) unless a test overrides it', () {
-      expect(autoRecordLive, isFalse);
-      expect(autoRecordUi, isFalse);
-      debugAutoRecordUiOverride = true;
+    test('follows autoRecordLive (true) unless a test overrides it', () {
+      expect(autoRecordLive, isTrue);
       expect(autoRecordUi, isTrue);
-      debugAutoRecordUiOverride = null;
+      debugAutoRecordUiOverride = false;
       expect(autoRecordUi, isFalse);
+      debugAutoRecordUiOverride = null;
+      expect(autoRecordUi, isTrue);
     });
   });
 
@@ -91,7 +91,11 @@ void main() {
     test('countByLevel counts every stored level, zero when none', () async {
       final (ops, _) = await rig();
       expect(await ops.countByLevel(), {RuleLevel.suggested: 2, RuleLevel.askFirst: 3, RuleLevel.autoRecord: 2});
-      expect(await RuleBulkOps(await hardTestStore([])).countByLevel(), {RuleLevel.suggested: 0, RuleLevel.askFirst: 0, RuleLevel.autoRecord: 0});
+      expect(await RuleBulkOps(await hardTestStore([])).countByLevel(), {
+        RuleLevel.suggested: 0,
+        RuleLevel.askFirst: 0,
+        RuleLevel.autoRecord: 0,
+      });
     });
 
     test('pendingAutoPeople comes only from the autoPending mark', () async {
@@ -132,9 +136,17 @@ void main() {
       final store = PrefsRuleStore();
       final at = DateTime.utc(2026, 11, 25);
       expect(
-          await store.setLevel(ReceiverType.sendMoney, '0712345678',
-              name: 'Ann', level: RuleLevel.autoRecord, categoryId: 1, ceilingCents: 5000, at: at),
-          isTrue);
+        await store.setLevel(
+          ReceiverType.sendMoney,
+          '0712345678',
+          name: 'Ann',
+          level: RuleLevel.autoRecord,
+          categoryId: 1,
+          ceilingCents: 5000,
+          at: at,
+        ),
+        isTrue,
+      );
       final ops = RuleBulkOps(store, now: () => at);
       expect(await ops.resetAllToSuggested(), 1);
       final r = await store.get(ReceiverType.sendMoney, '0712345678');
@@ -159,12 +171,12 @@ void main() {
 
   group('RuleHint.fromAutoRecord', () {
     WaitingItem item(RuleHint h) => WaitingItem(
-          id: heldIdFor(1),
-          kind: WaitingKind.waitingCategory,
-          heldAt: DateTime.utc(2026, 11, 25),
-          parsed: sampleFields(1, DateTime.utc(2026, 11, 25)),
-          hint: h,
-        );
+      id: heldIdFor(1),
+      kind: WaitingKind.waitingCategory,
+      heldAt: DateTime.utc(2026, 11, 25),
+      parsed: sampleFields(1, DateTime.utc(2026, 11, 25)),
+      hint: h,
+    );
 
     test('defaults to false and is not written then (old items unchanged)', () {
       const h = RuleHint(level: RuleLevel.askFirst, type: ReceiverType.sendMoney, key: 'k', suggested: [1]);

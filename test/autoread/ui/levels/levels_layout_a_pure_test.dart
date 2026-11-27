@@ -7,9 +7,14 @@ import 'package:mmogo/autoread/ui/levels/levels_groups.dart';
 import 'package:mmogo/autoread/ui/levels/levels_person_row.dart';
 import 'package:mmogo/autoread/ui/levels/levels_search.dart';
 
-LevelPerson _p(String name, RuleLevel l,
-        {ReceiverType type = ReceiverType.sendMoney, String key = '0722123555', int? ceiling, List<String> cats = const []}) =>
-    LevelPerson(type: type, key: key, name: name, level: l, ceilingCents: ceiling, categoryNames: cats);
+LevelPerson _p(
+  String name,
+  RuleLevel l, {
+  ReceiverType type = ReceiverType.sendMoney,
+  String key = '0722123555',
+  int? ceiling,
+  List<String> cats = const [],
+}) => LevelPerson(type: type, key: key, name: name, level: l, ceilingCents: ceiling, categoryNames: cats);
 
 void main() {
   test('search: empty matches all; name, kind, masked number, category; any case, trimmed', () {
@@ -39,14 +44,12 @@ void main() {
   // ONE open (Auto-record at start).
   test('row line: Suggests (chosen) / last 10, Asks, Records up to / never asks first, paused', () {
     expect(levelRowLine(_p('S', RuleLevel.suggested), paused: false), kHardSuggestsFromLast10);
-    final chosen = _p('S', RuleLevel.suggested).withChosenFrom(
-        hardTestRuleChosen([7, 4]), const {4: 'Bills', 7: 'Family'});
+    final chosen = _p('S', RuleLevel.suggested).withChosenFrom(hardTestRuleChosen([7, 4]), const {4: 'Bills', 7: 'Family'});
     expect(chosen.chosenCategoryIds, [7, 4]);
     expect(levelRowLine(chosen, paused: false), kHardSuggestsFromLast10); // I2: 0.2.2 always; the chosen line is 0.2.3
     expect(levelRowLine(_p('G', RuleLevel.askFirst, cats: ['Food']), paused: false), hardRowAsks('Food'));
     expect(levelRowLine(_p('G', RuleLevel.askFirst, cats: ['Food']), paused: true), hardRowAsks('Food')); // only Auto-record pauses
-    expect(levelRowLine(_p('A', RuleLevel.autoRecord, ceiling: 200000, cats: ['Rent']), paused: false),
-        hardRowRecordsUpTo('Rent', 200000));
+    expect(levelRowLine(_p('A', RuleLevel.autoRecord, ceiling: 200000, cats: ['Rent']), paused: false), hardRowRecordsUpTo('Rent', 200000));
     expect(levelRowLine(_p('A', RuleLevel.autoRecord, cats: ['Rent']), paused: false), hardRowRecordsNoLimit('Rent'));
     expect(levelRowLine(_p('A', RuleLevel.autoRecord, ceiling: 5, cats: ['Rent']), paused: true), kHardRowPaused);
     expect(levelRowLine(_p('A', RuleLevel.autoRecord), paused: false), kHardNoCategoryYet); // a deleted category
@@ -59,6 +62,20 @@ void main() {
     expect(gone.chosenCategoryIds, [7, 9]);
     expect(gone.chosenCategoryNames, ['Family']);
     expect(_p('S', RuleLevel.suggested).withChosenFrom(null, const {}).chosenCategoryIds, isEmpty);
+  });
+
+  test('row line: an Auto-record person waiting for Keep says so (paused or not); a kept one does not', () {
+    const wait = LevelPerson(
+      type: ReceiverType.sendMoney,
+      key: '0722123555',
+      name: 'Al',
+      level: RuleLevel.autoRecord,
+      autoPending: true,
+      categoryNames: ['Rent'],
+    );
+    expect(levelRowLine(wait, paused: false), 'Waiting for Keep');
+    expect(levelRowLine(wait, paused: true), 'Waiting for Keep');
+    expect(levelRowLine(_p('Al', RuleLevel.autoRecord, cats: ['Rent']), paused: false), isNot('Waiting for Keep'));
   });
 
   test('spoken: a paused Auto-record row says Auto-record and paused, never "Ask first"', () {
@@ -92,10 +109,11 @@ void main() {
 }
 
 ReceiverRule hardTestRuleChosen(List<int> ids) => ReceiverRule(
-    type: ReceiverType.sendMoney,
-    key: '0722123555',
-    name: 'S',
-    level: RuleLevel.suggested,
-    chosenCategoryIds: ids,
-    created: DateTime(2026, 11, 25),
-    changed: DateTime(2026, 11, 25));
+  type: ReceiverType.sendMoney,
+  key: '0722123555',
+  name: 'S',
+  level: RuleLevel.suggested,
+  chosenCategoryIds: ids,
+  created: DateTime(2026, 11, 25),
+  changed: DateTime(2026, 11, 25),
+);

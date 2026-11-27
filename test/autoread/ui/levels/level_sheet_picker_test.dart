@@ -2,6 +2,7 @@
 // Save off until a category is chosen, Save and Cancel pinned under a long list.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/autoread/ui/levels/hard_rule_ports.dart' show debugAutoRecordUiOverride;
 import 'package:mmogo/autoread/history/fake_history_reader.dart';
 import 'package:mmogo/autoread/logic/airtime_auto.dart';
 import 'package:mmogo/autoread/rules/fake_rule_store.dart';
@@ -38,20 +39,23 @@ Future<void> _show(WidgetTester t, LevelPerson p, CategoryChoices cats, {double 
   t.view.physicalSize = Size(390, height);
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.reset);
-  await t.pumpWidget(AppPaletteScope(
-    controller: AppPaletteController('ocean', 'light'),
-    child: MaterialApp(
-      home: Scaffold(
-        body: Builder(
-          builder: (c) => TextButton(
-            key: const Key('open'),
-            onPressed: () => showLevelSheet(c, person: p, categories: cats, onSave: onSave ?? (_, _, {ceilingCents}) async => LevelSaveResult.ok),
-            child: const Text('open'),
+  await t.pumpWidget(
+    AppPaletteScope(
+      controller: AppPaletteController('ocean', 'light'),
+      child: MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (c) => TextButton(
+              key: const Key('open'),
+              onPressed: () =>
+                  showLevelSheet(c, person: p, categories: cats, onSave: onSave ?? (_, _, {ceilingCents}) async => LevelSaveResult.ok),
+              child: const Text('open'),
+            ),
           ),
         ),
       ),
     ),
-  ));
+  );
   await t.tap(find.byKey(const Key('open')));
   await t.pumpAndSettle();
   await t.tap(find.byKey(const Key('levelChoiceaskFirst')));
@@ -61,6 +65,10 @@ Future<void> _show(WidgetTester t, LevelPerson p, CategoryChoices cats, {double 
 bool _on(WidgetTester t, String key) => t.widget<FilledButton>(find.byKey(Key(key))).onPressed != null;
 
 void main() {
+  // The Auto-record screens are live since the 0.2.2 flip; these tests cover the Ask first / Suggested screens.
+  setUp(() => debugAutoRecordUiOverride = false);
+  tearDown(() => debugAutoRecordUiOverride = null);
+
   const tim = LevelPerson(type: ReceiverType.sendMoney, key: '0711', name: 'Tim', level: RuleLevel.suggested, topIds: [2, 1]);
 
   testWidgets('level sheet is short and shows the current category on its row; Save is on', (t) async {
@@ -111,7 +119,11 @@ void main() {
 
   testWidgets('category sheet: a long list scrolls inside a compact sheet, title pinned; a very long name does not overflow', (t) async {
     final many = [
-      const CategoryChoice(id: '1', name: 'Very long category name with symbols %26 %2F %3F %23 %25 and more words that keep going past the edge of the screen again and again'),
+      const CategoryChoice(
+        id: '1',
+        name:
+            'Very long category name with symbols %26 %2F %3F %23 %25 and more words that keep going past the edge of the screen again and again',
+      ),
       for (var i = 2; i <= 60; i++) CategoryChoice(id: '$i', name: 'Category number $i'),
     ];
     await _show(t, tim, _Cats(many), height: 640);
@@ -128,7 +140,8 @@ void main() {
   });
 
   testWidgets('a very long chosen name is cut on the level sheet row without overflow', (t) async {
-    const longName = 'Very long category name with symbols %26 %2F %3F %23 %25 and more words that keep going past the edge of the screen again and again';
+    const longName =
+        'Very long category name with symbols %26 %2F %3F %23 %25 and more words that keep going past the edge of the screen again and again';
     await _show(t, tim, _Cats(const [CategoryChoice(id: '2', name: longName)]));
     expect(t.takeException(), isNull);
     expect(t.getRect(find.byKey(const Key('levelCategoryRow'))).right, lessThanOrEqualTo(390));
@@ -151,10 +164,16 @@ void main() {
       known: () async => const [KnownPerson(type: ReceiverType.pochi, key: 'Amina', name: 'Amina')],
     );
     final c = AirtimeAutoController(onSwitch: (_) async {}, onSwitchOther: (_) async {}, onUndo: (_) async {});
-    await t.pumpWidget(AppPaletteScope(
-      controller: AppPaletteController('ocean', 'light'),
-      child: MaterialApp(home: Scaffold(body: LevelsTab(controller: c, deps: deps))),
-    ));
+    await t.pumpWidget(
+      AppPaletteScope(
+        controller: AppPaletteController('ocean', 'light'),
+        child: MaterialApp(
+          home: Scaffold(
+            body: LevelsTab(controller: c, deps: deps),
+          ),
+        ),
+      ),
+    );
     await t.pumpAndSettle();
     // 0.2.2 U5 (D3): no type chips; Amina (Suggested) sits in the folded Suggested section.
     await t.tap(find.byKey(const Key('levelGroupToggle.suggested')));

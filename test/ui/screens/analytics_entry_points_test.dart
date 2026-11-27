@@ -79,10 +79,8 @@ Future<void> _drain(WidgetTester tester) async {
 /// scroll it up to about a third of the way down).
 List<Map<String, Object?>> _rowsWithBusyDay() => [
   ...analyticsSampleRows(),
-  for (var i = 0; i < 10; i++)
-    fakeTx(id: 200 + i, at: DateTime(2026, 9, 3, 12 + i ~/ 2, i), label: 'FILLER $i', amountCents: 1000),
-  for (var i = 0; i < 10; i++)
-    fakeTx(id: 300 + i, at: DateTime(2026, 9, 3, i ~/ 2, i), label: 'EARLY $i', amountCents: 1000),
+  for (var i = 0; i < 10; i++) fakeTx(id: 200 + i, at: DateTime(2026, 9, 3, 12 + i ~/ 2, i), label: 'FILLER $i', amountCents: 1000),
+  for (var i = 0; i < 10; i++) fakeTx(id: 300 + i, at: DateTime(2026, 9, 3, i ~/ 2, i), label: 'EARLY $i', amountCents: 1000),
 ];
 
 void main() {
@@ -90,9 +88,7 @@ void main() {
 
   group('from a Home row', () {
     for (final (brightness, palette) in [(Brightness.light, AppPalette.light), (Brightness.dark, AppPalette.dark)]) {
-      testWidgets('${brightness.name}: opens the Day of that transaction, scrolls it to ~⅓ and lights it', (
-        tester,
-      ) async {
+      testWidgets('${brightness.name}: opens the Day of that transaction, scrolls it to ~⅓ and lights it', (tester) async {
         final db = await _pump(tester, rows: _rowsWithBusyDay(), args: 7, brightness: brightness);
         expect(db.lookedUpIds, [7]);
         expect(_t('JAVA HOUSE'), findsOneWidget);
@@ -105,7 +101,7 @@ void main() {
         expect(row.top, closeTo(_phone.height / 3, 160), reason: 'about a third of the way down');
         expect(_rowColor(tester, 'JAVA HOUSE'), palette.highlight);
         expect(_rowColor(tester, 'FILLER 0'), palette.card);
-        expect(palette.highlight, brightness == Brightness.light ? const Color(0xFFFFF4D6) : const Color(0xFF3A3320));
+        expect(palette.highlight, brightness == Brightness.light ? const Color(0xFFFFF1C2) : const Color(0xFF3A3320));
 
         await _drain(tester);
         expect(_rowColor(tester, 'JAVA HOUSE'), palette.card);
@@ -156,9 +152,7 @@ void main() {
       counterpartyPhone: '0712345678',
     );
 
-    testWidgets('one recipient, no period passed: all time, the card AND the pill, "Paid to them", N payments', (
-      tester,
-    ) async {
+    testWidgets('one recipient, no period passed: all time, the card AND the pill, "Paid to them", N payments', (tester) async {
       await _pump(
         tester,
         rows: analyticsSampleRows(),
@@ -207,9 +201,7 @@ void main() {
       expect(card.hitTestable(), findsOneWidget);
     });
 
-    testWidgets("T22: on Paid to's period with its category; stepping keeps the recipient; close restores", (
-      tester,
-    ) async {
+    testWidgets("T22: on Paid to's period with its category; stepping keeps the recipient; close restores", (tester) async {
       await _pump(
         tester,
         rows: analyticsSampleRows(),
@@ -269,9 +261,7 @@ void main() {
       expect(_t('PETER OTIENO'), findsOneWidget);
     });
 
-    testWidgets("the type-only shortcut (Cash): All time (F8), not the nav-bar default, with Cash's filter on", (
-      tester,
-    ) async {
+    testWidgets("the type-only shortcut (Cash): All time (F8), not the nav-bar default, with Cash's filter on", (tester) async {
       await _pump(
         tester,
         rows: analyticsSampleRows(),

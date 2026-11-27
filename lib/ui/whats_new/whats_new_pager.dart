@@ -11,6 +11,7 @@ import '../copy/whats_new_pager_copy.dart';
 import '../theme/app_colors.dart';
 import '../widgets/tap_target.dart';
 import 'whats_new_cards.dart';
+import 'whats_new_items.dart';
 
 /// §UI.WHATSNEW.PAGER — the What's-new page (0.1.2 A5a; it replaced the
 /// six-card pager sheet). ONE full-screen route, shown the same way from Home
@@ -54,8 +55,8 @@ class WhatsNewProcess {
 ///
 /// [onOpenSettings] and [onOpenBackup] are the callers' route openers: they
 /// push OVER the page, Back returns to it as it was, and nothing is marked
-/// seen. [onOpenSite] opens the mmogo page in the browser (default: the
-/// storage bridge, the site URL only).
+/// seen. [onOpenSite] opens the install guide in the browser (default: the
+/// storage bridge, the install-guide URL only).
 Future<bool> showWhatsNewPager(
   BuildContext context, {
   required void Function(String? target) onOpenSettings,
@@ -69,12 +70,8 @@ Future<bool> showWhatsNewPager(
     final result = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         settings: const RouteSettings(name: 'whats-new'),
-        builder: (_) => WhatsNewPage(
-          onOpenSettings: onOpenSettings,
-          onOpenBackup: onOpenBackup,
-          onOpenSite: onOpenSite,
-          readOnly: readOnly,
-        ),
+        builder: (_) =>
+            WhatsNewPage(onOpenSettings: onOpenSettings, onOpenBackup: onOpenBackup, onOpenSite: onOpenSite, readOnly: readOnly),
       ),
     );
     return result ?? false;
@@ -94,13 +91,7 @@ void writeSeenQuietly(Future<void> Function(String versionName) write, String in
 }
 
 class WhatsNewPage extends StatefulWidget {
-  const WhatsNewPage({
-    super.key,
-    required this.onOpenSettings,
-    required this.onOpenBackup,
-    this.onOpenSite,
-    this.readOnly = false,
-  });
+  const WhatsNewPage({super.key, required this.onOpenSettings, required this.onOpenBackup, this.onOpenSite, this.readOnly = false});
 
   final void Function(String? target) onOpenSettings;
   final VoidCallback onOpenBackup;
@@ -149,7 +140,7 @@ class _WhatsNewPageState extends State<WhatsNewPage> {
   });
 
   /// The rows in the signed order: headline items, the fold button (and, when it is open, the
-  /// "More changes" items), the line that says 0.2.0 is still here, then the last item (Privacy).
+  /// "More changes" items), the line that says 0.2.1 is still here, then the last item (Privacy).
   /// Numbers run over the rows that are on screen.
   List<Widget> _rows(AppPalette palette) {
     var n = 0;
@@ -236,7 +227,7 @@ class _WhatsNewPageState extends State<WhatsNewPage> {
     }
     var opened = false;
     try {
-      opened = await StorageBridge.instance.openUrl(AppConstants.siteUrl);
+      opened = await StorageBridge.instance.openUrl(AppConstants.installHelpUrl);
     } catch (_) {}
     if (!opened && mounted) {
       PillToast.show(kUpdatesCouldNotOpen);

@@ -13,6 +13,7 @@ import '../../copy/settings_copy.dart';
 import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
 import '../backup/backup_format.dart';
+import 'settings_row_target.dart';
 import 'settings_widgets.dart';
 
 /// Settings ABOUT card (0.1.2 S9a, mock M9: Privacy and your data, Updates, Send
@@ -119,38 +120,50 @@ class _AboutSectionState extends State<AboutSection> {
           palette: palette,
           child: Column(
             children: [
-              SettingsLink(
-                palette: palette,
-                icon: Icons.shield_outlined,
-                label: kPrivacyTitle,
-                subtitle: kSettingsPrivacySubtitle,
-                first: true,
-                onTap: () => Navigator.of(context).pushNamed(Routes.privacy),
+              SettingsRowTarget(
+                id: 'about.privacy',
+                child: SettingsLink(
+                  palette: palette,
+                  icon: Icons.shield_outlined,
+                  label: kPrivacyTitle,
+                  subtitle: kSettingsPrivacySubtitle,
+                  first: true,
+                  onTap: () => Navigator.of(context).pushNamed(Routes.privacy),
+                ),
               ),
-              SettingsLink(
-                palette: palette,
-                icon: Icons.notifications_none_rounded,
-                label: kUpdatesTitle,
-                subtitle: _subtitle,
-                unreadDot: _inbox.unreadCount.value > 0,
-                onTap: _open,
+              SettingsRowTarget(
+                id: 'about.updates',
+                child: SettingsLink(
+                  palette: palette,
+                  icon: Icons.notifications_none_rounded,
+                  label: kUpdatesTitle,
+                  subtitle: _subtitle,
+                  unreadDot: _inbox.unreadCount.value > 0,
+                  onTap: _open,
+                ),
               ),
               if (widget.otherVersionRow)
-                SettingsLink(
-                  palette: palette,
-                  icon: Icons.devices_other_rounded,
-                  label: kOtherVersionSettingsLabel,
-                  subtitle: kOtherVersionSettingsSubtitle,
-                  trailingIcon: Icons.open_in_new_rounded,
-                  onTap: _otherVersion,
+                SettingsRowTarget(
+                  id: 'about.otherVersion',
+                  child: SettingsLink(
+                    palette: palette,
+                    icon: Icons.devices_other_rounded,
+                    label: kOtherVersionSettingsLabel,
+                    subtitle: kOtherVersionSettingsSubtitle,
+                    trailingIcon: Icons.open_in_new_rounded,
+                    onTap: _otherVersion,
+                  ),
                 ),
-              SettingsLink(
-                palette: palette,
-                icon: Icons.chat_bubble_outline_rounded,
-                label: kSendFeedbackLabel,
-                subtitle: kSendFeedbackSubtitle,
-                trailingIcon: Icons.open_in_new_rounded,
-                onTap: _sendFeedback,
+              SettingsRowTarget(
+                id: 'about.feedback',
+                child: SettingsLink(
+                  palette: palette,
+                  icon: Icons.chat_bubble_outline_rounded,
+                  label: kSendFeedbackLabel,
+                  subtitle: kSendFeedbackSubtitle,
+                  trailingIcon: Icons.open_in_new_rounded,
+                  onTap: _sendFeedback,
+                ),
               ),
             ],
           ),

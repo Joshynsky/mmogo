@@ -338,6 +338,8 @@ String hardRowSuggests(String categories) => 'Suggests $categories';
 // SIGN WORDING-DRAFT (mock-remembered-v2 page-open row_ask)
 String hardRowAsks(String category) => 'Asks: Record as $category?';
 // SIGN WORDING-DRAFT (mock-remembered-v2 page-auto row_auto_c)
+// WORDING-DRAFT (slice D, finding 3): an Auto-record person restored from a backup, not yet kept.
+const String kHardRowWaitingForKeep = 'Waiting for Keep';
 String hardRowRecordsUpTo(String category, int limitCents) => 'Records as $category, up to ${kshTrim(limitCents)}';
 // SIGN WORDING-DRAFT (mock-remembered-v2 page-auto row_auto_n)
 String hardRowRecordsNoLimit(String category) => 'Records as $category, never asks first';
@@ -346,25 +348,13 @@ const String kHardGroupNone = 'Nobody here yet.';
 // SIGN WORDING-DRAFT (mock-remembered-v2 page-empty imp_first)
 const String kHardPageFirstTime = 'Nobody set up yet. mmogo still suggests categories from history.';
 
-// ---------------------------------------------------------------- restore review (signed 25-11 "Restore")
-// SIGNED 25-11 ("Restore"): "{n} people were on Auto-record in your backup. They ask first until you check them."
-// The verb agrees with the count ("1 person was").
-String hardReviewLine(int n) =>
-    '${peopleCount(n)} ${n == 1 ? 'was' : 'were'} on Auto-record in your backup. They ask first until you check them.';
-// SIGNED 25-11 ("Restore": + Review)
-const String kHardReviewButton = 'Review';
-// SIGNED 25-11 ("Restore")
-const String kHardReviewTitle = 'Auto-record from your backup';
-// SIGNED 25-11 ("Restore")
-const String kHardReviewSub = 'Tick who goes back on Auto-record. The rest ask first.';
-// SIGNED 25-11 ("Restore": Save · Keep all on Ask first)
-const String kHardReviewConfirm = 'Save';
-// SIGNED 25-11 ("Restore": Save · Keep all on Ask first)
-const String kHardReviewKeepAll = 'Keep all on Ask first';
-// SIGNED 25-11 ("Restore"): "{n} people back on Auto-record."
-String hardReviewToast(int n) => '${peopleCount(n)} back on Auto-record.';
-// SIGNED 25-11 ("Restore")
-const String kHardReviewKeptToast = 'Everyone stays on Ask first.';
+// ---------------------------------------------------------------- restored banner (0.2.2 Option B)
+// SIGN WORDING-DRAFT (26-11 restore banner; replaced the old per-person review line): "Auto-record was restored for {n} people. Keep it?"
+String hardRestoredBanner(int n) => 'Auto-record was restored for ${peopleCount(n)}. Keep it?';
+// SIGN WORDING-DRAFT (26-11 restore banner button)
+const String kHardRestoredKeep = 'Keep';
+// SIGN WORDING-DRAFT (26-11 restore banner button)
+const String kHardRestoredTurnOff = 'Turn off';
 // SIGNED 25-11 ("Restore"): "Backup restored. Check {n} Auto-record people."
 String hardRestoreToast(int n) => 'Backup restored. Check $n Auto-record ${_peopleNoun(n)}.';
 // SIGNED 25-11 ("Restore", details-off)

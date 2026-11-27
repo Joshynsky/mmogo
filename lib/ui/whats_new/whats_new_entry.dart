@@ -4,6 +4,7 @@ import '../copy/data_copy.dart';
 import '../copy/whats_new_pager_copy.dart';
 import '../theme/app_colors.dart';
 import '../widgets/tap_target.dart';
+import 'whats_new_items.dart';
 
 /// §UI.WHATSNEW.ENTRY — the one "What's new in mmogo 0.1.2" entry on the
 /// Updates page (0.1.2 S11a, A2). SYNTHETIC: it is not a stored notice, so it
@@ -57,19 +58,14 @@ class WhatsNewEntryCard extends StatelessWidget {
                   decoration: BoxDecoration(color: palette.primary, borderRadius: BorderRadius.circular(999)),
                   child: Text(
                     kUpdatesNewPill.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                      color: palette.onPrimary,
-                    ),
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: palette.onPrimary),
                   ),
                 ),
               ],
             ],
           ),
           const SizedBox(height: 8),
-          Text(kWhatsNewEntryBody, style: TextStyle(fontSize: 13, height: 1.5, color: palette.softInk)),
+          Text(whatsNewEntryBody(), style: TextStyle(fontSize: 13, height: 1.5, color: palette.softInk)),
           const SizedBox(height: 10),
           Semantics(
             container: true,

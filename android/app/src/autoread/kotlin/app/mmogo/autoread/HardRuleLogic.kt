@@ -21,7 +21,7 @@ import org.json.JSONObject
  */
 internal object HardRuleLogic {
     /** Dart mirror: autoRecordLive (hard_rule_decision.dart). Flipped only by the PM-approved step G2. */
-    const val AUTO_RECORD_LIVE = false
+    const val AUTO_RECORD_LIVE = true
 
     /** Dart mirror: kHardPausedPrefsKey (prefs_hard_rule_pause.dart) with the plugin's "flutter." prefix. */
     const val PAUSED_KEY = "flutter.autoread_hard_paused"

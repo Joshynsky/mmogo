@@ -89,6 +89,7 @@ class RestorePreview {
     required this.phoneCounterpartyMap,
     required this.phoneRecentlyDeleted,
     this.fileFulizaEvents = 0,
+    this.fileRules = 0,
     this.newFulizaEvents = 0,
     this.phoneFulizaEvents = 0,
   });
@@ -97,6 +98,9 @@ class RestorePreview {
 
   /// Fuliza events in the file, what a MERGE would add, and what this phone has.
   final int fileFulizaEvents;
+
+  /// Remembered people's rules in the file (`receiver_rules`; 0 for a schema 8 or older file).
+  final int fileRules;
   final int newFulizaEvents;
   final int phoneFulizaEvents;
 

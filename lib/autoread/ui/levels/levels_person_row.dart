@@ -114,6 +114,7 @@ String levelRowLine(LevelPerson x, {required bool paused}) {
     case RuleLevel.askFirst:
       return cat == null ? kHardNoCategoryYet : hardRowAsks(cat);
     case RuleLevel.autoRecord:
+      if (x.autoPending) return kHardRowWaitingForKeep;
       if (paused) return kHardRowPaused;
       if (cat == null) return kHardNoCategoryYet;
       final c = x.ceilingCents;

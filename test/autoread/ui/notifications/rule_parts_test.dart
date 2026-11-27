@@ -4,6 +4,7 @@ library;
 // S2d: the rule parts of the Notifications page, on fakes (no real rule store).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/autoread/ui/levels/hard_rule_ports.dart' show debugAutoRecordUiOverride;
 import 'package:mmogo/autoread/logic/airtime_auto.dart';
 import 'package:mmogo/autoread/model/rule_hint.dart';
 import 'package:mmogo/autoread/model/waiting_item.dart';
@@ -23,13 +24,13 @@ import '../../../support/news_fakes.dart';
 import '../../../support/waiting_fakes.dart';
 
 Widget _host(Widget child, {double scale = 1.0}) => MaterialApp(
-      theme: AppTheme.theme,
-      builder: (context, c) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
-        child: c!,
-      ),
-      home: Scaffold(body: SingleChildScrollView(child: child)),
-    );
+  theme: AppTheme.theme,
+  builder: (context, c) => MediaQuery(
+    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
+    child: c!,
+  ),
+  home: Scaffold(body: SingleChildScrollView(child: child)),
+);
 
 void _size(WidgetTester t, double w) {
   t.view.devicePixelRatio = 1.0;
@@ -53,14 +54,20 @@ AirtimeAutoController _air(List<AutoRecorded> trail) {
   return c;
 }
 
-Widget _section(List<WaitingItem> items, WaitingActions a, {double scale = 1.0}) =>
-    _host(WaitingSection(waiting: items, now: kFakeNow, actions: a), scale: scale);
+Widget _section(List<WaitingItem> items, WaitingActions a, {double scale = 1.0}) => _host(
+  WaitingSection(waiting: items, now: kFakeNow, actions: a),
+  scale: scale,
+);
 
 List<String> _texts(WidgetTester t) => [for (final w in t.widgetList<Text>(find.byType(Text))) w.data ?? ''];
 
 int _buttons(Finder inside) => find.descendant(of: inside, matching: find.byType(InkWell)).evaluate().length;
 
 void main() {
+  // The Auto-record screens are live since the 0.2.2 flip; these tests cover the Ask first / Suggested screens.
+  setUp(() => debugAutoRecordUiOverride = false);
+  tearDown(() => debugAutoRecordUiOverride = null);
+
   late FakeRuleEngine engine;
   late FakeRuleStore store;
 
@@ -70,15 +77,15 @@ void main() {
   });
 
   WaitingActions actions({SuggestionsController? s, List<String>? log, AirtimeAutoController? air}) => WaitingActions(
-        suggestions: s,
-        airtime: air,
-        onChangeInSettings: air == null ? null : () {},
-        ruleHintFor: (w) => _hint,
-        categoryNameOf: _name,
-        onAskFirstYes: (w, h) async => log?.add('yes'),
-        onAskFirstChange: (w, h) => log?.add('change'),
-        onAskFirstLater: (w, h) => log?.add('later'),
-      );
+    suggestions: s,
+    airtime: air,
+    onChangeInSettings: air == null ? null : () {},
+    ruleHintFor: (w) => _hint,
+    categoryNameOf: _name,
+    onAskFirstYes: (w, h) async => log?.add('yes'),
+    onAskFirstChange: (w, h) => log?.add('change'),
+    onAskFirstLater: (w, h) => log?.add('later'),
+  );
 
   group('sections hide when empty', () {
     testWidgets('no offers, no items: no Suggestions, no Ask first, no Recorded automatically', (t) async {
@@ -98,7 +105,15 @@ void main() {
       _size(t, 360);
       final c = SuggestionsController(engine: engine, store: store);
       addTearDown(c.dispose);
-      await t.pumpWidget(_section([_item(1)], actions(s: c, air: _air([AutoRecorded(rowId: 1, amountCents: 5000, at: kFakeNow)]))));
+      await t.pumpWidget(
+        _section(
+          [_item(1)],
+          actions(
+            s: c,
+            air: _air([AutoRecorded(rowId: 1, amountCents: 5000, at: kFakeNow)]),
+          ),
+        ),
+      );
       await t.pump();
       final all = _texts(t);
       expect(all, contains('$kHeadingToConfirm (1)'));
@@ -110,11 +125,18 @@ void main() {
   group('N6 Recorded automatically count', () {
     testWidgets('counts only entries still recorded; undone rows stay listed but are not counted', (t) async {
       _size(t, 360);
-      await t.pumpWidget(_section([], actions(air: _air([
-        AutoRecorded(rowId: 1, amountCents: 5000, at: kFakeNow),
-        AutoRecorded(rowId: 2, amountCents: 6000, at: kFakeNow, inRecentlyDeleted: true),
-        AutoRecorded(rowId: 3, amountCents: 7000, at: kFakeNow, inRecentlyDeleted: true),
-      ]))));
+      await t.pumpWidget(
+        _section(
+          [],
+          actions(
+            air: _air([
+              AutoRecorded(rowId: 1, amountCents: 5000, at: kFakeNow),
+              AutoRecorded(rowId: 2, amountCents: 6000, at: kFakeNow, inRecentlyDeleted: true),
+              AutoRecorded(rowId: 3, amountCents: 7000, at: kFakeNow, inRecentlyDeleted: true),
+            ]),
+          ),
+        ),
+      );
       await t.pump();
       final all = _texts(t);
       expect(all, contains('Recently recorded (1)'));
@@ -155,16 +177,18 @@ void main() {
   group('suggestion card', () {
     testWidgets('F2: a full number shows masked, never raw', (t) async {
       _size(t, 360);
-      await t.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: SuggestionCard(
-            offer: const Offer(type: ReceiverType.sendMoney, key: '0722000555', name: 'LUCY AKINYI', categoryId: 5, run: 3),
-            categoryName: 'Food',
-            onNotNow: () {},
-            onConfirm: () {},
+      await t.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SuggestionCard(
+              offer: const Offer(type: ReceiverType.sendMoney, key: '0722000555', name: 'LUCY AKINYI', categoryId: 5, run: 3),
+              categoryName: 'Food',
+              onNotNow: () {},
+              onConfirm: () {},
+            ),
           ),
         ),
-      ));
+      );
       expect(find.textContaining('LUCY AKINYI 0722***555'), findsOneWidget);
       expect(find.textContaining('0722000555'), findsNothing);
     });
@@ -247,7 +271,13 @@ void main() {
 
     testWidgets('unknown category or no hint: a normal Categorize row', (t) async {
       _size(t, 360);
-      final a = WaitingActions(ruleHintFor: (w) => null, categoryNameOf: _name, onAskFirstYes: (w, h) async {}, onAskFirstChange: (w, h) {}, onAskFirstLater: (w, h) {});
+      final a = WaitingActions(
+        ruleHintFor: (w) => null,
+        categoryNameOf: _name,
+        onAskFirstYes: (w, h) async {},
+        onAskFirstChange: (w, h) {},
+        onAskFirstLater: (w, h) {},
+      );
       await t.pumpWidget(_section([_item(1)], a));
       expect(find.byKey(const Key('ask-first-yes')), findsNothing);
       expect(find.text('$kHeadingToConfirm (1)'), findsNothing);
@@ -275,7 +305,16 @@ void main() {
         _size(t, w);
         final c = SuggestionsController(engine: engine, store: store);
         addTearDown(c.dispose);
-        await t.pumpWidget(_section([_item(1)], actions(s: c, air: scale == 1.0 ? _air([AutoRecorded(rowId: 1, amountCents: 5000, at: kFakeNow)]) : null), scale: scale));
+        await t.pumpWidget(
+          _section(
+            [_item(1)],
+            actions(
+              s: c,
+              air: scale == 1.0 ? _air([AutoRecorded(rowId: 1, amountCents: 5000, at: kFakeNow)]) : null,
+            ),
+            scale: scale,
+          ),
+        );
         await t.pump();
         expect(t.takeException(), isNull);
         final ask = find.byKey(const Key('ask-first-actions'));

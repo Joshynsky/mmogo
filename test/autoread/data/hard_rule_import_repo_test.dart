@@ -259,10 +259,10 @@ void main() {
     r.dispose();
   });
 
-  test('flag false (the default): no mark can produce a row; the mark is dropped and the item waits', () async {
+  test('flag false: no mark can produce a row; the mark is dropped and the item waits', () async {
     await setAuto();
     final item = await arrive(1);
-    final r = repo(live: null);
+    final r = repo(live: false);
     await r.ingest();
     expect(await liveRows(), isEmpty);
     expect(toasted, isEmpty);

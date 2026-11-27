@@ -38,10 +38,10 @@ import '../../../support/hard_rule_fakes.dart';
 class _Cats implements CategoryChoices {
   @override
   Future<List<CategoryChoice>> categories() async => const [
-        CategoryChoice(id: '1', name: 'Family'),
-        CategoryChoice(id: '2', name: 'Food'),
-        CategoryChoice(id: '3', name: 'Bills'),
-      ];
+    CategoryChoice(id: '1', name: 'Family'),
+    CategoryChoice(id: '2', name: 'Food'),
+    CategoryChoice(id: '3', name: 'Bills'),
+  ];
   @override
   Future<CategoryChoice> create(String name) => throw UnimplementedError();
 }
@@ -52,21 +52,27 @@ class _RecStore extends FakeRuleStore {
   final List<({RuleLevel level, int? categoryId, int? ceilingCents})> calls = [];
   int forgetEveryoneCalls = 0;
   @override
-  Future<bool> setLevel(ReceiverType type, String key,
-      {required String name,
-      required RuleLevel level,
-      int? categoryId,
-      int? ceilingCents,
-      List<int> chosenCategoryIds = const <int>[],
-      required DateTime at}) {
+  Future<bool> setLevel(
+    ReceiverType type,
+    String key, {
+    required String name,
+    required RuleLevel level,
+    int? categoryId,
+    int? ceilingCents,
+    List<int> chosenCategoryIds = const <int>[],
+    required DateTime at,
+  }) {
     calls.add((level: level, categoryId: categoryId, ceilingCents: ceilingCents));
-    return super.setLevel(type, key,
-        name: name,
-        level: level,
-        categoryId: categoryId,
-        ceilingCents: ceilingCents,
-        chosenCategoryIds: chosenCategoryIds,
-        at: at);
+    return super.setLevel(
+      type,
+      key,
+      name: name,
+      level: level,
+      categoryId: categoryId,
+      ceilingCents: ceilingCents,
+      chosenCategoryIds: chosenCategoryIds,
+      at: at,
+    );
   }
 
   @override
@@ -100,7 +106,7 @@ class _HiddenStore extends _RecStore {
 
 class _Rig {
   _Rig({_RecStore? store, this.knownPeople = const [KnownPerson(type: ReceiverType.buyGoods, key: '5512', name: 'Mama Mboga')]})
-      : store = store ?? _RecStore();
+    : store = store ?? _RecStore();
   final _RecStore store;
   final List<KnownPerson> knownPeople;
   final notice = FakeRuleChangeNotice();
@@ -109,15 +115,19 @@ class _Rig {
   bool details = true;
 
   LevelsDeps get deps => LevelsDeps(
-        store: store,
-        history: FakeHistoryReader(history: {'BG.5512': [2]}),
-        categories: _Cats(),
-        suggest: FakeSuggestSettings(),
-        known: () async => knownPeople,
-        now: () => kHardTestNow,
-        pause: pause,
-        notice: notice,
-      );
+    store: store,
+    history: FakeHistoryReader(
+      history: {
+        'BG.5512': [2],
+      },
+    ),
+    categories: _Cats(),
+    suggest: FakeSuggestSettings(),
+    known: () async => knownPeople,
+    now: () => kHardTestNow,
+    pause: pause,
+    notice: notice,
+  );
 
   /// Tim Auto-record Family with Ksh 2,000, Amina (Buy Goods) Auto-record Bills with no limit, Grace Ask
   /// first Food, KPLC (Paybill) Ask first Bills, Mama Mboga Suggested (known name, no rule).
@@ -133,37 +143,47 @@ class _Rig {
 /// What the fake Settings page saw: the highlight id taken when it opened.
 final List<String?> _settingsOpened = [];
 
-Future<void> _pump(WidgetTester t, _Rig r,
-    {double scale = 1,
-    bool dark = false,
-    TextDirection dir = TextDirection.ltr,
-    LevelsSlots slots = const LevelsSlots(),
-    Size size = const Size(390, 1400)}) async {
+Future<void> _pump(
+  WidgetTester t,
+  _Rig r, {
+  double scale = 1,
+  bool dark = false,
+  TextDirection dir = TextDirection.ltr,
+  LevelsSlots slots = const LevelsSlots(),
+  Size size = const Size(390, 1400),
+}) async {
   t.view.physicalSize = size;
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.reset);
-  await t.pumpWidget(AppPaletteScope(
-    controller: AppPaletteController('ocean', dark ? 'dark' : 'light'),
-    child: MaterialApp(
-      onGenerateRoute: (s) => s.name == Routes.settings
-          ? MaterialPageRoute<void>(builder: (_) {
-              _settingsOpened.add(HighlightRequest.take());
-              return const Scaffold(key: Key('fakeSettings'), body: Center(child: BackButton(key: Key('fakeSettingsBack'))));
-            })
-          : null,
-      home: Builder(
-        builder: (c) => MediaQuery(
-          data: MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)),
-          child: Directionality(
-            textDirection: dir,
-            child: Scaffold(
-              body: LevelsTab(controller: r.airtime, deps: r.deps, detailsOn: () async => r.details, slots: slots),
+  await t.pumpWidget(
+    AppPaletteScope(
+      controller: AppPaletteController('ocean', dark ? 'dark' : 'light'),
+      child: MaterialApp(
+        onGenerateRoute: (s) => s.name == Routes.settings
+            ? MaterialPageRoute<void>(
+                builder: (_) {
+                  _settingsOpened.add(HighlightRequest.take());
+                  return const Scaffold(
+                    key: Key('fakeSettings'),
+                    body: Center(child: BackButton(key: Key('fakeSettingsBack'))),
+                  );
+                },
+              )
+            : null,
+        home: Builder(
+          builder: (c) => MediaQuery(
+            data: MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)),
+            child: Directionality(
+              textDirection: dir,
+              child: Scaffold(
+                body: LevelsTab(controller: r.airtime, deps: r.deps, detailsOn: () async => r.details, slots: slots),
+              ),
             ),
           ),
         ),
       ),
     ),
-  ));
+  );
   await t.pumpAndSettle();
 }
 
@@ -183,20 +203,18 @@ Future<void> _tapGroup(WidgetTester t, RuleLevel l) async {
 /// Test slots: a 60 px pause switch, a 10 px review line, a bottom bar with a Set up button when the tab
 /// gives it one ([seen] records what the bar received).
 LevelsSlots _testSlots({List<VoidCallback?>? seen, Future<void> Function(BuildContext)? onSetUp}) => LevelsSlots(
-      pauseSwitch: (_) => const SizedBox(key: Key('slotPause'), height: 60),
-      reviewLine: (_) => const SizedBox(key: Key('slotReview'), height: 10),
-      bottomBar: (_, setUp) {
-        seen?.add(setUp);
-        return SizedBox(
-          key: const Key('slotBar'),
-          height: 56,
-          child: setUp == null
-              ? null
-              : TextButton(key: const Key('slotBarSetUp'), onPressed: setUp, child: const Text(kHardSetUpButton)),
-        );
-      },
-      onSetUp: onSetUp,
+  pauseSwitch: (_) => const SizedBox(key: Key('slotPause'), height: 60),
+  reviewLine: (_) => const SizedBox(key: Key('slotReview'), height: 10),
+  bottomBar: (_, setUp) {
+    seen?.add(setUp);
+    return SizedBox(
+      key: const Key('slotBar'),
+      height: 56,
+      child: setUp == null ? null : TextButton(key: const Key('slotBarSetUp'), onPressed: setUp, child: const Text(kHardSetUpButton)),
     );
+  },
+  onSetUp: onSetUp,
+);
 
 void main() {
   setUp(() {
@@ -208,8 +226,9 @@ void main() {
     HighlightRequest.take();
   });
 
-  testWidgets('groups: Suggested, Ask first, Auto-record with counts; Auto-record open, the others closed; no search, chips or helper',
-      (t) async {
+  testWidgets('groups: Suggested, Ask first, Auto-record with counts; Auto-record open, the others closed; no search, chips or helper', (
+    t,
+  ) async {
     final r = _Rig();
     await r.seed();
     await _pump(t, r);
@@ -234,8 +253,7 @@ void main() {
     expect(find.text(kHardSearchPlaceholder), findsNothing);
   });
 
-  testWidgets('one open at a time: opening Ask first closes Auto-record (page-open); Hide closes it; Suggested opens alone',
-      (t) async {
+  testWidgets('one open at a time: opening Ask first closes Auto-record (page-open); Hide closes it; Suggested opens alone', (t) async {
     final r = _Rig();
     await r.seed();
     await _pump(t, r);
@@ -284,8 +302,7 @@ void main() {
   });
 
   // I2: in 0.2.2 a stored chosen list (a restored `sc`) does NOT change the row line (chosen lists are 0.2.3).
-  testWidgets('Suggested lists every Suggested person; every row says "Suggests from last 10 payments", a chosen list too',
-      (t) async {
+  testWidgets('Suggested lists every Suggested person; every row says "Suggests from last 10 payments", a chosen list too', (t) async {
     final r = _Rig();
     await r.seed();
     await r.store.saveRule(hardTestRule(_grace, name: 'Grace', categoryId: 2).copyWith(chosenCategoryIds: [3, 1]));
@@ -297,8 +314,7 @@ void main() {
     expect(_toggleText(t, RuleLevel.suggested), kHardGroupHide);
   });
 
-  testWidgets('paused: Auto-record rows say "Paused: asking first"; spoken = Auto-record + paused, never "Ask first"; resume',
-      (t) async {
+  testWidgets('paused: Auto-record rows say "Paused: asking first"; spoken = Auto-record + paused, never "Ask first"; resume', (t) async {
     final sem = t.ensureSemantics();
     final r = _Rig();
     await r.seed();
@@ -364,8 +380,7 @@ void main() {
     }
   });
 
-  testWidgets('B-7 + B-8: Turn it on opens Settings at the Record receiver details switch; back from Settings the page reloads',
-      (t) async {
+  testWidgets('B-7 + B-8: Turn it on opens Settings at the Record receiver details switch; back from Settings the page reloads', (t) async {
     final r = _Rig()..details = false;
     await r.seed();
     await _pump(t, r);
@@ -431,10 +446,17 @@ void main() {
     expect(seen.last, isNull);
     expect(find.byKey(const Key('slotBarSetUp')), findsNothing);
     var opened = 0;
-    await _pump(t, r, slots: _testSlots(seen: seen, onSetUp: (c) async {
-      opened++;
-      await r.store.saveRule(hardTestRule('0733000111', name: 'Wanjiru', level: RuleLevel.autoRecord, categoryId: 2));
-    }));
+    await _pump(
+      t,
+      r,
+      slots: _testSlots(
+        seen: seen,
+        onSetUp: (c) async {
+          opened++;
+          await r.store.saveRule(hardTestRule('0733000111', name: 'Wanjiru', level: RuleLevel.autoRecord, categoryId: 2));
+        },
+      ),
+    );
     expect(seen.last, isNotNull);
     await t.tap(find.byKey(const Key('slotBarSetUp')));
     await t.pumpAndSettle();
@@ -524,7 +546,9 @@ void main() {
 
   testWidgets('autoPending person: listed at Ask first and the sheet keeps the stored ceiling', (t) async {
     final r = _Rig();
-    await r.store.saveRule(hardTestRule(_grace, name: 'Grace', level: RuleLevel.askFirst, categoryId: 2, ceilingCents: 70000, autoPending: true));
+    await r.store.saveRule(
+      hardTestRule(_grace, name: 'Grace', level: RuleLevel.askFirst, categoryId: 2, ceilingCents: 70000, autoPending: true),
+    );
     await _pump(t, r);
     expect(find.byKey(const Key('levelGroup.autoRecord')), findsNothing);
     expect(_inRow('SM.$_grace', find.text(hardRowAsks('Food'))), findsOneWidget);
@@ -558,12 +582,21 @@ void main() {
     (2.0, false, TextDirection.rtl),
     (1.0, true, TextDirection.ltr),
   ]) {
-    testWidgets('text ${c.$1}, ${c.$2 ? 'dark' : 'light'}, ${c.$3.name}: no overflow, each group open, paused, every slot drawn',
-        (t) async {
+    testWidgets('text ${c.$1}, ${c.$2 ? 'dark' : 'light'}, ${c.$3.name}: no overflow, each group open, paused, every slot drawn', (
+      t,
+    ) async {
       final r = _Rig();
       await r.seed();
       r.pause.paused = true;
-      await _pump(t, r, scale: c.$1, dark: c.$2, dir: c.$3, slots: _testSlots(onSetUp: (_) async {}), size: const Size(390, 800));
+      await _pump(
+        t,
+        r,
+        scale: c.$1,
+        dark: c.$2,
+        dir: c.$3,
+        slots: _testSlots(onSetUp: (_) async {}),
+        size: const Size(390, 800),
+      );
       expect(t.takeException(), isNull);
       expect(t.getSize(find.byKey(const Key('levelButton.SM.$_tim'))).height, greaterThanOrEqualTo(44));
       for (final l in [RuleLevel.suggested, RuleLevel.askFirst, RuleLevel.autoRecord]) {
@@ -578,7 +611,8 @@ void main() {
         final row = t.getRect(find.byKey(const Key('levelButton.SM.$_tim')));
         final name = t.getRect(find.descendant(of: find.byKey(const Key('levelButton.SM.$_tim')), matching: find.text('Tim')));
         final chev = t.getRect(
-            find.descendant(of: find.byKey(const Key('levelButton.SM.$_tim')), matching: find.byIcon(Icons.chevron_right)));
+          find.descendant(of: find.byKey(const Key('levelButton.SM.$_tim')), matching: find.byIcon(Icons.chevron_right)),
+        );
         expect(name.right, greaterThan(row.center.dx));
         expect(chev.left, lessThan(row.center.dx));
       }
@@ -606,13 +640,21 @@ void main() {
       t.view.physicalSize = const Size(400, 900);
       t.view.devicePixelRatio = 1;
       addTearDown(t.view.reset);
-      await t.pumpWidget(AppPaletteScope(
-        controller: AppPaletteController('ocean', 'light'),
-        child: MaterialApp(
-          navigatorKey: appNavigatorKey, // the pill toasts live on this navigator's overlay
-          home: RememberedScreen(memory: m, extraTab: levelsExtraTab(r.airtime, deps: r.deps, cleanup: cleanup)),
+      await t.pumpWidget(
+        AppPaletteScope(
+          controller: AppPaletteController('ocean', 'light'),
+          child: MaterialApp(
+            navigatorKey: appNavigatorKey, // the pill toasts live on this navigator's overlay
+            home: RememberedScreen(
+              memory: m,
+              extraTab: levelsExtraTab(r.airtime, deps: r.deps, cleanup: cleanup),
+            ),
+          ),
         ),
-      ));
+      );
+      await t.pumpAndSettle();
+      // The page opens on the people tab when it holds people (0.2.2); these tests use the recipients tab.
+      await t.tap(find.byKey(const Key('rememberedTab0')));
       await t.pumpAndSettle();
     }
 
@@ -646,7 +688,9 @@ void main() {
     testWidgets('flag on: 2 names + 4 rules sharing 1 person -> the dialog says 5, no name; after it all are gone', (t) async {
       final r = _Rig();
       // 4 rules; the Pochi one is the remembered name JANE ATIENO (same person, counted once).
-      await r.store.saveRule(hardTestRule('JANE ATIENO', type: ReceiverType.pochi, name: 'JANE ATIENO', level: RuleLevel.askFirst, categoryId: 1));
+      await r.store.saveRule(
+        hardTestRule('JANE ATIENO', type: ReceiverType.pochi, name: 'JANE ATIENO', level: RuleLevel.askFirst, categoryId: 1),
+      );
       await r.store.saveRule(hardTestRule(_tim, name: 'Tim', level: RuleLevel.autoRecord, categoryId: 1, ceilingCents: 200000));
       await r.store.saveRule(hardTestRule(_grace, name: 'Grace', level: RuleLevel.askFirst, categoryId: 2));
       await r.store.saveRule(hardTestRule('888880', type: ReceiverType.payBill, name: 'KPLC', level: RuleLevel.askFirst, categoryId: 3));
@@ -660,7 +704,11 @@ void main() {
       expect(find.descendant(of: dlg, matching: find.text(kHardForgetOk)), findsOneWidget);
       expect(find.descendant(of: dlg, matching: find.text(kLevelsForgetAllNote)), findsNothing);
       for (final name in ['JANE', 'ZED', 'Tim', 'Grace', 'Amina', 'KPLC']) {
-        expect(find.descendant(of: dlg, matching: find.textContaining(name)), findsNothing, reason: name);
+        expect(
+          find.descendant(of: dlg, matching: find.textContaining(name)),
+          findsNothing,
+          reason: name,
+        );
       }
       await t.tap(find.byKey(const Key('forgetAllConfirm')));
       await t.pump();
@@ -716,7 +764,9 @@ void main() {
       debugAutoRecordUiOverride = false;
       final r = _Rig();
       await r.seed();
-      await r.store.saveRule(hardTestRule('JANE ATIENO', type: ReceiverType.pochi, name: 'JANE ATIENO', level: RuleLevel.askFirst, categoryId: 1));
+      await r.store.saveRule(
+        hardTestRule('JANE ATIENO', type: ReceiverType.pochi, name: 'JANE ATIENO', level: RuleLevel.askFirst, categoryId: 1),
+      );
       final m = await seeded();
       await pumpPage(t, r, m, cleanup: RuleCleanup(r.store));
       await t.tap(find.byKey(const Key('rememberedForgetAll')));

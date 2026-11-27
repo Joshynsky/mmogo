@@ -392,13 +392,13 @@ class _Fab extends StatelessWidget {
           decoration: BoxDecoration(color: palette.card, shape: BoxShape.circle),
           child: Material(
             key: const Key('primaryFab'),
-            color: palette.primary,
+            color: palette.addFill,
             // On Add itself: a ring in the deep ocean shade marks "you are here".
             shape: CircleBorder(side: active ? BorderSide(color: palette.deep, width: 2) : BorderSide.none),
             child: InkWell(
               customBorder: const CircleBorder(),
               onTap: onTap,
-              child: SizedBox(width: 54, height: 54, child: Icon(Icons.add, color: palette.onPrimary, size: 26)),
+              child: SizedBox(width: 54, height: 54, child: Icon(Icons.add, color: palette.addInk, size: 26)),
             ),
           ),
         ),

@@ -42,7 +42,7 @@ void main() {
     },
     actions: () => [
       A11yAction('Got it', _k('whatsNewGotIt')),
-      if (!kAutoReadCompiled) A11yAction('Open the mmogo page', _k('whatsNewBannerLink')),
+      A11yAction('Install guide', _k('whatsNewBannerLink')),
     ],
   );
 
@@ -53,15 +53,18 @@ void main() {
     open: (t) async {
       await t.tap(_k('openPager'));
       await a11ySettle(t);
-      await t.ensureVisible(_k('whatsNewItemHead-suggest'));
+      await t.ensureVisible(_k('whatsNewItemHead-${kAutoReadCompiled ? 'autorecord' : 'search'}'));
       await a11ySettle(t);
-      await t.tap(_k('whatsNewItemHead-suggest'));
-      await a11ySettle(t);
+      // The first row starts open (PM 27-11-2026 order), so only tap a row that is closed.
+      if (_k('whatsNewItemBody-${kAutoReadCompiled ? 'autorecord' : 'search'}').evaluate().isEmpty) {
+        await t.tap(_k('whatsNewItemHead-${kAutoReadCompiled ? 'autorecord' : 'search'}'));
+        await a11ySettle(t);
+      }
     },
     actions: () => [
       A11yAction('Got it', _k('whatsNewGotIt')),
-      A11yAction('Open in Settings', _k('whatsNewCalSettings')),
-      if (!kAutoReadCompiled) A11yAction('Open the mmogo page', _k('whatsNewBannerLink')),
+      if (kAutoReadCompiled) A11yAction('Open in Settings', _k('whatsNewCalSettings')),
+      A11yAction('Install guide', _k('whatsNewBannerLink')),
     ],
   );
 

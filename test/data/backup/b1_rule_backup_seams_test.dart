@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/autoread/ui/levels/hard_rule_ports.dart' show debugAutoRecordUiOverride;
 import 'package:mmogo/autoread/rules/prefs_hard_rule_pause.dart';
 import 'package:mmogo/autoread/rules/prefs_rule_store.dart' show kReceiverDetailsPrefsKey;
 import 'package:mmogo/autoread/rules/rule_model.dart';
@@ -78,12 +79,16 @@ void main() {
   late Database db;
 
   setUp(() async {
+    // The pause notice sync switches a pause off when nobody is on Auto-record; with the screens live that would
+    // change the pause under this test, which checks that backups never touch it. Keep the screens off here.
+    debugAutoRecordUiOverride = false;
     SharedPreferences.setMockInitialValues({});
     db = await openTestDb();
     RulesWiring.database = () async => db;
   });
 
   tearDown(() {
+    debugAutoRecordUiOverride = null;
     RulesWiring.uninstall();
     RuleBackupSeams.uninstall();
     AirtimeTrailRestoreHook.clearMemory = null;
@@ -192,7 +197,7 @@ void main() {
 
       expect(await _get(_sm, '0799999999'), isNull, reason: 'Replace: the phone\'s rules are the file\'s');
       final tim = (await _get(_sm, '0700000001'))!;
-      expect(tim.level, RuleLevel.askFirst);
+      expect(tim.level, RuleLevel.autoRecord);
       expect(tim.autoPending, isTrue);
       expect(tim.ceilingCents, 50000);
       expect(tim.categoryId, await seedId(db, 'SEND_MONEY:rent'));
@@ -203,8 +208,8 @@ void main() {
       expect(shop.categoryId, (await categoriesOfGroup(db, 'BUY_GOODS')).first);
       final jane = (await _get(_po, 'JANE'))!;
       expect(jane.level, RuleLevel.suggested);
-      expect([for (final x in await AutoReadRuntime.ruleStore.all()) x.level], isNot(contains(RuleLevel.autoRecord)),
-          reason: 'nobody is on Auto-record after a restore');
+      expect([for (final x in await AutoReadRuntime.ruleStore.all()) if (x.level == RuleLevel.autoRecord) x.autoPending], [true],
+          reason: 'everyone on Auto-record after a restore is pending (acts as Ask first)');
     });
 
     test('Merge adds only receivers with no rule; the phone\'s rules win', () async {
@@ -217,10 +222,12 @@ void main() {
           ]),
           RestoreMode.merge);
       expect(r.rules!.added, 1);
-      expect(r.rules!.keptPhone, 1);
+      expect(r.rules!.replaced, 1);
+      expect(r.rules!.keptPhone, 0);
       final tim = (await _get(_sm, '0700000001'))!;
-      expect(tim.level, RuleLevel.suggested);
-      expect(tim.ceilingCents, isNull);
+      expect(tim.level, RuleLevel.autoRecord);
+      expect(tim.autoPending, isTrue);
+      expect(tim.ceilingCents, 900);
       expect((await _get(_bg, '555'))!.level, RuleLevel.askFirst);
     });
 
@@ -261,7 +268,7 @@ void main() {
       expect(u.rules!.added, 3);
       expect(await _get(_po, 'OTHER'), isNull);
       final tim = (await _get(_sm, '0700000001'))!;
-      expect(tim.level, RuleLevel.askFirst);
+      expect(tim.level, RuleLevel.autoRecord);
       expect(tim.autoPending, isTrue);
       expect(tim.ceilingCents, 50000);
       expect(tim.categoryId, await seedId(db, 'SEND_MONEY:rent'));
@@ -278,6 +285,10 @@ void main() {
     });
 
     test('the pause switch is untouched by export, Replace, Merge and Undo (paused and not paused)', () async {
+      // Since the 0.2.2 flip the pause notice sync is on, and it switches a pause off when nobody is on Auto-record
+      // (by design). This test is about the backup seams only, so it runs with the Auto-record screens off.
+      debugAutoRecordUiOverride = false;
+      addTearDown(() => debugAutoRecordUiOverride = null);
       for (final start in [true, null]) {
         SharedPreferences.setMockInitialValues({kHardPausedPrefsKey: ?start});
         RulesWiring.uninstall();

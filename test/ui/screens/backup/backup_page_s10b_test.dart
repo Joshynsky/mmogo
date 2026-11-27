@@ -26,8 +26,7 @@ void main() {
   });
 
   /// The Show which button INSIDE the open sheet (the card behind has one too).
-  Finder sheetShowWhich() =>
-      find.descendant(of: find.byType(BottomSheet), matching: find.byKey(const Key('showWhichButton')));
+  Finder sheetShowWhich() => find.descendant(of: find.byType(BottomSheet), matching: find.byKey(const Key('showWhichButton')));
 
   Future<void> backUp(WidgetTester t) async {
     await t.ensureVisible(find.byKey(const Key('backUpNowButton')));
@@ -39,7 +38,9 @@ void main() {
   }
 
   group('page order and fixed lines', () {
-    testWidgets('top to bottom: header, Back up now, Auto-backup, Restore (D7 line directly above its button), Privacy link (F3 order)', (t) async {
+    testWidgets('top to bottom: header, Back up now, Auto-backup, Restore (D7 line directly above its button), Privacy link (F3 order)', (
+      t,
+    ) async {
       await pumpBackupPage(t);
       double y(Finder f) => t.getTopLeft(f.first).dy;
       final order = [
@@ -56,11 +57,11 @@ void main() {
       }
     });
 
-    testWidgets('D7: "A backup made with 0.1.2 cannot be restored by 0.1.1 or older." is on the Backup page', (t) async {
+    testWidgets('D7: the 0.2.2 restore direction is on the Backup page', (t) async {
       await pumpBackupPage(t);
-      expect(kBackupNotRestorableByOlder, 'A backup made with 0.1.2 cannot be restored by 0.1.1 or older.');
-      expect(find.text(kBackupNotRestorableByOlder), findsOneWidget);
-      expect(find.text(kBackupNotRestorableByOlderV4), findsOneWidget); // S12: 0.2.0 backups (schema 4)
+      expect(kBackupNotRestorableByOlderV6, 'A backup made with 0.2.2 cannot be restored by 0.2.1 or older.');
+      expect(find.text(kBackupNotRestorableByOlderV6), findsOneWidget);
+      expect(find.text(kBackupOlderStillRestoreV6), findsOneWidget);
     });
 
     testWidgets('D7 is not on the Privacy page', (t) async {
@@ -81,9 +82,11 @@ void main() {
 
   group('A5 / A6: flat boxes', () {
     bool striped(WidgetTester t, Finder text) {
-      final box = find.ancestor(of: text, matching: find.byType(Container)).evaluate().map((e) => e.widget as Container).firstWhere(
-        (c) => c.decoration is BoxDecoration && (c.decoration! as BoxDecoration).color == AppPalette.light.highlight,
-      );
+      final box = find
+          .ancestor(of: text, matching: find.byType(Container))
+          .evaluate()
+          .map((e) => e.widget as Container)
+          .firstWhere((c) => c.decoration is BoxDecoration && (c.decoration! as BoxDecoration).color == AppPalette.light.highlight);
       return (box.decoration! as BoxDecoration).border != null;
     }
 
@@ -92,24 +95,27 @@ void main() {
       expect(striped(t, find.text(kBackupNotEncryptedShort)), isFalse);
     });
 
-    testWidgets('R42 / R46: the not-encrypted warning appears ONCE (Back up now card), not on the Auto-backup card or in the "Before you back up" dialog', (t) async {
-      SharedPreferences.setMockInitialValues({
-        'auto_backup_enabled': true,
-        'auto_backup_folder_uri': 'content://tree/x',
-        'auto_backup_folder_name': 'Folder',
-      });
-      await pumpBackupPage(t);
-      expect(find.text(kBackupNotEncryptedShort), findsOneWidget);
-      expect(find.text(kBackupFileWarning), findsNothing);
-      await t.tap(find.byKey(const Key('backUpNowButton')));
-      await t.pumpAndSettle();
-      expect(find.text('Before you back up'), findsOneWidget);
-      // The dialog keeps only its own share-sheet line; the page behind it still shows the warning once.
-      expect(find.text(kBackupNotEncryptedShort), findsOneWidget);
-      expect(find.text(kBackupFileWarning), findsNothing);
-      expect(find.descendant(of: find.byType(PaletteAlertDialog), matching: find.textContaining('encrypted')), findsNothing);
-      expect(find.descendant(of: find.byType(PaletteAlertDialog), matching: find.textContaining('Android')), findsOneWidget);
-    });
+    testWidgets(
+      'R42 / R46: the not-encrypted warning appears ONCE (Back up now card), not on the Auto-backup card or in the "Before you back up" dialog',
+      (t) async {
+        SharedPreferences.setMockInitialValues({
+          'auto_backup_enabled': true,
+          'auto_backup_folder_uri': 'content://tree/x',
+          'auto_backup_folder_name': 'Folder',
+        });
+        await pumpBackupPage(t);
+        expect(find.text(kBackupNotEncryptedShort), findsOneWidget);
+        expect(find.text(kBackupFileWarning), findsNothing);
+        await t.tap(find.byKey(const Key('backUpNowButton')));
+        await t.pumpAndSettle();
+        expect(find.text('Before you back up'), findsOneWidget);
+        // The dialog keeps only its own share-sheet line; the page behind it still shows the warning once.
+        expect(find.text(kBackupNotEncryptedShort), findsOneWidget);
+        expect(find.text(kBackupFileWarning), findsNothing);
+        expect(find.descendant(of: find.byType(PaletteAlertDialog), matching: find.textContaining('encrypted')), findsNothing);
+        expect(find.descendant(of: find.byType(PaletteAlertDialog), matching: find.textContaining('Android')), findsOneWidget);
+      },
+    );
 
     testWidgets('the W1 box in the auto-backup setup sheet has no stripe', (t) async {
       await pumpBackupPage(t);
@@ -192,9 +198,7 @@ void main() {
       await backUp(t);
       await t.tap(sheetShowWhich());
       await t.pumpAndSettle();
-      final texts = t
-          .widgetList<Text>(find.descendant(of: find.byType(BottomSheet), matching: find.byType(Text)))
-          .map((w) => w.data ?? '');
+      final texts = t.widgetList<Text>(find.descendant(of: find.byType(BottomSheet), matching: find.byType(Text))).map((w) => w.data ?? '');
       for (final d in texts) {
         if (d == kBackupFilesApp) continue;
         // "saved receivers" is a noun, not a claim about the file.
@@ -221,10 +225,7 @@ void main() {
     });
 
     testWidgets('a category or saved receiver left out says "items", not "entries"', (t) async {
-      final rows = [
-        ...fakeSkippedEntries(1),
-        const SkippedRowInfo(kind: SkipKind.category, reason: SkipReason.cascaded),
-      ];
+      final rows = [...fakeSkippedEntries(1), const SkippedRowInfo(kind: SkipKind.category, reason: SkipReason.cascaded)];
       final rig = FakeExportRig(export: fakeExport(rows: rows));
       await pumpBackupPage(t, flow: rig.flow());
       await backUp(t);
@@ -349,10 +350,7 @@ void main() {
       final rig = FakeExportRig();
       await pumpBackupPage(t, flow: rig.flow());
       await backUp(t);
-      expect(
-        t.getSemantics(find.byKey(const Key('backupSheetTitle'))),
-        matchesSemantics(label: kBackupSharedTitle, isHeader: true),
-      );
+      expect(t.getSemantics(find.byKey(const Key('backupSheetTitle'))), matchesSemantics(label: kBackupSharedTitle, isHeader: true));
       h.dispose();
     });
   });

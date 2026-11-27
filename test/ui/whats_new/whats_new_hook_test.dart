@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/autoread/autoread_feature.dart';
 import 'package:mmogo/ui/copy/whats_new_copy.dart';
 import 'package:mmogo/ui/copy/whats_new_pager_copy.dart';
 import 'package:mmogo/ui/whats_new/whats_new_hook.dart';
@@ -82,8 +83,10 @@ Future<void> _openRow(WidgetTester tester, String id) async {
   final head = find.byKey(Key('whatsNewItemHead-$id'));
   await tester.ensureVisible(head);
   await tester.pumpAndSettle();
-  await tester.tap(head);
-  await tester.pumpAndSettle();
+  if (find.byKey(Key('whatsNewItemBody-$id')).evaluate().isEmpty) {
+    await tester.tap(head);
+    await tester.pumpAndSettle();
+  }
 }
 
 void main() {
@@ -92,7 +95,7 @@ void main() {
       await _pump(tester, seen: '0.1.1');
       expect(find.byKey(_pager), findsOneWidget);
       expect(find.text(kWhatsNewPagerTitle), findsOneWidget);
-      expect(find.text(kWhatsNewWithdrawalsTitle), findsOneWidget);
+      expect(find.text(kWhatsNewBlackTitle), findsOneWidget);
     });
 
     testWidgets('an upgrade from 0.1.0 (nothing stored, onboarding done) sees it', (tester) async {
@@ -188,7 +191,7 @@ void main() {
 
     testWidgets('the Settings route button opens its route and marks nothing seen', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1');
-      await _openRow(tester, 'suggest');
+      await _openRow(tester, 'autorecord');
       await tester.tap(find.byKey(const Key('whatsNewCalSettings')));
       await tester.pumpAndSettle();
       expect(rig.opened, ['settings']);
@@ -196,7 +199,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsOneWidget);
       expect(rig.written, isEmpty);
-    });
+    }, skip: !kAutoReadCompiled);
   });
 
   test('the retired 0.1.1 texts are gone from the shared copy', () {

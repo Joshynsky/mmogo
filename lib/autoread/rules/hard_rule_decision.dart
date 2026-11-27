@@ -9,7 +9,7 @@ import '../../domain/parsing/parsed_sms_fields.dart';
 import 'rule_model.dart';
 
 /// Master dormancy guard. A test pins it false, and pins the Kotlin mirror to the same value.
-const bool autoRecordLive = false;
+const bool autoRecordLive = true;
 
 enum HardRuleDecision {
   /// Record with no tap.

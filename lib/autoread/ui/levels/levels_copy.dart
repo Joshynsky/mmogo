@@ -103,18 +103,18 @@ const String kLevelsHelpAirtimeIntro = 'Airtime has two switches instead of leve
 // WORDING-DRAFT (moved from under the switches; was autoRecordExplainTap, now says both labels)
 const String kLevelsHelpAirtimeTap = 'You tap Parse on each message, then mmogo files it under the category of the switch: For myself or For another number.';
 // WORDING-DRAFT
-const String kLevelsHelpPrivacy = 'Everything here stays on this phone. It is never in backups and never shared.';
+const String kLevelsHelpPrivacy = 'Everything here stays on this phone. It is in your backups, so keep your backup files private. mmogo never sends it anywhere.';
 // WORDING-DRAFT (spoken name of the "?" is the page's: About this page)
 
 // ---- Settings rows (mock set_sugg, set_after) ----
 // WORDING-DRAFT (section label)
 const String kSuggestSectionLabel = 'Suggestions';
 // WORDING-DRAFT (0.2.1 offers "Ask first", not Auto-record)
-const String kSuggestSwitchLabel = 'Suggest asking first';
+const String kSuggestSwitchLabel = 'Offer Ask first';
 // WORDING-DRAFT
 const String kSuggestSwitchSub = 'After you record the same person and category several times in a row, mmogo offers to ask first next time.';
 // WORDING-DRAFT (mock set_after)
-const String kSuggestAfterLabel = 'Suggest after';
+const String kSuggestAfterLabel = 'Offer after N in a row';
 // WORDING-DRAFT (mock set_after_sub)
 const String kSuggestAfterSub = 'Successful records in a row, 2 to 10.';
 /// WORDING-DRAFT (mock set_after_opt)

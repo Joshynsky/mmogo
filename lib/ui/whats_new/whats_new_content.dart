@@ -2,6 +2,6 @@
 /// (and its copy) when a release has something to tell; a version not listed
 /// never shows the pop-up. 0.1.2 S11a: the 0.1.1 text was retired (it is no
 /// longer true), so only 0.1.2 is listed.
-const _versionsWithContent = {'0.1.2', '0.2.0', '0.2.1'};
+const _versionsWithContent = {'0.1.2', '0.2.0', '0.2.1', '0.2.2'};
 
 bool hasWhatsNewContentFor(String versionName) => _versionsWithContent.contains(versionName);

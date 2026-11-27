@@ -7,6 +7,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mmogo/autoread/autoread_feature.dart';
 import 'package:mmogo/data/updates/release_info.dart';
 import 'package:mmogo/data/updates/update_check_service.dart';
 import 'package:mmogo/data/updates/updates_inbox.dart';
@@ -15,6 +16,7 @@ import 'package:mmogo/ui/copy/data_copy.dart';
 import 'package:mmogo/ui/copy/whats_new_pager_copy.dart';
 import 'package:mmogo/ui/screens/updates/updates_screen.dart';
 import 'package:mmogo/ui/whats_new/whats_new_pager.dart';
+import 'package:mmogo/ui/whats_new/whats_new_items.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../data/updates/fake_update_check_client.dart';
@@ -117,7 +119,7 @@ void main() {
       expect(rig.inbox.notices, isEmpty);
       expect(find.byKey(_entry), findsOneWidget);
       expect(find.text(kWhatsNewPagerTitle), findsOneWidget);
-      expect(find.text(kWhatsNewEntryBody), findsOneWidget);
+      expect(find.text(whatsNewEntryBody()), findsOneWidget);
       expect(find.byKey(const Key('updatesEmpty')), findsOneWidget);
       expect(find.byKey(const Key('updatesFootnote')), findsNothing);
     });
@@ -168,14 +170,14 @@ void main() {
   });
 
   group('the NEW pill', () {
-    testWidgets('shown while the seen version is not 0.2.1', (tester) async {
+    testWidgets('shown while the seen version is not 0.2.2', (tester) async {
       await _pump(tester, seen: '0.1.1');
       await _openUpdates(tester);
       expect(find.byKey(_pill), findsOneWidget);
     });
 
-    testWidgets('not shown once 0.2.1 is stored as seen', (tester) async {
-      await _pump(tester, seen: '0.2.1');
+    testWidgets('not shown once 0.2.2 is stored as seen', (tester) async {
+      await _pump(tester, seen: '0.2.2');
       await _openUpdates(tester);
       expect(find.byKey(_pill), findsNothing);
       expect(find.byKey(_entry), findsOneWidget);
@@ -231,11 +233,12 @@ void main() {
       expect(rig.written, ['0.1.1']);
     });
 
-    testWidgets('Open in Settings pushes the stub route over the page; Back returns to the open Suggested categories row; nothing more is marked', (tester) async {
+    testWidgets('Open in Settings pushes the stub route over the page; Back returns to the open Auto-record row; nothing more is marked', (tester) async {
       final rig = await _pump(tester, seen: '0.1.1');
       await _openUpdates(tester);
       await _openPager(tester);
-      await tester.tap(find.byKey(const Key('whatsNewItemHead-suggest')));
+      // Auto-record is the first row and starts open.
+      await tester.ensureVisible(find.byKey(const Key('whatsNewCalSettings')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('whatsNewCalSettings')));
       await tester.pumpAndSettle();
@@ -244,9 +247,9 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byKey(_pager), findsOneWidget);
-      expect(find.byKey(const Key('whatsNewItemBody-suggest')), findsOneWidget);
+      expect(find.byKey(const Key('whatsNewItemBody-autorecord')), findsOneWidget);
       expect(rig.written, ['0.1.1']); // opening the pages is what counted as seen, once
       expect(WhatsNewProcess.pillCleared, isTrue);
-    });
+    }, skip: !kAutoReadCompiled);
   });
 }

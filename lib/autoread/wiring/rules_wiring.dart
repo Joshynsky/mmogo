@@ -23,6 +23,7 @@ import 'dart:async';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart' show Database;
 
 import '../../data/db/app_database.dart';
+import '../ui/settings/settings_search_autoread_rows.dart';
 import '../../data/db/ledger_hooks.dart';
 import '../../data/prefs/app_prefs.dart';
 import '../bridge/pause_notice_bridge.dart';
@@ -105,6 +106,7 @@ class RulesWiring {
   /// Safe to call twice. Sets the hooks, [LevelsDeps.instance] and [suggestions].
   static void install() {
     if (installed) return;
+    installSettingsSearchRows(); // the Settings search finds Reading messages and Auto-record rows
     final controller = suggestions ??= SuggestionsController(
       engine: AutoReadRuntime.ruleEngine,
       store: AutoReadRuntime.ruleStore,
@@ -166,6 +168,7 @@ class RulesWiring {
     AppPrefs.onCaptureIdentityWritten = null;
     RuleBackupSeams.uninstall(); // both rule seams go together
     uninstallRestoreRuleMessages(); // and the restore result's rule notes with them
+    uninstallSettingsSearchRows();
     LevelsDeps.instance = null;
     pauseNotice?.dispose(); // the notice itself stays (it must stay while mmogo is closed)
     pauseNotice = null;

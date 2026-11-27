@@ -17,7 +17,7 @@ import 'hard_rule_reset_footer.dart';
 import 'levels_deps.dart';
 import 'levels_setup_open.dart';
 import 'levels_tab.dart' show LevelsSlots;
-import 'review_line.dart';
+import 'restored_banner.dart';
 
 /// The slots for [d]. Empty while the Auto-record screens are off or there are no deps. The pause switch
 /// needs a pause port (none = not drawn). The review line is drawn by the tab only while "Record receiver
@@ -34,7 +34,7 @@ LevelsSlots hardRuleSlotsFor(LevelsDeps? d) {
             child: HardRulePauseCard(key: const Key('slotPauseSwitch'), port: pause, bulk: bulk)),
     reviewLine: (_) => CollapsingPadding(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-        child: ReviewLine(key: const Key('slotReviewLine'), bulk: bulk, now: d.now)),
+        child: RestoredBanner(key: const Key('slotReviewLine'), bulk: bulk, now: d.now)),
     bottomBar: (_, onSetUp) => HardRuleResetFooter(key: const Key('slotBottomBar'), bulk: bulk, onSetUp: onSetUp),
     onSetUp: setUpActionFor(d),
   );

@@ -24,7 +24,10 @@ String _code(String src) => src
 /// Every quoted string literal in [src] (single or double quotes, no
 /// interpolation handling: good enough to find words).
 List<String> _literals(String src) => [
-  for (final m in RegExp(r"'((?:[^'\\\n]|\\.)*)'|" r'"((?:[^"\\\n]|\\.)*)"').allMatches(_code(src)))
+  for (final m in RegExp(
+    r"'((?:[^'\\\n]|\\.)*)'|"
+    r'"((?:[^"\\\n]|\\.)*)"',
+  ).allMatches(_code(src)))
     (m.group(1) ?? m.group(2))!,
 ];
 
@@ -48,33 +51,84 @@ List<String> _s10bStrings() {
     const SkippedRowInfo(kind: SkipKind.savedReceiver, reason: SkipReason.couldNotRead),
   ];
   return [
-    kBackupSharedTitle, kBackupFilesApp, kBackupNotSharedLine, kShowWhich, kHideList, kShowAll, kDone,
-    kStillInApp, kOnlyDateAndType, kShowingFirst20, kRowUnreadableEntry, kRowCategory, kRowSavedReceiver,
-    kReasonMissingDetail, kReasonNotAllowed, kReasonCouldNotRead, kReasonCascaded,
-    kLostWarningTitle, kLostTickLabel, kContinue, kCancel, kChangedWhileChecking, kReplaceChecking,
-    kReplaceSafetyCopyFailed, kUndoRestoresRest, kReplaceProgressTitle, kStepValidating, kStepSafetyCopy,
-    kStepWriting, kRestoreSlow, kLeftoverTitle, kLeftoverCountedNote, kLeftoverWhatToDo, kOldFolderTitle,
-    kOldFolderBody, kStopUsingIt, kKeepAccess, kKeepAccessHint, kOldFolderGroup, kFolderWorking,
+    kBackupSharedTitle,
+    kBackupFilesApp,
+    kBackupNotSharedLine,
+    kShowWhich,
+    kHideList,
+    kShowAll,
+    kDone,
+    kStillInApp,
+    kOnlyDateAndType,
+    kShowingFirst20,
+    kRowUnreadableEntry,
+    kRowCategory,
+    kRowSavedReceiver,
+    kReasonMissingDetail,
+    kReasonNotAllowed,
+    kReasonCouldNotRead,
+    kReasonCascaded,
+    kLostWarningTitle,
+    kLostTickLabel,
+    kContinue,
+    kCancel,
+    kChangedWhileChecking,
+    kReplaceChecking,
+    kReplaceSafetyCopyFailed,
+    kUndoRestoresRest,
+    kReplaceProgressTitle,
+    kStepValidating,
+    kStepSafetyCopy,
+    kStepWriting,
+    kRestoreSlow,
+    kLeftoverTitle,
+    kLeftoverCountedNote,
+    kLeftoverWhatToDo,
+    kOldFolderTitle,
+    kOldFolderBody,
+    kStopUsingIt,
+    kKeepAccess,
+    kKeepAccessHint,
+    kOldFolderGroup,
+    kFolderWorking,
     ...kRestoredSettingLabels.values,
     backupSharedCountsLine(1284, 17, 42), backupSharedCountsLine(1, 1, 1),
-    backupLeftOutLine(3, allEntries: true), backupLeftOutLine(1, allEntries: false),
+    backupLeftOutLine(3, allEntries: true),
+    backupLeftOutLine(1, allEntries: false),
     backupTidiedLine(1), backupTidiedLine(4),
     for (final n in [0, 1, 3, 200]) ...[notIncludedTitle(n), lostWarningListTitle(n), lostResultListTitle(n)],
     moreNotShown(180),
     for (final n in [1, 3]) ...[
-      lostWarningBody(n, allEntries: true), lostWarningBody(n, allEntries: false),
-      replaceUndoLostNote(n), resultUndoneLostNote(n), lostForGoodLine(n, 'categories'),
-      leftoverKeepLabel(n), leftoverDeleteLabel(n), leftoverContinueKeep(n), keptToast(n), deletedToast(n),
+      lostWarningBody(n, allEntries: true),
+      lostWarningBody(n, allEntries: false),
+      replaceUndoLostNote(n),
+      resultUndoneLostNote(n),
+      lostForGoodLine(n, 'categories'),
+      leftoverKeepLabel(n),
+      leftoverDeleteLabel(n),
+      leftoverContinueKeep(n),
+      keptToast(n),
+      deletedToast(n),
     ],
     keptAndLostSentence(live: 60, included: 57, lost: 3),
-    replaceCountsLine(60, 3, 7), replaceRestoredLine(187, 0), replaceRestoredLine(187, 3),
+    replaceCountsLine(60, 3, 7),
+    replaceRestoredLine(187, 0),
+    replaceRestoredLine(187, 3),
     settingsRestoredLine(const ['Colour palette']), deletedPartlyToast(4, 2),
     leftoverBody(1, DateTime(2026, 9, 1), DateTime(2026, 9, 1)),
-    leftoverBody(3, DateTime(2026, 9, 1), DateTime(2026, 9, 3)), leftoverBody(3, null, null),
+    leftoverBody(3, DateTime(2026, 9, 1), DateTime(2026, 9, 3)),
+    leftoverBody(3, null, null),
     for (final r in rows) ...[skippedRowText(r, showReason: true), skippedRowText(r, showReason: false)],
     // data_copy.dart: new or changed in S10b
-    kBackupNotRestorableByOlder, kWhyRestoreAsks, kReplaceOptionHelp, kReplaceOptionTitle, kReplaceConfirmTitle,
-    kRememberedRecipientsNotInBackup, replaceRemovesLine(64, 3, 7), resultUndoneLostNote(5), kResultUndoneNote,
+    kBackupNotRestorableByOlder,
+    kWhyRestoreAsks,
+    kReplaceOptionHelp,
+    kReplaceOptionTitle,
+    kReplaceConfirmTitle,
+    kRememberedRecipientsNotInBackup,
+    replaceRemovesLine(64, 3, 7),
+    resultUndoneLostNote(5),
+    kResultUndoneNote,
     kResultSafetyCopyStillThere, kAutoBackupStuckLine,
   ];
 }
@@ -171,11 +225,7 @@ void main() {
           if (f.readAsStringSync().contains('kBackupNotRestorableByOlder')) _p(f),
       ]..sort();
       // 0.2.0: the What's new Backups item is back (via the V4 constant); still no Privacy page.
-      expect(users, [
-        'lib/ui/copy/data_copy.dart',
-        'lib/ui/copy/whats_new_pager_copy.dart',
-        'lib/ui/screens/backup/backup_section.dart',
-      ]);
+      expect(users, ['lib/ui/copy/data_copy.dart', 'lib/ui/copy/whats_new_pager_copy.dart', 'lib/ui/screens/backup/backup_section.dart', 'lib/ui/whats_new/whats_new_items.dart']);
     });
   });
 
@@ -191,7 +241,22 @@ void main() {
         'lib/ui/screens/backup/restore_result_sheet.dart',
       ];
       // The last part of the interpolated name must not be a value-carrying field.
-      const bad = {'name', 'uri', 'url', 'amount', 'phone', 'code', 'label', 'counterparty', 'recipient', 'displayname', 'foldername', 'filename', 'path', 'bytes'};
+      const bad = {
+        'name',
+        'uri',
+        'url',
+        'amount',
+        'phone',
+        'code',
+        'label',
+        'counterparty',
+        'recipient',
+        'displayname',
+        'foldername',
+        'filename',
+        'path',
+        'bytes',
+      };
       final seen = <String>{};
       for (final path in files) {
         for (final lit in _literals(_read(path))) {
@@ -207,12 +272,7 @@ void main() {
     });
 
     test('a row text carries only a date, a type name and a fixed phrase', () {
-      final r = SkippedRowInfo(
-        kind: SkipKind.entry,
-        reason: SkipReason.notAllowed,
-        date: DateTime(2026, 9, 3),
-        type: 'PAYBILL',
-      );
+      final r = SkippedRowInfo(kind: SkipKind.entry, reason: SkipReason.notAllowed, date: DateTime(2026, 9, 3), type: 'PAYBILL');
       expect(skippedRowText(r, showReason: true), '03-09-2026, Paybill: a value is not allowed');
     });
 

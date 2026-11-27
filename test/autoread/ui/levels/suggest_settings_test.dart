@@ -38,18 +38,22 @@ Future<void> _pump(WidgetTester t, SuggestSettingsPort? port, {double scale = 1}
   t.view.physicalSize = const Size(390, 800);
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.reset);
-  await t.pumpWidget(AppPaletteScope(
-    controller: AppPaletteController('ocean', 'light'),
-    child: MaterialApp(
-      navigatorKey: appNavigatorKey,
-      home: Builder(
-        builder: (c) => MediaQuery(
-          data: MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)),
-          child: Scaffold(body: SingleChildScrollView(child: SuggestSettingsSection(port: port))),
+  await t.pumpWidget(
+    AppPaletteScope(
+      controller: AppPaletteController('ocean', 'light'),
+      child: MaterialApp(
+        navigatorKey: appNavigatorKey,
+        home: Builder(
+          builder: (c) => MediaQuery(
+            data: MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)),
+            child: Scaffold(
+              body: SingleChildScrollView(child: SuggestSettingsSection(port: port)),
+            ),
+          ),
         ),
       ),
     ),
-  ));
+  );
   await t.pumpAndSettle();
 }
 
@@ -81,6 +85,28 @@ void main() {
     await t.pumpWidget(const SizedBox());
     await _pump(t, _Port(n: 0));
     expect(find.textContaining(suggestAfterOption(2)), findsOneWidget);
+  });
+
+  testWidgets('renamed rows: Offer Ask first, Offer after N in a row; no Suggest wording left', (t) async {
+    await _pump(t, _Port());
+    expect(find.text('Offer Ask first'), findsOneWidget);
+    expect(find.text('Offer after N in a row'), findsOneWidget);
+    expect(find.text('Suggest asking first'), findsNothing);
+    expect(find.text('Suggest after'), findsNothing);
+  });
+
+  testWidgets('showLabel false: no second SUGGESTIONS title', (t) async {
+    await t.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(child: SuggestSettingsSection(port: _Port(), showLabel: false)),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(find.text('SUGGESTIONS'), findsNothing);
+    expect(find.text('Suggestions'), findsNothing);
+    expect(find.text(kSuggestSwitchLabel), findsOneWidget);
   });
 
   testWidgets('picker offers exactly 2..10 and stores the choice', (t) async {

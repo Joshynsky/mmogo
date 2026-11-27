@@ -10,6 +10,7 @@ import '../../widgets/pill_toast.dart';
 import '../../../app_info.dart';
 import '../../../autoread/autoread_feature.dart';
 import '../../../autoread/ui/reading_settings_section.dart';
+import '../../../autoread/ui/settings/auto_record_settings_section.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/db/export_dao.dart';
 import '../../../data/maintenance/delete_data_service.dart';
@@ -36,6 +37,10 @@ import 'adding_section.dart';
 import 'data_section.dart';
 import 'look_section.dart';
 import 'remembered_hook_row.dart';
+import 'search/settings_search_button.dart';
+import 'search/settings_search_entry.dart';
+import 'search/settings_search_overlay.dart';
+import 'settings_row_target.dart';
 
 /// Settings' coach-tour page id (the seen flag is `tour_seen_settings`).
 const settingsTourId = 'settings';
@@ -116,7 +121,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _paletteTourKey = GlobalKey();
   final _dataTourKey = GlobalKey();
   final _addingTourKey = GlobalKey();
+  final _autoTourKey = GlobalKey();
   bool _tourOffered = false;
+
+  // Search pick: the row to pulse and a counter so the same row pulses again (see settings_row_target.dart).
+  String? _pulseId;
+  int _pulseSerial = 0;
+
+  /// A search result was tapped: the row scrolls into view and pulses.
+  void _jumpTo(SettingsSearchEntry entry) {
+    if (!mounted) return;
+    setState(() {
+      _pulseId = entry.id;
+      _pulseSerial++;
+    });
+  }
 
   /// A What's new link's area, taken once when the page opens; the first-visit tour waits for
   /// another visit while it is set.
@@ -326,6 +345,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// The auto-read build passes the hook: People (in Auto-record) then replaces the Remembered row in Adding entries.
+  bool get _hasPeopleRow => widget.rememberedHook != null;
+
+  // Tour text is DRAFT (item 3 slice E, PM signs): the Adding step loses "review the names mmogo remembers" in
+  // the auto-read build (that row is People now), and the auto-read build has one more step for Auto-record.
   List<CoachStep> _tourSteps() => [
     CoachStep(
       target: _paletteTourKey,
@@ -333,7 +357,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ),
     CoachStep(
       target: _addingTourKey,
-      text: 'Suggest categories for repeat receivers, manage your categories, or review the names mmogo remembers.',
+      text: _hasPeopleRow
+          ? 'Suggest categories for repeat receivers, or manage your categories.'
+          : 'Suggest categories for repeat receivers, manage your categories, or review the names mmogo remembers.',
       onEnter: () => scrollIntoView(_addingTourKey),
       actionLabel: 'Open Manage categories',
       onAction: () async {
@@ -345,6 +371,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       },
     ),
+    if (_hasPeopleRow)
+      CoachStep(
+        target: _autoTourKey,
+        text: 'Choose who mmogo records for you, pause it, and decide when it offers to ask first.',
+        onEnter: () => scrollIntoView(_autoTourKey),
+      ),
     CoachStep(
       target: _dataTourKey,
       text: 'Back up and restore, share everything as a CSV, or bring back deleted transactions.',
@@ -372,71 +404,97 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: SecondaryScaffold(
         title: kSettingsTitle,
         followPalette: true,
+        actions: [SettingsSearchButton(onPressed: () => showSettingsSearch(context, onPick: _jumpTo))],
         // No pull-to-refresh on Settings (PM direct decision, T23 draft):
         // nothing here changes from elapsed time the way Home/Analytics do.
-        body: ListView(
-          key: const Key('settingsScroll'),
-          cacheExtent: 2000, // a linked row below the fold is built, so it can be scrolled to
-          padding: const EdgeInsets.fromLTRB(14, 6, 14, 32),
-          children: [
-            LookSection(
-              palette: palette,
-              tourKey: _paletteTourKey,
-              appearance: AppPaletteScope.of(context).appearance,
-              onAppearance: _setAppearance,
-              firstDay: _firstDay,
-              onFirstDay: _pickFirstDay,
-              monthStyle: _monthStyle,
-              onMonthStyle: _setMonthStyle,
-              yearAmounts: _yearAmounts,
-              onYearAmounts: _setYearAmounts,
-              showWithdrawals: _showWithdrawals,
-              onShowWithdrawals: _setShowWithdrawals,
-              whereStyle: _whereStyle,
-              onWhereStyle: _setWhereStyle,
+        // A Column, not a lazy list: every row is built, so a search pick can scroll to any of them.
+        body: SettingsJumpScope(
+          pulseId: _pulseId,
+          serial: _pulseSerial,
+          child: SingleChildScrollView(
+            key: const Key('settingsScroll'),
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                LookSection(
+                  palette: palette,
+                  tourKey: _paletteTourKey,
+                  appearance: AppPaletteScope.of(context).appearance,
+                  onAppearance: _setAppearance,
+                  firstDay: _firstDay,
+                  onFirstDay: _pickFirstDay,
+                  monthStyle: _monthStyle,
+                  onMonthStyle: _setMonthStyle,
+                  yearAmounts: _yearAmounts,
+                  onYearAmounts: _setYearAmounts,
+                  showWithdrawals: _showWithdrawals,
+                  onShowWithdrawals: _setShowWithdrawals,
+                  whereStyle: _whereStyle,
+                  onWhereStyle: _setWhereStyle,
+                ),
+                const SizedBox(height: 14),
+                AddingSection(
+                  palette: palette,
+                  tourKey: _addingTourKey,
+                  autoRecognize: _autoRecognize,
+                  onAutoRecognizeChanged: _loading ? null : _handleAutoRecognizeChanged,
+                  captureReceiver: _captureReceiver,
+                  onCaptureReceiverChanged: _loading ? null : _handleCaptureReceiverChanged,
+                  showFuliza: _showFuliza,
+                  onShowFulizaChanged: _loading ? null : _handleShowFulizaChanged,
+                  showRemembered: !_hasPeopleRow,
+                  highlight: _highlight,
+                ),
+                const SizedBox(height: 14),
+                if (kAutoReadCompiled) ...[
+                  HighlightPulse(active: _highlight == kSettingsTargetReading, alignment: 0, child: const ReadingSettingsSection()),
+                  const SizedBox(height: 14),
+                ],
+                if (kAutoReadCompiled || _hasPeopleRow) ...[
+                  KeyedSubtree(
+                    key: _autoTourKey,
+                    child: AutoRecordSettingsSection(
+                      people: widget.rememberedHook == null
+                          ? null
+                          : SettingsRowTarget(
+                              id: 'auto.people',
+                              alsoFor: const {'auto.airtime'}, // the airtime switches are on the People page
+                              child: HighlightPulse(
+                                active: _highlight == kSettingsTargetRemembered,
+                                child: RememberedHookRow(key: const Key('settingsRemembered'), palette: palette, hook: widget.rememberedHook!),
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                DataSection(
+                  palette: palette,
+                  tourKey: _dataTourKey,
+                  exportSubtitle: _exportSubtitle,
+                  exportEnabled: exportEnabled,
+                  onExport: _handleExport,
+                  backupSubtitle: _backupSubtitle,
+                  onBackup: _openBackup,
+                  backupPaused: _backupPaused,
+                  deleteData: widget.deleteData,
+                  restart: widget.restart,
+                  backupFlow: widget.backupFlow,
+                ),
+                const SizedBox(height: 14),
+                AboutSection(palette: palette),
+                const SizedBox(height: 14),
+                DebugUpdateSeedTap(
+                  child: Text(
+                    '${AppInfo.name} ${AppInfo.versionName} · your data stays on this phone',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11.5, color: palette.mutedInk),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
-            AddingSection(
-              palette: palette,
-              tourKey: _addingTourKey,
-              autoRecognize: _autoRecognize,
-              onAutoRecognizeChanged: _loading ? null : _handleAutoRecognizeChanged,
-              captureReceiver: _captureReceiver,
-              onCaptureReceiverChanged: _loading ? null : _handleCaptureReceiverChanged,
-              showFuliza: _showFuliza,
-              onShowFulizaChanged: _loading ? null : _handleShowFulizaChanged,
-              rememberedHook: widget.rememberedHook,
-              highlight: _highlight,
-            ),
-            const SizedBox(height: 14),
-            DataSection(
-              palette: palette,
-              tourKey: _dataTourKey,
-              exportSubtitle: _exportSubtitle,
-              exportEnabled: exportEnabled,
-              onExport: _handleExport,
-              backupSubtitle: _backupSubtitle,
-              onBackup: _openBackup,
-              backupPaused: _backupPaused,
-              deleteData: widget.deleteData,
-              restart: widget.restart,
-              backupFlow: widget.backupFlow,
-            ),
-            const SizedBox(height: 14),
-            if (kAutoReadCompiled) ...[
-              HighlightPulse(active: _highlight == kSettingsTargetReading, alignment: 0, child: const ReadingSettingsSection()),
-              const SizedBox(height: 14),
-            ],
-            AboutSection(palette: palette),
-            const SizedBox(height: 14),
-            DebugUpdateSeedTap(
-              child: Text(
-                '${AppInfo.name} ${AppInfo.versionName} · your data stays on this phone',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 11.5, color: palette.mutedInk),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

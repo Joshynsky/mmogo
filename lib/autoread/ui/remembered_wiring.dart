@@ -14,17 +14,29 @@ import '../rules/rule_cleanup.dart' show RuleCleanup;
 import 'levels/hard_rule_ports.dart' show autoRecordUi;
 import 'levels/hard_rule_slots.dart';
 import 'levels/levels_deps.dart' show LevelsDeps;
+import 'levels/levels_people_count.dart' show levelsPeopleCount;
 import 'levels/levels_tab.dart' show levelsExtraTab;
 
 /// The Settings row hook: how many of the two switches are on (0 to 2) and ONE
 /// count of kept names (a count only, never the names). [memory] is a test seam.
-RememberedRowHook rememberedRowHookFor(AirtimeAutoController c, {RecipientMemory? memory}) =>
+/// [levels] (null = [LevelsDeps.instance]) gives the count of people with rules; none = no people part.
+RememberedRowHook rememberedRowHookFor(AirtimeAutoController c, {RecipientMemory? memory, LevelsDeps? levels}) =>
     RememberedRowHook(
       changes: c,
-      load: () async => RememberedRowInfo(
-        autoOn: (c.on ? 1 : 0) + (c.onOther ? 1 : 0),
-        names: (await (memory ?? RecipientMemory()).list()).length,
-      ),
+      load: () async {
+        final d = levels ?? LevelsDeps.instance;
+        int? people;
+        if (d != null) {
+          try {
+            people = await levelsPeopleCount(d);
+          } catch (_) {}
+        }
+        return RememberedRowInfo(
+          autoOn: (c.on ? 1 : 0) + (c.onOther ? 1 : 0),
+          names: (await (memory ?? RecipientMemory()).list()).length,
+          people: people,
+        );
+      },
     );
 
 /// The Remembered page with its second tab. [args] is the route argument

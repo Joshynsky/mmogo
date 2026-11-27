@@ -43,15 +43,16 @@ class RestoredRule {
   final String key;
   final String name;
 
-  /// 0 Suggested or 1 Ask first only: never 2.
+  /// 0 Suggested, 1 Ask first, or 2 Auto-record (always with [autoPending]; never 2 on a Paybill).
   final int level;
   final int? categoryId;
   final int? ceilingCents;
 
-  /// Came back as Ask first from Auto-record (or was already pending): waits for the person.
+  /// Level 2 restored from the file, or Ask first that was already pending: waits for the person
+  /// (acts as Ask first until Keep).
   final bool autoPending;
 
-  /// The file had Auto-record here (counted as "Auto-record restored as Ask first").
+  /// The file had Auto-record here (counted in `autoRecordAsAskFirst`: restored, waiting for Keep).
   final bool wasAutoRecord;
 
   /// The file had Auto-record on a Paybill (counted separately: it can never be Auto-record).
@@ -67,7 +68,8 @@ class RulesRestorePlan {
   const RulesRestorePlan({required this.replace, required this.hasSection, required this.rows});
 
   /// Replace: the phone's rules are replaced by [rows] (none = the phone ends with no rules).
-  /// Merge: the phone's rules stay; a row is added only for a receiver (type + key) with none.
+  /// Merge: the phone's rules stay, except a phone rule at Suggested, which the file's row replaces;
+  /// a row is added for a receiver with none; a phone Ask first / Auto-record rule is never touched.
   final bool replace;
 
   /// The file carried a `receiver_rules` section (schema >= 9).
@@ -80,6 +82,8 @@ class RulesRestoreOutcome {
   const RulesRestoreOutcome({
     this.added = 0,
     this.keptPhone = 0,
+    this.replaced = 0,
+    this.keptLocalNames = const <String>[],
     this.droppedForPrivacy = 0,
     this.skippedOverCap = 0,
     this.refused = 0,
@@ -95,8 +99,15 @@ class RulesRestoreOutcome {
   /// Rules written.
   final int added;
 
-  /// Merge: file rules not added because the phone already has a rule for that receiver.
+  /// Merge: file rules not used because the phone already has an Ask first or Auto-record rule for
+  /// that receiver (the phone's stays). Equals [keptLocalNames].length.
   final int keptPhone;
+
+  /// Merge: phone rules at Suggested that the file's rule replaced (not counted in [added]).
+  final int replaced;
+
+  /// Merge: the people whose phone rule stayed (display name, in file order), for the result sheet.
+  final List<String> keptLocalNames;
 
   /// File rules not stored because "Record receiver details" is OFF.
   final int droppedForPrivacy;
@@ -107,10 +118,11 @@ class RulesRestoreOutcome {
   /// Rules the store refused for another reason (should not happen).
   final int refused;
 
-  /// Written rules that were Auto-record in the file and are now Ask first, waiting.
+  /// Written rules that were Auto-record in the file: restored at Auto-record, waiting for Keep
+  /// (behave as Ask first meanwhile). The name is kept from 0.2.1; it is the banner's N.
   final int autoRecordAsAskFirst;
 
-  /// Written Paybill rules that were Auto-record in the file and are now Ask first.
+  /// Written Paybill rules that were Auto-record in the file and are Ask first (a Paybill never holds it).
   final int paybillAsAskFirst;
 
   /// Replace: the phone's own rules were removed first.
@@ -122,7 +134,7 @@ class RulesRestoreOutcome {
   final bool failed;
 
   @override
-  String toString() => 'RulesRestoreOutcome(added: $added, keptPhone: $keptPhone, '
+  String toString() => 'RulesRestoreOutcome(added: $added, keptPhone: $keptPhone, replaced: $replaced, '
       'droppedForPrivacy: $droppedForPrivacy, overCap: $skippedOverCap, refused: $refused, '
       'autoAsAskFirst: $autoRecordAsAskFirst, paybill: $paybillAsAskFirst, '
       'cleared: $phoneRulesCleared, failed: $failed)';
@@ -209,7 +221,7 @@ RulesRestorePlan planRulesRestore(ValidatedBackup file, RestoreMode mode, RuleCa
     final canAuto = type != 'PB';
     final auto = lv == 2;
     final wasAuto = auto && canAuto;
-    final level = auto ? 1 : lv;
+    final level = auto && !canAuto ? 1 : lv;
     rows.add(RestoredRule(
       type: type,
       key: r['k']! as String,
@@ -217,7 +229,7 @@ RulesRestorePlan planRulesRestore(ValidatedBackup file, RestoreMode mode, RuleCa
       level: level,
       categoryId: cat,
       ceilingCents: r['ceil'] as int?,
-      autoPending: level == 1 && (wasAuto || (!auto && canAuto && r['ap'] == 1)),
+      autoPending: wasAuto || (level == 1 && canAuto && r['ap'] == 1),
       wasAutoRecord: wasAuto,
       wasPaybillAuto: auto && !canAuto,
       chosenCategoryIds: level == 0 ? restoredChosenIds(r['sc'], cats) : const <int>[],

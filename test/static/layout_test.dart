@@ -41,6 +41,7 @@ const kAutoReadHookFiles = <String>[
   'ui/screens/settings/about_section.dart',
   'ui/screens/home/home_screen.dart',
   'ui/whats_new/whats_new_cards.dart',
+  'ui/whats_new/whats_new_items.dart',
   'ui/screens/privacy/privacy_screen.dart',
   'ui/screens/updates/update_site_url.dart',
 ];
@@ -51,13 +52,20 @@ const _codeMapPath = '../_pipeline/knowledge/code-map.md';
 String? codeMapSkipReason(String path) => File(path).existsSync()
     ? null
     : 'code map not found at $path (the record repo is not a sibling of this repo); '
-        'checked strictly wherever it is present';
+          'checked strictly wherever it is present';
 
 /// C14 frozen package sets (read from pubspec.yaml at the 0.1.2 S1 start).
 /// A new package needs the PM: do not edit these sets without the PM saying so.
 const kFrozenDependencies = <String>{
-  'flutter', 'cupertino_icons', 'sqflite', 'sqflite_common_ffi', 'sqlite3_flutter_libs',
-  'path', 'path_provider', 'shared_preferences', 'share_plus',
+  'flutter',
+  'cupertino_icons',
+  'sqflite',
+  'sqflite_common_ffi',
+  'sqlite3_flutter_libs',
+  'path',
+  'path_provider',
+  'shared_preferences',
+  'share_plus',
 };
 const kFrozenDevDependencies = <String>{'flutter_test', 'flutter_lints'};
 
@@ -80,10 +88,7 @@ Set<String> pubspecPackages(String pubspec, String section) {
 /// Empty when [source] holds only `export` directives, comments and blank lines.
 String barrelOffence(String source) {
   final noComments = source.replaceAll(RegExp(r'/\*[\s\S]*?\*/'), '').replaceAll(RegExp(r'//[^\n]*'), '');
-  final rest = noComments.replaceAll(
-    RegExp(r'''export\s+['"][^'"]+['"](?:\s+(?:show|hide)\s+[\w\s,]+)?\s*;'''),
-    '',
-  );
+  final rest = noComments.replaceAll(RegExp(r'''export\s+['"][^'"]+['"](?:\s+(?:show|hide)\s+[\w\s,]+)?\s*;'''), '');
   return rest.trim();
 }
 
@@ -91,21 +96,69 @@ String barrelOffence(String source) {
 /// before the marker rule). They are checked for file existence only. A NEW
 /// row must carry a marker in code, so this list is not to be extended.
 const _rowsWithoutCodeMarker = <String>{
-  'SCREEN.SETTINGS', 'SCREEN.BACKUP', 'SCREEN.BACKUP.RESTORE', 'SCREEN.BACKUP.AUTO',
-  'DATA.AUTO_BACKUP', 'DATA.UPDATES.CLIENT', 'DATA.UPDATES.RELEASE', 'DATA.UPDATES.SERVICE',
-  'DATA.BACKUP_COUNTS', 'DATA.BACKUP.LIMITS', 'DATA.BACKUP.CODEC', 'DATA.BACKUP.SETTINGS',
+  'SCREEN.SETTINGS',
+  'SCREEN.BACKUP',
+  'SCREEN.BACKUP.RESTORE',
+  'SCREEN.BACKUP.AUTO',
+  'DATA.AUTO_BACKUP',
+  'DATA.UPDATES.CLIENT',
+  'DATA.UPDATES.RELEASE',
+  'DATA.UPDATES.SERVICE',
+  'DATA.BACKUP_COUNTS',
+  'DATA.BACKUP.LIMITS',
+  'DATA.BACKUP.CODEC',
+  'DATA.BACKUP.SETTINGS',
   'DATA.BACKUP.VALIDATOR', 'DATA.BACKUP.REPAIR', 'DATA.BACKUP.RESTORE_TYPES',
-  'DATA.BACKUP.RESTORE_PLAN', 'DATA.BACKUP.RESTORE_WRITER', 'DATA.BACKUP.SAFETY_COPY',
-  'DATA.DB.MIGRATIONS', 'DATA.PREFS.BACKUP', 'PLATFORM.STORAGE_BRIDGE', 'APP.CONSTANTS',
-  'WIDGET.HOLD_STEP', 'SCREEN.MANAGE_CLASS', 'SCREEN.RECENTLY_DELETED', 'SCREEN.PROFILE',
-  'SCREEN.ONBOARDING', 'SCREEN.WELCOME', 'SCREEN.UPDATES', 'SCREEN.PRIVACY', 'UI.WHATSNEW',
-  'DATA.UPDATES.STARTUP', 'SHELL.BELL', 'SHELL.PRIMARY', 'SHELL.PRIMARY_SCAFFOLD',
-  'SHELL.SECONDARY', 'SHELL.ROUTES', 'SHELL.CHROME', 'SHELL.MESSENGER', 'THEME.PALETTE',
-  'THEME.SCOPE', 'THEME.APP', 'WIDGET.PERIOD_PILL', 'WIDGET.COACH_TOUR', 'WIDGET.FLAT_PICKER',
-  'WIDGET.MPESA_PICKER', 'APP.ENTRY', 'DATA.DB', 'DATA.TRANSACTION', 'DATA.COUNTERPARTY',
-  'DATA.CLASSIFICATION', 'DATA.ANALYTICS', 'DATA.HOME', 'DATA.RECENTLY_DELETED', 'DATA.EXPORT',
-  'DATA.LOCAL_SUMMARY', 'DATA.SEED', 'DATA.PREFS', 'DOMAIN.PERIOD_MATH', 'DOMAIN.ANALYTICS_PERIOD',
-  'DOMAIN.PAID_TO', 'DOMAIN.HOME', 'DOMAIN.PARSING', 'DOMAIN.COUNTERPARTY', 'DOMAIN.CASH',
+  'DATA.BACKUP.RESTORE_PLAN',
+  'DATA.BACKUP.RESTORE_WRITER',
+  'DATA.BACKUP.SAFETY_COPY',
+  'DATA.DB.MIGRATIONS',
+  'DATA.PREFS.BACKUP',
+  'PLATFORM.STORAGE_BRIDGE',
+  'APP.CONSTANTS',
+  'WIDGET.HOLD_STEP',
+  'SCREEN.MANAGE_CLASS',
+  'SCREEN.RECENTLY_DELETED',
+  'SCREEN.PROFILE',
+  'SCREEN.ONBOARDING',
+  'SCREEN.WELCOME',
+  'SCREEN.UPDATES',
+  'SCREEN.PRIVACY',
+  'UI.WHATSNEW',
+  'DATA.UPDATES.STARTUP',
+  'SHELL.BELL',
+  'SHELL.PRIMARY',
+  'SHELL.PRIMARY_SCAFFOLD',
+  'SHELL.SECONDARY',
+  'SHELL.ROUTES',
+  'SHELL.CHROME',
+  'SHELL.MESSENGER',
+  'THEME.PALETTE',
+  'THEME.SCOPE',
+  'THEME.APP',
+  'WIDGET.PERIOD_PILL',
+  'WIDGET.COACH_TOUR',
+  'WIDGET.FLAT_PICKER',
+  'WIDGET.MPESA_PICKER',
+  'APP.ENTRY',
+  'DATA.DB',
+  'DATA.TRANSACTION',
+  'DATA.COUNTERPARTY',
+  'DATA.CLASSIFICATION',
+  'DATA.ANALYTICS',
+  'DATA.HOME',
+  'DATA.RECENTLY_DELETED',
+  'DATA.EXPORT',
+  'DATA.LOCAL_SUMMARY',
+  'DATA.SEED',
+  'DATA.PREFS',
+  'DOMAIN.PERIOD_MATH',
+  'DOMAIN.ANALYTICS_PERIOD',
+  'DOMAIN.PAID_TO',
+  'DOMAIN.HOME',
+  'DOMAIN.PARSING',
+  'DOMAIN.COUNTERPARTY',
+  'DOMAIN.CASH',
   'DOMAIN.FORMAT',
   // barrel files: contain only exports, no doc comment marker
   'ANALYTICS.BARREL', 'HOME.BARREL', 'PAIDTO.BARREL',
@@ -123,7 +176,10 @@ List<File> _sources(String dir, Set<String> exts) {
 /// Marker -> files that carry it, over lib/ (.dart) and the Android Kotlin sources.
 Map<String, Set<String>> _markersInCode() {
   final found = <String, Set<String>>{};
-  final files = [..._sources('lib', {'.dart'}), ..._sources('android/app/src', {'.kt'})];
+  final files = [
+    ..._sources('lib', {'.dart'}),
+    ..._sources('android/app/src', {'.kt'}),
+  ];
   for (final f in files) {
     final text = f.readAsStringSync(encoding: utf8);
     for (final m in _markerRe.allMatches(text)) {
@@ -184,10 +240,7 @@ bool reachesAutoRead(String fromFile, String spec) {
 void main() {
   late List<String> libFiles; // relative to lib/, forward slashes
   setUpAll(() {
-    libFiles = _sources('lib', {'.dart'})
-        .map((f) => f.path.replaceAll('\\', '/'))
-        .map((p) => p.substring(p.indexOf('lib/') + 4))
-        .toList();
+    libFiles = _sources('lib', {'.dart'}).map((f) => f.path.replaceAll('\\', '/')).map((p) => p.substring(p.indexOf('lib/') + 4)).toList();
   });
 
   group('code map', () {
@@ -200,10 +253,7 @@ void main() {
 
     test('every code-map row resolves to a marker in code or is on the known unmarked list', skip: skip, () {
       final inCode = _markersInCode().keys.toSet();
-      final stale = _codeMapRows()
-          .map((r) => r.marker)
-          .where((m) => !inCode.contains(m) && !_rowsWithoutCodeMarker.contains(m))
-          .toList()
+      final stale = _codeMapRows().map((r) => r.marker).where((m) => !inCode.contains(m) && !_rowsWithoutCodeMarker.contains(m)).toList()
         ..sort();
       expect(stale, isEmpty, reason: 'code-map rows with no marker in code (and not on the known list): $stale');
     });
@@ -257,15 +307,10 @@ void main() {
     /// lib/ui/screens/<x>_screen.dart next to a folder lib/ui/screens/<x>/ is a barrel (E13).
     List<File> barrels() {
       final dir = Directory('lib/ui/screens');
-      return dir
-          .listSync()
-          .whereType<File>()
-          .where((f) => f.path.endsWith('_screen.dart'))
-          .where((f) {
-            final name = f.uri.pathSegments.last.replaceAll('_screen.dart', '');
-            return Directory('lib/ui/screens/$name').existsSync();
-          })
-          .toList();
+      return dir.listSync().whereType<File>().where((f) => f.path.endsWith('_screen.dart')).where((f) {
+        final name = f.uri.pathSegments.last.replaceAll('_screen.dart', '');
+        return Directory('lib/ui/screens/$name').existsSync();
+      }).toList();
     }
 
     test('every barrel file contains only export directives, comments and blank lines', () {
@@ -290,13 +335,19 @@ void main() {
     final pubspec = File('pubspec.yaml').readAsStringSync(encoding: utf8);
 
     test('dependencies equal the frozen set', () {
-      expect(pubspecPackages(pubspec, 'dependencies'), kFrozenDependencies,
-          reason: 'dependencies changed: a new package needs the PM (C14). Do not edit the frozen set without the PM.');
+      expect(
+        pubspecPackages(pubspec, 'dependencies'),
+        kFrozenDependencies,
+        reason: 'dependencies changed: a new package needs the PM (C14). Do not edit the frozen set without the PM.',
+      );
     });
 
     test('dev_dependencies equal the frozen set', () {
-      expect(pubspecPackages(pubspec, 'dev_dependencies'), kFrozenDevDependencies,
-          reason: 'dev_dependencies changed: a new package needs the PM (C14). Do not edit the frozen set without the PM.');
+      expect(
+        pubspecPackages(pubspec, 'dev_dependencies'),
+        kFrozenDevDependencies,
+        reason: 'dev_dependencies changed: a new package needs the PM (C14). Do not edit the frozen set without the PM.',
+      );
     });
 
     test('the package reader sees additions and removals (self-test)', () {

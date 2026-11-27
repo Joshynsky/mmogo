@@ -7,6 +7,7 @@
 library;
 
 import '../../../data/backup/restore_rules.dart' show RulesRestoreOutcome;
+import '../../../ui/copy/backup_copy.dart' show restoreRulesKeptNames, restoreRulesLine, restoreRulesNeedKeep;
 import '../../../ui/screens/backup/restore_rules_note.dart';
 import 'hard_rule_copy.dart';
 import 'hard_rule_ports.dart' show autoRecordUi;
@@ -22,8 +23,17 @@ List<RestoreRulesNote> restoreRuleNotes(RulesRestoreOutcome o) {
         body: hardRestoreOffBody(o.droppedForPrivacy),
         settingsButton: kHardOpenSettings,
       ),
-    if (autoRecordUi && o.autoRecordAsAskFirst > 0) RestoreRulesNote(body: hardRestoreToast(o.autoRecordAsAskFirst)),
+    ..._rulesLine(o),
+    if (o.keptLocalNames.isNotEmpty) RestoreRulesNote(body: restoreRulesKeptNames(o.keptLocalNames)),
+    if (autoRecordUi && o.autoRecordAsAskFirst > 0) RestoreRulesNote(body: restoreRulesNeedKeep(o.autoRecordAsAskFirst)),
   ];
+}
+
+/// The Rules line (added / replaced / kept from this phone), only while the Auto-record UI is on.
+List<RestoreRulesNote> _rulesLine(RulesRestoreOutcome o) {
+  if (!autoRecordUi) return const <RestoreRulesNote>[];
+  final line = restoreRulesLine(added: o.added, replaced: o.replaced, keptPhone: o.keptPhone);
+  return line == null ? const <RestoreRulesNote>[] : [RestoreRulesNote(body: line)];
 }
 
 /// Installs [restoreRuleNotes] in the holder (the wiring, I1).

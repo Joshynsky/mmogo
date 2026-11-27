@@ -30,6 +30,12 @@ abstract class RememberedExtraTab {
   RememberedExtraHelp get help;
 }
 
+/// Optional: an extra tab that can say whether it holds people, so the page opens on it when it does
+/// (0.2.2). A throw or false = the page opens on the recipients list as before.
+abstract class RememberedOpensOnPeople {
+  Future<bool> holdsPeople();
+}
+
 /// A help sheet's title and paragraphs (plain strings; the page draws them).
 class RememberedExtraHelp {
   const RememberedExtraHelp(this.title, this.paragraphs);

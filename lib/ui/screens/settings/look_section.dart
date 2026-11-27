@@ -7,6 +7,7 @@ import '../../theme/app_palette_scope.dart';
 import 'appearance_section.dart';
 import 'compact_choice_row.dart';
 import 'first_day.dart';
+import 'settings_row_target.dart';
 import 'settings_widgets.dart';
 
 // The First day dialog moved to first_day.dart (F4); callers of this file still find it here.
@@ -68,84 +69,105 @@ class LookSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              KeyedSubtree(
-                key: tourKey,
-                child: PaletteGroup(
-                  key: const Key('settingsPalette'),
-                  currentPaletteId: AppPaletteScope.of(context).value,
-                  palette: palette,
-                  onSelect: (id) => AppPaletteScope.of(context).select(id),
+              SettingsRowTarget(
+                id: 'look.palette',
+                child: KeyedSubtree(
+                  key: tourKey,
+                  child: PaletteGroup(
+                    key: const Key('settingsPalette'),
+                    currentPaletteId: AppPaletteScope.of(context).value,
+                    palette: palette,
+                    onSelect: (id) => AppPaletteScope.of(context).select(id),
+                  ),
                 ),
               ),
-              CompactSettingRow(
-                key: const Key('settingsAppearanceRow'),
-                palette: palette,
-                icon: AppearanceModeControl.iconFor(appearance), // 0.1.3 F4: follows the mode, not always a moon
-                title: kAppearanceTitle,
-                line: appearanceCaption(appearance),
-                lineKey: const Key('settingsAppearanceCaption'),
-                controlWidth: AppearanceModeControl.sideWidth,
-                control: (context, stacked) =>
-                    AppearanceModeControl(palette: palette, value: appearance, onChanged: onAppearance, stacked: stacked),
+              SettingsRowTarget(
+                id: 'look.appearance',
+                child: CompactSettingRow(
+                  key: const Key('settingsAppearanceRow'),
+                  palette: palette,
+                  icon: AppearanceModeControl.iconFor(appearance), // 0.1.3 F4: follows the mode, not always a moon
+                  title: kAppearanceTitle,
+                  line: appearanceCaption(appearance),
+                  lineKey: const Key('settingsAppearanceCaption'),
+                  controlWidth: AppearanceModeControl.sideWidth,
+                  control: (context, stacked) =>
+                      AppearanceModeControl(palette: palette, value: appearance, onChanged: onAppearance, stacked: stacked),
+                ),
               ),
-              FirstDayRow(
-                key: const Key('settingsFirstDayRow'),
-                palette: palette,
-                title: kFirstDayTitle,
-                dayNames: kFirstDayNames,
-                day: kFirstDayNames[firstDay.clamp(1, 7) - 1],
-                onTap: onFirstDay,
+              SettingsRowTarget(
+                id: 'look.firstDay',
+                child: FirstDayRow(
+                  key: const Key('settingsFirstDayRow'),
+                  palette: palette,
+                  title: kFirstDayTitle,
+                  dayNames: kFirstDayNames,
+                  day: kFirstDayNames[firstDay.clamp(1, 7) - 1],
+                  onTap: onFirstDay,
+                ),
               ),
-              CompactChoiceRow<MonthChartStyle>(
-                key: const Key('settingsMonthChartRow'),
-                palette: palette,
-                icon: Icons.calendar_view_month_outlined,
-                title: kMonthChartTitle,
-                line: kMonthChartLine,
-                keyPrefix: 'monthChart',
-                options: const [
-                  (MonthChartStyle.days, 'days', 'Days'),
-                  (MonthChartStyle.weeks, 'weeks', 'Weeks'),
-                ],
-                value: monthStyle,
-                onChanged: onMonthStyle,
+              SettingsRowTarget(
+                id: 'look.monthChart',
+                child: CompactChoiceRow<MonthChartStyle>(
+                  key: const Key('settingsMonthChartRow'),
+                  palette: palette,
+                  icon: Icons.calendar_view_month_outlined,
+                  title: kMonthChartTitle,
+                  line: kMonthChartLine,
+                  keyPrefix: 'monthChart',
+                  options: const [
+                    (MonthChartStyle.days, 'days', 'Days'),
+                    (MonthChartStyle.weeks, 'weeks', 'Weeks'),
+                  ],
+                  value: monthStyle,
+                  onChanged: onMonthStyle,
+                ),
               ),
-              CompactChoiceRow<YearViewAmounts>(
-                key: const Key('settingsYearViewRow'),
-                palette: palette,
-                icon: Icons.bar_chart_outlined,
-                title: kYearViewTitle,
-                line: kYearViewLine,
-                keyPrefix: 'yearView',
-                options: const [
-                  (YearViewAmounts.quarters, 'quarters', 'Quarter'),
-                  (YearViewAmounts.months, 'months', 'Monthly'),
-                ],
-                value: yearAmounts,
-                onChanged: onYearAmounts,
+              SettingsRowTarget(
+                id: 'look.yearView',
+                child: CompactChoiceRow<YearViewAmounts>(
+                  key: const Key('settingsYearViewRow'),
+                  palette: palette,
+                  icon: Icons.bar_chart_outlined,
+                  title: kYearViewTitle,
+                  line: kYearViewLine,
+                  keyPrefix: 'yearView',
+                  options: const [
+                    (YearViewAmounts.quarters, 'quarters', 'Quarter'),
+                    (YearViewAmounts.months, 'months', 'Monthly'),
+                  ],
+                  value: yearAmounts,
+                  onChanged: onYearAmounts,
+                ),
               ),
-              SettingsToggle(
-                key: const Key('settingsShowWithdrawals'),
-                palette: palette,
-                icon: Icons.bar_chart_outlined,
-                label: kShowWithdrawalsTitle,
-                subtitle: kShowWithdrawalsSubtitle,
-                value: showWithdrawals,
-                onChanged: onShowWithdrawals,
+              SettingsRowTarget(
+                id: 'look.withdrawals',
+                child: SettingsToggle(
+                  key: const Key('settingsShowWithdrawals'),
+                  palette: palette,
+                  icon: Icons.bar_chart_outlined,
+                  label: kShowWithdrawalsTitle,
+                  subtitle: kShowWithdrawalsSubtitle,
+                  value: showWithdrawals,
+                  onChanged: onShowWithdrawals,
+                ),
               ),
-              CompactChoiceRow<WhereItWentStyle>(
-                key: const Key('settingsWhereStyleRow'),
-                palette: palette,
-                icon: Icons.grid_view_outlined,
-                title: kWhereStyleTitle,
-                line: kWhereStyleLine,
-                keyPrefix: 'whereStyle',
-                options: const [
-                  (WhereItWentStyle.button, 'button', 'Button'),
-                  (WhereItWentStyle.strip, 'strip', 'Strip'),
-                ],
-                value: whereStyle,
-                onChanged: onWhereStyle,
+              SettingsRowTarget(
+                id: 'look.whereStyle',
+                child: CompactChoiceRow<WhereItWentStyle>(
+                  key: const Key('settingsWhereStyleRow'),
+                  palette: palette,
+                  icon: Icons.grid_view_outlined,
+                  title: kWhereStyleTitle,
+                  line: kWhereStyleLine,
+                  keyPrefix: 'whereStyle',
+                  options: const [
+                    (WhereItWentStyle.button, 'button', 'Button'),
+                    (WhereItWentStyle.strip, 'strip', 'Strip'),
+                  ],
+                  value: whereStyle,
+                  onChanged: onWhereStyle,
+                ),
               ),
               Container(
                 decoration: BoxDecoration(border: Border(top: BorderSide(color: palette.line))),
@@ -183,13 +205,14 @@ class AppearanceModeControl extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final bool stacked;
 
-  /// Three 44 px buttons, two 2 px gaps and the 2 px track padding: 140.
-  static const double sideWidth = 140;
+  /// Four 44 px buttons, three 2 px gaps and the 2 px track padding: 186.
+  static const double sideWidth = 186;
 
   static const modes = <(String, String, IconData)>[
     ('system', 'System', Icons.smartphone_outlined),
     ('light', 'Light', Icons.light_mode_outlined),
     ('dark', 'Dark', Icons.dark_mode_outlined),
+    ('black', 'Black', Icons.circle),
   ];
 
   /// The row's leading icon: the chosen mode's own icon (an unknown value reads as System).

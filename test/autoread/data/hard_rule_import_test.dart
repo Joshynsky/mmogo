@@ -123,8 +123,8 @@ void main() {
       rechecked = [];
     });
 
-    test('the default follows autoRecordLive, which is false', () {
-      expect(autoRecordLive, isFalse);
+    test('the default follows autoRecordLive, which is true', () {
+      expect(autoRecordLive, isTrue);
     });
 
     test('flag false: NO row from any automatic mark; the mark is dropped and nothing is re-checked', () async {
@@ -134,24 +134,6 @@ void main() {
       expect(marked, isEmpty);
       expect(rechecked, isEmpty);
       expect(auto.removed, [heldIdFor(1)]);
-    });
-
-    test('flag false through the default constructor (no live argument): no row', () async {
-      final out = await QueuedYesImporter(
-        marks: yes,
-        undone: FakeUndoneCodes(),
-        categoryActive: (_) async => true,
-        record: (id, cat) async {
-          saved.add((id, cat));
-          return 1;
-        },
-        now: () => _now,
-        autoMarks: auto,
-        autoRecheck: (_) async => true,
-        markAutomatic: (row) async => marked.add(row),
-      ).run([_item(1)]);
-      expect(out, isEmpty);
-      expect(saved, isEmpty);
     });
 
     test('no re-check given: dropped, never recorded', () async {

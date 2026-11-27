@@ -5,17 +5,21 @@ import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
 import 'settings_widgets.dart';
 
-/// §SETTINGS.REMEMBERED_HOOK: the Adding entries row that opens Remembered when
-/// the auto-read build passes a hook (the standard build keeps today's row).
+/// §SETTINGS.REMEMBERED_HOOK: the People row (first row of the Auto-record section, item 3
+/// slice E) that opens Remembered when the auto-read build passes a hook (the standard build keeps today's
+/// Remembered recipients row in Adding entries).
 ///
 /// What the auto-read build tells the Settings row: how many airtime switches
 /// are on (0 to 2) and how many remembered names there are. A null part is
 /// left out of the sub-line. Plain Dart: this file imports nothing from the
 /// auto-read folder, so the standard build never sees it used.
 class RememberedRowInfo {
-  const RememberedRowInfo({this.autoOn, this.names});
+  const RememberedRowInfo({this.autoOn, this.names, this.people});
   final int? autoOn;
   final int? names;
+
+  /// People with a rule (Suggested + Ask first + Auto-record), each once.
+  final int? people;
 }
 
 /// The hook the auto-read build passes into Settings. [load] is read when the
@@ -28,19 +32,24 @@ class RememberedRowHook {
 
 /// The sub-line for [info]; today's line when nothing is supplied.
 String rememberedRowSub(RememberedRowInfo? info) {
-  if (info == null || (info.autoOn == null && info.names == null)) return kRememberedRowSubtitle;
+  if (info == null || (info.autoOn == null && info.names == null && info.people == null)) return kRememberedRowSubtitle;
   final parts = <String>[
     if (info.autoOn != null) kRememberedRowAutoPart(info.autoOn!),
-    if (info.names != null) kRememberedRowNamesPart(info.names!),
+    if (info.people != null) kRememberedRowPeoplePart(info.people!),
+    // Names are mentioned only when there are some ("0 names" next to 12 people was wrong).
+    if (info.names != null && info.names! > 0) kRememberedRowNamesPart(info.names!),
   ];
   return '${parts.join(' · ')}$kRememberedRowTail';
 }
 
-/// The one Adding entries row used when the hook is present: opens the
+/// The one People row used when the hook is present: opens the
 /// Remembered page and refreshes its sub-line when you come back.
 class RememberedHookRow extends StatefulWidget {
-  const RememberedHookRow({super.key, required this.palette, required this.hook});
+  const RememberedHookRow({super.key, required this.palette, required this.hook, this.first = true});
   final AppPalette palette;
+
+  /// First row of its card (no top line).
+  final bool first;
   final RememberedRowHook hook;
 
   @override
@@ -83,14 +92,15 @@ class _RememberedHookRowState extends State<RememberedHookRow> {
     final sub = rememberedRowSub(_info);
     return Semantics(
       button: true,
-      label: '$kRememberedAutoRowLabel. $sub',
+      label: '$kPeopleRowLabel. $sub',
       excludeSemantics: true,
       onTap: _open,
       child: SettingsLink(
         palette: widget.palette,
         icon: Icons.people_outline,
-        label: kRememberedAutoRowLabel,
+        label: kPeopleRowLabel,
         subtitle: sub,
+        first: widget.first,
         onTap: _open,
       ),
     );

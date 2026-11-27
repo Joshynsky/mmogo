@@ -227,7 +227,7 @@ void main() {
           RestoreMode.replace);
       for (final k in ['a', 'b']) {
         final x = (await store.get(ReceiverType.sendMoney, k))!;
-        expect(x.level, RuleLevel.askFirst, reason: k);
+        expect(x.level, k == 'a' ? RuleLevel.askFirst : RuleLevel.autoRecord, reason: k);
         expect(x.chosenCategoryIds, isEmpty, reason: k);
       }
     });
@@ -357,9 +357,10 @@ void main() {
             ruleRow('SM', 'b', lv: 0, sc: [_seed(_transport), _seed(_rent)]),
           ]),
           RestoreMode.merge);
-      expect(r.rules!.keptPhone, 1);
+      expect(r.rules!.replaced, 0, reason: 'slice D: only the chosen list differed, so it is not counted as replaced');
       expect(r.rules!.added, 1);
-      expect((await store.get(ReceiverType.sendMoney, 'a'))!.chosenCategoryIds, phoneList);
+      expect(phoneList, isNotEmpty);
+      expect((await store.get(ReceiverType.sendMoney, 'a'))!.chosenCategoryIds, await _seedIds(db, [_rent]));
       expect((await store.get(ReceiverType.sendMoney, 'b'))!.chosenCategoryIds, await _seedIds(db, [_transport, _rent]));
     });
   });

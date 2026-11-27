@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/maintenance/delete_data_service.dart';
+import '../../copy/privacy_copy.dart' show kPrivacyBackupRowTitle;
 import '../../copy/settings_copy.dart';
 import '../../shell/routes.dart';
 import '../../theme/app_colors.dart';
 import '../backup/backup_export_flow.dart';
 import 'delete_data_row.dart';
+import 'settings_row_target.dart';
 import 'settings_widgets.dart';
 
 /// Settings "Your data, careful" section (0.1.2 S9a, mock M9): Backup and
@@ -62,31 +64,43 @@ class DataSection extends StatelessWidget {
             palette: palette,
             child: Column(
               children: [
-                SettingsLink(
-                  palette: palette,
-                  icon: Icons.backup_outlined,
-                  label: 'Backup and restore',
-                  subtitle: backupSubtitle,
-                  first: true,
-                  warningDot: backupPaused,
-                  onTap: onBackup ?? () => Navigator.of(context).pushNamed(Routes.backup),
+                SettingsRowTarget(
+                  id: 'data.backup',
+                  child: SettingsLink(
+                    palette: palette,
+                    icon: Icons.backup_outlined,
+                    label: kPrivacyBackupRowTitle,
+                    subtitle: backupSubtitle,
+                    first: true,
+                    warningDot: backupPaused,
+                    onTap: onBackup ?? () => Navigator.of(context).pushNamed(Routes.backup),
+                  ),
                 ),
-                SettingsLink(
-                  palette: palette,
-                  icon: Icons.ios_share,
-                  label: 'Export CSV',
-                  subtitle: exportSubtitle,
-                  onTap: exportEnabled ? onExport : null,
+                SettingsRowTarget(
+                  id: 'data.csv',
+                  child: SettingsLink(
+                    palette: palette,
+                    icon: Icons.ios_share,
+                    label: kExportCsvLabel,
+                    subtitle: exportSubtitle,
+                    onTap: exportEnabled ? onExport : null,
+                  ),
                 ),
-                SettingsLink(
-                  palette: palette,
-                  icon: Icons.restore_from_trash_outlined,
-                  label: 'Recently deleted',
-                  subtitle: 'Restore a transaction you removed, within 1 hour',
-                  onTap: () => Navigator.of(context).pushNamed(Routes.recentlyDeleted),
+                SettingsRowTarget(
+                  id: 'data.recentlyDeleted',
+                  child: SettingsLink(
+                    palette: palette,
+                    icon: Icons.restore_from_trash_outlined,
+                    label: kRecentlyDeletedLabel,
+                    subtitle: 'Restore a transaction you removed, within 1 hour',
+                    onTap: () => Navigator.of(context).pushNamed(Routes.recentlyDeleted),
+                  ),
                 ),
                 // S9b-2: the Delete data row is the LAST row of the card.
-                DeleteDataRow(palette: palette, deleteData: deleteData, restart: restart, backupFlow: backupFlow),
+                SettingsRowTarget(
+                  id: 'data.delete',
+                  child: DeleteDataRow(palette: palette, deleteData: deleteData, restart: restart, backupFlow: backupFlow),
+                ),
               ],
             ),
           ),

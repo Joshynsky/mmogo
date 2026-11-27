@@ -11,6 +11,16 @@ const kSettingsDataGroup = 'Your data';
 const kSettingsCarefulTag = 'careful';
 const kSettingsAboutGroup = 'About';
 
+/// WORDING-DRAFT (item 3 slice E, PM signs): the Auto-record section, auto-read build only.
+const kSettingsAutoRecordGroup = 'Auto-record';
+
+// ---- Your data rows (shared with the Settings search) ----
+const kExportCsvLabel = 'Export CSV';
+const kRecentlyDeletedLabel = 'Recently deleted';
+
+/// WORDING-DRAFT (item 3 slice F, PM signs): the Settings search result for the two airtime switches, which sit on the People page.
+const kAirtimeSwitchesSearchTitle = 'Airtime switches';
+
 // ---- Look ----
 const kPaletteTitle = 'Colour palette';
 const kPaletteSubtitle = 'Recolours the whole app.';
@@ -20,11 +30,13 @@ const kAppearanceTitle = 'Appearance';
 const kAppearanceCaptionSystem = 'Follows your phone’s setting.';
 const kAppearanceCaptionLight = 'Always light.';
 const kAppearanceCaptionDark = 'Always dark.';
+const kAppearanceCaptionBlack = 'Always dark, on a true black page.';
 
 /// `mode` is `system` | `light` | `dark`; anything else reads as System.
 String appearanceCaption(String mode) => switch (mode) {
   'light' => kAppearanceCaptionLight,
   'dark' => kAppearanceCaptionDark,
+  'black' => kAppearanceCaptionBlack,
   _ => kAppearanceCaptionSystem,
 };
 
@@ -67,9 +79,12 @@ const kManageCategoriesLabel = 'Manage categories';
 const kManageCategoriesSubtitle = 'Create, rename, delete and restore';
 const kRememberedRowLabel = 'Remembered recipients';
 const kRememberedRowSubtitle = 'Name and type, kept on this phone';
-// Auto-read build only (WORDING-DRAFT: label from the mock, PM-decided 12-11).
-const kRememberedAutoRowLabel = 'Remembered, suggestions and auto-record';
+// Auto-read build only. WORDING-DRAFT (item 3 slice E, PM signs): the row in the Auto-record section; was
+// "Remembered, suggestions and auto-record" in Adding entries.
+const kPeopleRowLabel = 'People';
 String kRememberedRowAutoPart(int on) => 'Auto-record airtime: $on of 2 on';
+// WORDING-DRAFT (PM signs, 26-11): people with a rule, "N people" / "1 person"
+String kRememberedRowPeoplePart(int n) => n == 1 ? '1 person' : '$n people';
 String kRememberedRowNamesPart(int n) => n == 1 ? '1 name' : '$n names';
 const kRememberedRowTail = ', kept on this phone';
 

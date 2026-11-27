@@ -273,10 +273,10 @@ class _MpesaTrackerAppState extends State<MpesaTrackerApp> with WidgetsBindingOb
       // (System follows the phone). Pages read the same choice through
       // AppPalette.of.
       theme: AppTheme.forPalette(set.light),
-      darkTheme: AppTheme.forPalette(set.dark),
+      darkTheme: AppTheme.forPalette(_paletteController.appearance == 'black' ? set.dark.toBlack() : set.dark),
       themeMode: switch (_paletteController.appearance) {
         'light' => ThemeMode.light,
-        'dark' => ThemeMode.dark,
+        'dark' || 'black' => ThemeMode.dark,
         _ => ThemeMode.system,
       },
       debugShowCheckedModeBanner: false,

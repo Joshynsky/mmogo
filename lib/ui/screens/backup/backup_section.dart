@@ -104,12 +104,7 @@ class BackUpNowCard extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         ..._summary(c, empty),
-        BackupWarning(
-          key: const Key('backupNotEncrypted'),
-          palette: palette,
-          text: kBackupNotEncryptedShort,
-          stripe: false,
-        ),
+        BackupWarning(key: const Key('backupNotEncrypted'), palette: palette, text: kBackupNotEncryptedShort, stripe: false),
         FilledButton(
           key: const Key('backUpNowButton'),
           onPressed: (empty || busy) ? null : onBackUp,
@@ -180,8 +175,7 @@ class BackUpNowCard extends StatelessWidget {
         palette: palette,
         key: const Key('backupCountsLine'),
       ),
-      if (c.deletedLeftOut > 0)
-        BackupPara(notIncludedLine(c.deletedLeftOut), palette: palette, key: const Key('backupNotIncluded')),
+      if (c.deletedLeftOut > 0) BackupPara(notIncludedLine(c.deletedLeftOut), palette: palette, key: const Key('backupNotIncluded')),
     ];
   }
 
@@ -191,13 +185,7 @@ class BackUpNowCard extends StatelessWidget {
 /// The Restore card: the D7 line directly above the button (F3, from the
 /// mock), the button, then one line.
 class RestoreCard extends StatelessWidget {
-  const RestoreCard({
-    super.key,
-    required this.palette,
-    required this.busy,
-    required this.restoring,
-    required this.onRestore,
-  });
+  const RestoreCard({super.key, required this.palette, required this.busy, required this.restoring, required this.onRestore});
 
   final AppPalette palette;
   final bool busy;
@@ -225,13 +213,14 @@ class RestoreCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                kBackupNotRestorableByOlder,
+                kBackupNotRestorableByOlderV6, // WORDING-SIGNED (0.2.2, PM 26-11-2026)
+                key: const Key('backupD7LineV6'),
                 style: TextStyle(fontSize: 12.5, height: 1.45, fontWeight: FontWeight.w600, color: palette.tintInk),
               ),
               const SizedBox(height: 6),
               Text(
-                kBackupNotRestorableByOlderV4, // WORDING-DRAFT (S12)
-                key: const Key('backupD7LineV4'),
+                kBackupOlderStillRestoreV6, // WORDING-SIGNED (0.2.2, PM 26-11-2026)
+                key: const Key('backupD7LineStillRestore'),
                 style: TextStyle(fontSize: 12.5, height: 1.45, fontWeight: FontWeight.w600, color: palette.tintInk),
               ),
             ],

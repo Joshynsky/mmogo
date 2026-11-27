@@ -297,6 +297,20 @@ void main() {
       expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
     });
 
+    testWidgets('rules line: shown with the file count, absent for zero or an old file', (t) async {
+      final r = _Rig();
+      r.service.preview = fakePreview(fileRules: 6);
+      await _pump(t, r);
+      await _toMergeDialog(t, r);
+      expect(find.text(kRestoreRulesLabel), findsOneWidget);
+      expect(_text(t, 'restoreRulesInFile'), '6 in the file');
+      await t.pumpWidget(const SizedBox());
+      final r0 = _Rig();
+      await _pump(t, r0);
+      await _toMergeDialog(t, r0);
+      expect(find.byKey(const Key('restoreRulesInFile')), findsNothing);
+    });
+
     testWidgets('a file with no entries says so', (t) async {
       final r = _Rig();
       r.service.preview = fakePreview(fileTx: 0, fileCls: 0, fileMap: 0, newTx: 0, dupTx: 0);
