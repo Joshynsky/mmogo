@@ -2,7 +2,37 @@
 
 What changed in each version of mmogo, newest first. Written for the people who use the app, so it says what you will notice, not how it was built. Dates are when the version was released.
 
-## 0.2.1 (not released)
+## 0.2.2 (not released)
+
+### Added
+- **Auto-record (auto-read version).** For a person you choose, mmogo can now record their payments without asking. It covers Send Money, Buy Goods, airtime and Pochi payments. A person's level is Suggested, Ask first or Auto-record. For Auto-record you can set a limit: payments up to it are recorded, anything above is asked first. You get a pop-up when a message arrives, and the entry is recorded the next time you open mmogo. Paybill payments always ask first. Entries recorded this way appear under Recently recorded with an Auto-record tag. Undo takes the entry back and keeps that person on Auto-record; to stop it, change their level or pause.
+- **Pause all Auto-record (auto-read version).** One switch asks first for everyone until you resume. While it is on, a notice stays on your phone with a Resume button, and the To do page says so. Your settings are kept.
+- **Suggested categories (auto-read version).** For a person at Suggested, the waiting card and the Categorize sheet show up to two categories you used most for them in their last 10 payments. Tap one to record at once; an Undo message follows. Paybill, withdrawals and airtime are not suggested.
+- **Backups keep each person's settings.** A new backup holds each person's level, limit and category suggestions. After you restore, anyone who was on Auto-record waits under one banner, "Keep it?", with Keep and Turn off. Until you choose, they ask first. With Merge, a person you already set to Ask first or Auto-record on this phone is kept and named in the result. The restore dialog counts the people's settings in the file. Backups from 0.2.1 and earlier still restore, without people's settings.
+- **Reset and Forget on the Remembered page (auto-read version).** Reset everyone to Suggested, or Forget all people. Both say what they will do first, and nothing already recorded changes.
+- **Black.** Appearance now has four choices: System, Light, Dark and Black. Black is Dark on a true black page. System follows your phone and never gives Black.
+- **Search in Settings.** The magnifier at the top right opens a search field with suggestion chips. Tap a result and Settings scrolls to that row and highlights it.
+
+### Changed
+- **Settings is regrouped.** The order is Look, Adding entries, Reading messages, Auto-record, Your data and About. Reading messages and Auto-record appear in the auto-read version only. "Suggest asking first" is now "Offer Ask first" and "Suggest after" is now "Offer after N in a row". The Settings tour has a step for Auto-record.
+- **Ocean palette refreshed.** The Add button is sun yellow, Send Money is blue so it no longer looks like a button, empty bars and switches are easier to see, and the dark teal is calmer. Leaf and Indigo keep their colours.
+- **Home reads more clearly.** The Home line "Cash withdrawn, not counted" now shows only the part of a withdrawal you have not yet linked to a Cash entry, and hides when nothing is left. Entries made in the same minute stay in the order they happened.
+- **Two people with the same name** are told apart by their phone number, shown like 0722***555, on the Remembered page, the person sheet and the cards.
+- **To do page (auto-read version).** Answers you owe come first, then messages to parse, one suggestion card, then messages to categorize. Messages mmogo could not read have their own heading and are not counted under To categorize.
+- **Clearer buttons.** "Not now" replaces "Categorize later" and "Later" on the waiting cards. Android Back closes the keyboard first instead of closing the sheet. Manage categories explains that categories for withdrawn money are created under Cash. Parse from the notification shows as off while Read M-Pesa messages is off.
+- **Record receiver details.** Switching it off now hides the people mmogo remembers and stops using their settings; they come back when you switch it on. Forget all and Delete data still erase them.
+- **Replace restore** now says that people's settings in the file are put back, and that anyone on Auto-record waits for your Keep.
+
+### Fixed
+- **Alerts and cards stay in step (auto-read version).** A queued alert disappears once its entry is recorded, a message that arrives while mmogo is open shows up without reopening, and the Ask first offer card leaves after you tap it.
+- **Forget all people** works when only a rule person is left, and "Open Settings" from the Remembered page now lands on the switch.
+- **Large text.** Appearance and the Remembered group titles no longer break mid-word at 200% text.
+
+### Good to know
+- A backup made with 0.2.2 cannot be restored by 0.2.1 or older. Backups from 0.2.1 and earlier still restore.
+- Nothing is recorded automatically unless you set a person to Auto-record.
+
+## 0.2.1 (20 November 2026)
 
 ### Added
 - **Withdrawals stay withdrawals.** Pick what the cash was for and mmogo adds a linked Cash entry under that category. Earlier withdrawals are not changed; open one to say what the cash was for. In the auto-read version, withdrawals that still need a decision appear in Notifications.
@@ -24,7 +54,7 @@ What changed in each version of mmogo, newest first. Written for the people who 
 ### Good to know
 - A backup made with 0.2.1 cannot be restored by 0.2.0 or older. Backups from 0.2.0 and earlier still restore.
 
-## 0.2.0 (not released)
+## 0.2.0 (14 November 2026)
 
 0.1.3 was never released, so 0.2.0 includes its changes (listed under 0.1.3 below).
 
